@@ -1,0 +1,1155 @@
+# SDD — 园艺机械 Shopify 主题需求规格书（修复版）
+
+| 项       | 内容                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------- |
+| 主题名   | **Coppice**（待 USPTO 复核，见 §10.3）                                                                  |
+| 主题定位 | 面向户外动力设备（OPE）商家、上架 Shopify Theme Store 的垂直行业商业主题                                |
+| 交付性质 | 投稿型产品：单人可交付、无外部商家依赖、无排期承诺                                                      |
+| 主市场   | 北美（美/加），货币单位与筛选项文案按北美口径                                                           |
+| 技术基线 | Shopify Online Store 2.0，基于官方 Skeleton Theme                                                       |
+| 配套文件 | `AGENTS.md`、`docs/TASKS.md`、`tools/check-theme-name.sh`                                               |
+| 版本     | v4.1（修复字段计数、筛选维度口径、drive_type 拆分、§6.5 数据源、数据岛字段清单、A3 标注、商标核验状态） |
+
+---
+
+## 1. 项目概述
+
+### 1.1 主题定位
+
+面向销售**割草机、链锯、打草机**等户外动力设备（Outdoor Power Equipment, OPE）的商家，解决机械类商品特有的三件事：
+
+1. **规格复杂** —— 一台割草机有 15+ 项关键参数，通用主题只能把参数塞进富文本描述里，无法结构化展示、无法筛选、无法比较。
+2. **决策链路长** —— 高单价商品通常需要 2–4 周决策周期，用户会在多个型号间反复比对，通用主题没有"对比"这一环节。
+3. **配件关联性强** —— 刀片、滤芯、机油、火花塞、电池是持续复购项，通用主题的"相关推荐"无法承担耗材复购入口的角色。
+
+**范围界定**：演示店覆盖 **4 个对比分组**（走步式割草机 / 骑乘式割草机 / 链锯 / 打草机）。`spec.compare_group` 是商家可自行扩展的机制，字段体系面向汽油与电池驱动的户外动力设备通用；v1.0 **不包含发电机**。
+
+### 1.2 核心假设与最脆弱的一环
+
+核心假设：**参数即商品**。从数据层（结构化 metafield）到展示层（规格速览、筛选、对比）到转化层（配件捆绑、物流预期管理）都围绕结构化参数构建。
+
+**最脆弱的地方在录入**：字段过多会导致商家放弃。因此本 SDD 将 **「必填字段压缩到 6 个 + 交付 CSV 批量导入流水线」** 当作 P0 需求。
+
+### 1.3 竞品参考
+
+| 类型     | 参考对象                          | 借鉴点                                           |
+| -------- | --------------------------------- | ------------------------------------------------ |
+| 垂直店铺 | Yard Force（Shopify 店铺）        | 产品页参数表组织、动力平台系列导航、产品对比功能 |
+| 商业主题 | MexMart、各类工具/工业垂直主题    | 筛选维度设计、规格表格布局                       |
+| 平台原生 | Dawn 的 `collection.filters` 渲染 | 仅作为交互模式参考，代码不得复用                 |
+| 配置工具 | Search & Discovery 筛选器配置     | 原生 faceted filtering 的对齐方式                |
+
+> 竞品研究只用于交互模式与信息架构参考。代码层面必须原创；若参考实现方式，须重写并确保与参考对象存在实质差异。
+
+---
+
+## 2. 目标商家画像与主市场
+
+### 2.1 主画像
+
+| 维度       | 特征                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------- |
+| 商家类型   | OPE 品牌商、区域经销商、五金/园艺机械零售商                                                             |
+| SKU 规模   | 50–500（主体 80–200）                                                                                   |
+| 商品特征   | 单件价值高（$200–$5,000+），技术参数多（每品 10–20 项），耗材复购率高，存在"同平台多工具"的家族式产品线 |
+| 消费决策   | 按**使用面积 → 地形 → 动力源 → 品牌平台**逐步收敛，再在 2–3 个型号间对比                                |
+| 物流特征   | 存在超大件（骑乘式割草机等），需尾板/叉车卸货                                                           |
+| 客单价特征 | 购物车常含"主机 + 耗材"组合                                                                             |
+
+### 2.2 次要画像
+
+- 拥有同一电池平台（如 40V）多款工具的**存量用户**，复购裸机（bare tool）与配件。
+- 季节性商家（割草机等），需要在换季时快速调整首页与导航重心。
+
+### 2.3 反画像（本主题不服务）
+
+- 纯配件/小件五金电商（SKU 数千、无规格参数、无高单价决策）。
+- 非机械类园艺：花卉苗木、盆栽、种子（应改用 `Garden` 标签下的植物类主题）。
+- 需要报价单 / B2B 阶梯价 / 询盘的批发站（需要 App 或 B2B 能力，不在主题范围）。
+
+### 2.4 主市场决策：北美
+
+**决策**：主市场 = **北美**。理由：OPE 最大市场；Theme Store 流量与 `Garden` / `Hardware` 标签的商家分布也偏北美。
+
+**硬约束**：
+
+| 项             | 约束                                                              | 处理方式                                                                |
+| -------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **筛选项文案** | 筛选值就是 metafield 的原始文本，主题无法按访客地区重写筛选项标签 | 分段值与枚举值一律按北美口径措辞（`Under 5,000 sq ft`），公制写法不做   |
+| 数字参数       | 需要可排序、可比较、可做范围                                      | **以公制为规范存储**（mm / cc / L / kg / dB），展示时由主题设置切换英制 |
+| 单位换算       | Liquid 无内置单位换算                                             | 集中在一个 `snippet/spec-value.liquid` 内实现，禁止散落各模板           |
+| 语言           | 首版只交付 `locales/en.default.json`                              | 其它语言 v1.1                                                           |
+
+---
+
+## 3. 平台能力边界（已核实的事实基线）
+
+### 3.1 提交资格
+
+Theme Store 对所有 Shopify Partner 开放，**个人身份免费注册即可，无需公司主体**。门槛在质量审核，不在身份。
+
+### 3.2 命名规则（官方硬性要求）
+
+| 规则           | 内容                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 长度与词数     | **1–2 个单词，少于 30 个字符**                                                                                                        |
+| 独立性         | 不得与 Shopify 产品/活动/品牌相似（明确点名 `Shopify`、`Unite`、`Polaris`）                                                           |
+| 公司名         | 不得包含开发者公司名或 Partner 账户名                                                                                                 |
+| 平台/SEO 词    | 不得用网站名、电商平台名、SEO 利益词（点名 `Performance`、`Mobile`、`Sales`）                                                         |
+| 行业与集合分类 | 不得取 Theme Store 的行业/集合分类名（点名 `Fashion`、`Electronics`、`Jewelry`）→ 同理 `Garden` / `Hardware` / `Tools` 也不能做主题名 |
+| 唯一性         | 必须与在架主题唯一且明显区分                                                                                                          |
+| preset         | **至少一个 preset 必须与父主题同名**                                                                                                  |
+| 命名指南       | 用名词；易拼写、易发音、跨方言可用；不用潮流词、不寻常拼写、过长名称；不得与其他平台主题同名                                          |
+| 不可逆         | 上传后主题名与 preset 名不可修改                                                                                                      |
+
+### 3.3 集合筛选（Search & Discovery）
+
+| 项                             | 官方结论                                                                                                                                |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 可作筛选来源的 metafield 类型  | **7 种**：Single line text、Single line text (List)、Decimal、Integer、True or false、Metaobject reference、Metaobject reference (List) |
+| 数字型是否支持范围滑杆         | **不支持**。Storefront API 的 metafield filter 仅支持等值匹配。价格是唯一有范围滑杆的维度                                               |
+| variant metafield 能否作筛选源 | **可以**                                                                                                                                |
+| 谁能配置筛选器                 | 商家在 Search & Discovery 里配置 → 属店铺配置，不构成主题对 App 的依赖                                                                  |
+| 主题侧                         | 渲染原生 `collection.filters` / `filter` / `filter_value` 对象，URL 与 canonical 由平台处理                                             |
+
+### 3.4 自动化集合条件
+
+| metafield 类型                 | 支持的条件                                           |
+| ------------------------------ | ---------------------------------------------------- |
+| True or false                  | is equal to                                          |
+| Integer                        | is equal to / **is greater than** / **is less than** |
+| Decimal                        | is equal to / **is greater than** / **is less than** |
+| Single line text（单值或列表） | is equal to                                          |
+| Metaobject reference           | 可用                                                 |
+
+并且官方明确：**Collections by metafields 对 product 与 variant metafield 均可用。**
+
+### 3.5 CSV 批量导入
+
+**结论：Shopify 原生产品 CSV 支持导入 product metafield，不需要任何 App。**
+
+| 项                                      | 官方规则                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 列头格式                                | `NAME (product.metafields.namespace.key)`，例如 `Fabric (product.metafields.shopify.fabric)`；也可只写 `product.metafields.namespace.key`                                                                                                                                                                                                                                                             |
+| 前置条件                                | **metafield 定义必须先存在**，Shopify 不会在导入时自动创建定义                                                                                                                                                                                                                                                                                                                                        |
+| 官方支持的导入类型                      | boolean、color、date、date_time、dimension、money、multi_line_text_field、number_decimal、number_integer、product_reference、single_line_text_field、url、volume、weight，以及 `list.color` / `list.date` / `list.date_time` / `list.dimension` / `list.metaobject_reference` / `list.number_decimal` / `list.number_integer` / `list.product_reference` / `list.url` / `list.volume` / `list.weight` |
+| 更新模式的必填列                        | 更新已有商品时，必填列为 **URL handle + Title**                                                                                                                                                                                                                                                                                                                                                       |
+| **变体 metafield**                      | **不支持产品 CSV 导入/导出**。本项目已放弃变体级 metafield                                                                                                                                                                                                                                                                                                                                            |
+| 错误反馈                                | **静默失败**：列名拼错、类型不匹配、值不在预设选项内 → 该列/该值被直接忽略，不报错                                                                                                                                                                                                                                                                                                                    |
+| 空值                                    | 必须真正留空（不能是 `""`、单个空格或 `null`）                                                                                                                                                                                                                                                                                                                                                        |
+| **覆盖规则**                            | ① 文件里包含了某列、但单元格留空 → 该商品的这个值被显式清空；② 文件里完全不含某列 → 该值保持原样                                                                                                                                                                                                                                                                                                      |
+| **列名以官方模板为准**                  | 权威来源 = 后台「产品 → 导入」下载的 `product_template.csv`（57 列）。拼错不报错——平台按「缺失列」处理                                                                                                                                                                                                                                                                                                |
+| **文件是变体级**                        | 一行 = 一个变体。`URL handle` 每行都重复；`Title` 与 `Option N name` 只在每个商品的首行；商品级字段（含全部 metafield）也只在首行                                                                                                                                                                                                                                                                     |
+| **变体级列存在时不得省略 Option 列**    | 文件里只要出现 `SKU` / `Price` / `Inventory quantity`，就必须有 `Option1 name` + `Option1 value`。单变体商品固定写 `Title` / `Default Title`                                                                                                                                                                                                                                                          |
+| **`Product category` = 平台标准分类法** | 取自受控词表。可写面包屑或分类 ID，但不可同时写                                                                                                                                                                                                                                                                                                                                                       |
+| **图像行**                              | 一张图一行：只能填 `URL handle` + `Product image URL` + `Image position`（从 1 起）+ `Image alt text`。URL 必须公开可访问的 https；单文件 ≤ 25 MP / ≤ 20 MB；单商品 ≤ 250 张；3D 与视频不支持 CSV                                                                                                                                                                                                     |
+
+**已验证的硬边界**：`list.single_line_text_field` **无法**通过产品 CSV 导入。实测中无论用换行符还是逗号，所有值都被识别为单个 item。因此本 SDD 的处理是：**筛选源一律不用 list 类型**，且唯一用到 list 的字段（`spec.compat_platforms`）已从数据模型中移除。
+
+**分类法补充**：Shopify 分类法原生就有 `Outdoor Power Equipment Base Units`（裸机）与 `Outdoor Power Equipment Sets`（套装）两个类目。发电机不在 `Home & Garden` 分支，而落在 `Hardware > Power & Electrical Supplies > Generators`。演示店仍会有 2 条 Hardware 分支的分类（机油在 `… > Lubricants > Oil`、充电器在 `Hardware > Tool Accessories > Power Tool Chargers`），因为平台没给 OPE 店的这些通用配件更合适的家。配件跨分支与主机跨分支性质不同，商家文档须预先说明。
+
+### 3.6 主题做不到的事
+
+| 需求                           | 现实                                                                                                              | 结论                                                                |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| "绑定特定物流模板"             | 主题无权创建/绑定物流模板，也无法计算运费                                                                         | 改为条件化提示                                                      |
+| "读取 URL 查询参数"            | Liquid `request` 只有 `design_mode` / `host` / `locale` / `origin` / `page_type` / `path` / `visual_preview_mode` | 参数只能由 JS 读（`location.search`）；商品数据须服务端以数据岛下发 |
+| "控制 robots.txt"              | 平台层可以（商家可自建 `robots.txt.liquid`），但 Theme Store requirements §11 明文禁止主题包含该模板              | 页面级只有两个杠杆：`<meta name="robots">` 与 canonical             |
+| "用外部 CDN / 外部 API"        | 资源必须走 Shopify CDN；不得依赖第三方服务                                                                        | 所有数据来自 metafield / 原生对象                                   |
+| "购物车级折扣、买赠、捆绑定价" | 属 App 功能范畴                                                                                                   | 不得实现                                                            |
+
+**责任层级说明**：`robots.txt` 是域名级资源，`<meta name="robots">` / canonical 是页面级。关键陷阱：`robots.txt` 挡住的 URL，爬虫永远不会去读它页面里的 `noindex`。所以两个杠杆不是"二选一"，而是先后两级：先允许抓，才谈得上收录。**对本项目的推论**：我们要防的不是"某几个页面该屏蔽"，而是"不产生重复页"。没有 `robots.txt` 这个杠杆，剩下的只有 canonical；而 canonical 必须静态、出现在初始 HTML 里。
+
+### 3.7 待验证假设清单（开发前必须先做的 spike）
+
+| #   | 假设                                                       | 验证方法                                                                   | 预估      | 状态                                                                                                                                                                                      |
+| --- | ---------------------------------------------------------- | -------------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | `list.single_line_text_field` 的 CSV 导入行为              | 开发店建 1 个定义 + 3 行测试 CSV 试导入                                    | 0.25 人日 | **已完成，结论：不支持。已从数据模型移除该字段。**                                                                                                                                        |
+| A2  | 原生 measurement 类型在 Liquid 中的取值方式与 CSV 导入格式 | 开发店建 3 个定义，`{{ metafield \| json }}` 打印看结构；另做 CSV 导入实测 | 0.25 人日 | **已完成，结论：① `.value` 返回纯数字（如 `25.0`），`.unit` 返回单位字符串（如 `mm`）；② CSV 导入用简写格式（如 `25mm`），单位必须与 definition 中定义的单位完全一致；JSON 格式不可用。** |
+| A3  | 对比数据岛在满编 50 款下的 gzip 体积与 Liquid 渲染耗时     | 开发店建一个满 50 款的分组页，测 transfer size + Theme Inspector 渲染耗时  | 0.25 人日 | **待验证。§6.2.1 中的体量预算为估算值，验收基线以 A3 实测结果为准。**                                                                                                                     |
+
+> 若 A2 成立（已成立），v1.1 可把参数型字段迁到原生 measurement 类型。**v1.0 不赌这个假设**，一律用 `number_integer` / `number_decimal`。迁移前需额外验证 `tools/build-import-csv.py` 的单位一致性校验逻辑。
+
+---
+
+## 4. 信息架构与模板清单
+
+### 4.1 模板层（14 个）
+
+| #   | 模板                    | 用途                   | 差异化处理                                               |
+| --- | ----------------------- | ---------------------- | -------------------------------------------------------- |
+| 1   | `index.json`            | 首页                   | 动力平台入口、按用途分区、季节切换 section               |
+| 2   | `product.json`          | 产品页                 | 规格速览卡 + 完整规格表 + 对比勾选 + 配件捆绑 + 物流提示 |
+| 3   | `collection.json`       | 集合页                 | 原生筛选渲染 + 密集参数网格 + 对比勾选                   |
+| 4   | `list-collections.json` | 集合列表               | 按动力平台/用途分组的入口卡                              |
+| 5   | `page.json`             | 通用页                 | 支持规格说明类内容                                       |
+| 6   | `page.contact.json`     | 联系页                 | 表单 + 售后/配件咨询入口                                 |
+| 7   | **`page.compare.json`** | **对比页（每组一页）** | 承载一个对比分组的规格数据岛 + 对比表                    |
+| 8   | `blog.json`             | 博客列表               | 选购指南、维护教程                                       |
+| 9   | `article.json`          | 文章页                 | 同上                                                     |
+| 10  | `cart.json`             | 购物车                 | 物流等级提示、耗材加购、折扣、加速结账                   |
+| 11  | `search.json`           | 搜索                   | 原生筛选 + 参数命中                                      |
+| 12  | `404.json`              | 404                    | 按用途返回的入口                                         |
+| 13  | `gift_card.liquid`      | 礼品卡                 | 二维码 ≥120×120 px                                       |
+| 14  | `password.json`         | 密码页                 | shop logo / `shop.password_message`                      |
+
+> 另需 `layout/theme.liquid`、`config/settings_schema.json`（含 `theme_info`）、`config/settings_data.json`、`locales/en.default.json`。
+
+### 4.2 Section Group 与全局组件
+
+- `sections/header-group.json`：公告栏（物流政策）、utility bar、主导航（含动力平台下拉）、搜索、账户组件 `<shopify-account>`、购物车抽屉入口。
+- `sections/footer-group.json`：售后与保修说明、耗材分类入口、newsletter、社交图标、支付图标（`enabled_payment_types`，全彩）。
+- 两个 group 都必须渲染在 section groups 内，让商家可动态增删排序。
+
+### 4.3 主导航结构（建议）
+
+```
+Shop
+├── Mowers
+│   ├── Walk-behind          → 集合
+│   ├── Self-propelled
+│   └── Riding
+├── Chainsaws
+├── Trimmers
+└── Accessories
+    ├── Blades & Bars
+    ├── Filters
+    ├── Oils & Fuel
+    └── Batteries & Chargers
+Shop by Platform                ← 动力平台导航
+├── 20V Battery
+├── 40V Battery
+├── 60V Battery
+└── Gas Series
+Support
+├── Shipping & Oversized Delivery
+├── Warranty
+└── Maintenance Guides
+```
+
+### 4.4 视觉方向与设计稿
+
+| 项           | 决定                                                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| 默认外观方向 | **现代电商式**（大图、大留白、浅底、单一强调色）                                                                                  |
+| 差异化落点   | 参数区（速览卡 / 规格表 / 对比表 / 筛选已选标签）与决策辅助区（对比栏 / 物流徽标 / 平台兼容）**保留工程化呈现**，不随全局语言稀释 |
+| 反向验收     | 遮住品牌名后，若页面像任何一套现代电商主题，方向判定不合格                                                                        |
+| 设计稿的边界 | 设计稿是方向稿 + 开发参考稿，不是上架素材、不是令牌来源、不是验收依据                                                             |
+
+**落点文件**：`docs/design/DESIGN-BRIEF.md` —— 含令牌候选锚点、演示店合成数据锚、13 张必出图与 4 张可选图的逐张 prompt、出图归档与迭代纪律。
+
+> 视觉相关的验收仍以 §8.2 与 `AGENTS.md` 为准；令牌最终值由 T2.1 实跑确定。
+
+---
+
+## 5. 数据模型（Metafields）
+
+> 命名空间：`spec.*`（技术规格）、`platform.*`（动力平台）、`logistics.*`（物流）、`acc.*`（配件）。
+
+### 5.1 设计原则
+
+**P1 — 所有筛选源字段一律用 `single_line_text_field`，绝不用 list。**
+理由三重：① 它在 Search & Discovery 支持的 7 种筛选类型里；② 它在官方 CSV 导入支持清单里；③ 一个商品在同一维度上确实只需要一个值。
+
+**P2 — 物理参数以公制为规范存储，展示层按设置切英制。**
+主市场是北美，但存储用公制是为了可换算、可比大小、不产生两套真值。转换集中在 `snippet/spec-value.liquid`。
+
+**P3 — "适用面积"同时建文本分段与数字两个字段。**
+`spec.area_coverage`（文本分段）做筛选源 → 标签干净；`spec.area_coverage_sqft`（number_integer）做对比表排序与自动化集合的 `>`/`<` 范围条件。
+
+**P4 — 关键差异参数一律留在产品级；跨变体差异用「说明字段」显式标注，不用变体级 metafield。**
+同一型号的 20" / 22" 切割宽度常做成变体。这些参数只建产品级 metafield；若某型号的该参数确实随变体变化，商家在 `spec.spec_variance_note` 里写一句人话说明，对比表以提示图标呈现。**必须承认的代价**：同一产品的不同变体在对比表里只显示一个产品级代表值。若该参数是选购决策的核心，**正确做法是拆成两个独立产品** —— 这条写进商家文档。
+
+**P5 — 对比用 `spec.compare_group` 做安全阀。**
+只有同组商品能进同一对比清单，避免"链锯 vs 割草机"的无效对比；同时它决定对比页路由与表格行定义。判定键只用 `compare_group`，不用 `product_type` —— 后者是平台自由文本，拼法必然分裂，只能当商家侧的旁证信号。
+
+**P6 — 不依赖 App，不依赖外部服务。**
+全部用原生 metafield + 原生对象 + Cart AJAX API。
+
+### 5.2 命名空间总览
+
+| 命名空间    | 资源    | 用途                                            | 字段数 |
+| ----------- | ------- | ----------------------------------------------- | ------ |
+| `spec`      | Product | 规格（筛选源 + 参数 + 对比控制 + 变体差异说明） | **16** |
+| `platform`  | Product | 电池平台                                        | 1      |
+| `logistics` | Product | 物流提示                                        | 4      |
+| `acc`       | Product | 配件与耗材关联                                  | 2      |
+| **合计**    |         |                                                 | **23** |
+
+> **字段计数明细（逐项可核）**：
+>
+> - `spec` = 筛选源 5（`power_source`、`operation_type`、`drive_type`、`area_coverage`、`duty_level`）+ 参数型 8 + 对比控制 3 = **16**
+> - `platform` = 1（`battery_platform`）
+> - `logistics` = 4（`shipping_class`、`needs_liftgate`、`assembly_required`、`lead_time_days`）
+> - `acc` = 2（`consumables`、`fitment_note`）
+> - **总计 23 个字段**。
+>
+> 字段清单与示例值的唯一来源：`docs/demo-store/field-list.md` + `demo-catalog.md` + `demo-products.csv`。
+
+### 5.3 Product metafields
+
+**A. 筛选源字段（5 个，全部 `single_line_text_field`）**
+
+| #   | key                   | 类型                   | 必填     | 值域（北美口径，写死）                                                                           |
+| --- | --------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| 1   | `spec.power_source`   | single_line_text_field | **必填** | `Gasoline` / `Corded electric` / `Battery` / `Propane`                                           |
+| 2   | `spec.operation_type` | single_line_text_field | **必填** | `Walk-behind` / `Riding` / `Remote-controlled` / `Handheld` / `N/A`                              |
+| 3   | `spec.drive_type`     | single_line_text_field | 可选     | `Push` / `Self-propelled` / `Front-wheel drive` / `Rear-wheel drive` / `All-wheel drive` / `N/A` |
+| 4   | `spec.area_coverage`  | single_line_text_field | **必填** | `Under 5,000 sq ft` / `5,000–10,000 sq ft` / `10,000–1 acre` / `Over 1 acre` / `N/A`             |
+| 5   | `spec.duty_level`     | single_line_text_field | **必填** | `Residential` / `Semi-pro` / `Commercial`                                                        |
+
+> **变更说明（v4.1）**：原 `spec.drive_type` 把**操作姿态**（Walk-behind / Riding / Remote-controlled）与**驱动方式**（Push / FWD / RWD / AWD）混在一个值域里。修复：拆成 `spec.operation_type`（操作姿态，必填，筛选源）与 `spec.drive_type`（驱动方式，可选，筛选源）。两者分别对应一个用户可独立提问的决策维度："我是站着推还是坐着开"与"它是怎么驱动的"。骑乘式割草机现在可以同时有 `operation_type = Riding` 和 `drive_type = Rear-wheel drive`。
+>
+> `platform.battery_platform` 属 `platform` 命名空间，见 §5.3 末。
+> 移除了 `spec.deck_material`、`spec.starter_type`、`spec.season` 三个可选筛选源，因为它们在演示中不是核心决策维度。
+
+**B. 参数型字段（用于规格表与对比表，不做筛选源）**
+
+| key                       | 类型           | 存储单位 | 北美展示 | 入对比表 | 可排序 |
+| ------------------------- | -------------- | -------- | -------- | -------- | ------ |
+| `spec.displacement_cc`    | number_decimal | cc       | cu in    | ✓        | ✓      |
+| `spec.power_w`            | number_integer | W        | hp       | ✓        | ✓      |
+| `spec.cutting_width_mm`   | number_integer | mm       | in       | ✓        | ✓      |
+| `spec.bar_length_mm`      | number_integer | mm       | in       | ✓        | ✓      |
+| `spec.weight_kg`          | number_decimal | kg       | lb       | ✓        | ✓      |
+| `spec.noise_db`           | number_decimal | dB(A)    | dB(A)    | ✓        | ✓      |
+| `spec.area_coverage_sqft` | number_integer | sq ft    | sq ft    | ✓        | ✓      |
+| `spec.warranty_months`    | number_integer | month    | month    | ✓        | ✓      |
+
+> 共 8 个参数型字段。整机重量 `spec.weight_kg` 已加回，作为对比表的一行。
+
+**C. 对比与兼容控制字段**
+
+| key                       | 类型                   | 用途                                                                                                                                                                                                                         |
+| ------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spec.compare_group`      | single_line_text_field | **必填**。对比分组键，v1.0 预设 4 个取值：`walk-behind-mower` / `riding-mower` / `chainsaw` / `string-trimmer`（机制本身商家可自行扩展）。决定对比页路由与表格行定义。**空值行为：该商品不可加入对比（不兜底成任何默认组）** |
+| `spec.compare_hidden`     | boolean                | 可选。`true` 时把该商品排除出对比清单（如停产款、订制品）                                                                                                                                                                    |
+| `spec.spec_variance_note` | single_line_text_field | 可选。当本型号的关键参数随变体变化时，用一句人话说明（如 `Deck width varies by variant: 20 in or 22 in`）。对比表检测到非空时在该列表头显示提示图标，展开呈现原文                                                            |
+
+**D. 电池平台字段（`platform` 命名空间）**
+
+| key                         | 类型                   | 必填               | 值域                                  |
+| --------------------------- | ---------------------- | ------------------ | ------------------------------------- |
+| `platform.battery_platform` | single_line_text_field | 电池类**条件必填** | `20V` / `40V` / `60V` / `80V` / `N/A` |
+
+**对比表实际渲染的字段清单（数据岛白名单，v4.1 补齐）**
+
+对比表由分组决定行清单。以下为 v1.0 四个分组的**固定行定义**。数据岛**只序列化这些字段**，其余 metafield 一个都不入岛。
+
+| 行                             | 对应 metafield                                 | 适用于                                                            |
+| ------------------------------ | ---------------------------------------------- | ----------------------------------------------------------------- |
+| 动力源                         | `spec.power_source`                            | 全部分组                                                          |
+| 操作方式                       | `spec.operation_type`                          | 全部分组                                                          |
+| 驱动方式                       | `spec.drive_type`                              | 全部分组                                                          |
+| 适用面积                       | `spec.area_coverage`                           | 全部分组                                                          |
+| 使用强度                       | `spec.duty_level`                              | 全部分组                                                          |
+| 切割宽度 / 导板长度 / 切割幅度 | `spec.cutting_width_mm` / `spec.bar_length_mm` | 割草机用 cutting_width；链锯用 bar_length；打草机用 cutting_width |
+| 排量 / 功率                    | `spec.displacement_cc` / `spec.power_w`        | 汽油机用 displacement；电池机用 power                             |
+| 整机重量                       | `spec.weight_kg`                               | 全部分组                                                          |
+| 噪音                           | `spec.noise_db`                                | 全部分组                                                          |
+| 保修                           | `spec.warranty_months`                         | 全部分组                                                          |
+
+> **行数上限**：10 行。数据岛只放这 10 行对应的字段值。**未出现在本清单中的任何 metafield 不得进入数据岛。** 这条清单同时是 §6.2.5 验收标准的对照依据。
+
+### 5.4 变体差异的处理规则
+
+**决策：不使用变体级 metafield。**
+
+| 项       | 内容                                                                                                                                                                     |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 替代机制 | 参数型字段全部为产品级；`spec.spec_variance_note` 用一句人话标注差异；商家文档明确写"何时该拆产品、何时该用变体"的判定规则                                               |
+| 代价     | 同一产品的所有变体，在规格表与对比表中只显示一个产品级代表值。若某型号的差异参数是选购决策的核心（20" vs 22" 割台、14" vs 18" 导板），**正确做法是把它拆成两个独立产品** |
+
+**渲染规则（实现时必须遵守）**
+
+1. 对比表与规格表只读产品级字段，不读变体、不提供变体切换器。
+2. `spec.spec_variance_note` 非空 → 该列表头显示提示图标，展开后呈现原文，`aria-expanded` 可访问。
+3. 参数缺失 → 显示 `—`，任何情况下不得显示 0。
+4. `spec_variance_note` 为空 → 不渲染任何提示（不做"可能有差异"式的模糊占位）。
+
+### 5.5 物流字段（条件渲染，不做筛选）
+
+| key                           | 类型                   | 用途               | 示例                                   |
+| ----------------------------- | ---------------------- | ------------------ | -------------------------------------- |
+| `logistics.shipping_class`    | single_line_text_field | **必填**。物流等级 | `Parcel` / `Oversized` / `Freight LTL` |
+| `logistics.needs_liftgate`    | boolean                | 需尾板/叉车卸货    | `true`                                 |
+| `logistics.assembly_required` | boolean                | 需自行组装         | `true`                                 |
+| `logistics.lead_time_days`    | number_integer         | 备货准备天数       | `5`                                    |
+
+### 5.6 配件字段
+
+| key                | 类型                     | 用途                                                |
+| ------------------ | ------------------------ | --------------------------------------------------- |
+| `acc.consumables`  | `list.product_reference` | 耗材（刀片、滤芯、机油、火花塞）                    |
+| `acc.fitment_note` | single_line_text_field   | 适配说明（`Fits 21 in deck models 2022 and later`） |
+
+> **为什么移除 `acc.bundles_well_with`（v4.1 修正）**：原设计将其定位为"叠加在原生 complementary products 之上"。但两者语义高度重叠——都是"常一起购买"。保留会导致产品页出现两个推荐区块，且商家需要同时维护两套关联。**为避免语义重复，增强层只保留耗材关联（`acc.consumables`），"常一起购买"完全交给原生 complementary products。**
+
+### 5.7 必填字段收敛（录入成本控制，P0）
+
+**必填字段 6 个 + 条件必填 1 个 = 约束主机的 7 项**：
+
+| #   | 字段                        | 性质                                        | 为什么它是必填           |
+| --- | --------------------------- | ------------------------------------------- | ------------------------ |
+| 1   | `spec.power_source`         | 必填                                        | 第一筛选维度             |
+| 2   | `spec.operation_type`       | 必填                                        | 第二筛选维度             |
+| 3   | `spec.area_coverage`        | 必填                                        | 第三筛选维度             |
+| 4   | `spec.duty_level`           | 必填                                        | 第四筛选维度             |
+| 5   | `spec.compare_group`        | 必填                                        | 没有它，对比功能整体失效 |
+| 6   | `logistics.shipping_class`  | 必填                                        | 没有它，物流提示整体失效 |
+| 7   | `platform.battery_platform` | **条件必填**（`power_source = Battery` 时） | 动力平台导航与筛选       |
+
+**适用对象**：这 7 项**约束的是主机（机器类商品）**。耗材/配件无法满足其中两项 —— `spec.power_source` 与 `spec.duty_level` 的预设选项里没有 `N/A`，机油与刀片根本填不了。耗材走"缺值 → 该维度下不出现"规则。**不要为此给这两个字段加 `N/A` 选项**。
+
+**可选字段缺席时的行为**：该参数行在规格表与对比表中不出现（而非显示空白或 0）。
+**主题侧无法强制必填**（metafield 定义本身不支持"必填"），因此交付物是「商家文档里的录入检查清单 + 一个校验脚本」。
+
+### 5.8 Metafield 定义的前置配置（P0 顺序，不可颠倒）
+
+1. **先建全部定义**，再谈导入——CSV 不会自动创建定义。
+2. 每个筛选源定义：勾选 **Storefront 可见性**（否则 `collection.filters` 取不到）。
+3. 需要在自动化集合里用到的定义：开启 **「用作集合条件」**（官方对该用途有数量上限，文档载明 128 个）。
+4. 每个字段用**预设选项**而非自由文本。
+5. 定义建完后**不要再改 key 或类型**——改了名字等于所有商家数据失联。
+
+### 5.9 CSV 批量导入流水线（交付物，不是附注）
+
+**对外（给商家）交付**
+
+| 交付物                                    | 内容                                                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/merchant/metafield-import-guide.md` | 逐步操作 + 截图 + 常见静默失败排查表                                                                                                  |
+| `metafield-import-template.csv`           | 含全部列头的空数据模板，商家只需填值。按官方 `product_template.csv` 格式重建；实测 57 列 = 官方子集 27 + metafield 23；行结构为变体级 |
+| `metafield-import-example.csv`            | 5 行小样。取 `nb-21p`（单变体）+ `nb-22sp`（多变体）—— 一次把变体行结构、Option 列写法、首行代表变体三项验到                          |
+
+**对内（开发用，不打进主题 ZIP）**
+
+`tools/build-import-csv.py`：读一份简化的产品表（Excel/CSV，商家友好列名如 `Power source`），生成符合官方列头格式的导入 CSV，并做**预校验**：
+
+- 列头拼写与定义完全一致
+- 值必须在定义的预设选项内
+- 数字列不含单位字符
+- 空值真正留空
+- 跨行一致性：同一 `compare_group` 跨越多个分类 → 警告；同一分类分散到多个 `compare_group` → 提示复核。判据优先用 `Product category`（受控词表）而不是 `Type`（自由文本），且必须判到父级
+- 输出一份「预期校验报告」：哪些行会静默失败
+- 格式合规：`URL handle` 每行都有且唯一；商品级字段只出现在首行；变体级必填（`SKU` / `Price` / 重量 / 库存）齐全且 `SKU` 全局唯一；单变体必须 `Option1 = Title / Default Title`；metafield 列头名称段不含括号；每个商品都有 `Product category`
+
+**演示店数据锚**：`docs/demo-store/demo-products.csv`（官方 `product_template.csv` 格式，**当前样例集 24 个商品 / 26 行 / 57 列**，含 2 个多变体商品）+ `demo-catalog.md` + `field-list.md`（字段清单 + R1–R16 一致性规则 + 预期校验输出夹具：0 错误 + 1 条信息级提示）。三者均由 `tools/gen-demo-data.py` 生成 —— T1.13 的空模板与 5 行示例由它派生，**禁止手改 CSV**。
+
+> **规模口径（v4.1 统一）**：当前样例集 **24 个商品**，是最终演示店（**80–120 个商品**，见 §9.4）的**核心子集**。§13 验收标准中的"演示店覆盖 4 个对比分组"按分组口径验收，不按商品总数验收。最终提交前需按 §9.4 扩充至 80–120 个商品。
+
+**导入顺序（两遍制）**
+
+1. **第一遍**：商品 + 变体 + 核心字段。注意列名逐字照抄官方模板。
+2. **第二遍**：metafield 更新（必填列 `URL handle` + `Title`，勾选 "Overwrite any current products that have the same handle"）。
+3. 每遍先用 5 行小样验证；导入前备份。
+
+**验收标准**
+
+- [ ] 用 `metafield-import-template.csv` + 示例 CSV，一个不了解本主题的人能在 30 分钟内完成 20 个商品的导入。
+- [ ] `tools/build-import-csv.py` 能对故意写错的输入给出**明确报错**（对应平台的静默失败）。
+- [ ] 导入后抽查 5 个商品：**5 个筛选维度**全部在集合页筛选器里正常出现且计数正确。
+- [ ] 「同型号多尺寸应拆分为独立产品」的判定规则已写入商家指南，并在演示店有一组真实拆分样例。
+- [ ] 含多变体且 `spec.spec_variance_note` 非空的商品，对比表表头出现可展开的提示，且该提示**不改变对比表的任何数值**。
+- [ ] 预校验脚本能对「同一分组混入不同 `product_type`」的输入给出警告。
+- [ ] **所有商品的 `Product category` 全部被平台识别**（导入预览页无「未知分类」）；空气滤清器与火花塞这两个**分类法缺叶子节点**的商品，按 `field-list.md` §4.7 的降级类目导入成功。
+
+### 5.10 单位与本地化
+
+- 所有面向商家文案走 `t:` 翻译键，`locales/en.default.json` 为基准。
+- 单位切换是**主题设置**（`settings.spec_unit_system`：`imperial` 默认 / `metric`），不是浏览器自动判断。
+- 换算与格式化集中在 `snippet/spec-value.liquid`：入参 `value` + `unit` + 目标制，输出带单位文本。**禁止在别处散落换算逻辑**。
+- 筛选项文案不参与单位切换。
+
+---
+
+## 6. 核心差异化功能规格
+
+### 6.1 结构化规格筛选
+
+**目标**：让消费者按动力源、操作方式、驱动方式、适用面积、使用强度收敛到 3–5 款候选。
+
+**实现方案（唯一推荐路径）**：渲染 Shopify **原生 storefront filtering**，不自行发明筛选逻辑。
+
+| 项         | 规格                                                                                                        |
+| ---------- | ----------------------------------------------------------------------------------------------------------- |
+| 数据来源   | `collection.filters` / `filter` / `filter_value` 对象                                                       |
+| 筛选器配置 | 商家在 Search & Discovery 里把 §5.3 A 的 **5 个** metafield 加为筛选来源（店铺配置，不构成主题的 App 依赖） |
+| 渲染       | `sections/faceted-filters.liquid`，三种布局：侧栏（桌面）/ 顶部横条 / 抽屉（移动端）                        |
+| 无刷新     | 原生筛选 URL + Section Rendering API（`?section_id=`）更新网格与结果计数                                    |
+| 已选标签   | 网格上方渲染已应用筛选标签，可逐个移除 + 全部清除                                                           |
+| 结果计数   | 每个筛选值显示 `filter_value.count`                                                                         |
+| 排序       | 保留原生 sort（`collection.sort_options`）                                                                  |
+| 价格       | 原生价格区间（唯一有范围滑杆的维度）                                                                        |
+| SEO        | 原生筛选 URL 的 canonical 由平台处理，**不得自行拼接会被索引的伪路径**                                      |
+
+**边界情况**
+
+- 某筛选值下商品数为 0：按设置置灰或隐藏。
+- 商品缺失该 metafield 值：在该维度下不出现——**这是"数据不全 → 筛选漏出"的必然行为，必须写进商家文档**。
+- 集合为空：空状态 + 推荐集合入口。
+- 移动端抽屉打开：焦点锁定，`Esc` 关闭回焦。
+- 单集合商品数控制在 **25,000 对象以内**。
+
+**验收标准**
+
+- [ ] 集合页与搜索页均可渲染商家配置的全部筛选来源（含 metafield 筛选）。
+- [ ] 筛选结果计数与实际商品数一致。
+- [ ] 已选标签可逐个移除、可全部清除。
+- [ ] 移动端抽屉键盘可操作（Tab 进入、`Esc` 关闭回焦）。
+- [ ] 筛选后 URL 可分享、刷新后状态保留。
+
+### 6.2 产品对比工具
+
+#### 6.2.1 架构结论：**每组一页 + 服务端数据岛 + localStorage 状态 + 客户端渲染**
+
+```
+用户在商品卡 / 产品页勾选
+        |  写入 localStorage（ib:compare:v1：handle + 分组键）
+        |
+        +-- 分组键 --> 跳转 /pages/compare-<group-key>（静态路径，无参数）
+        |
+   服务端渲染两样东西：
+   ① 默认对比表 —— 该组默认 3 款的静态 HTML（爬虫 / 无 JS 可读）
+   ② 规格数据岛 —— <script type="application/json" id="cmp-data">
+        |
+   JS（defer）读 localStorage：
+      无有效选择 --> 不动，保留服务端默认表
+      有有效选择 --> 从数据岛取值、按 handle 组装对比表，替换默认表
+        |
+   URL 全程无参数 · 不使用 history.pushState
+```
+
+**五个设计要点**
+
+| 要点             | 做法                                                                                                                                                                                                             | 解决什么                               |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| 分组路由         | 每个 `spec.compare_group` 值对应一个 Shopify Page（`/pages/compare-<group-key>`），用 `templates/page.compare.json` 渲染。主题设置里维护 group → page 的映射                                                     | 服务端**知道自己在渲染哪一组**         |
+| 服务端数据岛     | `sections/compare-data.liquid` 把该组商品的规格输出成 `<script type="application/json" id="cmp-data">`。**商品数上限 50**（= Liquid 单页 `for` 循环硬限）；**字段白名单见 §5.3 末**；**列式编码**。置于 DOM 末尾 | metafield 只能服务端取                 |
+| **服务端默认表** | 服务端渲染该组默认 3 款的静态对比表（默认款数由设置控制，2–4）                                                                                                                                                   | 爬虫、无 JS、JS 报错时页面仍有实质内容 |
+| 客户端渲染       | JS 读数据岛 + localStorage，用**同一个表格 snippet** 重建表头 / `<tbody>` 并替换                                                                                                                                 | 用户选择生效；不引入第二套标记规范     |
+| 用户状态         | 选择清单存 `localStorage`（key `ib:compare:v1`，只存 handle + 分组键）                                                                                                                                           | 刷新/翻页状态保留；不存价格等易变数据  |
+
+**⚠️ 为什么"纯客户端渲染"仍然必须保留数据岛**
+
+> **产品 metafield 无法从客户端读取。** AJAX Product API 的 `GET /products/{handle}.js` 返回结构中**不含 `metafields` 字段**。客户端要拿到 metafield，只有服务端数据岛下发这一条可行路径。
+
+**载荷与性能（v4.1 修正归因）**
+
+| 成本                 | 机制                                                                                                                                        | 量级                                                 | 对策                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| ① 传输字节           | 计入 HTML 文档大小，随文档一起 gzip 下发                                                                                                    | 满编 50 款约 3–6 KB gzip（**估算，以 A3 实测为准**） | 列式编码 + §5.3 末的字段白名单                                                         |
+| ② **服务端渲染耗时** | Liquid 数组遍历时，**访问 `product.price` / `product.featured_image` / `product.variants` 等对象会触发数据库查询**；只访问 metafield 时不会 | 取决于模板实际访问了哪些对象                         | 数量闸 50 + 数据岛模板**只访问 metafield**，不访问价格/图片/库存 + `assign` 移到循环外 |
+| ③ 主线程             | `type="application/json"` 的 script **不被浏览器执行**；`JSON.parse` 只在用户有有效选择时才调用                                             | 默认为零                                             | 懒解析：默认路径从不 `JSON.parse`                                                      |
+
+> **归因修正说明（v4.1）**：原文写"Liquid 数组里的每个商品都会触发变体 / 图片 / 价格 / 库存的数据库查询"，这是过宽的表述。实际触发条件是**模板代码是否访问了这些对象**。数据岛模板只访问 metafield 时，不会触发价格/库存查询。但对比页的其他 section（如表头缩略图）若访问 `product.featured_image`，则会触发。**优化方向是：数据岛模板与其他 section 分开，数据岛只碰 metafield。**
+
+**四道闸**
+
+1. **数量闸：每组 ≤ 50 款。** 平台硬限。
+2. **字段闸：只序列化 §5.3 末白名单里的字段。**
+3. **编码闸：列式编码。**
+4. **位置闸：置于 DOM 末尾**；对比页表头**每列各渲染 1 张缩略图**（共 3–4 张），不渲染商品卡大图。
+
+**体量预算（待 A3 实测校正）**
+
+| 场景                                | 原始 JSON | 预计 gzip       | 判定              |
+| ----------------------------------- | --------- | --------------- | ----------------- |
+| 满编 50 款 × 白名单字段（列式编码） | ~18–20 KB | **估算 < 8 KB** | ⚠️ 以 A3 实测为准 |
+| 满编 50 款 × 全部字段（对象式）     | ~50 KB    | ~12–15 KB       | ⚠️ 尚可但无必要   |
+
+> **v4.1 标注**：上表为**估算值**，不是验收基线。§6.2.5 的验收标准中"数据岛 gzip 后 < 8 KB"改为"以 A3 实测结果为准，且不超过 `docs/TASKS.md` 中记录的实测基线"。
+
+#### 6.2.2 功能规格
+
+| 项             | 规格                                                                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 入口           | 产品卡（集合页 / 搜索结果 / 首页商品卡）与产品页上的 "Add to compare" 按钮                                                                            |
+| 选择上限       | **4 款**（默认 3）                                                                                                                                    |
+| 分组约束       | 仅 `spec.compare_group` 相同者可同时加入。**跨组时不得只给一句提示** —— 必须给出「清空并加入这一款」可执行动作；该商品分组键为空时加入入口 `disabled` |
+| 排除规则       | `spec.compare_hidden = true` 的商品不出现在勾选入口                                                                                                   |
+| 对比栏         | 底部悬浮条：缩略图、移除按钮、"Compare (3)" 主按钮；可折叠                                                                                            |
+| 参数行         | 由分组决定行清单（**见 §5.3 末白名单**）；差异值高亮；相同值可折叠                                                                                    |
+| **变体处理**   | **对比表只呈现产品级参数：表头即产品标题，不显示变体名、不提供变体切换器**。若 `spec.spec_variance_note` 非空，该列表头显示提示图标，展开后呈现原文   |
+| 服务端默认表   | 服务端渲染该组默认 3 款的静态对比表；JS 检测到 localStorage 有有效选择时替换该表。默认款数由设置控制（2–4）                                           |
+| 残缺数据       | 显示 `—`，**不得显示 0 或空白**                                                                                                                       |
+| **分享与直达** | **v1.0 不提供**：URL 不带参数 → 对比清单不跨浏览器/跨设备共享、无直达链接                                                                             |
+| 空状态         | 该组可对比商品 < 2 时显示"该分组暂无可对比商品" + 返回集合页入口；**不得渲染空的对比表骨架**                                                          |
+
+#### 6.2.3 SEO 与重复内容
+
+**决策：方案 A（纯本地状态） + 方案 E（每组一页）。**
+
+| 项           | 做法                                                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| 对比页 URL   | **永不出现查询参数**（勾选、跳转、移除、刷新全程）                                                               |
+| canonical    | 对比页模板**无条件静态输出** `<link rel="canonical" href="{{ request.origin }}{{ request.path }}">`              |
+| 服务端默认表 | 服务端渲染该组默认 3 款的静态对比表（可索引、无 JS 可读）                                                        |
+| 索引开关     | 主题设置提供 `compare_page_indexing`，商家可一键切 noindex                                                       |
+| 代码禁止项   | 主题的任何部分都不得生成带查询参数的对比 URL；不得出现把对比参数写入 URL 的 `history.pushState` / `replaceState` |
+
+**验收标准（SEO 部分）**
+
+- [ ] 对比页 URL **永不出现查询参数**。
+- [ ] **关闭 JS** 访问对比页，仍能看到该组默认对比表与选型文案。
+- [ ] 任何来源的带参对比 URL，其源码 canonical 均指向去参路径。
+- [ ] 页面源码中不存在由 JS 注入的 robots / canonical 指令。
+
+#### 6.2.4 无障碍要求
+
+- 勾选按钮必须是 `<button>` 而非 `<a>`，带 `aria-pressed` 状态。
+- 对比栏出现 / 数量变化时用 `aria-live="polite"` 播报"已添加 1 款，共 3 款"。
+- 参数表用 `<caption>` + `<th scope="col">`（型号列表头）+ `<th scope="row">`（参数名）。
+- 移动端横向滚动时型号列表头 sticky，另提供"下一款"切换按钮作为键盘友好的替代路径。
+- 变体差异提示：图标必须是 `<button aria-expanded>`，展开内容与图标用 `aria-describedby` 关联，展开/收起时 `aria-live` 播报说明原文。
+- 移除对比项后焦点回到合理位置（不丢失）。
+- **JS 接管渲染时**：服务端默认表与 JS 渲染表**必须使用同一个表格 snippet**，标记结构与屏读顺序完全一致。
+- **表格被替换时不得丢焦点**：若替换由用户操作触发（移除 / 添加），焦点由该操作的控件负责维持；若替换由页面加载触发（恢复上次清单），用 `aria-live="polite"` 播报"已载入你对比清单中的 3 款"，且**不抢占焦点**。
+
+#### 6.2.5 验收标准
+
+- [ ] 勾选 → 刷新 → 状态保留；跨分组添加时提示且不污染清单。
+- [ ] **URL 全程不含查询参数**；代码中无写入对比参数的 `history.pushState` / `replaceState`。
+- [ ] **关闭 JS** 后打开对比页，仍能看到该组默认 3 款的静态对比表与选型文案；勾选入口优雅不出现。
+- [ ] JS 接管后表格结构与服务端默认表**逐项一致**（同一 snippet），且不丢焦点、不重复播报。
+- [ ] 对比页在**满编 50 款**的分组下，数据岛 gzip 体积**以 A3 实测结果为准，且不超过 `docs/TASKS.md` 中记录的实测基线**；不阻塞 LCP；Theme Inspector 复核 Liquid 渲染耗时无异常尖峰。
+- [ ] 数据岛**只包含 §5.3 末白名单里的字段**（源码/脚本核对：未在白名单中的 metafield 不出现在 JSON 里）；采用列式编码。
+- [ ] 分组商品数 > 50 时：主题编辑器出现警告，对比页给出说明文案，且用户加入的超范围商品**显式降级**（占位说明 + 商品页链接），**不得静默丢列**。
+- [ ] 含多变体且填了 `spec.spec_variance_note` 的商品，表头出现提示图标，可展开、可键盘访问、状态可播报。
+- [ ] 参数缺失时显示 `—`，**任何情况下不得显示 0**；`spec_variance_note` 为空时不渲染任何提示。
+- [ ] 对比页可纯键盘完成全部操作，`aria-live` 有播报。
+- [ ] 对比页移动端 Lighthouse 性能不因该模块下降超过 3 分。
+
+#### 6.2.6 商品数上限与超限降级
+
+**上限来源**：`for` 循环单页 50 次迭代是平台硬限。所以 v1.0 里**一个对比分组页最多覆盖 50 款商品**。
+
+| 场景                            | 行为                                                                                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 分组 ≤ 50 款（正常）            | 数据岛覆盖该组全部商品，任意 2–4 款组合都能渲染                                                                                                         |
+| 分组 > 50 款                    | 数据岛覆盖该组**排序后的前 50 款**；主题编辑器在 group → page 映射处警告"该分组 N 款 > 上限 50，建议拆分为子分组"；对比页表格下方展示一行说明（可关闭） |
+| 用户加入了数据岛未覆盖的 handle | **不静默失败**：该列位置显示"该商品不在本页数据范围内" + 产品页链接 + 移除按钮；其余列正常渲染                                                          |
+
+#### 6.2.7 跨类型校验与三层防御
+
+**判定依据：`spec.compare_group`，不是 `product_type`。**
+
+| 层            | 位置                                  | 做什么                                                   | 失败时的行为                                                                                                                                             |
+| ------------- | ------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **L1 入口层** | 商品卡 / 产品页的 Add to compare      | 读出该商品的分组键，与 `localStorage` 清单中的分组键比对 | 不同组 → **不写入**；提示 + **「清空并加入这一款」** 主按钮 / 「取消」。分组键为空 → 按钮 `disabled` + `aria-describedby` 说明「该商品尚未设置对比分组」 |
+| **L2 页面层** | `/pages/compare-<group>` 的服务端渲染 | 页面本身即一个组，数据岛只装该组商品                     | **构造上不可能混组**                                                                                                                                     |
+| **L3 渲染层** | 对比页的客户端接管 JS                 | 逐条核对 `localStorage` 条目的分组键与当前页面的分组键   | 不符、或 handle 不在数据岛 → **剔除该条 + `aria-live` 播报**，其余条目正常渲染                                                                           |
+
+**L1 能成立的前提**：每张商品卡必须输出 `data-compare-group` 属性。**空分组键不兜底**。
+
+**商家侧的一致性检测**
+
+| 手段           | 做法                                                                                                                                                             |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 主题编辑器     | 在 group → page 映射处显示该组商品数**与组内 `product_type` 分布**；出现 ≥2 种差异明显的类型时警告。**这些提示只在 `request.design_mode` 为 true 时渲染**        |
+| CSV 预校验脚本 | `tools/build-import-csv.py` 增加两条跨行规则：① 同一 `compare_group` 跨越多个 `product_type` → 警告；② 同一 `product_type` 分散到多个 `compare_group` → 提示复核 |
+| 商家文档       | 给出「如何划分对比分组」判定规则                                                                                                                                 |
+
+**验收标准**
+
+- [ ] 连续加入割草机与链锯：第二款**不被写入**清单；界面出现「清空并加入」可执行动作；原清单未被污染。
+- [ ] 在 devtools 里手工把 `localStorage` 条目改成跨组 → 刷新对比页后该条被**剔除并播报**，其余条目正常渲染。
+- [ ] 某商品 `compare_group` 为空 → 加入按钮 `disabled`、键盘无法触发、有可读说明，**且不落入任何兜底组**。
+- [ ] 故意把一款链锯填成割草机的分组 → **主题编辑器与预校验脚本都能报出「组内类型不一致」**。
+- [ ] 面向购物者的页面上**不出现任何商家侧校验提示**。
+
+---
+
+### 6.3 配件与耗材关联
+
+**目标**：把耗材复购变成产品页的原生转化路径。
+
+| 层       | 实现                                                                                                                          |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 主路径   | 原生 **complementary products**（互补推荐 intent），由商家在平台侧配置；这是官方强制主题支持的功能                            |
+| 增强层   | `acc.consumables`（`list.product_reference`）驱动自定义 section，分类化展示刀片/滤芯/机油/电池，带适配说明 `acc.fitment_note` |
+| 加购     | Cart AJAX API（`/cart/add.js`，items 数组）实现"一键加购主机 + 耗材"，加购后更新购物车抽屉并 `aria-live` 播报                 |
+| 页面覆盖 | 产品页（主）、购物车页（补充建议）、对比页（不含，避免与对比功能语义冲突）                                                    |
+
+**多变体耗材的处理**
+
+| 情况                                         | 行为                                               |
+| -------------------------------------------- | -------------------------------------------------- |
+| 耗材只有 1 个可用变体                        | 直接加入购物车                                     |
+| 耗材有多个可用变体（刀片有尺寸、机油有容量） | **该行必须显示变体选择器，用户选完才允许加购**     |
+| 用户未选择                                   | 加购按钮禁用，并显示"Choose a size / capacity"提示 |
+
+**合规与边界**
+
+- **不得**实现捆绑折扣、买赠、购物车级折扣——属 App 功能范畴。
+- 加购按钮必须真实调用购物车接口，不得是装饰性 UI。
+- 耗材缺货：按钮置灰显示 "Sold out"，不得静默失败。
+
+**验收标准**
+
+- [ ] 产品页可一键把主机与 1–3 项耗材加入购物车，购物车内容与数量正确。
+- [ ] 多变体耗材必须选完变体才能加购；未选时按钮禁用且有提示。
+- [ ] 加购后屏幕阅读器播报结果；错误（超库存、变体不可用）有明确提示。
+- [ ] 无 JS 时降级为常规单件加购表单仍可用。
+
+### 6.4 大件物流提示
+
+**目标**：把"配送预期"前置到产品页与购物车，降低售后纠纷。
+
+**能力边界**：主题**无权**创建或绑定物流模板，也**无法**计算运费——那是店铺级配置。主题只能做**条件化提示**。
+
+| 位置       | 呈现                                                                                                                                          |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 产品页     | 物流等级徽标（Parcel / Oversized / Freight LTL）+ 卸货要求（`needs_liftgate`）+ 备货天数（`lead_time_days`）+ 组装提示（`assembly_required`） |
+| 产品页浮层 | 点击"配送详情"打开页面内 dialog，展示通用政策                                                                                                 |
+| 购物车页   | 车内有 `Oversized` / `Freight LTL` 时：**行级**提示 + 顶部汇总提示条                                                                          |
+| 全局       | 公告栏可放通用超大件政策（不属于本模块）                                                                                                      |
+
+**实现要点**
+
+- 全部条件渲染基于 metafield，**不依赖任何 App 或第三方物流服务**。
+- 未填写物流 metafield 的商品：**不显示该模块**（不显示"未知"之类的噪音）。
+- 物流提示**不得伪装成实时运费报价**；文案必须声明"参考信息，最终运费与时效以结账为准"。
+- dialog 遵循 §8.2 的模态无障碍规范。
+
+**验收标准**
+
+- [ ] 不同 `shipping_class` 的商品在产品页显示正确提示。
+- [ ] 购物车含超大件时汇总提示出现，纯小件时完全不出现。
+- [ ] 未配置 metafield 的商品不产生空模块。
+
+### 6.5 动力平台导航
+
+**目标**：服务"已有 40V 电池、想再买同平台裸机"的存量用户——这是 OPE 品类特有的高转化路径。
+
+| 层       | 实现                                                                                                                       |
+| -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 集合     | **自动化集合**，条件 `platform.battery_platform` is equal to `<值>`。**前置条件**：在 metafield 定义里开启「用作集合条件」 |
+| 导航     | 主导航「Shop by Platform」一级项，下挂各平台                                                                               |
+| 入口页   | `list-collections.json` 渲染平台卡片：平台介绍、兼容工具数、平台内热销                                                     |
+| 产品页   | 「平台兼容」区块：本机平台 + 同平台其他工具的自动化集合入口                                                                |
+| 耗材交叉 | 平台内电池/充电器自动进入配件推荐候选                                                                                      |
+
+> **数据源修正（v4.1）**：原文写"产品页「平台兼容」区块：本机平台、**相关裸机入口**"，但 `spec.compat_platforms` 已在 §5.3 C 移除（A1 验证不支持 CSV 导入）。**修正后的数据源**：产品页「平台兼容」区块显示 `platform.battery_platform` 的值（如 `40V`），并提供一个指向**同平台自动化集合**的链接。该集合由 `platform.battery_platform is equal to 40V` 条件自动生成，无需新增字段。原"相关裸机入口"的语义由该集合承担——集合内可包含同平台的裸机与套装商品。
+
+**验收标准**
+
+- [ ] 从任意平台入口进入后，仅显示该平台商品。
+- [ ] 产品页平台区块正确显示 `battery_platform` 值与同平台集合入口；无平台商品（如手动工具）时整块不渲染。
+- [ ] 新增商品并填 `platform.battery_platform` 后能**自动**进入对应集合。
+
+### 6.6 规格速览卡（支撑功能）
+
+**产品页**首屏下方固定位置，以图标 + 数值展示 4–6 项最影响决策的参数（切割宽度 / 动力源 / 操作方式 / 重量 / 噪音 / 保修）。这是"参数即商品"假设最直观的落点。
+
+- 展示哪几项由 section schema 配置（商家可换行、可加行、可排序）。
+- 缺值自动跳过该行，不留空位。
+- 单位随 `settings.spec_unit_system` 切换。
+
+> **与集合页网格的区别**：集合页商品卡只输出 2–3 项参数（见 §8.1），规格速览卡是**产品页专属**的 4–6 项展示。
+
+---
+
+## 7. 通用功能与合规要求
+
+### 7.1 官方强制功能覆盖矩阵（缺一即拒）
+
+| #   | 功能                            | 本主题落点                                            | 状态 |
+| --- | ------------------------------- | ----------------------------------------------------- | ---- |
+| 1   | Sections Everywhere             | 全 JSON 模板 + section groups                         | 必须 |
+| 2   | Discounts                       | Cart / 结账 / 订单显示单品与整单折扣                  | 必须 |
+| 3   | Accelerated checkout            | Product page 与 Cart page **默认启用**，品牌色不改    | 必须 |
+| 4   | Faceted search filtering        | §6.1                                                  | 必须 |
+| 5   | Gift cards                      | `gift_card.liquid`，二维码 ≥120×120 px                | 必须 |
+| 6   | Image focal points              | `image_picker` 焦点支持                               | 必须 |
+| 7   | Social sharing images           | `page_image` 对象                                     | 必须 |
+| 8   | Country / currency selection    | UX 指南对齐                                           | 必须 |
+| 9   | Language selection              | 同上                                                  | 必须 |
+| 10  | Multi-level menus               | §4.3 导航结构                                         | 必须 |
+| 11  | Newsletter forms                | footer                                                | 必须 |
+| 12  | Pickup availability             | Product page                                          | 必须 |
+| 13  | Related product recommendations | Product page                                          | 必须 |
+| 14  | Complementary recommendations   | §6.3 主路径                                           | 必须 |
+| 15  | Rich product media              | 3D / 视频，覆盖 product、featured product、quick view | 必须 |
+| 16  | Search + predictive search      | `search.json` + 预测搜索                              | 必须 |
+| 17  | Selling plans                   | Cart page 显示订阅计划                                | 必须 |
+| 18  | Shop Pay Installments           | `product.liquid` banner                               | 必须 |
+| 19  | Unit pricing                    | Collection / Product / Cart / Customer                | 必须 |
+| 20  | Variant images                  | 变体图切换                                            | 必须 |
+| 21  | Follow on Shop                  | `login_button` filter，品牌色不改                     | 必须 |
+| 22  | Account component               | header 中 `<shopify-account>`，桌面与移动均可见       | 必须 |
+
+### 7.2 代码与资源红线
+
+- 必须基于 Skeleton Theme 或完全原创；**不得**出现 Dawn / Horizon 衍生代码。
+- 不得含 `.scss` / `.scss.liquid`；不得含压缩 `.css` / `.js`（ES6 产物与第三方库除外）。
+- 不得修改或解析 `content_for_header`；不得包含 `robots.txt.liquid`。
+- 提交包**不得**包含 `config/markets.json`。
+- 资源必须走 Shopify CDN（`asset_url` / `image_url`），不得用外部 CDN；不得硬编码 `http://` / `https://` 资源链接。
+- 站内 URL 一律用 `routes` 对象。
+- 不得实现依赖 App 的功能（愿望清单、购物车折扣、预约、Instagram feed 等）。
+- 不得伪造数据：库存紧张提示、倒计时、浏览量均为禁止项。
+- 主题独占上架 Theme Store，不得含外部营销内容或联盟链接。
+
+---
+
+## 8. 非功能性需求
+
+### 8.1 性能
+
+**准入线**：home / product / collection 三页，桌面与移动端，Lighthouse 性能**平均分 ≥ 60**；目标 **≥ 80**。
+
+| 指标                                     | 目标     |
+| ---------------------------------------- | -------- |
+| Lighthouse Performance（移动端三页平均） | **≥ 80** |
+| LCP                                      | < 2.5 s  |
+| INP                                      | < 200 ms |
+| CLS                                      | < 0.1    |
+
+**本主题特有的性能风险点与对策**
+
+| 风险                             | 对策                                                                                                                                                     |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 集合页商品卡含大量参数           | 网格内只输出 2–3 项参数；完整参数留给产品页与对比页                                                                                                      |
+| **对比页 JSON 数据岛**           | 商品数上限 50 + 只序列化 §5.3 末白名单字段 + 列式编码 + 置于 DOM 末尾 + 表头每列 1 张缩略图。**Liquid 数据岛模板只访问 metafield，不访问价格/图片/库存** |
+| 筛选抽屉 / 对比栏注入大量 DOM    | 隐藏组件**首次打开时才构建 DOM**；移动与桌面菜单合并                                                                                                     |
+| metafield 在循环内反复读取       | 把取值与 `assign` 移到循环外                                                                                                                             |
+| 产品页参数行数多导致 Liquid 复杂 | 参数行定义放 schema，用 `for` + `limit`，避免嵌套循环                                                                                                    |
+| 高清单品图                       | LCP 图 `fetchpriority="high"` + eager；非首屏 lazy；统一 `image_tag` + srcset + width/height                                                             |
+| 字体                             | 仅用 `font_picker` 可用字体；`font_modify` 加载字重；fallback 用 `size-adjust` 降 CLS                                                                    |
+
+**强制要求**：所有 script 带 `defer` / `async`；所有 `img` 带 `width` / `height`；基础 CSS 与字体 preload 置于 `content_for_header` 之上；Theme Check 不得出现 Error。
+
+### 8.2 无障碍
+
+**准入线**：三页 × 桌面移动，Lighthouse 无障碍**平均分 ≥ 90**；目标 **≥ 95**。基准 **WCAG 2.1 AA**。
+
+- 键盘可达全部功能：筛选抽屉、对比勾选、对比栏、参数表、模态、加购确认、变体切换。
+- 焦点顺序 = DOM 顺序；焦点态可见；无正 `tabindex`；禁用 `autofocus`。
+- Skip link 存在且聚焦可见。
+- `lang="{{ request.locale.iso_code }}"`；不得禁用缩放。
+- 标题层级正确，每页一个 `h1`。
+- 所有 `img` 有 `alt`（装饰性为 `alt=""`）。
+- 表单 label + `for`、`required`、`autocomplete`；错误用 `aria-describedby` 并移焦。
+- **动态区域一律 `aria-live`**：筛选结果计数、对比清单数量、加购结果、变体切换结果。
+- 对比 / 参数表格：`caption` + `th scope`。
+- 抽屉与模态：`role="dialog"`、打开移焦、焦点锁定、`Esc` 关闭回焦。
+- 对比度：正文 4.5:1；大字号与图标 3:1；输入框边框 3:1；颜色不作唯一信息载体。
+- 触摸目标 ≥ 44×44 px——**高风险控件：对比勾选框、耗材变体选择器、数量步进器**。
+
+### 8.3 浏览器兼容
+
+| 平台    | 目标                                                                                                          |
+| ------- | ------------------------------------------------------------------------------------------------------------- |
+| 桌面    | Safari 最新 2 版（Mac）；Chrome 最新 3 版（Mac/PC）；Firefox 最新 3 版（Mac/PC）；Edge 最新 2 版（PC）        |
+| 移动    | Mobile Safari 最新 2 版（iOS）；Chrome Mobile 最新 3 版（Android/iOS）；Samsung Internet 最新 2 版（Android） |
+| Webview | Instagram、Facebook、Pinterest 最新版（Android/iOS）可浏览与购买                                              |
+
+必须实测的流程：筛选 → 产品页 → 对比 → 加购 → 购物车 → 结账。
+
+### 8.4 SEO
+
+- 输出 theme SEO metadata（title / meta description / canonical）。
+- Google rich product snippets。
+- Open Graph 与 Twitter card 标签；社交占位文本留空。
+- 不得包含 `robots.txt.liquid`。
+- 对比页 canonical 处理见 §6.2.3（**服务端静态输出，不用 JS 注入**）；对比页 URL **不携带任何查询参数**。
+- 对比页必须在**无 JS** 时仍有可索引的服务端正文。
+
+### 8.5 国际化
+
+- 所有面向商家文案走 `t:` 翻译键，`locales/en.default.json` 为基准。
+- 参数单位可切换（英制默认 / 公制），逻辑集中在 `snippet/spec-value.liquid`。
+- 支持 RTL 布局（逻辑属性 `margin-inline` 等），不写死 `left` / `right`。
+
+### 8.6 商家体验
+
+- 所有设置项有 `label`，默认值是可用示例而非占位符。
+- 术语统一（home page、slideshow、checkout、heading、subheading、body text、signup、favicon、sidebar、button label、social media、navigation、main menu、cart type）。
+- 文案为 sentence case + 美式英语（`color`、`canceled`）。
+- 所有 section / block 独立可配置、可排序；参数行可增删。
+- 商家未填写 metafield 时页面不崩、不留空模块。
+
+---
+
+## 9. 演示店铺规范
+
+### 9.1 虚拟品牌与产品图
+
+| 项       | 决定                                                                                                             |
+| -------- | ---------------------------------------------------------------------------------------------------------------- |
+| 品牌     | **自建虚拟品牌**，不出现任何真实厂商商标                                                                         |
+| 产品图   | **AI 生成**或原创拍摄                                                                                            |
+| 商品名   | 自拟定型号命名体系（**`NB-21P`、`NB-4600` 等**，`NB` = 演示店品牌 Northbark 的缩写），**不得**使用厂商真实型号码 |
+| 参数数值 | 可以使用行业真实数值——**事实不受版权保护**                                                                       |
+| 文案     | 全部自写，不得复制厂商文案                                                                                       |
+
+### 9.2 虚拟品牌候选
+
+| 候选                        | 语感       | 备注                                            |
+| --------------------------- | ---------- | ----------------------------------------------- |
+| **Northbark Outdoor Power** | 户外、北美 | 首选；**刻意与主题名 `Coppice` 不产生语义关联** |
+| Timbersedge Power           | 坚固、木质 | 次选                                            |
+| Cinderpath Equipment        | 硬朗、路径 | 备选                                            |
+
+> **虚拟品牌也必须过商标检索**："虚构"不等于"不侵权"。
+
+### 9.3 AI 产品图的使用规范
+
+| 项         | 要求                                                                         |
+| ---------- | ---------------------------------------------------------------------------- |
+| 商用条款   | 核验所用图像生成工具的商用许可条款并存档                                     |
+| 商标洁净   | 图中不得出现真实品牌 logo、型号标、可识别包装                                |
+| 型号一致性 | 图中机器规格必须与填写的 metafield 一致                                      |
+| 视觉一致性 | 同一系列使用统一的提示词与光线/角度风格                                      |
+| 人像       | 避免生成可识别的真实人物                                                     |
+| 无障碍     | 每张图给出**描述机器与场景的实质 alt**                                       |
+| 数量       | 每商品 2–4 张（主图 + 细节 + 场景）；耗材 1–2 张                             |
+| 版权存档   | `docs/demo-store/asset-provenance.md` 记录每张图的生成工具、日期、提示词摘要 |
+
+### 9.4 演示店内容规模
+
+- 与标签一致：**`Garden` + `Some (11-100+)`**。
+- **最终规模：80–120 个商品**（主机 40–60 + 耗材/配件 40–60），覆盖 **4 个对比分组**。
+- **当前样例集：24 个商品 / 26 行**（`demo-products.csv`），是最终规模的核心子集，已覆盖全部 4 个对比分组与本节要求的全部特殊样例。
+- **100% 填全 6 个必填字段 + 电池类商品的 `platform.battery_platform`**——演示店是审核方判断"数据模型是否可用"的唯一证据。
+- 至少 3 个商品的 `logistics.shipping_class = Freight LTL`。
+- 至少 1 个商品含多变体（20"/22"）且填了 `spec.spec_variance_note`。
+- 另至少 1 组"同型号不同尺寸"按**独立产品**录入。
+- 禁止 Lorem Ipsum、禁止占位符、禁止未发布的空页面。
+
+**字段值与规模已定稿**：`docs/demo-store/demo-catalog.md`（12 款主机 × 4 组 + 12 款耗材）、`demo-products.csv`（可直接导入）、`field-list.md`（字段口径与规则）。
+
+#### 演示范围为什么收缩为 4 组
+
+**移除发电机组与吹雪机组**，并删除发电机专用字段 `spec.output_kw`。
+
+| 维度                     | 说明                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **合规不受影响**         | 官方 §20 Demo stores 判定单位是**行业**，不是品类。四个分组同属 `Home & Garden > Lawn & Garden > Outdoor Power Equipment` |
+| **移除发电机的实质理由** | 它是**整台主机**落在 `Hardware > Power & Electrical Supplies > Generators`，与演示店的 `Garden` 标签存在张力              |
+| **移除吹雪机的理由**     | 季节性强、与"园艺"联想弱                                                                                                  |
+| **代价**                 | 参数结构的展示面由 6 种降到 3 种，但官方 versatility 是 recommendations 而非 requirements                                 |
+| **不受影响的能力**       | `compare_group` 仍是商家可自行扩展的机制；跨类型校验的演示场景仍在；5 个筛选维度全部照旧可用                              |
+
+---
+
+## 10. 主题命名与核验
+
+### 10.1 已定稿（待 USPTO 复核）
+
+**主题名：`Coppice`**（1 词，7 字符，名词）。首个 preset 必须与父主题同名 → **`Coppice`**。第二 preset（v1.1）→ `Coppice Pro`。
+
+**Tagline 建议**：`Rugged storefront for outdoor power equipment dealers`（53 / 70 字符）
+
+> **状态说明（v4.1）**：`Coppice` 已通过 Theme Store 占用核验与 Justia 商标初筛，但 **USPTO TESS / TSDR 逐条复核尚未完成**。在 T0.3 完成之前，主题名状态为"候选定稿"，不是"最终定稿"。若 USPTO 发现软件类（第 9/42 类）live 商标冲突，回退备选为 `Thicket`（语义更直白，代价是商标环境较拥挤）。
+
+### 10.2 Coppice 词义与适用性
+
+`coppice`（晚 14 世纪作 `coppes`）← 古法语 `copeiz`（被砍伐过的森林）← 通俗拉丁语 `*colpaticium`（"被砍过的"）← `*colpāre`（砍）。**语源核心是"砍"**，直指 OPE 行业的清灌作业。读音 /ˈkɒpɪs/（英）／/ˈkɑːpɪs/（美），两个音节。
+
+**官方指南符合度**：1 词、7 字符、名词、常规拼写、无品牌/公司/SEO/行业分类词冲突、Theme Store 内唯一。全部满足。
+
+**三条保留意见**：① 英式林业用语，北美认知度中等；② 双 `p` 拼写与 `copious` 发音可能混淆；③ 与 `copse` 需选定其一。
+
+### 10.3 核验结果
+
+| 方法                                           | 结果                             | 状态              |
+| ---------------------------------------------- | -------------------------------- | ----------------- |
+| Theme Store 全量 handle 比对（340 个英文主题） | ✅ 未占用                        | 已完成            |
+| WordPress.org 主题目录 API                     | ✅ 无同名                        | 已完成            |
+| 命名风格反查（34 个品类词模式）                | 命中 0 个                        | 已完成            |
+| 美国商标初筛（Justia）                         | 纯文字商标仅 2 条，软件类 0 命中 | 已完成            |
+| **USPTO TESS / TSDR 逐条复核**                 | **待完成**                       | **T0.3 验收条件** |
+
+> 提交前必须在 USPTO 逐条核对 Justia 初筛发现的 2 条纯文字商标（办公家具 / 金融资产管理）的 live/dead 与实际类别。**这是主题名最终定稿的前置条件。**
+
+### 10.4 Listing 素材清单
+
+| #   | 素材                 | 硬约束                                              |
+| --- | -------------------- | --------------------------------------------------- |
+| 1   | 主题名 + preset 名   | 来自 ZIP；1–2 词 / <30 字符                         |
+| 2   | **Tagline**          | 一行广告，**≤ 70 字符**                             |
+| 3   | Metadata description | 供搜索引擎结果页与链接预览使用                      |
+| 4   | 价格                 | $100–$500 USD，$10 一档（建议 $320）                |
+| 5   | 行业标签             | 单选：`Garden`                                      |
+| 6   | 目录规模标签         | 单选：`Some (11-100+)`                              |
+| 7   | 3 个 highlights      | 第 1 条可为 YouTube 视频（≤2 分钟）；静图 1600×1200 |
+| 8   | 演示店链接           | 每个 preset 一条，须完整可用                        |
+| 9   | 双端首屏截图         | 桌面 2000×2496 + 移动 750×1334；每张需 alt 文本     |
+| 10  | Features 标签        | 从 Merchandising / Marketing / Cart 等分类中勾选    |
+| 11  | 跟踪 ID              | GA4、Meta Pixel 等（可选）                          |
+| 12  | 商家支持信息         | 联系表单、文档链接、评价通知邮箱                    |
+| 13  | 提交备注             | 演示店统一密码、给审核团队的说明                    |
+
+---
+
+## 11. 风险登记册
+
+| #     | 风险                                                         | 概率            | 影响                                 | 对策                                                                                                                                             |
+| ----- | ------------------------------------------------------------ | --------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **1** | **无真实商家 → "参数即商品"的录入模型从未被真实验证**        | **高**          | 高：主题过审但无人用                 | ① 必填字段压到 6 个；② 交付 CSV 批量导入流水线 + 预校验脚本；③ 演示店全流程手工走一遍并记录实际用时；④ 文档给出"30 分钟完成 20 个商品"的实操路径 |
+| 2     | metafield 数据不完整导致筛选/对比出现空值                    | 高              | 体验崩塌、审核质疑                   | 缺值优雅降级；演示店 100% 填全；商家文档写清必然行为                                                                                             |
+| 3     | 误用 Dawn 作为基线                                           | 中              | **致命：直接拒稿**                   | `shopify theme init` 拉 Skeleton Theme；CI 禁止引入 Dawn 源文件                                                                                  |
+| 4     | 对比页数据岛拖垮性能                                         | 中              | 性能分不达标                         | 商品数上限 50 + 只序列化白名单字段 + 列式编码 + 置于 DOM 末尾 + 懒解析 + 数据岛模板只访问 metafield                                              |
+| 5     | `list.single_line_text_field` 的 CSV 导入行为与官方清单不符  | 中              | 商家录入受阻                         | **已验证不支持，已从数据模型移除该字段**                                                                                                         |
+| 6     | **产品级参数无法表达变体间差异 → 对比表可能给出片面结论**    | 中              | 商家按片面结论选购，退货率上升       | ① `spec.spec_variance_note` 显式标注差异；② 商家指南给出"何时把尺寸拆成独立产品"判定规则；③ 演示店备一组真实拆分样例                             |
+| 7     | 筛选自研 AJAX 绕过原生筛选                                   | 低              | SEO 与合规风险                       | 坚持原生 `collection.filters` 渲染                                                                                                               |
+| 8     | 物流提示被判定为"虚假承诺"                                   | 低              | 审核风险                             | 明确声明为参考信息、以结账为准                                                                                                                   |
+| 9     | 行业/目录标签与演示店不一致                                  | 低              | 审核被拒                             | 演示店目录规模与 `Garden` / `Some (11-100+)` 严格对齐                                                                                            |
+| 10    | **AI 图片与品牌权利问题在提交末期暴露**                      | 中              | 审核被拒或被迫返工                   | 权利清单 + 资产溯源表；品牌先过商标检索                                                                                                          |
+| 11    | 与在架主题差异不足                                           | 中              | 以"缺乏独特性"被拒                   | 差异集中在参数系统，而非视觉换皮                                                                                                                 |
+| 12    | **纯投稿、单人 → "2 个工作日响应"承诺不可持续**              | **高**          | 评分下滑、被下架                     | 自助优先的支持结构；把"2 个工作日"限定为**首个响应**                                                                                             |
+| 13    | **主题名 `Coppice` 的北美认知度中等**                        | 低              | 削弱 listing 点击意愿                | 描述落点全部交给 tagline 与 highlights                                                                                                           |
+| 14    | 上架后维护负担                                               | 高              | 被动下架                             | 订阅 changelog；更新时间隔 ≥4 周                                                                                                                 |
+| 15    | 未达性能/无障碍门槛                                          | 中              | 拒绝                                 | 专项阶段 + 官方基准复现                                                                                                                          |
+| 16    | **对比清单不可分享、不可直达**                               | —（确定性取舍） | 低：跨设备 / 转发场景流失            | 接受。v1.1 用方案 B 低成本加回                                                                                                                   |
+| 17    | **对比分组 > 50 款时数据岛覆盖不全**                         | 中              | 用户加入的商品无法在对比页渲染       | 主题编辑器警告 + 对比页显式降级文案 + 商家文档给出拆分规则                                                                                       |
+| 18    | **商家把不同品类塞进同一个 `compare_group`**                 | 中              | 对比表大面积显示 `—`                 | 用户侧由 L1/L3 挡住；商家侧由主题编辑器与 CSV 预校验脚本发现                                                                                     |
+| 19    | **演示范围收缩后「参数架构通用性」的展示面由 6 种降至 3 种** | 低              | 低：审核方看到的"跨结构适配"证据变少 | listing highlights 明说架构可扩展；商家文档给出新增分组步骤                                                                                      |
+| 20    | **主题名 USPTO 复核未完成 → 可能被迫回退备选**               | 中              | 品牌标识变更导致 listing 素材返工    | 在 T0.3 完成前不制作最终 listing 素材；回退预案 `Thicket` 已备                                                                                   |
+
+---
+
+## 12. 范围分层
+
+### v1.0 —— 能过审的最小完整产品（目标交付）
+
+- 单 preset（`Coppice`）→ **不需要 `/listings` 目录**、不需要第二个演示店
+- 5 个差异化功能：结构化筛选、产品对比、配件关联、物流提示、规格速览卡
+- 22 项官方强制功能全覆盖
+- 6 个必填 metafield + CSV 导入流水线（**核心，不是加分项**）
+- 性能 ≥ 80、无障碍 ≥ 95、浏览器矩阵通过
+- 演示店（虚拟品牌 + AI 图，**4 个对比分组**）+ 商家文档 + 联系表单 + 支持结构
+
+### v1.1 —— 加分项（过审后再投入）
+
+| 项                                          | 价值                              | 前置依赖                                                         |
+| ------------------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
+| 产品页内嵌精选对比（SEO 方案 D）            | 承接 "X vs Y" 搜索意图            | v1.0 对比模块稳定                                                |
+| **对比分组 > 50 款的覆盖方案**              | 解除平台 `for` 循环 50 次迭代限制 | 真实商家反馈确认需要                                             |
+| **对比清单分享链接（SEO 方案 B）**          | 让对比清单可分享、可直达          | v1.0 对比模块稳定（0.5 人日）                                    |
+| 第二 preset（`Coppice Pro`，`Lots (500+)`） | 覆盖大型经销商                    | 需 `/listings` + 第二个演示店                                    |
+| **重新纳入发电机组 / 吹雪机组**             | 扩大买家覆盖                      | 需恢复 `spec.output_kw` + 补演示数据                             |
+| **参数型字段迁移到原生 measurement 类型**   | 平台负责单位校验，录入体验更好    | A2 已成立；需额外验证 `build-import-csv.py` 的单位一致性校验逻辑 |
+| Metaobject 规格行配置                       | 商家自定义规格行                  | 第一个商家反馈                                                   |
+| Quick view                                  | 集合页转化提升                    | 性能预算有余量                                                   |
+| 季节切换 section                            | 服务季节性商家                    | —                                                                |
+| 多语言 locale                               | 非北美市场                        | 主市场验证后                                                     |
+
+### 明确不做
+
+- 任何形式的购物车折扣、捆绑定价、买赠（App 功能）
+- 愿望清单、预约、评论系统（App 功能）
+- 依赖外部 API 的实时运费/库存显示
+- 倒计时、库存紧张提示、浏览量（伪造数据）
+- 客户定制分支（本主题只做 Theme Store 投稿）
+
+---
+
+## 13. 验收标准（Definition of Done）
+
+**功能**
+
+- [ ] 22 项官方强制功能全部实现并实测通过。
+- [ ] §6 的 5 个差异化模块全部实现，且通过各自的验收标准。
+- [ ] 产品页所有关键元素均为独立可排序块。
+- [ ] 对比页在**无参数、且关闭 JS** 的状态下也能渲染出有意义的内容。
+- [ ] 对比页数据岛不超过 50 款上限，且只含 §5.3 末白名单字段。
+- [ ] 跨类型对比被三层校验挡住。
+
+**数据**
+
+- [ ] 6 个必填字段在演示店 100% 填全；电池类商品 `platform.battery_platform` 100% 填全。
+- [ ] **5 个筛选维度**在集合页筛选器中全部正常出现且计数正确。
+- [ ] CSV 导入流水线可被第三方在 30 分钟内跑通。
+
+**质量**
+
+- [ ] `shopify theme check` 无 Error；Warning 均有书面理由。
+- [ ] Lighthouse 性能三页双端平均 ≥ 60（实际 ≥ 80）；无障碍 ≥ 90（实际 ≥ 95）。
+- [ ] 核心流程在 §8.3 全部浏览器/设备组合上通过。
+- [ ] W3 HTML 校验通过。
+- [ ] 键盘可完成：筛选 → 选品 → 对比 → 加购 → 结账。
+- [ ] VoiceOver 或 NVDA 走查核心流程无阻断问题。
+
+**交付**
+
+- [ ] 演示店内容与 `Garden` / `Some (11-100+)` 标签一致，无占位文本、无真实厂商商标。
+- [ ] 演示店覆盖 **4 个对比分组**，且**主机**分类全部落在 `Home & Garden` 内（配件允许跨到 `Hardware`）。
+- [ ] 资产溯源表完成。
+- [ ] 单 preset，因此**无需** `/listings`。
+- [ ] 商家文档、FAQ、联系表单、支持结构就绪。
+- [ ] 提交包不含 `config/markets.json`。
+- [ ] 命名核验证据存于 `docs/naming/`；**USPTO 复核已完成**。
+
+---
+
+## 14. 术语表
+
+| 术语                           | 含义                                                                     |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| OPE                            | Outdoor Power Equipment，户外动力设备                                    |
+| Skeleton Theme                 | Shopify 官方最简主题脚手架，上架主题的合规基线                           |
+| OS 2.0                         | Online Store 2.0，JSON 模板 + sections everywhere + app blocks           |
+| Section group                  | 允许商家动态增删排序 header / footer 的容器机制                          |
+| Metafield                      | Shopify 原生结构化自定义数据字段                                         |
+| Faceted filtering              | 基于筛选对象的多维筛选                                                   |
+| Complementary products         | 原生互补商品推荐（与"相关推荐"不同）                                     |
+| Section Rendering API          | 通过 `?section_id=` 只返回某个 section 的 HTML                           |
+| **数据岛（data island）**      | 用 `<script type="application/json">` 随页面下发的结构化数据，供 JS 读取 |
+| **服务端默认表**               | 对比页由 Liquid 预先渲染的该组默认 3 款对比表                            |
+| **列式编码**                   | 数据岛的组织方式：字段键名只在表头出现一次，每款商品是一组值数组         |
+| **数量闸 50**                  | 对比数据岛的硬上限。来源是 Liquid `for` 循环单页最多 50 次迭代的平台限制 |
+| **字段白名单**                 | §5.3 末列出的、允许进入数据岛的 metafield 清单。未列入的字段不得序列化   |
+| `/listings`                    | 多 preset 主题提交时必需的目录（单 preset 不需要）                       |
+| **Listing**                    | 主题在 Theme Store 上的商品详情页；一个 preset 对应一个独立 listing      |
+| **Tagline**                    | listing 页上的一行广告文案，≤70 字符                                     |
+| Preset                         | 主题预设，拥有独立 listing 与演示店；至少一个 preset 必须与主题同名      |
+| compare_group                  | 对比分组键，决定对比页路由与表格行定义；也是跨类型校验的唯一权威键       |
+| **变体差异说明**               | `spec.spec_variance_note`，用一句人话标注"该参数随变体变化"              |
+| **操作方式（operation_type）** | 用户的操作姿态：Walk-behind / Riding / Remote-controlled / Handheld      |
+| **驱动方式（drive_type）**     | 机器的推进机制：Push / Self-propelled / FWD / RWD / AWD                  |
+
+---
+
+## 15. 来源与核验记录
+
+### 15.1 官方来源
+
+| 主题                           | URL                                                                           |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| Theme Store 要求（含命名章节） | https://shopify.dev/docs/storefronts/themes/store/requirements                |
+| 提交与审核流程                 | https://shopify.dev/docs/storefronts/themes/store/review-process/submit-theme |
+| Listing 与行业/目录标签        | https://shopify.dev/docs/storefronts/themes/store/review-process/listings     |
+| 产品 CSV 导入导出              | https://help.shopify.com/en/manual/products/import-export/using-csv           |
+| 集合筛选支持的 metafield 类型  | https://help.shopify.com/en/manual/online-store/search-and-discovery/filters  |
+| 自动化集合条件                 | https://help.shopify.com/en/manual/products/collections/conditions            |
+| Liquid `request` 对象属性      | https://shopify.dev/docs/api/liquid/objects/request                           |
+| 性能最佳实践                   | https://shopify.dev/docs/storefronts/themes/best-practices/performance        |
+| 无障碍最佳实践                 | https://shopify.dev/docs/storefronts/themes/best-practices/accessibility      |
+| Skeleton Theme                 | https://github.com/Shopify/skeleton-theme                                     |
+
+### 15.2 实跑核验记录（2026-09-22 至 2026-09-24）
+
+| 核验项                                 | 结果                                                                                        |
+| -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Theme Store 全部英文主题 handle        | 340 个 handle                                                                               |
+| 候选主题名占用情况                     | 全部未占用；`forge`、`grove` 已占用                                                         |
+| 命名风格反查                           | 命中 0 个品类词，全为意象名词                                                               |
+| Coppice 词义与读音                     | 语源核心是"砍"；/ˈkɒpɪs/                                                                    |
+| Coppice 占用复核                       | Theme Store 与 WordPress 均未占用                                                           |
+| 美国商标初筛（Justia）                 | Coppice 软件类 0 命中                                                                       |
+| **USPTO TESS / TSDR 复核**             | **待完成**                                                                                  |
+| CSV metafield 导入能力                 | 支持，含列头格式与类型清单；变体 metafield 不支持                                           |
+| `list.single_line_text_field` CSV 导入 | **实测不支持**，已从数据模型移除                                                            |
+| measurement 类型 Liquid 取值           | **实测**：`.value` 返回纯数字（如 `25.0`），`.unit` 返回单位字符串（如 `mm`）               |
+| measurement 类型 CSV 导入格式          | **实测**：简写格式 `25mm` 可用；单位必须与 definition 中定义的单位完全一致；JSON 格式不可用 |
+| 筛选支持的 metafield 类型              | 7 种；数字型无范围筛选                                                                      |
+| 自动化集合 metafield 条件              | 支持；数字型支持 `>` / `<`                                                                  |
+| Liquid 能否读查询参数                  | 不能 → 对比页采用数据岛 + localStorage 架构                                                 |
+| 演示店品类范围要求                     | 判定单位是行业，不是品类；无强制品类数要求                                                  |
+
+---
+
+**文档结束。**
