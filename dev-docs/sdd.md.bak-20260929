@@ -204,32 +204,28 @@ Theme Store 对所有 Shopify Partner 开放，**个人身份免费注册即可�
 ### 4.3 主导航结构（建议）
 
 ```
-Shop                               全店入口：按品类进入集合
-├── Mowers            割草机
-│   ├── Walk-behind   走步式，指向集合
-│   ├── Self-propelled  自走式，指向集合
-│   └── Riding        骑乘式，指向集合
-├── Chainsaws         链锯，指向集合
-├── Trimmers          打草机，指向集合
-└── Accessories       配件与耗材
-    ├── Blades & Bars   刀片与导板
-    ├── Filters         滤芯
-    ├── Oils & Fuel     机油与燃油
-    └── Batteries & Chargers  电池与充电器
-Shop by Platform      动力平台导航：同平台电池可共用，服务存量用户
-├── 20V Battery       指向 platform.battery_platform = 20V 的自动化集合
-├── 40V Battery       同上，40V
-├── 60V Battery       同上，60V
-└── Gas Series        汽油系列，指向动力源为汽油的集合
-Support               售后与支持
-├── Shipping & Oversized Delivery  配送与超大件交付说明
-├── Warranty          保修政策
-└── Maintenance Guides  维护指南，指向博客或页面
+Shop
+├── Mowers
+│   ├── Walk-behind          → 集合
+│   ├── Self-propelled
+│   └── Riding
+├── Chainsaws
+├── Trimmers
+└── Accessories
+    ├── Blades & Bars
+    ├── Filters
+    ├── Oils & Fuel
+    └── Batteries & Chargers
+Shop by Platform                ← 动力平台导航
+├── 20V Battery
+├── 40V Battery
+├── 60V Battery
+└── Gas Series
+Support
+├── Shipping & Oversized Delivery
+├── Warranty
+└── Maintenance Guides
 ```
-
-> 菜单末尾的指向分三类：**集合**（自动化或手动集合）、**页面**（内容页）、**博客**。
-> `Shop by Platform` 下的每一项都指向由 `platform.battery_platform` 条件自动生成的集合，
-> 不是手工维护的菜单链接 —— 新增商品并填好该字段后会自动进入对应集合。
 
 ### 4.4 视觉方向与设计稿
 
@@ -272,13 +268,13 @@ Support               售后与支持
 
 ### 5.2 命名空间总览
 
-| 命名空间    | 资源    | 用途                                            | 字段数 | 中文说明 |
-| ----------- | ------- | ----------------------------------------------- | ------ | -------- |
-| `spec`      | Product | 规格（筛选源 + 参数 + 对比控制 + 变体差异说明） | **16** | 规格 |
-| `platform`  | Product | 电池平台（筛选源 + 自动化集合）                 | 1 | 电池平台 |
-| `logistics` | Product | 物流提示                                        | 4 | 物流提示 |
-| `acc`       | Product | 配件与耗材关联                                  | 2 | 配件与耗材关联 |
-| **合计**    |         |                                                 | **23** | —        |
+| 命名空间    | 资源    | 用途                                            | 字段数 |
+| ----------- | ------- | ----------------------------------------------- | ------ |
+| `spec`      | Product | 规格（筛选源 + 参数 + 对比控制 + 变体差异说明） | **16** |
+| `platform`  | Product | 电池平台（筛选源 + 自动化集合）                 | 1      |
+| `logistics` | Product | 物流提示                                        | 4      |
+| `acc`       | Product | 配件与耗材关联                                  | 2      |
+| **合计**    |         |                                                 | **23** |
 
 > **字段计数明细（逐项可核）**：
 >
@@ -294,14 +290,14 @@ Support               售后与支持
 
 **A. 筛选源字段（6 个，全部 `single_line_text_field`）**
 
-| #   | key                         | 命名空间 | 类型                   | 必填               | 值域（北美口径，写死） | 中文说明 |
-| --- | --------------------------- | -------- | ---------------------- | ------------------ | ------------------------------------------------------------------------------------------------ | -------- |
-| 1   | `spec.power_source`         | spec     | single_line_text_field | **必填**           | `Gasoline` / `Corded electric` / `Battery` / `Propane` | 动力源。第一筛选维度，决定机器烧什么 |
-| 2   | `spec.operation_type`       | spec     | single_line_text_field | **必填**           | `Walk-behind` / `Riding` / `Remote-controlled` / `Handheld` / `N/A` | 操作姿态。走步 / 骑乘 / 遥控 / 手持 |
-| 3   | `spec.drive_type`           | spec     | single_line_text_field | **必填**           | `Push` / `Self-propelled` / `Front-wheel drive` / `Rear-wheel drive` / `All-wheel drive` / `N/A` | 驱动方式。谁提供推进力：人力推行、自走、前驱、后驱、四驱 |
-| 4   | `spec.area_coverage`        | spec     | single_line_text_field | **必填**           | `Under 5,000 sq ft` / `5,000–10,000 sq ft` / `10,000–1 acre` / `Over 1 acre` / `N/A` | 适用面积。分段文本，供筛选；数字版见 `area_coverage_sqft` |
-| 5   | `spec.duty_level`           | spec     | single_line_text_field | **必填**           | `Residential` / `Semi-pro` / `Commercial` | 使用强度。家用 / 半专业 / 商用 |
-| 6   | `platform.battery_platform` | platform | single_line_text_field | 电池类**条件必填** | `20V` / `40V` / `60V` / `80V` / `N/A` | 电池平台电压。同平台工具可共用电池，驱动平台导航与自动化集合 |
+| #   | key                         | 命名空间 | 类型                   | 必填               | 值域（北美口径，写死）                                                                           |
+| --- | --------------------------- | -------- | ---------------------- | ------------------ | ------------------------------------------------------------------------------------------------ |
+| 1   | `spec.power_source`         | spec     | single_line_text_field | **必填**           | `Gasoline` / `Corded electric` / `Battery` / `Propane`                                           |
+| 2   | `spec.operation_type`       | spec     | single_line_text_field | **必填**           | `Walk-behind` / `Riding` / `Remote-controlled` / `Handheld` / `N/A`                              |
+| 3   | `spec.drive_type`           | spec     | single_line_text_field | **必填**           | `Push` / `Self-propelled` / `Front-wheel drive` / `Rear-wheel drive` / `All-wheel drive` / `N/A` |
+| 4   | `spec.area_coverage`        | spec     | single_line_text_field | **必填**           | `Under 5,000 sq ft` / `5,000–10,000 sq ft` / `10,000–1 acre` / `Over 1 acre` / `N/A`             |
+| 5   | `spec.duty_level`           | spec     | single_line_text_field | **必填**           | `Residential` / `Semi-pro` / `Commercial`                                                        |
+| 6   | `platform.battery_platform` | platform | single_line_text_field | 电池类**条件必填** | `20V` / `40V` / `60V` / `80V` / `N/A`                                                            |
 
 > **变更说明（v4.2）**：
 >
@@ -311,26 +307,26 @@ Support               售后与支持
 
 **B. 参数型字段（用于规格表与对比表，不做筛选源）**
 
-| key                       | 类型           | 存储单位 | 北美展示 | 入对比表 | 可排序 | 中文说明 |
-| ------------------------- | -------------- | -------- | -------- | -------- | ------ | -------- |
-| `spec.displacement_cc`    | number_decimal | cc       | cu in    | ✓        | ✓ | 发动机排量。汽油机填它，电池机留空 |
-| `spec.power_w`            | number_integer | W        | hp       | ✓        | ✓ | 额定功率。电池机与电动机填它，汽油机留空 |
-| `spec.cutting_width_mm`   | number_integer | mm       | in       | ✓        | ✓ | 切割宽度。割草机割台幅宽 / 打草机切割直径 |
-| `spec.bar_length_mm`      | number_integer | mm       | in       | ✓        | ✓ | 导板长度。链锯专用 |
-| `spec.weight_kg`          | number_decimal | kg       | lb       | ✓        | ✓ | 整机重量。需注明是否含电池 |
-| `spec.noise_db`           | number_decimal | dB(A)    | dB(A)    | ✓        | ✓ | 操作位噪音。dB(A)，须注明测量距离 |
-| `spec.area_coverage_sqft` | number_integer | sq ft    | sq ft    | ✓        | ✓ | 适用面积数字版。供对比表排序与自动化集合的 `>` / `<` 条件 |
-| `spec.warranty_months`    | number_integer | month    | month    | ✓        | ✓ | 保修月数。家用 / 商用保修期不同时取该型号实际值 |
+| key                       | 类型           | 存储单位 | 北美展示 | 入对比表 | 可排序 |
+| ------------------------- | -------------- | -------- | -------- | -------- | ------ |
+| `spec.displacement_cc`    | number_decimal | cc       | cu in    | ✓        | ✓      |
+| `spec.power_w`            | number_integer | W        | hp       | ✓        | ✓      |
+| `spec.cutting_width_mm`   | number_integer | mm       | in       | ✓        | ✓      |
+| `spec.bar_length_mm`      | number_integer | mm       | in       | ✓        | ✓      |
+| `spec.weight_kg`          | number_decimal | kg       | lb       | ✓        | ✓      |
+| `spec.noise_db`           | number_decimal | dB(A)    | dB(A)    | ✓        | ✓      |
+| `spec.area_coverage_sqft` | number_integer | sq ft    | sq ft    | ✓        | ✓      |
+| `spec.warranty_months`    | number_integer | month    | month    | ✓        | ✓      |
 
 > 共 8 个参数型字段。整机重量 `spec.weight_kg` 已加回，作为对比表的一行。
 
 **C. 对比控制字段**（标题修正，移除“兼容”）
 
-| key                       | 类型                   | 用途 | 中文说明 |
-| ------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `spec.compare_group`      | single_line_text_field | **必填**。对比分组键，v1.0 预设 4 个取值：`walk-behind-mower` / `riding-mower` / `chainsaw` / `string-trimmer`（机制本身商家可自行扩展）。决定对比页路由与表格行定义。**空值行为：该商品不可加入对比（不兜底成任何默认组）** | 对比分组键。决定对比页路由与表格行定义，也是跨类型校验的唯一权威键 |
-| `spec.compare_hidden`     | boolean                | 可选。`true` 时把该商品排除出对比清单（如停产款、订制品） | 对比隐藏。真值时不出现在勾选入口 |
-| `spec.spec_variance_note` | single_line_text_field | 可选。当本型号的关键参数随变体变化时，用一句人话说明（如 `Deck width varies by variant: 20 in or 22 in`）。对比表检测到非空时在该列表头显示提示图标，展开呈现原文 | 变体差异说明。关键参数随变体变化时，用一句人话写清差异 |
+| key                       | 类型                   | 用途                                                                                                                                                                                                                         |
+| ------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spec.compare_group`      | single_line_text_field | **必填**。对比分组键，v1.0 预设 4 个取值：`walk-behind-mower` / `riding-mower` / `chainsaw` / `string-trimmer`（机制本身商家可自行扩展）。决定对比页路由与表格行定义。**空值行为：该商品不可加入对比（不兜底成任何默认组）** |
+| `spec.compare_hidden`     | boolean                | 可选。`true` 时把该商品排除出对比清单（如停产款、订制品）                                                                                                                                                                    |
+| `spec.spec_variance_note` | single_line_text_field | 可选。当本型号的关键参数随变体变化时，用一句人话说明（如 `Deck width varies by variant: 20 in or 22 in`）。对比表检测到非空时在该列表头显示提示图标，展开呈现原文                                                            |
 
 **对比表实际渲染的字段清单（按分组列出）**
 
@@ -391,19 +387,19 @@ Support               售后与支持
 
 ### 5.5 物流字段（条件渲染，不做筛选）
 
-| key                           | 类型                   | 用途               | 示例 | 中文说明 |
-| ----------------------------- | ---------------------- | ------------------ | -------------------------------------- | -------- |
-| `logistics.shipping_class`    | single_line_text_field | **必填**。物流等级 | `Parcel` / `Oversized` / `Freight LTL` | 物流等级。决定产品页徽标与购物车汇总提示 |
-| `logistics.needs_liftgate`    | boolean                | 需尾板/叉车卸货    | `true` | 需尾板或叉车卸货。超大件交付的前置条件 |
-| `logistics.assembly_required` | boolean                | 需自行组装         | `true` | 需自行组装。到货后是否要买家装配 |
-| `logistics.lead_time_days`    | number_integer         | 备货准备天数       | `5` | 备货准备天数。0 表示通常当日发出 |
+| key                           | 类型                   | 用途               | 示例                                   |
+| ----------------------------- | ---------------------- | ------------------ | -------------------------------------- |
+| `logistics.shipping_class`    | single_line_text_field | **必填**。物流等级 | `Parcel` / `Oversized` / `Freight LTL` |
+| `logistics.needs_liftgate`    | boolean                | 需尾板/叉车卸货    | `true`                                 |
+| `logistics.assembly_required` | boolean                | 需自行组装         | `true`                                 |
+| `logistics.lead_time_days`    | number_integer         | 备货准备天数       | `5`                                    |
 
 ### 5.6 配件字段
 
-| key                | 类型                     | 用途 | 中文说明 |
-| ------------------ | ------------------------ | --------------------------------------------------- | -------- |
-| `acc.consumables`  | `list.product_reference` | 耗材（刀片、滤芯、机油、火花塞） | 关联耗材。刀片、滤芯、机油、火花塞等复购品 |
-| `acc.fitment_note` | single_line_text_field   | 适配说明（`Fits 21 in deck models 2022 and later`） | 适配说明。一句话写清适配范围，支持通配写法 |
+| key                | 类型                     | 用途                                                |
+| ------------------ | ------------------------ | --------------------------------------------------- |
+| `acc.consumables`  | `list.product_reference` | 耗材（刀片、滤芯、机油、火花塞）                    |
+| `acc.fitment_note` | single_line_text_field   | 适配说明（`Fits 21 in deck models 2022 and later`） |
 
 > **为什么移除 `acc.bundles_well_with`**：原设计将其定位为"叠加在原生 complementary products 之上"。但两者语义高度重叠——都是"常一起购买"。保留会导致产品页出现两个推荐区块，且商家需要同时维护两套关联。**为避免语义重复，增强层只保留耗材关联（`acc.consumables`），"常一起购买"完全交给原生 complementary products。**
 
@@ -778,30 +774,30 @@ Support               售后与支持
 
 ### 7.1 官方强制功能覆盖矩阵（缺一即拒）
 
-| #   | 功能                            | 中文说明 | 本主题落点                                            | 状态 |
-| --- | ------------------------------- | -------- | ----------------------------------------------------- | ---- |
-| 1   | Sections Everywhere             | 所有页面（含首页、产品页、集合页、博客等）都必须由 JSON 模板和 section groups 组成，商家能在主题编辑器里自由添加、删除、拖动区块 | 全 JSON 模板 + section groups                            | 必须 |
-| 2   | Discounts                       | 自动折扣与折扣码在购物车、结账、订单确认页各处都要正确显示单品优惠与整单优惠金额 | Cart / 结账 / 订单显示单品与整单折扣                               | 必须 |
-| 3   | Accelerated checkout            | Shopify 加速结账（Shop Pay 一键支付）：产品页与购物车页的加速结账区块必须默认启用，且不得改其品牌配色 | Product page 与 Cart page **默认启用**，品牌色不改               | 必须 |
-| 4   | Faceted search filtering        | 集合页的多维筛选（价格、商品选项、可用性、metafield 等条件），商家在后台开启后主题须原生渲染 | §6.1                                                  | 必须 |
-| 5   | Gift cards                      | 礼品卡的独立页面模板（gift_card.liquid），含可扫描的二维码（尺寸不小于 120×120 像素），供收银台扫码核销 | `gift_card.liquid`，二维码 ≥120×120 px                    | 必须 |
-| 6   | Image focal points              | 商家在后台为图片设置的焦点点，主题裁剪展示时必须尊重，不得裁掉焦点区域 | `image_picker` 焦点支持                                   | 必须 |
-| 7   | Social sharing images           | 页面被分享到社交媒体时的卡片预览图（page_image 对象），保证 OG 图正确输出 | `page_image` 对象                                       | 必须 |
-| 8   | Country / currency selection    | 面向跨境店铺，主题须提供/兼容国家与货币选择入口，符合官方 UX 指南 | UX 指南对齐                                               | 必须 |
-| 9   | Language selection              | 多语言店铺的语言切换入口，同样对齐官方 UX 指南 | 同上                                                    | 必须 |
-| 10  | Multi-level menus               | 导航菜单支持多级嵌套（下拉子菜单），商家在后台配置的层级结构主题须完整渲染 | §4.3 导航结构                                             | 必须 |
-| 11  | Newsletter forms                | 页脚提供邮件订阅（newsletter）表单，可对接客户资料收集 | footer                                                | 必须 |
-| 12  | Pickup availability             | 产品页展示线下门店自提的可挂性查询（Pickup Availability），顾客可选门店、看库存 | Product page                                          | 必须 |
-| 13  | Related product recommendations | 产品页的相关商品推荐区块（基于 Recommendations API 的「为你推荐」） | Product page                                          | 必须 |
-| 14  | Complementary recommendations   | 产品页的互补商品推荐区块（基于 Recommendations API 的互补意图，本主题用作配件挂载主路径） | §6.3 主路径                                              | 必须 |
-| 15  | Rich product media              | 产品媒体支持 3D 模型与视频，须在 product、featured product、quick view 三类场景都能正常播放与交互 | 3D / 视频，覆盖 product、featured product、quick view        | 必须 |
-| 16  | Search + predictive search      | 搜索结果页 + 搜索框的即时联想（predictive search）：输入时即给出商品/页面/文章建议 | `search.json` + 预测搜索                                  | 必须 |
-| 17  | Selling plans                   | 订阅制商品（selling plans，周期购）在购物车页要能显示所选订阅计划与频率 | Cart page 显示订阅计划                                      | 必须 |
-| 18  | Shop Pay Installments           | 产品页展示 Shop Pay 分期付款（Installments）横幅，向顾客说明可分期 | `product.liquid` banner                               | 必须 |
-| 19  | Unit pricing                    | 单价/单位计价（如每 100 mL ¥x）须在集合、产品、购物车、客户账户等场景正确显示 | Collection / Product / Cart / Customer                | 必须 |
-| 20  | Variant images                  | 顾客切换变体时产品主图随之切换（变体图片绑定 option 后的联动） | 变体图切换                                                 | 必须 |
-| 21  | Follow on Shop                  | 登录顾客可通过 login_button filter 展示在 Shop App 关注店铺的按钮，且不改其品牌色 | `login_button` filter，品牌色不改                           | 必须 |
-| 22  | Account component               | 页头使用 `<shopify-account>` 原生账户组件（登录/账户入口），桌面端与移动端均须可见 | header 中 `<shopify-account>`，桌面与移动均可见                 | 必须 |
+| #   | 功能                            | 本主题落点                                            | 状态 |
+| --- | ------------------------------- | ----------------------------------------------------- | ---- |
+| 1   | Sections Everywhere             | 全 JSON 模板 + section groups                         | 必须 |
+| 2   | Discounts                       | Cart / 结账 / 订单显示单品与整单折扣                  | 必须 |
+| 3   | Accelerated checkout            | Product page 与 Cart page **默认启用**，品牌色不改    | 必须 |
+| 4   | Faceted search filtering        | §6.1                                                  | 必须 |
+| 5   | Gift cards                      | `gift_card.liquid`，二维码 ≥120×120 px                | 必须 |
+| 6   | Image focal points              | `image_picker` 焦点支持                               | 必须 |
+| 7   | Social sharing images           | `page_image` 对象                                     | 必须 |
+| 8   | Country / currency selection    | UX 指南对齐                                           | 必须 |
+| 9   | Language selection              | 同上                                                  | 必须 |
+| 10  | Multi-level menus               | §4.3 导航结构                                         | 必须 |
+| 11  | Newsletter forms                | footer                                                | 必须 |
+| 12  | Pickup availability             | Product page                                          | 必须 |
+| 13  | Related product recommendations | Product page                                          | 必须 |
+| 14  | Complementary recommendations   | §6.3 主路径                                           | 必须 |
+| 15  | Rich product media              | 3D / 视频，覆盖 product、featured product、quick view | 必须 |
+| 16  | Search + predictive search      | `search.json` + 预测搜索                              | 必须 |
+| 17  | Selling plans                   | Cart page 显示订阅计划                                | 必须 |
+| 18  | Shop Pay Installments           | `product.liquid` banner                               | 必须 |
+| 19  | Unit pricing                    | Collection / Product / Cart / Customer                | 必须 |
+| 20  | Variant images                  | 变体图切换                                            | 必须 |
+| 21  | Follow on Shop                  | `login_button` filter，品牌色不改                     | 必须 |
+| 22  | Account component               | header 中 `<shopify-account>`，桌面与移动均可见       | 必须 |
 
 ### 7.2 代码与资源红线
 
