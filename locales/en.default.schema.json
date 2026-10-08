@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin language editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "general": {
     "404": "Not found",
@@ -29,9 +38,107 @@
     "section": "Section",
     "settings": "Settings",
     "sidebar": "Sidebar",
+    "spec_units": "Specification units",
     "text": "Text",
     "theme": "Theme",
     "typography": "Typography"
+  },
+  "sections": {
+    "hero_slideshow": {
+      "name": "Hero slideshow",
+      "aria_label": "Highlights",
+      "blocks": {
+        "slide": {
+          "name": "Slide",
+          "labels": {
+            "image": "Image (landscape)",
+            "image_info": "Recommended at least 2400px wide. First slide's image is the LCP element and loads with high priority.",
+            "image_mobile": "Mobile image (portrait, optional)",
+            "image_mobile_info": "Recommended 3:4. When empty, the landscape image is cropped on mobile."
+          },
+          "defaults": {
+            "heading": "Mowing season starts here",
+            "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
+            "button_label": "Shop mowers"
+          }
+        }
+      },
+      "presets": {
+        "slide_1": {
+          "heading": "Mowing season starts here",
+          "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
+          "button_label": "Shop mowers"
+        }
+      }
+    },
+    "platform_cards": {
+      "name": "Platform cards",
+      "defaults": {
+        "heading": "Shop by platform"
+      },
+      "blocks": {
+        "card": {
+          "name": "Platform card",
+          "labels": {
+            "collection_info": "Use a battery-platform automated collection. Empty collections are hidden automatically.",
+            "image_info": "Optional. Falls back to the collection image, then to its first product image."
+          }
+        }
+      }
+    },
+    "use_case_grid": {
+      "name": "Use case grid",
+      "defaults": {
+        "heading": "Shop by yard size"
+      },
+      "blocks": {
+        "use_case": {
+          "name": "Use case",
+          "defaults": {
+            "heading": "Small yards",
+            "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
+            "button_label": "Shop walk-behind mowers"
+          },
+          "labels": {
+            "collection_info": "Links to the collection that matches this yard type."
+          }
+        }
+      },
+      "presets": {
+        "case_1": {
+          "heading": "Small yards",
+          "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
+          "button_label": "Shop walk-behind mowers"
+        },
+        "case_2": {
+          "heading": "Large lawns",
+          "text": "Riding mowers and tractors for an acre and beyond.",
+          "button_label": "Shop riding mowers"
+        }
+      }
+    },
+    "featured_collection": {
+      "name": "Featured collection",
+      "defaults": {
+        "heading": "Featured mowers",
+        "view_all_label": "View all"
+      },
+      "headers": {
+        "card_specs": "Product card specifications"
+      },
+      "labels": {
+        "show_spec_width": "Show cutting width",
+        "show_spec_power": "Show power source",
+        "show_spec_weight": "Show weight",
+        "spec_info": "Up to 2–3 specs per card; rows with empty values are skipped automatically."
+      }
+    },
+    "blog_posts": {
+      "name": "Blog posts",
+      "defaults": {
+        "heading": "Buying guides"
+      }
+    }
   },
   "labels": {
     "alignment": "Alignment",
@@ -39,6 +146,14 @@
     "foreground": "Foreground",
     "grid_gap": "Grid spacing",
     "grid_item_width": "Grid item width",
+    "heading": "Heading",
+    "subheading": "Subheading",
+    "button_label": "Button label",
+    "button_link": "Button link",
+    "blog": "Blog",
+    "collection": "Collection",
+    "description": "Description",
+    "image": "Image",
     "input_corner_radius": "Input corner radius",
     "layout_direction": "Layout direction",
     "menu": "Menu",
@@ -46,9 +161,15 @@
     "padding": "Padding",
     "page_margin": "Page margin",
     "page_width": "Page width",
+    "posts_to_show": "Posts to show",
+    "products_to_show": "Products to show",
     "show_payment_icons": "Show payment icons",
+    "spec_unit_system": "Specification unit system",
+    "spec_unit_system_info": "Data is stored in metric. Imperial (ft/lb) is the default display for the North American market.",
     "text_style": "Text style",
-    "text": "Text"
+    "text": "Text",
+    "title_override": "Title override",
+    "view_all_label": "'View all' link label"
   },
   "options": {
     "alignment": {
@@ -68,10 +189,14 @@
       "large": "Large",
       "small": "Small"
     },
+    "spec_unit_system": {
+      "imperial": "Imperial (in, lb, sq ft)",
+      "metric": "Metric (mm, kg, m2)"
+    },
     "text_style": {
       "title": "Title",
       "subtitle": "Subtitle",
       "normal": "Normal text"
-    },
+    }
   }
 }

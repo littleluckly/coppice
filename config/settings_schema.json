@@ -54,6 +54,28 @@
     ]
   },
   {
+    "name": "t:general.spec_units",
+    "settings": [
+      {
+        "type": "select",
+        "id": "spec_unit_system",
+        "label": "t:labels.spec_unit_system",
+        "options": [
+          {
+            "value": "imperial",
+            "label": "t:options.spec_unit_system.imperial"
+          },
+          {
+            "value": "metric",
+            "label": "t:options.spec_unit_system.metric"
+          }
+        ],
+        "default": "imperial",
+        "info": "t:labels.spec_unit_system_info"
+      }
+    ]
+  },
+  {
     "name": "t:general.colors",
     "settings": [
       {
