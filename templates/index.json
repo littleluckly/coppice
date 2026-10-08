@@ -14,10 +14,19 @@
       "blocks": {
         "slide-1": {
           "type": "slide",
-          "settings": {}
+          "settings": {
+            "image": "shopify://shop_images/mower-large-lawn-ride-on-pc-16x9_webp.webp",
+            "image_mobile": "shopify://shop_images/mower-large-lawn-ride-on-mobile-3x4_webp.webp",
+            "heading": "Mowing season starts here",
+            "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
+            "button_label": "Shop mowers",
+            "button_link": ""
+          }
         }
       },
-      "block_order": ["slide-1"],
+      "block_order": [
+        "slide-1"
+      ],
       "settings": {}
     },
     "platform-cards": {
@@ -25,46 +34,96 @@
       "blocks": {
         "card-1": {
           "type": "card",
-          "settings": {}
+          "settings": {
+            "collection": "",
+            "title": "",
+            "description": ""
+          }
         },
         "card-2": {
           "type": "card",
-          "settings": {}
+          "settings": {
+            "collection": "",
+            "title": "",
+            "description": ""
+          }
         },
         "card-3": {
           "type": "card",
-          "settings": {}
+          "settings": {
+            "collection": "",
+            "title": "",
+            "description": ""
+          }
         },
         "card-4": {
           "type": "card",
-          "settings": {}
+          "settings": {
+            "collection": "",
+            "title": "",
+            "description": ""
+          }
         }
       },
-      "block_order": ["card-1", "card-2", "card-3", "card-4"],
-      "settings": {}
+      "block_order": [
+        "card-1",
+        "card-2",
+        "card-3",
+        "card-4"
+      ],
+      "settings": {
+        "heading": "Shop by platform"
+      }
     },
     "use-cases": {
       "type": "use-case-grid",
       "blocks": {
         "case-1": {
           "type": "use_case",
-          "settings": {}
+          "settings": {
+            "heading": "Small yards",
+            "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
+            "collection": "",
+            "button_label": "Shop walk-behind mowers"
+          }
         },
         "case-2": {
           "type": "use_case",
-          "settings": {}
+          "settings": {
+            "heading": "Small yards",
+            "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
+            "collection": "",
+            "button_label": "Shop walk-behind mowers"
+          }
         }
       },
-      "block_order": ["case-1", "case-2"],
-      "settings": {}
+      "block_order": [
+        "case-1",
+        "case-2"
+      ],
+      "settings": {
+        "heading": "Shop by yard size"
+      }
     },
     "featured": {
       "type": "featured-collection",
-      "settings": {}
+      "settings": {
+        "collection": "",
+        "heading": "Featured mowers",
+        "products_to_show": 8,
+        "show_spec_width": true,
+        "show_spec_power": true,
+        "show_spec_weight": false,
+        "view_all_label": "View all"
+      }
     },
     "blog": {
       "type": "blog-posts",
-      "settings": {}
+      "settings": {
+        "blog": "",
+        "heading": "Buying guides",
+        "posts_to_show": 3
+      }
     }
   },
   "order": [
