@@ -1,0 +1,168 @@
+{% comment %}
+  Use case grid — 首页"按用途收敛"区（task-index T-2.3，SDD §4.1）。
+  图文块 ×2–3：图 + 标题 + 一句话 + 目标集合链接。
+  演示店 v1 只配置小院（→走步式）与大草坪（→骑乘式）两张（pages-ui §2）。
+{% endcomment %}
+
+{%- if section.blocks.size > 0 -%}
+  <div class="use-case-grid">
+    {%- if section.settings.heading != blank -%}
+      <h2 class="use-case-grid__heading">{{ section.settings.heading | escape }}</h2>
+    {%- endif -%}
+
+    <ul class="use-case-grid__grid" role="list">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign block_link = block.settings.link
+          if block.settings.collection != blank
+            assign block_link = block.settings.collection.url
+          endif
+        -%}
+        <li class="use-case-grid__item" {{ block.shopify_attributes }}>
+          {%- if block.settings.image != blank -%}
+            {{
+              block.settings.image
+              | image_url: width: 1200
+              | image_tag:
+                widths: '600, 900, 1200',
+                sizes: '(min-width: 750px) 45vw, 90vw',
+                width: block.settings.image.width,
+                height: block.settings.image.height,
+                loading: 'lazy',
+                alt: block.settings.heading
+            }}
+          {%- endif -%}
+          <div class="use-case-grid__body">
+            {%- if block.settings.heading != blank -%}
+              <h3 class="use-case-grid__item-heading">{{ block.settings.heading | escape }}</h3>
+            {%- endif -%}
+            {%- if block.settings.text != blank -%}
+              <p class="use-case-grid__text">{{ block.settings.text | escape }}</p>
+            {%- endif -%}
+            {%- if block_link != blank and block.settings.button_label != blank -%}
+              <a class="use-case-grid__link" href="{{ block_link }}">{{ block.settings.button_label | escape }}</a>
+            {%- endif -%}
+          </div>
+        </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+
+{%- endif -%}
+
+{% stylesheet %}
+    .use-case-grid__heading {
+      font-size: 1.5rem;
+      font-weight: 500;
+      margin-block-end: 1rem;
+    }
+    .use-case-grid__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+      gap: 1.5rem;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .use-case-grid__item img {
+      border-radius: 12px;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      width: 100%;
+    }
+    .use-case-grid__item-heading {
+      font-size: 1.2rem;
+      font-weight: 500;
+      margin-block-start: 0.75rem;
+    }
+    .use-case-grid__text {
+      margin-block-start: 0.25rem;
+      opacity: 0.8;
+    }
+    .use-case-grid__link {
+      display: inline-block;
+      margin-block-start: 0.5rem;
+      min-height: 44px;
+      padding-block: 10px;
+      color: inherit;
+      font-weight: 500;
+    }
+  {% endstylesheet %}
+
+
+{% schema %}
+{
+  "name": "t:sections.use_case_grid.name",
+  "tag": "section",
+  "class": "use-case-grid-section",
+  "max_blocks": 3,
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "t:sections.use_case_grid.defaults.heading"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "use_case",
+      "name": "t:sections.use_case_grid.blocks.use_case.name",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.image"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:labels.heading",
+          "default": "t:sections.use_case_grid.blocks.use_case.defaults.heading"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "t:labels.description",
+          "default": "t:sections.use_case_grid.blocks.use_case.defaults.text"
+        },
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "t:labels.collection",
+          "info": "t:sections.use_case_grid.blocks.use_case.labels.collection_info"
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "t:labels.button_label",
+          "default": "t:sections.use_case_grid.blocks.use_case.defaults.button_label"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.use_case_grid.name",
+      "blocks": [
+        {
+          "type": "use_case",
+          "settings": {
+            "heading": "t:sections.use_case_grid.presets.case_1.heading",
+            "text": "t:sections.use_case_grid.presets.case_1.text",
+            "button_label": "t:sections.use_case_grid.presets.case_1.button_label"
+          }
+        },
+        {
+          "type": "use_case",
+          "settings": {
+            "heading": "t:sections.use_case_grid.presets.case_2.heading",
+            "text": "t:sections.use_case_grid.presets.case_2.text",
+            "button_label": "t:sections.use_case_grid.presets.case_2.button_label"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

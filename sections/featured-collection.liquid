@@ -1,0 +1,155 @@
+{% comment %}
+  Featured collection — 首页精选集合网格（task-index T-2.4，pages-ui §2）。
+  桌面 2×4 / 移动 2 列；消费 snippets/product-card.liquid（2–3 项参数 + 对比勾选）。
+  商品循环内不做 metafield assign（在 snippet 内处理）。空集合 → 不渲染。
+  首行卡片图片 eager（LCP 候选），其余 lazy。
+{% endcomment %}
+
+{%- liquid
+  assign card_collection = section.settings.collection
+  assign limit = section.settings.products_to_show | default: 8
+-%}
+
+{%- if card_collection != blank and card_collection.products_count > 0 -%}
+  <script src="{{ 'compare-toggle.js' | asset_url }}" defer></script>
+  <div class="featured-collection">
+    {%- if section.settings.heading != blank -%}
+      <h2 class="featured-collection__heading">{{ section.settings.heading | escape }}</h2>
+    {%- endif -%}
+
+    <ul class="featured-collection__grid" role="list">
+      {%- for product in card_collection.products limit: limit -%}
+        <li class="featured-collection__item">
+          {%- liquid
+            assign card_lazy = true
+            assign eager_width = false
+            assign eager_power = false
+            assign eager_weight = false
+            if forloop.index <= 4
+              assign card_lazy = false
+            endif
+            if section.settings.show_spec_width
+              assign eager_width = true
+            endif
+            if section.settings.show_spec_power
+              assign eager_power = true
+            endif
+            if section.settings.show_spec_weight
+              assign eager_weight = true
+            endif
+          -%}
+          {% render 'product-card',
+            product: product,
+            lazy: card_lazy,
+            show_width: eager_width,
+            show_power: eager_power,
+            show_weight: eager_weight
+          %}
+        </li>
+      {%- endfor -%}
+    </ul>
+
+    {%- if section.settings.view_all_label != blank -%}
+      <a class="featured-collection__view-all" href="{{ card_collection.url }}">
+        {{ section.settings.view_all_label | escape }}
+      </a>
+    {%- endif -%}
+  </div>
+
+{%- endif -%}
+
+{% stylesheet %}
+    .featured-collection__heading {
+      font-size: 1.5rem;
+      font-weight: 500;
+      margin-block-end: 1rem;
+    }
+    .featured-collection__grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    @media (min-width: 750px) {
+      .featured-collection__grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    .featured-collection__view-all {
+      display: inline-block;
+      margin-block-start: 1rem;
+      min-height: 44px;
+      padding-block: 10px;
+      color: inherit;
+      font-weight: 500;
+    }
+  {% endstylesheet %}
+
+
+{% schema %}
+{
+  "name": "t:sections.featured_collection.name",
+  "tag": "section",
+  "class": "featured-collection-section",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "t:sections.featured_collection.defaults.heading"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "min": 4,
+      "max": 12,
+      "step": 4,
+      "label": "t:labels.products_to_show",
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "t:sections.featured_collection.headers.card_specs"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_spec_width",
+      "label": "t:sections.featured_collection.labels.show_spec_width",
+      "info": "t:sections.featured_collection.labels.spec_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_spec_power",
+      "label": "t:sections.featured_collection.labels.show_spec_power",
+      "info": "t:sections.featured_collection.labels.spec_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_spec_weight",
+      "label": "t:sections.featured_collection.labels.show_spec_weight",
+      "info": "t:sections.featured_collection.labels.spec_info",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "view_all_label",
+      "label": "t:labels.view_all_label",
+      "default": "t:sections.featured_collection.defaults.view_all_label"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.featured_collection.name"
+    }
+  ]
+}
+{% endschema %}

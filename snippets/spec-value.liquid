@@ -1,0 +1,55 @@
+{% doc %}
+  spec-value — 全主题唯一的参数单位换算与格式化落点（AGENTS.md §4 红线）。
+
+  数据口径：metafield 按公制存储（SDD §2.4），展示单位跟随全局设置
+  `settings.spec_unit_system`（imperial 默认 / metric），主市场北美口径（SDD §8.5）。
+
+  缺值行为：空值或 0 → 输出空字符串，调用方跳行，永不显示 0（SDD §5.7）。
+
+  用法：
+    {% render 'spec-value', value: product.metafields.spec.cutting_width_mm.value, unit_type: 'length_mm' %}
+
+  换算系数备注（换算逻辑禁止散落到其他文件）：
+    - 1 in = 25.4 mm
+    - 1 kg = 2.20462 lb
+    - 1 sq ft = 0.092903 ㎡
+
+  @param {number} value - 数值（number_integer / number_decimal metafield 的 .value）
+  @param {string} unit_type - 'length_mm' | 'weight_kg' | 'area_sqft' 之一
+  @param {string} spec_class - 可选，外层 span 的修饰类名
+{% enddoc %}
+
+{%- liquid
+  assign output = ''
+  if value == blank or value == 0
+    assign output = ''
+  else
+    assign unit_system = settings.spec_unit_system | default: 'imperial'
+    case unit_type
+      when 'length_mm'
+        if unit_system == 'imperial'
+          assign converted = value | times: 0.0393701 | round: 1
+          assign output = converted | append: ' in'
+        else
+          assign output = value | append: ' mm'
+        endif
+      when 'weight_kg'
+        if unit_system == 'imperial'
+          assign converted = value | times: 2.20462 | round
+          assign output = converted | append: ' lb'
+        else
+          assign output = value | append: ' kg'
+        endif
+      when 'area_sqft'
+        if unit_system == 'imperial'
+          assign output = value | append: ' sq ft'
+        else
+          assign converted = value | times: 0.092903 | round
+          assign output = converted | append: ' m2'
+        endif
+    endcase
+  endif
+-%}
+{%- if output != blank -%}
+  <span class="spec-value{% if spec_class %} spec-value--{{ spec_class }}{% endif %}" data-unit-system="{{ unit_system }}">{{ output }}</span>
+{%- endif -%}

@@ -92,7 +92,7 @@
 
 | 字段 | 规则 |
 | ---- | ---- |
-| `acc.consumables` | `list.product_reference`。挂刀片/滤芯/机油/火花塞等复购品；⚠️ 官方 CSV 导入支持该类型，但引用值需目标商品已存在 → 配件导入后**二次导入更新主机** |
+| `acc.consumables` | `list.product_reference`。挂刀片/滤芯/机油/火花塞等复购品；⚠️ 官方 CSV 导入支持该类型（与实测翻车的 list.single_line_text_field 不同），CSV 值 = **目标商品 handle**，多个逗号分隔整格加引号（如 `"honda-21-blade,oil-filter-hf"`）；引用目标必须已存在 → 配件导入后**二次导入更新主机**；handle 拼错**静默忽略**不报错，导入后须抽查渲染。后台亦可手工点选 |
 | `acc.fitment_note` | 一句话适配说明，如 `Fits 21 in deck models 2022 and later`；写在**配件侧**，主机不填 |
 
 ---

@@ -1,0 +1,102 @@
+{% doc %}
+  product-card — 商品卡（首页 featured-collection 与集合页共用，task-index T-1.2）。
+
+  输出：图 + 标题 + 价格 + 2–3 项参数（SDD §8.1 列表页体量约束）+ 对比勾选。
+  参数行逐项判空：缺值只显示已有参数，不留空位（pages-ui §2 状态要点）。
+
+  对比勾选（SDD §6.2.2）：
+    - <button aria-pressed>，输出 data-compare-group（spec.compare_group）与 data-compare-handle
+    - spec.compare_hidden == 'TRUE' → 不渲染按钮
+    - spec.compare_group 为空 → 不渲染按钮（无法分组，§5.4 不兜底）
+    - 触摸目标 ≥ 44×44px（AGENTS.md §8）
+
+  @param {product} product - product 对象（必填）
+  @param {boolean} lazy - true → 图片 lazy（非首屏）；缺省 false → eager
+  @param {boolean} show_width - true → 显示切割宽度（经 spec-value 换算）
+  @param {boolean} show_power - true → 显示动力源（枚举原样，不换算）
+  @param {boolean} show_weight - true → 显示整机重量（经 spec-value 换算）
+{% enddoc %}
+
+{%- if product != blank -%}
+  <article class="product-card">
+    <a class="product-card__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+      {%- if product.featured_image -%}
+        {{
+          product.featured_image
+          | image_url: width: 800
+          | image_tag:
+            widths: '400, 600, 800',
+            sizes: '(min-width: 750px) 22vw, 45vw',
+            width: product.featured_image.width,
+            height: product.featured_image.height,
+            loading: lazy,
+            alt: product.featured_image.alt
+        }}
+      {%- else -%}
+        {{ 'product-1' | placeholder_svg_tag: 'product-card__placeholder' }}
+      {%- endif -%}
+    </a>
+
+    <h3 class="product-card__title">
+      <a href="{{ product.url }}">{{ product.title | escape }}</a>
+    </h3>
+
+    <p class="product-card__price">{{ product.price | money }}</p>
+
+    {%- assign has_specs = false -%}
+    {%- if show_width and product.metafields.spec.cutting_width_mm.value != blank -%}
+      {%- assign has_specs = true -%}
+    {%- elsif show_power and product.metafields.spec.power_source.value != blank -%}
+      {%- assign has_specs = true -%}
+    {%- elsif show_weight and product.metafields.spec.weight_kg.value != blank -%}
+      {%- assign has_specs = true -%}
+    {%- endif -%}
+
+    {%- if has_specs -%}
+      <ul class="product-card__specs">
+        {%- if show_width -%}
+          {%- assign width_value = product.metafields.spec.cutting_width_mm.value -%}
+          {%- if width_value != blank -%}
+            <li class="product-card__spec">
+              <span class="product-card__spec-label">{{ 'products.product_card.spec_cutting_width' | t }}</span>
+              {%- render 'spec-value', value: width_value, unit_type: 'length_mm', spec_class: 'card' -%}
+            </li>
+          {%- endif -%}
+        {%- endif -%}
+        {%- if show_power -%}
+          {%- assign power_value = product.metafields.spec.power_source.value -%}
+          {%- if power_value != blank -%}
+            <li class="product-card__spec">
+              <span class="product-card__spec-label">{{ 'products.product_card.spec_power_source' | t }}</span>
+              <span class="spec-value spec-value--card">{{ power_value }}</span>
+            </li>
+          {%- endif -%}
+        {%- endif -%}
+        {%- if show_weight -%}
+          {%- assign weight_value = product.metafields.spec.weight_kg.value -%}
+          {%- if weight_value != blank -%}
+            <li class="product-card__spec">
+              <span class="product-card__spec-label">{{ 'products.product_card.spec_weight' | t }}</span>
+              {%- render 'spec-value', value: weight_value, unit_type: 'weight_kg', spec_class: 'card' -%}
+            </li>
+          {%- endif -%}
+        {%- endif -%}
+      </ul>
+    {%- endif -%}
+
+    {%- assign compare_group = product.metafields.spec.compare_group.value -%}
+    {%- assign compare_hidden = product.metafields.spec.compare_hidden.value -%}
+    {%- if compare_group != blank and compare_hidden != 'TRUE' -%}
+      <button
+        type="button"
+        class="product-card__compare"
+        aria-pressed="false"
+        data-compare-group="{{ compare_group }}"
+        data-compare-handle="{{ product.handle }}"
+        data-compare-title="{{ product.title | escape }}"
+      >
+        {{ 'products.product_card.add_to_compare' | t }}
+      </button>
+    {%- endif -%}
+  </article>
+{%- endif -%}

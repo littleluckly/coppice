@@ -1,20 +1,68 @@
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file are auto-generated.
- *
- * This file may be updated by the Shopify admin theme editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
 {
   "sections": {
-    "main": {
-      "type": "hello-world",
+    "hero": {
+      "type": "hero-slideshow",
+      "blocks": {
+        "slide-1": {
+          "type": "slide",
+          "settings": {}
+        }
+      },
+      "block_order": ["slide-1"],
+      "settings": {}
+    },
+    "platform-cards": {
+      "type": "platform-cards",
+      "blocks": {
+        "card-1": {
+          "type": "card",
+          "settings": {}
+        },
+        "card-2": {
+          "type": "card",
+          "settings": {}
+        },
+        "card-3": {
+          "type": "card",
+          "settings": {}
+        },
+        "card-4": {
+          "type": "card",
+          "settings": {}
+        }
+      },
+      "block_order": ["card-1", "card-2", "card-3", "card-4"],
+      "settings": {}
+    },
+    "use-cases": {
+      "type": "use-case-grid",
+      "blocks": {
+        "case-1": {
+          "type": "use_case",
+          "settings": {}
+        },
+        "case-2": {
+          "type": "use_case",
+          "settings": {}
+        }
+      },
+      "block_order": ["case-1", "case-2"],
+      "settings": {}
+    },
+    "featured": {
+      "type": "featured-collection",
+      "settings": {}
+    },
+    "blog": {
+      "type": "blog-posts",
       "settings": {}
     }
   },
   "order": [
-    "main"
+    "hero",
+    "platform-cards",
+    "use-cases",
+    "featured",
+    "blog"
   ]
 }

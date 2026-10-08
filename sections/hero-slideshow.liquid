@@ -1,0 +1,217 @@
+{% comment %}
+  Hero slideshow — 首页首屏（task-index T-2.1，pages-ui §2）。
+
+  实现：CSS scroll-snap 横滑（原生滚动，键盘可达，零 JS——性能与无障碍优先）。
+  LCP 硬约束（SDD §8.1）：第一张幻灯图 eager + fetchpriority high，其余 lazy。
+  首块标题为 h1（每页一个 h1，AGENTS.md §8）；其余块 h2。
+{% endcomment %}
+section.blocks.size {{ section.blocks.size }}
+{%- if section.blocks.size > 0 -%}
+  ----------
+  <div
+    class="hero-slideshow full-width"
+    role="region"
+    aria-roledescription="carousel"
+    aria-label="{{ 'sections.hero_slideshow.aria_label' | t }}"
+  >
+    <div class="hero-slideshow__track" tabindex="0">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign is_first = forloop.first
+          assign loading = 'lazy'
+          assign fetch_priority = 'auto'
+          if is_first
+            assign loading = 'eager'
+            assign fetch_priority = 'high'
+          endif
+        -%}
+        <div class="hero-slideshow__slide" {{ block.shopify_attributes }}>
+          <div class="hero-slideshow__media{% if is_first == false %} hero-slideshow__media--lazy{% endif %}">
+            {%- if block.settings.image != blank -%}
+              {%- if block.settings.image_mobile != blank -%}
+                <picture>
+                  <source
+                    media="(max-width: 749px)"
+                    srcset="{{ block.settings.image_mobile | image_url: width: 900 }} 900w, {{ block.settings.image_mobile | image_url: width: 1400 }} 1400w"
+                    sizes="100vw"
+                    width="{{ block.settings.image_mobile.width }}"
+                    height="{{ block.settings.image_mobile.height }}"
+                  >
+                  {{
+                    block.settings.image
+                    | image_url: width: 2400
+                    | image_tag:
+                      widths: '800, 1200, 1600, 2400',
+                      sizes: '100vw',
+                      width: block.settings.image.width,
+                      height: block.settings.image.height,
+                      loading: loading,
+                      fetchpriority: fetch_priority,
+                      alt: block.settings.image.alt
+                  }}
+                </picture>
+              {%- else -%}
+                {{
+                  block.settings.image
+                  | image_url: width: 2400
+                  | image_tag:
+                    widths: '800, 1200, 1600, 2400',
+                    sizes: '100vw',
+                    width: block.settings.image.width,
+                    height: block.settings.image.height,
+                    loading: loading,
+                    fetchpriority: fetch_priority,
+                    alt: block.settings.image.alt
+                }}
+              {%- endif -%}
+            {%- elsif is_first -%}
+              {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-slideshow__placeholder' }}
+            {%- endif -%}
+          </div>
+
+          <div class="hero-slideshow__content">
+            {%- if block.settings.heading != blank -%}
+              {%- if is_first -%}
+                <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
+              {%- else -%}
+                <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
+              {%- endif -%}
+            {%- endif -%}
+
+            {%- if block.settings.subheading != blank -%}
+              <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
+            {%- endif -%}
+
+            {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
+              <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
+                {{ block.settings.button_label | escape }}
+              </a>
+            {%- endif -%}
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  .hero-slideshow__track {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .hero-slideshow__track::-webkit-scrollbar {
+    display: none;
+  }
+  .hero-slideshow__slide {
+    position: relative;
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    min-height: clamp(22rem, 56vw, 44rem);
+  }
+  .hero-slideshow__media,
+  .hero-slideshow__media img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .hero-slideshow__media img {
+    object-fit: cover;
+  }
+  .hero-slideshow__content {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    padding: var(--page-margin);
+    max-width: 42rem;
+    color: #ffffff;
+    text-shadow: 0 1px 8px rgb(0 0 0 / 45%);
+  }
+  .hero-slideshow__heading {
+    font-size: clamp(1.75rem, 4vw, 3rem);
+    font-weight: 500;
+  }
+  .hero-slideshow__subheading {
+    margin-block-start: 0.5rem;
+    font-size: 1.05rem;
+  }
+  .hero-slideshow__cta {
+    display: inline-block;
+    margin-block-start: 1rem;
+    padding: 0.75rem 1.5rem;
+    min-height: 44px;
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    text-decoration: none;
+    border-radius: var(--style-border-radius-inputs);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.hero_slideshow.name",
+  "tag": "section",
+  "class": "hero-slideshow-section",
+  "max_blocks": 5,
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "t:sections.hero_slideshow.blocks.slide.name",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:sections.hero_slideshow.blocks.slide.labels.image",
+          "info": "t:sections.hero_slideshow.blocks.slide.labels.image_info"
+        },
+        {
+          "type": "image_picker",
+          "id": "image_mobile",
+          "label": "t:sections.hero_slideshow.blocks.slide.labels.image_mobile",
+          "info": "t:sections.hero_slideshow.blocks.slide.labels.image_mobile_info"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:labels.heading",
+          "default": "t:sections.hero_slideshow.blocks.slide.defaults.heading"
+        },
+        {
+          "type": "text",
+          "id": "subheading",
+          "label": "t:labels.subheading",
+          "default": "t:sections.hero_slideshow.blocks.slide.defaults.subheading"
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "t:labels.button_label",
+          "default": "t:sections.hero_slideshow.blocks.slide.defaults.button_label"
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "t:labels.button_link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Coppice",
+      "blocks": [
+        {
+          "type": "slide",
+          "settings": {
+            "heading": "t:sections.hero_slideshow.presets.slide_1.heading",
+            "subheading": "t:sections.hero_slideshow.presets.slide_1.subheading",
+            "button_label": "t:sections.hero_slideshow.presets.slide_1.button_label"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

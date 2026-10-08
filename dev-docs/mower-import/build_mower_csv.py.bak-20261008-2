@@ -113,48 +113,48 @@ AREA_SQFT = {
 # alt 已按 NB 型号预写（图未出，描述以型号与既定造型为准，出图后逐张复核）。
 IMAGES = {
     "northbark-nb-21p": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21p-1-main_webp.webp?v=1791447564", "Northbark NB-21P 21-inch gas walk-behind push mower with rear grass bag, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21p-2-bag_webp.webp?v=1791447566", "Northbark NB-21P rear grass bag and 3-in-1 discharge detail"),
+        "main": ("", "Northbark NB-21P 21-inch gas walk-behind push mower with rear grass bag, three-quarter view"),
+        "second": ("", "Northbark NB-21P rear grass bag and 3-in-1 discharge detail"),
     },
     "northbark-nb-21s": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21s-1-main_webp.webp?v=1791447564", "Northbark NB-21S 21-inch gas self-propelled mower with rear grass bag, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21s-2-controls_webp.webp?v=1791447562", "Northbark NB-21S variable speed control lever detail"),
+        "main": ("", "Northbark NB-21S 21-inch gas self-propelled mower with rear grass bag, three-quarter view"),
+        "second": ("", "Northbark NB-21S variable speed control lever detail"),
     },
     "northbark-nb-22s": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-22s-1-main_webp.webp?v=1791447563", "Northbark NB-22S 22-inch self-propelled gas mower, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-22s-2-height-adjuster_webp.webp?v=1791447565", "Northbark NB-22S single-lever height adjuster detail"),
+        "main": ("", "Northbark NB-22S 22-inch self-propelled gas mower, three-quarter view"),
+        "second": ("", "Northbark NB-22S single-lever height adjuster detail"),
     },
     "northbark-nb-21ph": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21ph-1-main_webp.webp?v=1791447564", "Northbark NB-21PH 21-inch high-wheel push gas mower with rear bag, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21ph-2-wheels_webp.webp?v=1791447565", "Northbark NB-21PH 11-inch rear high wheel detail"),
+        "main": ("", "Northbark NB-21PH 21-inch high-wheel push gas mower with rear bag, three-quarter view"),
+        "second": ("", "Northbark NB-21PH 11-inch rear high wheel detail"),
     },
     "northbark-nb-21bs": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21bp-1-main_webp.webp?v=1791447562", "Northbark NB-21BS 21-inch 40V brushless cordless self-propelled mower with rear grass bag"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21bp-2-kit_webp.webp?v=1791447564", "Northbark NB-21BS kit with two 6.0 Ah batteries and charger"),
+        "main": ("", "Northbark NB-21BS 21-inch 40V brushless cordless self-propelled mower with rear grass bag"),
+        "second": ("", "Northbark NB-21BS kit with two 6.0 Ah batteries and charger"),
     },
     "northbark-nb-21bp": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21bp-1-main_webp.webp?v=1791447562", "Northbark NB-21BP 21-inch brushless cordless push mower kit with two batteries and charger"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21bp-2-kit_webp.webp?v=1791447564", "Northbark NB-21BP kit with 4.0 Ah and 2.0 Ah batteries and charger"),
+        "main": ("", "Northbark NB-21BP 21-inch brushless cordless push mower kit with two batteries and charger"),
+        "second": ("", "Northbark NB-21BP kit with 4.0 Ah and 2.0 Ah batteries and charger"),
     },
     "northbark-nb-21b80": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21b80-1-main_webp.webp?v=1791447560", "Northbark NB-21B80 80V brushless self-propelled cordless mower, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21b80-2-kit_webp.webp?v=1791447563", "Northbark NB-21B80 kit with two batteries and charger"),
+        "main": ("", "Northbark NB-21B80 80V brushless self-propelled cordless mower, three-quarter view"),
+        "second": ("", "Northbark NB-21B80 kit with 5.0 Ah battery and charger"),
     },
     "northbark-nb-42t": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42t-1-main_webp.webp?v=1791447563", "Northbark NB-42T 42-inch lawn tractor, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42t-2-controls_webp.webp?v=1791447564", "Northbark NB-42T foot pedal and dashboard detail"),
+        "main": ("", "Northbark NB-42T 42-inch lawn tractor, three-quarter view"),
+        "second": ("", "Northbark NB-42T foot pedal and dashboard detail"),
     },
     "northbark-nb-42th": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42th-1-main_webp.webp?v=1791447563", "Northbark NB-42TH 42-inch riding lawn mower with hydrostatic transmission and sunshade canopy, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42th-2-controls_webp.webp?v=1791447559", "Northbark NB-42TH sunshade canopy detail"),
+        "main": ("", "Northbark NB-42TH 42-inch riding lawn mower with hydrostatic transmission, three-quarter view"),
+        "second": ("", "Northbark NB-42TH hydrostatic control and cruise lever detail"),
     },
     "northbark-nb-42z": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42z-1-main_webp.webp?v=1791447563", "Northbark NB-42Z 42-inch zero-turn riding mower, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42z-2-controls_webp.webp?v=1791447564", "Northbark NB-42Z dual lap bar controls detail"),
+        "main": ("", "Northbark NB-42Z 42-inch zero-turn riding mower, three-quarter view"),
+        "second": ("", "Northbark NB-42Z dual lap bar controls detail"),
     },
     "northbark-nb-42tc": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42tc-1-main_webp.webp?v=1791447564", "Northbark NB-42TC 42-inch riding lawn mower with 7-speed CVT, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42tc-2-controls_webp.webp?v=1791447564", "Northbark NB-42TC gear shift detail"),
+        "main": ("", "Northbark NB-42TC 42-inch riding lawn mower with 7-speed CVT, three-quarter view"),
+        "second": ("", "Northbark NB-42TC gear shift detail"),
     },
 }
 
@@ -300,7 +300,7 @@ PRODUCTS = [
         battery_platform="80V", cc="", cut_mm=533, weight_kg=26.3, warranty_mo=60,
         shipping_class="Parcel", liftgate="", assembly="", lead=3,
         desc="<p>80 V brushless rear-wheel self-propelled mower with variable speed, 3-in-1 "
-             "cutting and vertical storage, kitted with two batteries and a charger. Listed "
+             "cutting and vertical storage, kitted with a 5.0 Ah battery and charger. Listed "
              "weight 58 lb (26.3 kg) is the bare unit, battery excluded. "
              "5-year tool / 3-year battery warranty.</p>",
     ),
@@ -338,7 +338,7 @@ PRODUCTS = [
         battery_platform="", cc=547, cut_mm=1067, weight_kg=186.0, warranty_mo=36,
         shipping_class="Freight LTL", liftgate="TRUE", assembly="TRUE", lead=7,
         desc="<p>A 547 cc engine paired with a 42 in. stamped deck, "
-             "hydrostatic transmission, cruise control and a sunshade canopy. Listed weight 410 lb (186.0 kg) is "
+             "hydrostatic transmission and cruise control. Listed weight 410 lb (186.0 kg) is "
              "an aggregated reference for the line. 3-year unlimited-hour residential warranty.</p>",
     ),
     dict(

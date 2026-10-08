@@ -1,4 +1,7 @@
 {
+  "date_formats": {
+    "on_date": "%B %-d, %Y"
+  },
   "404": {
     "title": "404",
     "not_found": "Page not found.",
@@ -29,6 +32,25 @@
   },
   "collections": {
     "title": "Collections"
+  },
+  "products": {
+    "product_card": {
+      "add_to_compare": "Add to compare",
+      "spec_cutting_width": "Cutting width",
+      "spec_power_source": "Power source",
+      "spec_weight": "Weight"
+    }
+  },
+  "sections": {
+    "hero_slideshow": {
+      "aria_label": "Highlights"
+    },
+    "platform_cards": {
+      "products_count": {
+        "one": "{{ count }} product",
+        "other": "{{ count }} products"
+      }
+    }
   },
   "gift_card": {
     "add_to_apple_wallet": "Add to Apple Wallet",

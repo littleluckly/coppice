@@ -1,7 +1,7 @@
 [
   {
     "name": "theme_info",
-    "theme_name": "Skeleton",
+    "theme_name": "Coppice",
     "theme_version": "0.1.0",
     "theme_author": "Shopify",
     "theme_documentation_url": "https://help.shopify.com/manual/online-store/themes",
@@ -50,6 +50,28 @@
         "unit": "px",
         "label": "t:labels.page_margin",
         "default": 20
+      }
+    ]
+  },
+  {
+    "name": "t:general.spec_units",
+    "settings": [
+      {
+        "type": "select",
+        "id": "spec_unit_system",
+        "label": "t:labels.spec_unit_system",
+        "options": [
+          {
+            "value": "imperial",
+            "label": "t:options.spec_unit_system.imperial"
+          },
+          {
+            "value": "metric",
+            "label": "t:options.spec_unit_system.metric"
+          }
+        ],
+        "default": "imperial",
+        "info": "t:labels.spec_unit_system_info"
       }
     ]
   },

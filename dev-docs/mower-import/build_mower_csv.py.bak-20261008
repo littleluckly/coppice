@@ -102,60 +102,55 @@ AREA_SQFT = {
 
 # ---------------------------------------------------------------- 图片（Shopify Files CDN + alt）
 
-# 2026-10-08 升级为每款 2 张图（main 主图 + second 细节图，SDD §9.3"每商品 2–4 张"）。
-# 命名规范与台账见 docs/demo-store/asset-provenance.md（product-<型号>-<序>-<内容>.jpg）。
-# URL 规则：main/second 均为 Shopify Files CDN 链接；second URL 为空 → CSV 不输出该款第二行。
-# alt：已按 provenance 台账预写，出图后逐张复核图文一致。
-
 # 2026-09-30 虚拟品牌化改造：原真实品牌产品图全部弃用（版权/商标，SDD §9.1）。
 # URL 全部置空——11 张 Northbark 产品图由 AI 重出（无 logo、无文字、无水印、
 # 统一造型风格，SDD §9.3），上传 Files 后把链接回填此处再重跑。
 # alt 已按 NB 型号预写（图未出，描述以型号与既定造型为准，出图后逐张复核）。
 IMAGES = {
-    "northbark-nb-21p": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21p-1-main_webp.webp?v=1791447564", "Northbark NB-21P 21-inch gas walk-behind push mower with rear grass bag, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21p-2-bag_webp.webp?v=1791447566", "Northbark NB-21P rear grass bag and 3-in-1 discharge detail"),
-    },
-    "northbark-nb-21s": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21s-1-main_webp.webp?v=1791447564", "Northbark NB-21S 21-inch gas self-propelled mower with rear grass bag, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21s-2-controls_webp.webp?v=1791447562", "Northbark NB-21S variable speed control lever detail"),
-    },
-    "northbark-nb-22s": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-22s-1-main_webp.webp?v=1791447563", "Northbark NB-22S 22-inch self-propelled gas mower, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-22s-2-height-adjuster_webp.webp?v=1791447565", "Northbark NB-22S single-lever height adjuster detail"),
-    },
-    "northbark-nb-21ph": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21ph-1-main_webp.webp?v=1791447564", "Northbark NB-21PH 21-inch high-wheel push gas mower with rear bag, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21ph-2-wheels_webp.webp?v=1791447565", "Northbark NB-21PH 11-inch rear high wheel detail"),
-    },
-    "northbark-nb-21bs": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21bp-1-main_webp.webp?v=1791447562", "Northbark NB-21BS 21-inch 40V brushless cordless self-propelled mower with rear grass bag"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21bp-2-kit_webp.webp?v=1791447564", "Northbark NB-21BS kit with two 6.0 Ah batteries and charger"),
-    },
-    "northbark-nb-21bp": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21bp-1-main_webp.webp?v=1791447562", "Northbark NB-21BP 21-inch brushless cordless push mower kit with two batteries and charger"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21bp-2-kit_webp.webp?v=1791447564", "Northbark NB-21BP kit with 4.0 Ah and 2.0 Ah batteries and charger"),
-    },
-    "northbark-nb-21b80": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21b80-1-main_webp.webp?v=1791447560", "Northbark NB-21B80 80V brushless self-propelled cordless mower, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-21b80-2-kit_webp.webp?v=1791447563", "Northbark NB-21B80 kit with two batteries and charger"),
-    },
-    "northbark-nb-42t": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42t-1-main_webp.webp?v=1791447563", "Northbark NB-42T 42-inch lawn tractor, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42t-2-controls_webp.webp?v=1791447564", "Northbark NB-42T foot pedal and dashboard detail"),
-    },
-    "northbark-nb-42th": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42th-1-main_webp.webp?v=1791447563", "Northbark NB-42TH 42-inch riding lawn mower with hydrostatic transmission and sunshade canopy, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42th-2-controls_webp.webp?v=1791447559", "Northbark NB-42TH sunshade canopy detail"),
-    },
-    "northbark-nb-42z": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42z-1-main_webp.webp?v=1791447563", "Northbark NB-42Z 42-inch zero-turn riding mower, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42z-2-controls_webp.webp?v=1791447564", "Northbark NB-42Z dual lap bar controls detail"),
-    },
-    "northbark-nb-42tc": {
-        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42tc-1-main_webp.webp?v=1791447564", "Northbark NB-42TC 42-inch riding lawn mower with 7-speed CVT, three-quarter view"),
-        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42tc-2-controls_webp.webp?v=1791447564", "Northbark NB-42TC gear shift detail"),
-    },
+    "northbark-nb-21p": (
+        "",
+        "Northbark NB-21P 21-inch gas walk-behind push mower with rear grass bag, three-quarter view",
+    ),
+    "northbark-nb-21s": (
+        "",
+        "Northbark NB-21S 21-inch gas self-propelled mower with rear grass bag, three-quarter view",
+    ),
+    "northbark-nb-22s": (
+        "",
+        "Northbark NB-22S 22-inch self-propelled gas mower, shown on a driveway",
+    ),
+    "northbark-nb-21ph": (
+        "",
+        "Northbark NB-21PH 21-inch high-wheel push gas mower with rear bag",
+    ),
+    "northbark-nb-21bs": (
+        "",
+        "Northbark NB-21BS 21-inch 40V brushless cordless self-propelled mower with rear grass bag",
+    ),
+    "northbark-nb-21bp": (
+        "",
+        "Northbark NB-21BP 21-inch brushless cordless push mower kit with two batteries and charger",
+    ),
+    "northbark-nb-21b80": (
+        "",
+        "Northbark NB-21B80 80V brushless self-propelled cordless mower cutting a lawn",
+    ),
+    "northbark-nb-42t": (
+        "",
+        "Northbark NB-42T 42-inch lawn tractor on a residential lawn",
+    ),
+    "northbark-nb-42th": (
+        "",
+        "Northbark NB-42TH 42-inch riding lawn mower with hydrostatic transmission, parked on grass",
+    ),
+    "northbark-nb-42z": (
+        "",
+        "Northbark NB-42Z 42-inch zero-turn riding mower",
+    ),
+    "northbark-nb-42tc": (
+        "",
+        "Northbark NB-42TC 42-inch riding lawn mower with 7-speed CVT, mowing beside a fence",
+    ),
 }
 
 # ---------------------------------------------------------------- 产品数据
@@ -300,7 +295,7 @@ PRODUCTS = [
         battery_platform="80V", cc="", cut_mm=533, weight_kg=26.3, warranty_mo=60,
         shipping_class="Parcel", liftgate="", assembly="", lead=3,
         desc="<p>80 V brushless rear-wheel self-propelled mower with variable speed, 3-in-1 "
-             "cutting and vertical storage, kitted with two batteries and a charger. Listed "
+             "cutting and vertical storage, kitted with a 5.0 Ah battery and charger. Listed "
              "weight 58 lb (26.3 kg) is the bare unit, battery excluded. "
              "5-year tool / 3-year battery warranty.</p>",
     ),
@@ -338,7 +333,7 @@ PRODUCTS = [
         battery_platform="", cc=547, cut_mm=1067, weight_kg=186.0, warranty_mo=36,
         shipping_class="Freight LTL", liftgate="TRUE", assembly="TRUE", lead=7,
         desc="<p>A 547 cc engine paired with a 42 in. stamped deck, "
-             "hydrostatic transmission, cruise control and a sunshade canopy. Listed weight 410 lb (186.0 kg) is "
+             "hydrostatic transmission and cruise control. Listed weight 410 lb (186.0 kg) is "
              "an aggregated reference for the line. 3-year unlimited-hour residential warranty.</p>",
     ),
     dict(
@@ -388,7 +383,6 @@ def build_rows():
     rows = []
     for p in PRODUCTS:
         grams = lb_to_g(p["weight_lb"])
-        imgs = IMAGES[p["handle"]]
         base = {c: "" for c in OFFICIAL_KEEP}
         base.update({
             "Title": p["title"],
@@ -412,9 +406,8 @@ def build_rows():
             "Weight unit for display": "lb",
             "Requires shipping": "TRUE",
             "Fulfillment service": "manual",
-            "Image position": "1",
-            "Product image URL": imgs["main"][0],
-            "Image alt text": imgs["main"][1],
+            "Product image URL": IMAGES[p["handle"]][0],
+            "Image alt text": IMAGES[p["handle"]][1],
         })
         meta = {h: "" for h in META_HEADER}
         meta.update({
@@ -436,16 +429,6 @@ def build_rows():
             "Lead time (days) (product.metafields.logistics.lead_time_days)": str(p["lead"]),
         })
         rows.append({**base, **meta})
-        # 第二张图行：Shopify CSV 规范——图片行只填 handle + 图片列，其余留空
-        if imgs["second"][0]:
-            img_row = {c: "" for c in OFFICIAL_KEEP + META_HEADER}
-            img_row.update({
-                "URL handle": p["handle"],
-                "Image position": "2",
-                "Product image URL": imgs["second"][0],
-                "Image alt text": imgs["second"][1],
-            })
-            rows.append(img_row)
     return rows
 
 
@@ -457,25 +440,12 @@ def validate(rows):
 
     skus = set()
     handles = set()
-    main_handles = {r["URL handle"] for r in rows if r["SKU"]}
     for i, row in enumerate(rows):
         if len(row) != n_cols:
             errors.append(f"行 {i+1}: 列数 {len(row)} != {n_cols}")
         h = row["URL handle"]
         if not h:
             errors.append(f"行 {i+1}: URL handle 为空")
-        # 图片行（第二张图）：只带 handle + 图片列，专走图片行校验
-        is_img_row = (not row["SKU"]) and bool(h)
-        if is_img_row:
-            if h not in main_handles:
-                errors.append(f"行 {i+1}: 图片行 handle 无对应主行: {h}")
-            if row["Image position"] != "2":
-                errors.append(f"行 {i+1}: 图片行 Image position 应为 2")
-            if not row["Product image URL"].startswith("https://cdn.shopify.com/"):
-                errors.append(f"行 {i+1}: 图片行 URL 非 Shopify CDN")
-            if not row["Image alt text"]:
-                errors.append(f"行 {i+1}: 图片行 alt 为空（无障碍硬要求）")
-            continue
         if h in handles:
             errors.append(f"行 {i+1}: URL handle 重复 {h}")
         handles.add(h)
@@ -485,8 +455,6 @@ def validate(rows):
         if sku in skus:
             errors.append(f"行 {i+1}: SKU 重复 {sku}")
         skus.add(sku)
-        if row["Image position"] != "1":
-            errors.append(f"行 {i+1}: 主行 Image position 应为 1")
         # 图片列（T-0.2）：URL 缺失记警告（导入后无主图），alt 缺失记错误（无障碍硬要求）
         if not row["Product image URL"]:
             warnings.append(f"行 {i+1}: Product image URL 为空（{row['URL handle']}，导入后无主图）")
@@ -579,8 +547,7 @@ def main():
     # 4) 报告
     print(f"✓ 已写出 {OUT_PATH}")
     print(f"  列数 = {len(header)}（官方 {len(OFFICIAL_KEEP)} + metafield {len(META_HEADER)}）")
-    print(f"  商品数 = {len(PRODUCTS)}（全部单变体）；总行数 = {len(rows)}"
-          f"（主行 {len(PRODUCTS)} + 第二图行 {len(rows) - len(PRODUCTS)}）")
+    print(f"  商品数 = {len(rows)}（全部单变体，共 {len(rows)} 行）")
     print(f"  校验：0 错误 / {len(warnings)} 警告 / {len(infos)} 信息" if not errors
           else f"✗ 校验失败：{len(errors)} 错误")
     for e in errors:

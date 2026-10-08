@@ -1,0 +1,157 @@
+# 首页（index.json）开发任务清单 — task-index.md
+
+> **性质**：SDD 驱动开发的页面级任务清单（v1.0）。拆解自 `dev-docs/pages-ui.md` §2（首页工单）与 `dev-docs/sdd.md` 对应章节，不引入新决策。
+> **权威关系**：与 SDD / pages-ui 冲突时，以 `dev-docs/sdd.md` 为准；本清单只负责把首页工作切成可执行、可验收的任务。
+> **范围**：仅 `templates/index.json` 及其 5 个内容 section + 2 个首页立项的共享 snippet。header/footer group、购物车抽屉等全局组件**不在本清单内**（见 §0 外部依赖）。
+> **版本**：v1.0 ｜ 整理日期：2026-09-30 ｜ 总人日：**8.5**（累加链见 §3）
+> **通用约束**：以下不逐任务重复——文案走 `t:` 键、URL 走 `routes`、图片 `image_tag` + width/height + 焦点裁剪、JS 一律 defer/async、隐藏组件首次打开才建 DOM、类名 Skeleton 风格 BEM、设计令牌走 `css-variables.liquid`（AGENTS.md §4/§6）。
+
+---
+
+## 0. 外部依赖（不在本清单内，但影响首页）
+
+| 依赖 | 现状（2026-09-30） | 影响 | 处置 |
+| --- | --- | --- | --- |
+| header-group 改造（公告栏、三级菜单、`<shopify-account>`、预测搜索、cart 入口，pages-ui §1.1） | Skeleton 默认结构，仅 1 个 header section | 首页开发期间真机预览看到的是 Skeleton 头部；对比勾选、账户等全局交互不可端到端验证 | 待全局组件任务清单立项；**不阻塞** section 开发 |
+| footer-group 改造（newsletter、localization、支付图标，pages-ui §1.2） | Skeleton 默认结构 | 同上 | 同上 |
+| `snippets/spec-value.liquid` | 未创建 | 首页商品卡参数需要它 → 已立项进本清单 T-1.1（首页为第一消费方） | 本清单内解决 |
+| 演示素材（hero/平台卡/用例图） | assets/ 仅 3 个 SVG | preset 要求可用示例内容 → 已立项进本清单 T-0.2 | 本清单内解决 |
+
+---
+
+## 1. 任务分解
+
+### P0 前置（数据与素材）
+
+#### T-0.1 演示数据核查 · 0.5 人日 · 依赖：CSV 导入流水线（外部，SDD §5.9） ✅ 2026-09-30 完成 → ⛔ 同日重开（路线回虚拟品牌，CSV 改造后需重导复查）
+
+> **⛔ 2026-09-30 重开**：刘工拍板回归 SDD §9.1 原案——CSV 已虚拟品牌化改造（vendor→Northbark、型号→NB 体系、文案去商标、真实召回提示删除；参数数值保留，§9.1 允许行业真实值），脚本 0 错误。**店侧待办**：新 CSV 重导（新 handle → 新建 11 款）→ 删除旧真实品牌 11 款商品与 Files 中已传的真实品牌图 → 重新核对集合计数与 metafield 定义（定义本身不受影响）。
+
+核对项（不过则暂停 section 开发，先走 `dev-docs/handoff-产品csv导入.md` 流程）：
+
+- [x] 23 个 metafield 定义已建，全勾 Storefront 可见性 + Admin API 筛选；`battery_platform` 另勾"用作集合条件"（SDD §5.8）✅ 刘工后台确认
+- [x] 平台自动化集合按值域建齐（条件见 SDD §3.4/§6.5，值域 `20V/40V/60V/80V/N/A` 见 metafield-reference #17）✅ 刘工后台确认：
+  - **40V / 80V / Gas Series**：非空，必建——2026-09-30 导入数据实际分布：40V ×2、80V ×1、Gasoline ×7（Gas Series 条件为 `spec.power_source is equal to Gasoline`）
+  - **20V / 60V**：当前为空集合，**建了保留不删**——作为 T-4.1 空卡隐藏逻辑的实测对象（避免为测试造数据）
+- [x] 演示商品已导入且 `spec.*` 关键字段非空 ✅ 脚本核验（build_mower_csv.py 校验 0 错误，AK/AP/AQ 等列 11/11 非空）
+- [x] 确认各平台集合 `all_products_count` 与上表分布一致（40V=2、80V=1、Gas=7、20V/60V=0）✅ 刘工后台确认；不一致先查 CSV 而不是改集合条件
+
+#### T-0.2 演示素材准备 · 1.0 人日 · 依赖：无 ✅ 2026-10-08 完成（22 张产品图 + 8 张 hero + 2 张用例图全部核验入库，台账见 docs/demo-store/asset-provenance.md）
+
+> **进展（2026-09-30）**：刘工拍板回归 SDD §9.1 虚拟品牌原案——**11 张真实品牌产品图全部弃用**（版权/商标），11 张 Northbark 产品图 + 5 张场景图（hero ×3、用例 ×2）全部 AI 重出，统一造型风格（§9.3）。素材本地存档 `dev-docs/local-assets/`。产品图最终落点是 Shopify Files（商品图走 `product.images`/CDN，不经 `asset_url`）。
+>
+> **AI 图生成清单（16 张，统一 Northbark 造型语言）**：11 产品图（逐张与 NB 型号规格一致，§9.3 型号一致性；无 logo/无文字/无水印）+ hero 横竖双备 3 套 + 用例纯场景 2 张；出图时登记 `docs/demo-store/asset-provenance.md`（工具/提示词摘要/日期，§9.3 尚未创建）。✅ hero 8 张与用例 2 张已于 10-08 验收通过（复用矩阵），**产品图 11 张为 T-0.2 唯一剩余项**。
+
+**产品图出图规格（11 张 Northbark 主图，逐项核验口径）**：
+
+- **内容红线**（§9.3）：无真实品牌 logo/型号标/可识别包装；无烧录文字/按钮/水印；无可识别真实人物；生成工具商用许可已核验
+- **型号一致性**（§9.3）：NB-21 系=21 in 刀盘走步机、NB-22S=22 in、NB-42 系=42 in 方向盘式 tractor、NB-42Z=zero-turn（操纵杆无方向盘）；电池款（BP/BS/B80）无排气管无油箱盖；PH 带大后轮，BP/BS kit 造型可带电池
+- **造型基调**：汽油走步=绿、电池走步=灰黑、骑乘 tractor=绿灰、zero-turn=红黑（与已验收 hero 矩阵同语言）
+- **技术口径**：2048×2048 方形；JPG/WebP ≤500 KB（禁 PNG）；全系列统一左前 45° 视角；白底/统一浅灰棚拍（与场景图区分）
+- **alt**：已预写在 build_mower_csv.py IMAGES 字典（出图后逐张复核与画面一致）
+- **数量**：✅ 已定稿按 **2 张/款 = 22 张**（刘工 10-08 拍板，满足 §9.3"每商品 2–4 张"下限）：每款 main 主图（左前 45° 白底棚拍）+ 1 张卖点细节图（variant 见台账）。CSV 管线已升级支持（build_mower_csv.py：second URL 空→不输出第二行；有→按 Shopify 规范追加图片行），冒烟测试通过
+- **台账**：`docs/demo-store/asset-provenance.md` 已创建（10-08）——命名规范 `product-<型号>-<序>-<内容>.jpg`、22 张清单（文件名/alt/状态）、生成工具与商用许可待登记、提示词模板。出图后逐张回填 URL + 状态
+
+- [x] ~~11 张产品图上传 Shopify Files → 回填 CSV `Product image URL` 列~~ **9/11 完成（2026-09-30）**：URL 已回填进 `build_mower_csv.py` IMAGES 字典并重新生成 CSV（0 错误）；**Husqvarna Z242F / Troy-Bilt Pony 42X 两张漏传**，补传后把链接填入脚本 IMAGES 再重跑。素材本地存档 `dev-docs/local-assets/`。⚠️ CSV 曾第二次被存成 XLSX（魔数 PK），已重生成纯文本——表格软件里编辑后必须"另存为 CSV UTF-8"
+- [x] ~~素材均登记 alt 文案~~ **11/11 完成（2026-09-30）**：逐张看图撰写，写入 CSV `Image alt text` 列 + 脚本 IMAGES 字典；只描述可见内容，不编角度
+- [x] Hero 横竖屏双备图（10-08 第三批）✅ **验收通过**：2 场景（small-yard/large-lawn）× 2 机型（push/ride-on）× 双端（pc 16:9 / mobile 3:4）= 8 张 WebP，2560×1440 + 1296×1728，**全部无文字/无按钮/无水印/无真实 logo**，横竖同场景同机对版，体积 424–682 KB（CDN 转码兜底）。URL 见 Files（文件名 `mower-<场景>-<机型>-<端>_webp.webp`）；本地存档 `dev-docs/local-assets/`。文案层注意：small-yard-ride-on / large-lawn-push 两张作 hero 时不绑定用例文案（骑乘机≠小院之选），幻灯文案写产品线通用语
+- [x] 平台卡图 3 张（40V / 80V / Gas）：**已决策不单独准备**——复用平台代表产品图（40V→Ryobi 40V HP、80V→Kobalt 80V、Gas→Honda HRN216PKA），preset/编辑器里经 `image_picker` 选图即可；"平台横幅感"增强图过审后再 AI 补，不阻塞（20V/60V 空集合不出卡，无需图）。⚠️ 真实品牌图弃用后改为复用 11 张 Northbark 产品图中的对应款
+- [x] 用例图文块配图 2 张（小院 / 大草坪；林地清理无对应集合暂不上）✅ **复用 hero 矩阵，无需单独出图**（10-08）：Small Yards 卡 → `mower-small-yard-push-pc/mobile`（走步机=小院用例语义 ✓），Large Lawns 卡 → `mower-large-lawn-ride-on-pc/mobile`（骑乘机=大草坪用例语义 ✓），均纯场景无字
+- [ ] 素材存档补全：`docs/demo-store/asset-provenance.md`（§9.3 要求记录生成工具/日期/提示词摘要）尚未创建，重出图时一并登记
+
+### P1 共享组件（首页立项，后续页面复用）
+
+#### T-1.1 `snippets/spec-value.liquid` · 0.5 人日 · 依赖：T-0.1 ✅ 2026-10-08 完成
+
+- [ ] 输入：metafield 值 + 字段类型（长度/面积/重量/功率等），输出：按 `settings.spec_unit_system` 换算后的显示值
+- [ ] **全主题单位换算逻辑集中于此**（AGENTS.md §4 红线），其他文件禁止出现换算
+- [ ] 缺值返回空（调用方跳行），**永不输出 0**（SDD §5.4/§5.7）
+- [ ] 公制存储 → 北美英制口径显示（如 `sq ft`，SDD §8.5）；换算系数以 metafield-reference.md 数据字典为准，不确定的标注"待实测校正"
+
+#### T-1.2 `snippets/product-card.liquid` · 1.0 人日 · 依赖：T-1.1 ✅ 2026-10-08 完成
+
+- [ ] 输出：图 + 标题 + 价格 + **2–3 项参数**（字段选择由调用方 section 设置传入）+ 对比勾选（SDD §8.1 卡片体量约束）
+- [ ] 参数行逐项判空：缺值只显示已有参数，**不留空位**（pages-ui §2 状态要点）
+- [ ] 对比勾选：`<button aria-pressed>`，输出 `data-compare-group`（取 `spec.compare_group`；`compare_hidden` 为 true 的商品隐藏勾选），对齐 §6.2.2
+- [ ] 卡内链接走 `routes`；触摸目标 ≥ 44×44px（AGENTS.md §8 高危控件）
+- [ ] 初版按首页 featured-collection 需求实现；集合页任务复用时再扩展（此处留注释锚点）
+
+### P2 首页 sections（pages-ui §2 线框自上而下）
+
+#### T-2.1 `sections/hero-slideshow.liquid` · 1.5 人日 · 依赖：T-0.2 ✅ 2026-10-08 完成
+
+- [ ] 幻灯块 ×N（block）：每块横竖屏双图、标题、副文案、CTA 按钮链接（settings 选择）
+- [ ] **LCP 硬约束**（SDD §8.1）：首张幻灯图 `fetchpriority="high"` + eager，且在首屏流内；第 2+ 张 lazy
+- [ ] 轮播交互：圆点/箭头键盘可达（≥44×44px），自动播放可暂停（无障碍）；或 v1.0 降级为"首屏静态 hero + 后续幻灯懒加载"——**实现取其一，验收标准不变**
+- [ ] schema：name/label 走 `t:` 键；**preset 名 = `Coppice`**（AGENTS.md §4 命名硬性要求，"至少一个 section preset 名与主题名相同"——落在本 section）；preset 默认值用 T-0.2 素材，不是占位符
+
+#### T-2.2 `sections/platform-cards.liquid` · 1.0 人日 · 依赖：T-0.1 ✅ 2026-10-08 完成
+
+- [ ] 渲染平台卡 ×N（商家 block 选择目标集合）：卡图 + 平台介绍 + **兼容工具数** + 链接到自动化集合（SDD §6.5）
+- [ ] 工具数取 `collection.all_products_count`，循环外取值
+- [ ] **空集合隐藏该卡，不是灰卡**（pages-ui §2 状态要点）；全部为空 → 整个 section 不渲染
+- [ ] 移动端横滑（pages-ui §2 移动线框）；卡排序 block 顺序即渲染顺序
+
+#### T-2.3 `sections/use-case-grid.liquid` · 0.5 人日 · 依赖：T-0.2 ✅ 2026-10-08 完成
+
+- [ ] 图文块 ×2–3（block）：图 + 标题 + 一句话 + 目标集合链接（小院 / 大草坪 / 林地清理收敛路径，SDD §4.1）
+- [ ] 桌面半幅网格 / 移动纵排；无特殊状态，遵守通用无障碍
+
+#### T-2.4 `sections/featured-collection.liquid` · 0.5 人日 · 依赖：T-1.2 ✅ 2026-10-08 完成
+
+- [ ] 集合选择设置 + 商品卡网格（桌面 2×4 / 移动 2 列，pages-ui §2 线框），消费 `snippets/product-card.liquid`
+- [ ] 商品循环内**不做** metafield assign（已在 snippet 内处理，避免重复取值）
+- [ ] 集合为空 → section 不渲染或显示空态文案（与 T-2.2 同规则，取"不渲染"）
+
+#### T-2.5 `sections/blog-posts.liquid` · 0.5 人日 · 依赖：无（可并行） ✅ 2026-10-08 完成
+
+- [ ] blog 选择设置 + 文章块 ×3：图（lazy）+ 标题 + 摘要 + 日期
+- [ ] 文章图为可选项，缺图文章卡退化为纯文字布局（不裂版）
+
+### P3 组装与文案
+
+#### T-3.1 重写 `templates/index.json` + locales 键 · 0.5 人日 · 依赖：T-2.1 ~ T-2.5 ✅ 2026-10-08 完成
+
+- [ ] index.json 按 pages-ui §2 顺序组装：hero-slideshow → platform-cards → use-case-grid → featured-collection → blog-posts
+- [ ] 所有 section/label 文案键落 `locales/en.default.json` + `en.default.schema.json`；sentence case + 美式英语（AGENTS.md §9）
+- [ ] `(v1.1) 季节切换 section`：**不创建文件、不计人日**——过审后随 v1.1 立项（SDD §12），此处仅登记占位
+
+### P4 首页验收
+
+#### T-4.1 首页验收 · 1.0 人日 · 依赖：T-3.1（+ 外部依赖 header/footer group 完成后复测）🔄 进行中（theme check 全绿 46 文件 0 offenses；Lighthouse/真机待 push 后）
+
+- [ ] `shopify theme check` 涉首页文件 0 Error
+- [ ] Lighthouse Performance：桌面+移动 ≥ 60 准入 / 目标 80；LCP < 2.5s、CLS < 0.1（SDD §8.1/§13）——**实测值回填本清单**
+- [ ] Lighthouse Accessibility ≥ 90 准入 / 目标 95；每页一个 `h1`（hero 内标题不得用 h1 重复）、skip link、aria-live（SDD §8.2）
+- [ ] 空集合场景实测：20V / 60V 空集合的**卡与菜单项均不出现**（对应 T-0.1 保留的空集合）；首页可见卡恰为 40V / 80V / Gas 三张
+- [ ] 缺 metafield 的商品卡只显示已有参数、无空位、无 0
+- [ ] 无 JS：hero 首图可见、CTA 可点、平台卡/商品卡可点（渐进增强底线）
+- [ ] 主流程冒烟：首页 → 平台卡 → 集合 → 产品页（SDD §8.3 验收路径首段）
+
+---
+
+## 2. 验收锚点对照
+
+| 任务 | pages-ui | SDD |
+| --- | --- | --- |
+| T-0.1 | §0 前置开关 | §5.8、§3.4、§5.9 |
+| T-1.1 / T-1.2 | §2 卡内 2–3 项参数 | §8.1、§6.2.2、§5.4 |
+| T-2.1 | §2 hero 行 | §8.1（LCP）、§7.1 #1 |
+| T-2.2 | §2 平台卡行 | §6.5、§4.3 |
+| T-2.3 / T-2.5 | §2 用途区 / 博客行 | §4.1 |
+| T-3.1 | §2 全页 | §7.1 #1（Sections Everywhere）、§8.6 |
+| T-4.1 | §2 状态要点 | §8.1/§8.2/§8.3/§13 |
+
+## 3. 人日累加链
+
+```
+T-0.1 0.5 + T-0.2 1.0 = 1.5
++ T-1.1 0.5 + T-1.2 1.0 = 3.0   （累计 4.5）
++ T-2.1 1.5 + T-2.2 1.0 + T-2.3 0.5 + T-2.4 0.5 + T-2.5 0.5 = 4.0   （累计 8.5）
++ T-3.1 0.5   （累计 9.0）
++ T-4.1 1.0   （累计 10.0）
+────────────────────────────
+合计 10.0 人日（单人估算；Lighthouse 实测与 header/footer group 联调可能产生追加，追加项须回填本清单并重算累加链）
+```
+
+> **维护规则**：SDD / pages-ui 变更时同步本清单对应任务；任务状态变更（完成/阻塞）在条目后加 `✅ 日期` / `⛔ 原因` 标注；追加任务插入对应阶段并重编号前先检查锚点表引用。

@@ -36,7 +36,7 @@
 - **重量**：metafield `spec.weight_kg` 取厂商公布的**运转重量**（含油液）；Kobalt 取官方说明书的**裸机重量 58 lb（不含电池）**，描述中已注明。变体 `Weight value (grams)` 与 metafield 同源换算（1 lb = 453.592 g）。
 - **保修**：一律取**家用（residential）**整机保修；Toro 不含 "3-Year Guaranteed to Start"（仅为启动保障）。
 - **骑乘式 logistics**：`Freight LTL` + `needs_liftgate=TRUE` + `assembly_required=TRUE` + `lead_time_days=7`（Tractor Supply 页面载明 7–10 天发运）；走步式一律 `Parcel`。
-- **`Product category`**：走步式用 `Home & Garden > Lawn & Garden > Outdoor Power Equipment > Lawn Mowers`；骑乘式用其子节点 `… > Lawn Mowers > Riding Mowers`（Shopify 标准分类法）。
+- **`Product category`**：走步式用 `Home & Garden > Lawn & Garden > Outdoor Power Equipment > Lawn Mowers`；骑乘式用其子节点 `… > Lawn Mowers > Riding Mowers`（Shopify 标准分类法）。**刻意不采纳后台 Shopify Magic 的 "Lawn Tractors (in Tractors)" 建议**：那是农业机械分支（Business & Industrial），不符合 SDD §13"主机分类全部落在 Home & Garden"的硬约束，且会导致 Google 渠道映射与店内 4 台骑乘机类目一致性出问题。导入实测（2026-09-30）：Riding Mowers 被平台正常识别，建议提示为 Magic 猜测，可忽略。
 - **`Type` 列**：自由文本，写 `Walk-behind mower` / `Riding mower`，仅作商家侧旁证；对比分组权威键是 `spec.compare_group`。
 
 ## 3. 逐款来源

@@ -220,7 +220,6 @@ Shop by Platform      动力平台导航：同平台电池可共用，服务存�
 ├── 20V Battery       指向 platform.battery_platform = 20V 的自动化集合
 ├── 40V Battery       同上，40V
 ├── 60V Battery       同上，60V
-├── 80V Battery       同上，80V（值域见 §5.3；集合为空时菜单项暂不挂）
 └── Gas Series        汽油系列，指向动力源为汽油的集合
 Support               售后与支持
 ├── Shipping & Oversized Delivery  配送与超大件交付说明
