@@ -71,7 +71,7 @@
         "card-1": {
           "type": "card",
           "settings": {
-            "collection": "",
+            "collection": "gas-series",
             "title": "",
             "description": ""
           }
@@ -79,7 +79,7 @@
         "card-2": {
           "type": "card",
           "settings": {
-            "collection": "",
+            "collection": "80v-battery",
             "title": "",
             "description": ""
           }
@@ -87,7 +87,7 @@
         "card-3": {
           "type": "card",
           "settings": {
-            "collection": "",
+            "collection": "40v-battery",
             "title": "",
             "description": ""
           }
@@ -117,6 +117,7 @@
         "case-1": {
           "type": "use_case",
           "settings": {
+            "image": "shopify://shop_images/product-nb-21b80-2-kit_webp.webp",
             "heading": "Small yards",
             "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
             "collection": "",
@@ -126,6 +127,7 @@
         "case-2": {
           "type": "use_case",
           "settings": {
+            "image": "shopify://shop_images/product-nb-42tc-1-main_webp.webp",
             "heading": "Small yards",
             "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
             "collection": "",
