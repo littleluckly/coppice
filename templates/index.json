@@ -118,9 +118,9 @@
           "type": "use_case",
           "settings": {
             "image": "shopify://shop_images/product-nb-21b80-2-kit_webp.webp",
-            "heading": "Small yards update",
-            "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
-            "collection": "",
+            "heading": "Small & medium yards",
+            "text": "Walk-behind mowers for lawns up to 10,000 sq ft — push or self-propelled, gas or battery.",
+            "collection": "small-yards",
             "button_label": "Shop walk-behind mowers"
           }
         },
@@ -128,10 +128,10 @@
           "type": "use_case",
           "settings": {
             "image": "shopify://shop_images/product-nb-42tc-1-main_webp.webp",
-            "heading": "Small yards",
-            "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
-            "collection": "",
-            "button_label": "Shop walk-behind mowers"
+            "heading": "Large lawns & acreage",
+            "text": "Riding tractors and zero-turns for properties of 10,000 sq ft and up.",
+            "collection": "large-lawns",
+            "button_label": "Shop riding mowers"
           }
         }
       },
