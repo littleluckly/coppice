@@ -20,7 +20,7 @@
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
             "button_label": "Shop mowers",
-            "button_link": ""
+            "button_link": "#"
           }
         },
         "slide_K4yFhb": {
@@ -30,6 +30,28 @@
             "image_mobile": "shopify://shop_images/mower-small-yard-ride-on-mobile-3x4_webp.webp",
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
+            "button_label": "Shop mowers dddd",
+            "button_link": "shopify://collections/20v-battery"
+          }
+        },
+        "slide_6VKME8": {
+          "type": "slide",
+          "settings": {
+            "image": "shopify://shop_images/mower-large-lawn-push-pc-16x9_webp.webp",
+            "image_mobile": "shopify://shop_images/mower-large-lawn-push-mobile-3x4_webp.webp",
+            "heading": "Mowing season starts here",
+            "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
+            "button_label": "Shop mowers",
+            "button_link": ""
+          }
+        },
+        "slide_qiadTF": {
+          "type": "slide",
+          "settings": {
+            "image": "shopify://shop_images/mower-small-yard-push-pc-16x9_webp.webp",
+            "image_mobile": "shopify://shop_images/mower-small-yard-push-mobile-3x4_webp.webp",
+            "heading": "Mowing season starts here",
+            "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
             "button_label": "Shop mowers",
             "button_link": ""
           }
@@ -37,7 +59,9 @@
       },
       "block_order": [
         "slide-1",
-        "slide_K4yFhb"
+        "slide_K4yFhb",
+        "slide_6VKME8",
+        "slide_qiadTF"
       ],
       "settings": {}
     },
