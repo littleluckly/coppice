@@ -19,27 +19,29 @@
         <li class="blog-posts__item">
           <a class="blog-posts__card" href="{{ article.url }}">
             {%- if article.image != blank -%}
-              {{
-                article.image
-                | image_url: width: 800
-                | image_tag:
-                  widths: '400, 600, 800',
-                  sizes: '(min-width: 750px) 30vw, 90vw',
-                  width: article.image.width,
-                  height: article.image.height,
-                  loading: 'lazy',
-                  alt: article.image.alt
-              }}
+              <span class="blog-posts__media">
+                {{
+                  article.image
+                  | image_url: width: 600
+                  | image_tag:
+                    widths: '300, 600',
+                    sizes: '(min-width: 750px) 20vw, 90vw',
+                    width: article.image.width,
+                    height: article.image.height,
+                    loading: 'lazy',
+                    alt: article.image.alt
+                }}
+              </span>
             {%- endif -%}
-            <h3 class="blog-posts__title">{{ article.title | escape }}</h3>
-            <time class="blog-posts__date" datetime="{{ article.published_at | date: '%Y-%m-%d' }}">
-              {{ article.published_at | date: format: 'on_date' }}
-            </time>
-            {%- if article.excerpt != blank -%}
-              <p class="blog-posts__excerpt">{{ article.excerpt | strip_html | truncate: 120 }}</p>
-            {%- elsif article.content != blank -%}
-              <p class="blog-posts__excerpt">{{ article.content | strip_html | truncate: 120 }}</p>
-            {%- endif -%}
+            <span class="blog-posts__body">
+              <h3 class="blog-posts__title">{{ article.title | escape }}</h3>
+              {%- if article.excerpt != blank -%}
+                <p class="blog-posts__excerpt">{{ article.excerpt | strip_html | truncate: 90 }}</p>
+              {%- elsif article.content != blank -%}
+                <p class="blog-posts__excerpt">{{ article.content | strip_html | truncate: 90 }}</p>
+              {%- endif -%}
+              <span class="blog-posts__read-more">{{ 'sections.blog_posts.read_more' | t }}</span>
+            </span>
           </a>
         </li>
       {%- endfor -%}
