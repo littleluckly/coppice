@@ -11,12 +11,30 @@
   "type": "header",
   "name": "t:general.header",
   "sections": {
-    "header": {
-      "type": "header",
-      "settings": {}
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "settings": {
+        "dismissible": true
+      },
+      "blocks": {
+        "announcement-1": {
+          "type": "announcement",
+          "settings": {
+            "text": "Oversized orders ship by freight with liftgate delivery — see shipping details",
+            "link": "/pages/shipping-and-oversized-delivery"
+          }
+        }
+      }
+    },
+    "main-nav": {
+      "type": "main-nav",
+      "settings": {
+        "menu": "main-menu"
+      }
     }
   },
   "order": [
-    "header"
+    "announcement-bar",
+    "main-nav"
   ],
 }

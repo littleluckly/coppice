@@ -78,6 +78,15 @@
     "title": "Search"
   },
   "sections": {
+    "announcement_bar": {
+      "label": "Announcement",
+      "dismiss": "Dismiss announcement",
+      "previous": "Previous announcement",
+      "next": "Next announcement"
+    },
+    "blog_posts": {
+      "read_more": "Read guide"
+    },
     "hero_slideshow": {
       "aria_label": "Highlights"
     },
@@ -86,9 +95,9 @@
         "one": "{{ count }} product",
         "other": "{{ count }} products"
       }
-    },
-    "blog_posts": {
-      "read_more": "Read guide"
     }
+  },
+  "general": {
+    "pagination_separator": " / "
   }
 }
