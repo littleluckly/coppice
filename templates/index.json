@@ -108,7 +108,9 @@
         "card-4"
       ],
       "settings": {
-        "heading": "Shop by platform"
+        "heading": "Shop by platform",
+        "view_all_label": "View all platforms",
+        "view_all_link": ""
       }
     },
     "use-cases": {
@@ -140,16 +142,17 @@
         "case-2"
       ],
       "settings": {
-        "heading": "Shop by yard size"
+        "heading": "Find the Right Equiment for Your Space"
       }
     },
     "featured": {
       "type": "featured-collection",
       "settings": {
-        "collection": "",
+        "collection": "featured",
         "heading": "Featured mowers",
-        "products_to_show": 8,
+        "products_to_show": 6,
         "show_spec_width": true,
+        "show_spec_cc": true,
         "show_spec_power": true,
         "show_spec_weight": false,
         "view_all_label": "View all"
