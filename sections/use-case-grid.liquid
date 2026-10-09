@@ -25,23 +25,25 @@
               | image_url: width: 1200
               | image_tag:
                 widths: '600, 900, 1200',
-                sizes: '(min-width: 750px) 45vw, 90vw',
+                sizes: '(min-width: 750px) 33vw, 90vw',
                 width: block.settings.image.width,
                 height: block.settings.image.height,
                 loading: 'lazy',
                 alt: block.settings.heading
             }}
           {%- endif -%}
-          <div class="use-case-grid__body">
-            {%- if block.settings.heading != blank -%}
-              <h3 class="use-case-grid__item-heading">{{ block.settings.heading | escape }}</h3>
-            {%- endif -%}
-            {%- if block.settings.text != blank -%}
-              <p class="use-case-grid__text">{{ block.settings.text | escape }}</p>
-            {%- endif -%}
-            {%- if block_link != blank and block.settings.button_label != blank -%}
-              <a class="use-case-grid__link" href="{{ block_link }}">{{ block.settings.button_label | escape }}</a>
-            {%- endif -%}
+          <div class="use-case-grid__overlay">
+            <div class="use-case-grid__body">
+              {%- if block.settings.heading != blank -%}
+                <h3 class="use-case-grid__item-heading">{{ block.settings.heading | escape }}</h3>
+              {%- endif -%}
+              {%- if block.settings.text != blank -%}
+                <p class="use-case-grid__text">{{ block.settings.text | escape }}</p>
+              {%- endif -%}
+              {%- if block_link != blank and block.settings.button_label != blank -%}
+                <a class="use-case-grid__link" href="{{ block_link }}">{{ block.settings.button_label | escape }}</a>
+              {%- endif -%}
+            </div>
           </div>
         </li>
       {%- endfor -%}
