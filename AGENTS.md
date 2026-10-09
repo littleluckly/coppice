@@ -97,6 +97,17 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - JS 一律 `defer` 或 `async`；隐藏组件（抽屉、对比栏）**首次打开才构建 DOM**。
 - 图片统一 `image_tag` + `width` / `height` + srcset；尊重焦点裁剪；非首屏 lazy。
 
+**JS 组件化：优先 Web Components（Custom Elements）**
+
+- **可交互组件一律用 Custom Element 封装**（`class XxxEl extends HTMLElement` + `customElements.define`），标签名用连字符命名（`cart-drawer`、`predictive-search`、`nav-drawer`、`cart-toggle`）。
+- **禁止用 `document.addEventListener('click', ...)` 全局委托 + `closest()` 遍历做组件行为**。这是本项目的硬性约定（2026-10-09 刘工拍板）：全局委托让组件无法自包含、无法复用、无法单测，且在 Section Rendering（`/search/suggest` 片段替换、主题编辑器动态注入）下容易重复绑定。
+- 每个元素的 `connectedCallback` / `disconnectedCallback` 自行绑定与解绑监听；重复绑定用 `AbortController`（`{ signal }`）一次性拆除，避免 Section 重新渲染后事件叠加。
+- **状态靠 attribute 反映，样式与 `:has()` / `[open]` 等选择器挂钩**，不靠 JS 切 class 硬编码视觉状态（例：`<cart-drawer open>` → CSS `:has()` 决定遮罩显隐）。
+- 元素内部 DOM **优先延迟构建**：`<template>` 惰性实例化，首次打开才 `append`（延续"隐藏组件首次打开才建 DOM"）。
+- **平台原生组件优先于自建**：能用原生 `<dialog>` + `showModal()` 解决的模态（焦点锁定、`inert` 背景、`Esc` 关闭、`::backdrop`）就不要手写模态管理。
+- 一律 ES6+ 类与 `classList` / `dataset`，不用 jQuery、不用全局 `var` 挂函数。
+- 现有 `assets/compare-toggle.js` / `wishlist-toggle.js` 为本规则落地前的产物，**新增组件不再沿用其全局委托写法**；改到相关功能时顺手重构为 Custom Element。
+
 ## 7. 性能（SDD §8.1，验收硬线）
 
 - Lighthouse Performance：home / product / collection 三页桌面+移动平均 **≥ 60 准入，≥ 80 目标**；LCP < 2.5s，INP < 200ms，CLS < 0.1。
@@ -111,7 +122,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 每页一个 `h1`；焦点顺序 = DOM 顺序；无正 `tabindex`；禁用 `autofocus`；skip link 必备。
 - `lang="{{ request.locale.iso_code }}"`；不禁用缩放；所有 `img` 有 `alt`（装饰性 `alt=""`）。
 - 动态区域（筛选计数、对比数量、加购结果、变体切换）一律 `aria-live="polite"`。
-- 抽屉/模态：`role="dialog"` + 打开移焦 + 焦点锁定 + `Esc` 关闭回焦。
+- 抽屉/模态：**优先原生 `<dialog>` + `showModal()`**（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`），并按 Skeleton 约定给 `<dialog>` 加 `scroll-lock` 属性（`critical.css` 已有 `html:has(dialog[scroll-lock][open]) { overflow: hidden }`）。**此时不再手写 `role="dialog"` / `aria-modal` / 焦点陷阱脚本**——`showModal()` 已让外部内容 `inert`，重复实现只会打架。不使用 `<dialog>` 的浮层（如预测搜索下拉）才手写 `role="dialog"` + 打开移焦 + 焦点锁定 + `Esc` 回焦。抽屉一律用 Custom Element 封装（AGENTS.md §6）。
 - 表格（对比/参数）：`caption` + `th scope`。
 - 对比度：正文 4.5:1，大字号与图标 3:1；颜色不作唯一信息载体。
 - 触摸目标 ≥ 44×44 px（高危控件：对比勾选框、耗材变体选择器、数量步进器）。
