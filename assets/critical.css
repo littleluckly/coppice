@@ -128,7 +128,7 @@ body {
   .featured-collection-section,
   .blog-posts-section
 ) {
-  padding-block-end: 3.5rem;
+  padding-block-end: 1.5rem;
 }
 
 /** Visually hidden, screen-reader accessible only */
