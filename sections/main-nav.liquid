@@ -119,7 +119,8 @@
         {{ 'icon-menu.svg' | inline_asset_content }}
       </button>
 
-      <dialog class="nav-drawer" data-nav-drawer aria-labelledby="nav-drawer-title">
+      <nav-drawer>
+        <dialog class="nav-drawer" data-nav-drawer aria-labelledby="nav-drawer-title">
         {%- comment -%} 内容存 <template>，首次打开才实例化（AGENTS §6） {%- endcomment -%}
         <template data-nav-drawer-template>
           <div class="nav-drawer__inner">
