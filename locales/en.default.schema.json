@@ -128,9 +128,10 @@
       },
       "labels": {
         "show_spec_width": "Show cutting width",
+        "show_spec_cc": "Show displacement (cc)",
         "show_spec_power": "Show power source",
         "show_spec_weight": "Show weight",
-        "spec_info": "Up to 2–3 specs per card; rows with empty values are skipped automatically."
+        "spec_info": "Specs render as one horizontal row; entries with empty values are skipped automatically."
       }
     },
     "blog_posts": {

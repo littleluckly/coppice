@@ -44,7 +44,9 @@
   },
   "products": {
     "product_card": {
-      "add_to_compare": "Add to compare",
+      "add_to_compare": "Compare",
+      "add_to_wishlist": "Add to wishlist",
+      "rating_label": "Rated {{ rating }} out of 5",
       "spec_cutting_width": "Cutting width",
       "spec_power_source": "Power source",
       "spec_weight": "Weight"
