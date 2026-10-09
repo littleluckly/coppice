@@ -23,9 +23,12 @@ shopify theme dev          # 本地开发预览
 shopify theme check        # Theme Check 静态检查 —— 必须 0 Error 才允许提交
 shopify theme push         # 推送到开发店
 shopify theme pull         # 拉取线上主题
+
+python3 tools/check-locale-keys.py   # 校验 t: 翻译键在两个 locale 文件里都存在
 ```
 
 - 提交审核前：`shopify theme check` 不得出现任何 Error（Warning 尽量清零）。
+- **Agent 沙箱内 `shopify` CLI 不可见**（`command not found`），但刘工本机正常——需要跑 theme check 时请刘工代跑并回贴结果。
 - Lighthouse 验收线见 §7 / §8。
 
 ## 3. 目录结构
@@ -58,6 +61,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 资源一律走 Shopify CDN：`asset_url` / `image_url`；**不得**硬编码 `http://` / `https://` 外部资源链接，不得依赖外部 CDN / 外部 API / 第三方服务。
 - 站内 URL 一律用 `routes` 对象，不得手拼路径。
 - 所有面向商家/顾客的文案走 `t:` 翻译键，键值落在 `locales/`；不得硬编码英文文案（除非是数据本身）。
+- **Shopify 有两个独立的 locale 命名空间**：正文 `{{ 'x' | t }}` 查 `locales/en.default.json`，**schema 块里的 `"name": "t:x"` 查 `locales/en.default.schema.json`**。写 section 时两个文件要分别确认，新增后跑 `python3 tools/check-locale-keys.py` 全量校验（缺键时退出码 1）。
 - 不实现依赖 App 的功能（愿望清单、购物车折扣、买赠捆绑定价、预约、Instagram feed 等）。
 - 不伪造数据：库存紧张提示、倒计时、浏览量为禁止项。
 - 不得包含外部营销内容或联盟链接。
@@ -154,7 +158,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 
 ## 11. 已知状态与待办（截至 2026-10-09）
 
-- SDD 引用的 `tools/check-theme-name.sh`、`tools/build-import-csv.py`、`snippets/spec-value.liquid`、`docs/TASKS.md` **尚未创建**；涉及时先确认是否已立项，不要假设存在。
+- SDD 引用的 `tools/check-theme-name.sh`、`tools/build-import-csv.py`、`snippets/spec-value.liquid`、`docs/TASKS.md` **尚未创建**；涉及时先确认是否已立项，不要假设存在。（`tools/check-locale-keys.py` 已于 2026-10-09 落地，用于校验 `t:` 键。）
 - Spike A1/A2 已完成（结论已写进 SDD §3.7）；A3（对比数据岛满载体积）待实测，验收基线以实测为准。
 - **⚠️ `shopify` CLI 在 Agent 沙箱内不可见（`command not found`），但刘工本机正常**（2026-10-09 实测确认，`shopify theme check` 46 文件 0 offenses）。Agent 侧跑不了 theme check 时**请刘工代跑并回贴结果**，不要误判成"CLI 未装"或"验收跑不了"。
 - 主题 v1.0 范围不含发电机（演示店仅含 Hardware 分支配件分类 2 条）。
