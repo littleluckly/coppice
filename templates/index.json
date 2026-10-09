@@ -12,12 +12,57 @@
     "hero": {
       "type": "hero-slideshow",
       "blocks": {
+        "slide_K4yFhb": {
+          "type": "slide",
+          "settings": {
+            "image": "shopify://shop_images/mower-small-yard-ride-on-pc-16x9_webp.webp",
+            "image_mobile": "shopify://shop_images/mower-small-yard-ride-on-mobile-3x4_webp.webp",
+            "heading": "Mowing season starts here",
+            "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
+            "button_label": "Shop mowers dddd",
+            "button_link": "shopify://collections/20v-battery"
+          }
+        },
+        "slide_qiadTF": {
+          "type": "slide",
+          "settings": {
+            "image": "shopify://shop_images/mower-small-yard-push-pc-16x9_webp.webp",
+            "image_mobile": "shopify://shop_images/mower-small-yard-push-mobile-3x4_webp.webp",
+            "heading": "Mowing season starts here",
+            "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
+            "button_label": "Shop mowers",
+            "button_link": ""
+          }
+        },
         "slide-1": {
           "type": "slide",
-          "settings": {}
+          "settings": {
+            "image": "shopify://shop_images/mower-large-lawn-ride-on-pc-16x9_webp.webp",
+            "image_mobile": "shopify://shop_images/mower-large-lawn-ride-on-mobile-3x4_webp.webp",
+            "heading": "Mowing season starts here",
+            "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
+            "button_label": "Shop mowers",
+            "button_link": "#"
+          }
+        },
+        "slide_6VKME8": {
+          "type": "slide",
+          "settings": {
+            "image": "shopify://shop_images/mower-large-lawn-push-pc-16x9_webp.webp",
+            "image_mobile": "shopify://shop_images/mower-large-lawn-push-mobile-3x4_webp.webp",
+            "heading": "Mowing season starts here",
+            "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
+            "button_label": "Shop mowers",
+            "button_link": ""
+          }
         }
       },
-      "block_order": ["slide-1"],
+      "block_order": [
+        "slide_K4yFhb",
+        "slide_qiadTF",
+        "slide-1",
+        "slide_6VKME8"
+      ],
       "settings": {}
     },
     "platform-cards": {
@@ -25,46 +70,101 @@
       "blocks": {
         "card-1": {
           "type": "card",
-          "settings": {}
+          "settings": {
+            "collection": "gas-series",
+            "title": "",
+            "description": ""
+          }
         },
         "card-2": {
           "type": "card",
-          "settings": {}
+          "settings": {
+            "collection": "80v-battery",
+            "title": "",
+            "description": ""
+          }
         },
         "card-3": {
           "type": "card",
-          "settings": {}
+          "settings": {
+            "collection": "40v-battery",
+            "title": "",
+            "description": ""
+          }
         },
         "card-4": {
           "type": "card",
-          "settings": {}
+          "settings": {
+            "collection": "",
+            "title": "",
+            "description": ""
+          }
         }
       },
-      "block_order": ["card-1", "card-2", "card-3", "card-4"],
-      "settings": {}
+      "block_order": [
+        "card-1",
+        "card-2",
+        "card-3",
+        "card-4"
+      ],
+      "settings": {
+        "heading": "Shop by platform",
+        "view_all_label": "View all platforms",
+        "view_all_link": ""
+      }
     },
     "use-cases": {
       "type": "use-case-grid",
       "blocks": {
         "case-1": {
           "type": "use_case",
-          "settings": {}
+          "settings": {
+            "image": "shopify://shop_images/lawn-mower-small-yard-card.webp",
+            "heading": "Small & medium yards",
+            "text": "Walk-behind mowers for lawns up to 10,000 sq ft — push or self-propelled, gas or battery.",
+            "collection": "small-yards",
+            "button_label": "Shop walk-behind mowers"
+          }
         },
         "case-2": {
           "type": "use_case",
-          "settings": {}
+          "settings": {
+            "image": "shopify://shop_images/lawn-mower-large-lawn-card.webp",
+            "heading": "Large lawns & acreage",
+            "text": "Riding tractors and zero-turns for properties of 10,000 sq ft and up.",
+            "collection": "large-lawns",
+            "button_label": "Shop riding mowers"
+          }
         }
       },
-      "block_order": ["case-1", "case-2"],
-      "settings": {}
+      "block_order": [
+        "case-1",
+        "case-2"
+      ],
+      "settings": {
+        "heading": "Find the Right Equiment for Your Space"
+      }
     },
     "featured": {
       "type": "featured-collection",
-      "settings": {}
+      "settings": {
+        "collection": "featured",
+        "heading": "Featured mowers",
+        "products_to_show": 6,
+        "show_spec_width": true,
+        "show_spec_cc": true,
+        "show_spec_power": true,
+        "show_spec_weight": false,
+        "view_all_label": "View all"
+      }
     },
     "blog": {
       "type": "blog-posts",
-      "settings": {}
+      "settings": {
+        "blog": "",
+        "heading": "Buying guides",
+        "posts_to_show": 3
+      }
     }
   },
   "order": [
