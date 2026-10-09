@@ -116,6 +116,21 @@ body {
   grid-column: 1 / -1;
 }
 
+/**
+ * Vertical rhythm for content sections (效果图节奏：区块间 ≈ 3.5rem，标题贴齐上一区块底)。
+ * 新增内容 section 时，把它的 schema "class" 加进下面的 :is() 列表。
+ * hero 之后的区块间距来自前一块的 padding-block-end，首块（hero）自身不参与。
+ */
+:is(
+  .hero-slideshow-section,
+  .platform-cards-section,
+  .use-case-grid-section,
+  .featured-collection-section,
+  .blog-posts-section
+) {
+  padding-block-end: 1.5rem;
+}
+
 /** Visually hidden, screen-reader accessible only */
 .visually-hidden {
   position: absolute !important;

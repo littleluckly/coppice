@@ -69,23 +69,25 @@
           </div>
 
           <div class="hero-slideshow__content">
-            {%- if block.settings.heading != blank -%}
-              {%- if is_first -%}
-                <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
-              {%- else -%}
-                <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
+            <div class="hero-slideshow__body">
+              {%- if block.settings.heading != blank -%}
+                {%- if is_first -%}
+                  <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
+                {%- else -%}
+                  <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
+                {%- endif -%}
               {%- endif -%}
-            {%- endif -%}
 
-            {%- if block.settings.subheading != blank -%}
-              <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
-            {%- endif -%}
+              {%- if block.settings.subheading != blank -%}
+                <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
+              {%- endif -%}
 
-            {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
-              <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
-                {{ block.settings.button_label | escape }}
-              </a>
-            {%- endif -%}
+              {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
+                <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
+                  {{ block.settings.button_label | escape }}
+                </a>
+              {%- endif -%}
+            </div>
           </div>
         </div>
       {%- endfor -%}
@@ -103,31 +105,38 @@
   .hero-slideshow__track::-webkit-scrollbar {
     display: none;
   }
-  .hero-slideshow__slide {
-    position: relative;
-    flex: 0 0 100%;
-    scroll-snap-align: start;
-    min-height: clamp(22rem, 56vw, 44rem);
-  }
-  .hero-slideshow__media,
-  .hero-slideshow__media img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-  }
-  .hero-slideshow__media img {
-    object-fit: cover;
-  }
-  .hero-slideshow__content {
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline-start: 0;
-    padding: var(--page-margin);
-    max-width: 42rem;
-    color: #ffffff;
-    text-shadow: 0 1px 8px rgb(0 0 0 / 45%);
-  }
+    .hero-slideshow__slide {
+      position: relative;
+      flex: 0 0 100%;
+      scroll-snap-align: start;
+      min-height: clamp(22rem, 56vw, 44rem);
+      display: flex;
+      align-items: flex-end;
+    }
+    .hero-slideshow__media,
+    .hero-slideshow__media img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .hero-slideshow__media img {
+      object-fit: cover;
+    }
+    .hero-slideshow__content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      padding-block-end: var(--page-margin);
+      display: grid;
+      grid-template-columns: var(--content-grid);
+    }
+    .hero-slideshow__body {
+      grid-column: 2;
+      max-width: 42rem;
+      color: #ffffff;
+      text-shadow: 0 1px 8px rgb(0 0 0 / 45%);
+    }
   .hero-slideshow__heading {
     font-size: clamp(1.75rem, 4vw, 3rem);
     font-weight: 500;
