@@ -86,6 +86,8 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 区块可复用样式优先 `{% stylesheet %}` / `{% javascript %}` 标签（多次声明只输出一次）；全局关键样式放 `assets/critical.css`。
 - **样式归属判据**：section 自有布局样式 → `{% stylesheet %}`（聚合加载，section 移除时自动卸载，且**必须位于 section 顶层**，不得嵌套在 if/for 内）。仅当样式为**大体积可选增强**或**跨 section 全局功能**（如对比栏、Dawn mask-blobs 类设置级变体）时，才拆独立 `.css` + 条件 `stylesheet_tag`——不为省 1–2 KB 把 section 自有样式拆成独立请求。
 - **箭头准则**：`→` 仅用于两类位置——View All 链接、行尾导航元素（如 platform 横条卡右端）。卡内文字链接**不加**箭头；新增箭头前先数同屏总数（≤5）。
+- **`{% javascript %}` / `{% stylesheet %}` 内不渲染 Liquid**（theme check 会报 `StaticStylesheetAndJavascriptTags`）。这两个标签的内容被聚合成单一 `scripts.js` / `styles.css` 并自动 defer 注入，**只能放静态代码**。要加载 `assets/` 里的外部文件用 `{{ 'x.js' | asset_url | script_tag: defer: true }}`（主题内无需复用时）；每个文件有且仅有一个 `{% javascript %}` / `{% stylesheet %}`。
+- **不留未使用的 `assign`**：theme check 的 `UnusedAssign` 会抓出"写了但没接线"的残留变量——写 section 时每个 assign 都要有消费点。
 - **脚本改 CSS 后必查产物**：grep 检查重复规则块、裸选择器（如孤立 `::after {`）、缩进损坏；locale/JSON 文件校验前先剥 Shopify dev 同步的 `/* */` 注释头。
 - 单一 CSS 属性的设置 → CSS 变量（`style="--gap: {{ ... }}px"`）；多属性设置 → 修饰类（`.collection--narrow`）。
 - 类名用 Skeleton 风格 BEM：`block__element--modifier`；品牌色等设计令牌走 `snippets/css-variables.liquid` 输出，不硬编码色值。
