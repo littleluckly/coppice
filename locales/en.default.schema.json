@@ -10,6 +10,7 @@
 {
   "general": {
     "404": "Not found",
+    "account": "Account",
     "announcement_bar": "Announcement bar",
     "article": "Article",
     "block": "Block",
@@ -158,6 +159,7 @@
     "collection": "Collection",
     "customer_account_menu": "Customer account menu",
     "description": "Description",
+    "follow_on_shop": "Show Follow on Shop button",
     "foreground": "Foreground",
     "grid_gap": "Grid spacing",
     "grid_item_width": "Grid item width",
