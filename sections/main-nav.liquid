@@ -201,7 +201,7 @@
             {%- endcomment -%}
             <div class="nav-drawer__footer">
               {%- if shop.customer_accounts_enabled -%}
-                {% render 'account-entry', class: 'nav-drawer__account' %}
+                {% render 'account-entry', class: 'account--in-drawer' %}
               {%- endif -%}
             </div>
           </div>
@@ -417,7 +417,7 @@
   }
 
   /* 抽屉内账户组件的 sheet 从抽屉顶部弹出，与桌面端不同 */
-  .nav-drawer__account .account__component {
+  .account--in-drawer .account__component {
     --shopify-account-dialog-position-top: 0;
   }
 
