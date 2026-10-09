@@ -101,13 +101,24 @@
     font-weight: 500;
   }
   .platform-cards__view-all {
-    color: inherit;
+    color: var(--color-brand-accent);
     font-weight: 500;
     text-decoration: none;
     white-space: nowrap;
     min-height: 44px;
     padding-block: 10px;
   }
+.platform-cards__view-all {
+    color: var(--color-brand-accent);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    min-height: 44px;
+    padding-block: 10px;
+  }::after {
+      content: '\2192';
+      margin-inline-start: 0.3rem;
+    }
   .platform-cards__grid {
     display: grid;
     grid-template-columns: 1fr;
