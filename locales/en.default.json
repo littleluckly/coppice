@@ -8,9 +8,6 @@
  * ------------------------------------------------------------
  */
 {
-  "date_formats": {
-    "on_date": "%B %-d, %Y"
-  },
   "404": {
     "title": "404",
     "not_found": "Page not found.",
@@ -31,6 +28,9 @@
     "update": "Update",
     "remove": "Remove"
   },
+  "collections": {
+    "title": "Collections"
+  },
   "customers": {
     "login": {
       "email": "Email",
@@ -39,8 +39,24 @@
       "title": "Login"
     }
   },
-  "collections": {
-    "title": "Collections"
+  "date_formats": {
+    "on_date": "%B %-d, %Y"
+  },
+  "gift_card": {
+    "add_to_apple_wallet": "Add to Apple Wallet",
+    "card": "Gift card",
+    "expired": "This gift card has expired",
+    "expires_on": "Expires on {{ expires_on }}",
+    "use_at_checkout": "Use this gift card at checkout"
+  },
+  "navigation": {
+    "menu": "Menu",
+    "close": "Close"
+  },
+  "password": {
+    "title": "This shop is private",
+    "password": "Password",
+    "enter": "Enter"
   },
   "products": {
     "product_card": {
@@ -51,6 +67,15 @@
       "spec_power_source": "Power source",
       "spec_weight": "Weight"
     }
+  },
+  "search": {
+    "clear": "Clear search",
+    "label": "Search",
+    "title": "Search",
+    "submit": "Search",
+    "placeholder": "Search articles, pages, or products",
+    "no_results_html": "No results found for {{ terms }}",
+    "results_for_html": "{{ count }} results found for {{ terms }}"
   },
   "sections": {
     "hero_slideshow": {
@@ -65,24 +90,5 @@
     "blog_posts": {
       "read_more": "Read guide"
     }
-  },
-  "gift_card": {
-    "add_to_apple_wallet": "Add to Apple Wallet",
-    "card": "Gift card",
-    "expired": "This gift card has expired",
-    "expires_on": "Expires on {{ expires_on }}",
-    "use_at_checkout": "Use this gift card at checkout"
-  },
-  "password": {
-    "title": "This shop is private",
-    "password": "Password",
-    "enter": "Enter"
-  },
-  "search": {
-    "title": "Search",
-    "placeholder": "Search articles, pages, or products",
-    "submit": "Search",
-    "no_results_html": "No results found for {{ terms }}",
-    "results_for_html": "{{ count }} results found for {{ terms }}"
   }
 }
