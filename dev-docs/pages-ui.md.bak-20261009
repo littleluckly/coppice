@@ -56,7 +56,7 @@
 | 一级 | 二级 | 三级子项 | 指向类型 | 建议建法（自动化条件） |
 | --- | --- | --- | --- | --- |
 | **Shop** | Mowers | Walk-behind | 集合 | `operation_type = Walk-behind` **且** `drive_type = Push`（条件 ALL） |
-| | | Self-propelled | 集合 | `operation_type = Walk-behind` **且** `drive_type is not equal to Push`（条件 ALL；CSV 自走款 drive_type 实际值为 Rear-wheel drive，不能用'等于 Self-propelled'） |
+| | | Self-propelled | 集合 | `drive_type = Self-propelled` |
 | | | Riding | 集合 | `operation_type = Riding` |
 | | Chainsaws | — | 集合 | `compare_group = chainsaw` 或 `Product category` 条件 |
 | | Trimmers | — | 集合 | `compare_group = string-trimmer` |

@@ -25,23 +25,25 @@
               | image_url: width: 1200
               | image_tag:
                 widths: '600, 900, 1200',
-                sizes: '(min-width: 750px) 45vw, 90vw',
+                sizes: '(min-width: 750px) 33vw, 90vw',
                 width: block.settings.image.width,
                 height: block.settings.image.height,
                 loading: 'lazy',
                 alt: block.settings.heading
             }}
           {%- endif -%}
-          <div class="use-case-grid__body">
-            {%- if block.settings.heading != blank -%}
-              <h3 class="use-case-grid__item-heading">{{ block.settings.heading | escape }}</h3>
-            {%- endif -%}
-            {%- if block.settings.text != blank -%}
-              <p class="use-case-grid__text">{{ block.settings.text | escape }}</p>
-            {%- endif -%}
-            {%- if block_link != blank and block.settings.button_label != blank -%}
-              <a class="use-case-grid__link" href="{{ block_link }}">{{ block.settings.button_label | escape }}</a>
-            {%- endif -%}
+          <div class="use-case-grid__overlay">
+            <div class="use-case-grid__body">
+              {%- if block.settings.heading != blank -%}
+                <h3 class="use-case-grid__item-heading">{{ block.settings.heading | escape }}</h3>
+              {%- endif -%}
+              {%- if block.settings.text != blank -%}
+                <p class="use-case-grid__text">{{ block.settings.text | escape }}</p>
+              {%- endif -%}
+              {%- if block_link != blank and block.settings.button_label != blank -%}
+                <a class="use-case-grid__link" href="{{ block_link }}">{{ block.settings.button_label | escape }}</a>
+              {%- endif -%}
+            </div>
           </div>
         </li>
       {%- endfor -%}
@@ -50,7 +52,7 @@
 
 {%- endif -%}
 
-{% stylesheet %}
+  {% stylesheet %}
     .use-case-grid__heading {
       font-size: 1.5rem;
       font-weight: 500;
@@ -58,33 +60,49 @@
     }
     .use-case-grid__grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+      gap: 0.75rem;
       list-style: none;
       padding: 0;
       margin: 0;
     }
-    .use-case-grid__item img {
+    .use-case-grid__item {
+      position: relative;
       border-radius: 12px;
-      aspect-ratio: 16 / 10;
-      object-fit: cover;
+      overflow: hidden;
+      min-height: 15rem;
+      display: flex;
+      align-items: flex-end;
+    }
+    .use-case-grid__item img {
+      position: absolute;
+      inset: 0;
       width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .use-case-grid__overlay {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      padding: 2.5rem 1rem 1rem;
+      color: #ffffff;
+      background: linear-gradient(to top, rgb(0 0 0 / 70%), rgb(0 0 0 / 25%) 55%, transparent);
     }
     .use-case-grid__item-heading {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 500;
-      margin-block-start: 0.75rem;
     }
     .use-case-grid__text {
-      margin-block-start: 0.25rem;
-      opacity: 0.8;
+      font-size: 0.88rem;
+      opacity: 0.9;
     }
     .use-case-grid__link {
       display: inline-block;
-      margin-block-start: 0.5rem;
+      margin-block-start: 0.4rem;
       min-height: 44px;
       padding-block: 10px;
-      color: inherit;
+      color: #ffffff;
       font-weight: 500;
     }
   {% endstylesheet %}

@@ -36,11 +36,11 @@
 ## Fixed（已闭环）
 
 ### BUG-014 · `{% stylesheet %}` 嵌套在 `{% if %}` 内 → 本地 dev 全部新 section 报错
-- **日期**：2026-10-08 ｜ **状态**：Fixed
+- **日期**：2026-10-08（首犯）/ **2026-10-09（二犯：重写 featured-collection.liquid 时重蹈）** ｜ **状态**：Fixed ×2
 - **现象**：`Liquid syntax error: 'stylesheet' tag must not be nested inside other tags`，5 个新 section 全中；blog-posts 连带报 "Section type does not refer to an existing section file"（解析失败→section 无效→引用找不到，并非文件缺失）。
-- **根因**：Shopify 要求 stylesheet/javascript 标签位于 section **顶层**；且 **theme-check-node 静态分析不检查此规则**——theme check 全绿 ≠ dev server 无错。
-- **修复**：脚本统一把 5 个文件的 stylesheet 块剪切到 endif 之后、schema 之前。
-- **预防**：**新 section 落地必须过 dev server 验证，theme check 全绿只是必要条件不是充分条件**（已入记忆）。
+- **根因**：Shopify 要求 stylesheet/javascript 标签位于 section **顶层**；且 **theme-check-node 静态分析不检查此规则**——theme check 全绿 ≠ dev server 无错。二犯根因：重写文件时凭旧结构记忆，没对照 bugs.md 首犯记录。
+- **修复**：脚本统一把 stylesheet 块剪切到 endif 之后、schema 之前（两轮同法）。
+- **预防（二犯后加码）**：**凡是 Write/Edit 一个 .liquid section，写完立刻检查 `{% stylesheet %}`/`{% javascript %}` 是否位于顶层**——已固化为操作步骤而非"经验"；AGENTS §6 样式归属判据条内含位置规则。
 
 ### BUG-013 · 正则批量改源码三连败
 - **日期**：2026-10-08 ｜ **状态**：Fixed
@@ -121,6 +121,13 @@
 - **预防**：Sections Everywhere 原则下，每个页面区域 = 独立 section 文件。
 
 ---
+
+### BUG-019 · Self-propelled 集合条件与实际 drive_type 数据不符
+- **日期**：2026-10-09 ｜ **状态**：Fixed
+- **现象**：pages-ui §1.1.1 写集合条件 `drive_type = Self-propelled`，但 CSV 自走款（NB-21S/22S/21BS/21B80）drive_type 实际填 Rear-wheel drive（行业真实值）——照文档建集合必为空。
+- **根因**：文档按值域想象写条件，未对照导入数据实际值。
+- **修复**：条件改为 `operation_type = Walk-behind` 且 `drive_type is not equal to Push`（pages-ui.md，备份 .bak-20261009）。
+- **预防**：**写集合条件前先 grep CSV 实际值**——文档条件必须以数据实况为准，值域是值域、取值是取值。
 
 ## 记录模板（追加新 bug 用）
 

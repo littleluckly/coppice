@@ -74,7 +74,8 @@
     "platform_cards": {
       "name": "Platform cards",
       "defaults": {
-        "heading": "Shop by platform"
+        "heading": "Shop by platform",
+        "view_all_label": "View all platforms"
       },
       "blocks": {
         "card": {
@@ -95,8 +96,8 @@
         "use_case": {
           "name": "Use case",
           "defaults": {
-            "heading": "Small yards",
-            "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
+            "heading": "Small & medium yards",
+            "text": "Walk-behind mowers for lawns up to 10,000 sq ft — push or self-propelled, gas or battery.",
             "button_label": "Shop walk-behind mowers"
           },
           "labels": {
@@ -106,13 +107,13 @@
       },
       "presets": {
         "case_1": {
-          "heading": "Small yards",
-          "text": "Compact walk-behind mowers for lawns under 5,000 sq ft.",
+          "heading": "Small & medium yards",
+          "text": "Walk-behind mowers for lawns up to 10,000 sq ft — push or self-propelled, gas or battery.",
           "button_label": "Shop walk-behind mowers"
         },
         "case_2": {
-          "heading": "Large lawns",
-          "text": "Riding mowers and tractors for an acre and beyond.",
+          "heading": "Large lawns & acreage",
+          "text": "Riding tractors and zero-turns for properties of 10,000 sq ft and up.",
           "button_label": "Shop riding mowers"
         }
       }
@@ -128,16 +129,18 @@
       },
       "labels": {
         "show_spec_width": "Show cutting width",
+        "show_spec_cc": "Show displacement (cc)",
         "show_spec_power": "Show power source",
         "show_spec_weight": "Show weight",
-        "spec_info": "Up to 2–3 specs per card; rows with empty values are skipped automatically."
+        "spec_info": "Specs render as one horizontal row; entries with empty values are skipped automatically."
       }
     },
     "blog_posts": {
       "name": "Blog posts",
       "defaults": {
         "heading": "Buying guides"
-      }
+      },
+      "read_more": "Read guide"
     }
   },
   "labels": {
@@ -169,7 +172,10 @@
     "text_style": "Text style",
     "text": "Text",
     "title_override": "Title override",
-    "view_all_label": "'View all' link label"
+    "view_all_label": "'View all' link label",
+    "brand": "Brand color (headers, banner)",
+    "brand_accent": "Brand accent (buttons, links)",
+    "view_all_link": "'View all' link target"
   },
   "options": {
     "alignment": {

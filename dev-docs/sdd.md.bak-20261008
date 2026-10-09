@@ -432,11 +432,7 @@ Support               售后与支持
 
 1. **先建全部定义**，再谈导入——CSV 不会自动创建定义。
 2. 每个筛选源定义：勾选 **Storefront 可见性**（否则 `collection.filters` 取不到）。
-3. 需要在自动化集合里用到的定义：开启 **「用作集合条件」**（官方对该用途有数量上限，文档载明 128 个）。需要开启的字段（2026-10-08 增补，覆盖全部集合条件依赖）：
-   - `platform.battery_platform` → 平台自动化集合（§6.5）
-   - `spec.power_source` → Gas Series 集合（§4.3）
-   - `spec.area_coverage_sqft` → 用例卡集合（pages-ui §2 小院/大草坪，数字型支持 < / >）
-   - `spec.operation_type` / `spec.drive_type` → 主导航 Walk-behind / Self-propelled / Riding 集合（§4.3）
+3. 需要在自动化集合里用到的定义：开启 **「用作集合条件」**（官方对该用途有数量上限，文档载明 128 个）。
 4. 每个字段用**预设选项**而非自由文本。
 5. 定义建完后**不要再改 key 或类型**——改了名字等于所有商家数据失联。
 
