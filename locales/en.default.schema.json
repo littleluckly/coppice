@@ -121,7 +121,7 @@
     "featured_collection": {
       "name": "Featured collection",
       "defaults": {
-        "heading": "Featured mowers",
+        "heading": "Featured products",
         "view_all_label": "View all"
       },
       "headers": {
