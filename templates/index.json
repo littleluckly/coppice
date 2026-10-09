@@ -117,7 +117,7 @@
         "case-1": {
           "type": "use_case",
           "settings": {
-            "image": "shopify://shop_images/product-nb-21b80-2-kit_webp.webp",
+            "image": "shopify://shop_images/lawn-mower-small-yard-card.webp",
             "heading": "Small & medium yards",
             "text": "Walk-behind mowers for lawns up to 10,000 sq ft — push or self-propelled, gas or battery.",
             "collection": "small-yards",
@@ -127,7 +127,7 @@
         "case-2": {
           "type": "use_case",
           "settings": {
-            "image": "shopify://shop_images/product-nb-42tc-1-main_webp.webp",
+            "image": "shopify://shop_images/lawn-mower-large-lawn-card.webp",
             "heading": "Large lawns & acreage",
             "text": "Riding tractors and zero-turns for properties of 10,000 sq ft and up.",
             "collection": "large-lawns",
