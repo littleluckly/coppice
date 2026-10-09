@@ -71,11 +71,11 @@
   "search": {
     "clear": "Clear search",
     "label": "Search",
-    "title": "Search",
-    "submit": "Search",
-    "placeholder": "Search articles, pages, or products",
     "no_results_html": "No results found for {{ terms }}",
-    "results_for_html": "{{ count }} results found for {{ terms }}"
+    "placeholder": "Search articles, pages, or products",
+    "results_for_html": "{{ count }} results found for {{ terms }}",
+    "submit": "Search",
+    "title": "Search"
   },
   "sections": {
     "hero_slideshow": {
