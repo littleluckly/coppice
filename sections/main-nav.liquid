@@ -201,7 +201,7 @@
   </nav>
 {% endif %}
 
-{{ 'nav-drawer.js' | asset_url | script_tag: defer: true }}
+<script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
 
 {% stylesheet %}
   .main-nav {
