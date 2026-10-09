@@ -91,6 +91,18 @@
         "label": "t:labels.foreground"
       },
       {
+        "type": "color",
+        "id": "brand_color",
+        "default": "#1E4B3C",
+        "label": "t:labels.brand"
+      },
+      {
+        "type": "color",
+        "id": "brand_accent",
+        "default": "#2E6B4E",
+        "label": "t:labels.brand_accent"
+      },
+      {
         "type": "range",
         "id": "input_corner_radius",
         "min": 0,
