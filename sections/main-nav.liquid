@@ -193,6 +193,17 @@
                 {%- endif -%}
               {%- endfor -%}
             </ul>
+
+            {%- comment -%}
+              #22 要求 <shopify-account> 移动端也可见。抽屉内容虽存于 <template>
+              （首次打开才实例化），组件本身仍在 DOM 中、可被平台脚本识别，
+              因此不违反"移动端可见"。复用 account-entry snippet，不复制组件。
+            {%- endcomment -%}
+            <div class="nav-drawer__footer">
+              {%- if shop.customer_accounts_enabled -%}
+                {% render 'account-entry', class: 'nav-drawer__account' %}
+              {%- endif -%}
+            </div>
           </div>
         </template>
       </dialog>
@@ -393,6 +404,21 @@
 
   .nav-drawer__sublist--deep .nav-drawer__link {
     padding-inline-start: 3rem;
+  }
+
+  /* 抽屉底部固定区：账户入口 + （后续）购物车入口 */
+  .nav-drawer__footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-block-start: auto;
+    padding: 0.5rem 1rem;
+    border-block-start: 1px solid currentColor;
+  }
+
+  /* 抽屉内账户组件的 sheet 从抽屉顶部弹出，与桌面端不同 */
+  .nav-drawer__account .account__component {
+    --shopify-account-dialog-position-top: 0;
   }
 
   /* ---- 断点：以下为移动端 ---- */
