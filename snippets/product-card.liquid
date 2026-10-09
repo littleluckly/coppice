@@ -1,82 +1,108 @@
 {% doc %}
   product-card — 商品卡（首页 featured-collection 与集合页共用，task-index T-1.2）。
 
-  输出：图 + 标题 + 价格 + 2–3 项参数（SDD §8.1 列表页体量约束）+ 对比勾选。
-  参数行逐项判空：缺值只显示已有参数，不留空位（pages-ui §2 状态要点）。
+  输出（视觉基准：效果图-首页 Featured Products 区）：
+  图 + 收藏心 + 标题 + 规格横排行（宽·排量·动力源）+ 价格（含划线对比价）+ 星级 + Compare。
 
-  对比勾选（SDD §6.2.2）：
-    - <button aria-pressed>，输出 data-compare-group（spec.compare_group）与 data-compare-handle
-    - spec.compare_hidden == 'TRUE' → 不渲染按钮
-    - spec.compare_group 为空 → 不渲染按钮（无法分组，§5.4 不兜底）
-    - 触摸目标 ≥ 44×44px（AGENTS.md §8）
+  纪律：
+  - 参数行逐项判空：缺值跳项，分隔符自动正确（li+li::before），不留空位（SDD §5.7）
+  - 星级读官方 Product Reviews app 的 reviews.rating / reviews.rating_count metafield；
+    app 未装或无数据 → 星级行整个不渲染（不显示 0，Dawn 同款方案）
+  - 收藏为 localStorage 版（ib:wishlist:v1，assets/wishlist-toggle.js）：
+    本机持久、不跨设备同步——UI 不承诺同步（评估结论 2026-10-09）
+  - 对比按钮 spec.compare_hidden == 'TRUE' 或 compare_group 为空 → 不渲染
 
   @param {product} product - product 对象（必填）
   @param {boolean} lazy - true → 图片 lazy（非首屏）；缺省 false → eager
-  @param {boolean} show_width - true → 显示切割宽度（经 spec-value 换算）
-  @param {boolean} show_power - true → 显示动力源（枚举原样，不换算）
-  @param {boolean} show_weight - true → 显示整机重量（经 spec-value 换算）
+  @param {boolean} show_width - true → 规格行显示切割宽度（经 spec-value 换算）
+  @param {boolean} show_cc - true → 规格行显示排量（cc，不换算）
+  @param {boolean} show_power - true → 规格行显示动力源（枚举原样）
+  @param {boolean} show_weight - true → 规格行显示整机重量（经 spec-value 换算）
 {% enddoc %}
 
 {%- if product != blank -%}
   <article class="product-card">
-    <a class="product-card__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
-      {%- if product.featured_image -%}
-        {{
-          product.featured_image
-          | image_url: width: 800
-          | image_tag:
-            widths: '400, 600, 800',
-            sizes: '(min-width: 750px) 22vw, 45vw',
-            width: product.featured_image.width,
-            height: product.featured_image.height,
-            loading: lazy,
-            alt: product.featured_image.alt
-        }}
-      {%- else -%}
-        {{ 'product-1' | placeholder_svg_tag: 'product-card__placeholder' }}
+    <div class="product-card__media-wrap">
+      <a class="product-card__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+        {%- if product.featured_image -%}
+          {{
+            product.featured_image
+            | image_url: width: 800
+            | image_tag:
+              widths: '400, 600, 800',
+              sizes: '(min-width: 1100px) 15vw, (min-width: 750px) 30vw, 45vw',
+              width: product.featured_image.width,
+              height: product.featured_image.height,
+              loading: lazy,
+              alt: product.featured_image.alt
+          }}
+        {%- else -%}
+          {{ 'product-1' | placeholder_svg_tag: 'product-card__placeholder' }}
+        {%- endif -%}
+      </a>
+
+      {%- if product.metafields.spec.compare_group.value != blank
+        and product.metafields.spec.compare_hidden.value != 'TRUE' -%}
+        <button
+          type="button"
+          class="product-card__wishlist"
+          aria-pressed="false"
+          data-wishlist-handle="{{ product.handle }}"
+          aria-label="{{ 'products.product_card.add_to_wishlist' | t }}"
+        >
+          <svg class="product-card__heart" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+            <path d="M12 21s-7.5-4.9-10-9.3C.4 8.6 2 4.5 5.7 4.1c2.1-.2 4.1.9 5.3 2.7h2c1.2-1.8 3.2-2.9 5.3-2.7 3.7.4 5.3 4.5 3.7 7.6C19.5 16.1 12 21 12 21Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </button>
       {%- endif -%}
-    </a>
+    </div>
 
     <h3 class="product-card__title">
       <a href="{{ product.url }}">{{ product.title | escape }}</a>
     </h3>
 
-    <p class="product-card__price">{{ product.price | money }}</p>
-
-    {%- assign has_specs = false -%}
-    {%- if show_width and product.metafields.spec.cutting_width_mm.value != blank -%}
-      {%- assign has_specs = true -%}
-    {%- elsif show_power and product.metafields.spec.power_source.value != blank -%}
-      {%- assign has_specs = true -%}
-    {%- elsif show_weight and product.metafields.spec.weight_kg.value != blank -%}
-      {%- assign has_specs = true -%}
-    {%- endif -%}
-
+    {%- comment -%} 规格横排行：宽 · 排量 · 动力源（缺值跳项，分隔符由 CSS 补） {%- endcomment -%}
+    {%- liquid
+      assign has_specs = false
+      if show_width and product.metafields.spec.cutting_width_mm.value != blank
+        assign has_specs = true
+      endif
+      if show_cc and product.metafields.spec.displacement_cc.value != blank
+        assign has_specs = true
+      endif
+      if show_power and product.metafields.spec.power_source.value != blank
+        assign has_specs = true
+      endif
+      if show_weight and product.metafields.spec.weight_kg.value != blank
+        assign has_specs = true
+      endif
+    -%}
     {%- if has_specs -%}
-      <ul class="product-card__specs">
+      <ul class="product-card__specs" role="list">
         {%- if show_width -%}
           {%- assign width_value = product.metafields.spec.cutting_width_mm.value -%}
           {%- if width_value != blank -%}
             <li class="product-card__spec">
-              <span class="product-card__spec-label">{{ 'products.product_card.spec_cutting_width' | t }}</span>
               {%- render 'spec-value', value: width_value, unit_type: 'length_mm', spec_class: 'card' -%}
             </li>
+          {%- endif -%}
+        {%- endif -%}
+        {%- if show_cc -%}
+          {%- assign cc_value = product.metafields.spec.displacement_cc.value -%}
+          {%- if cc_value != blank -%}
+            <li class="product-card__spec">{{ cc_value }} cc</li>
           {%- endif -%}
         {%- endif -%}
         {%- if show_power -%}
           {%- assign power_value = product.metafields.spec.power_source.value -%}
           {%- if power_value != blank -%}
-            <li class="product-card__spec">
-              <span class="product-card__spec-label">{{ 'products.product_card.spec_power_source' | t }}</span>
-              <span class="spec-value spec-value--card">{{ power_value }}</span>
-            </li>
+            <li class="product-card__spec">{{ power_value }}</li>
           {%- endif -%}
         {%- endif -%}
         {%- if show_weight -%}
           {%- assign weight_value = product.metafields.spec.weight_kg.value -%}
           {%- if weight_value != blank -%}
             <li class="product-card__spec">
-              <span class="product-card__spec-label">{{ 'products.product_card.spec_weight' | t }}</span>
               {%- render 'spec-value', value: weight_value, unit_type: 'weight_kg', spec_class: 'card' -%}
             </li>
           {%- endif -%}
@@ -84,14 +110,40 @@
       </ul>
     {%- endif -%}
 
-    {%- assign compare_group = product.metafields.spec.compare_group.value -%}
-    {%- assign compare_hidden = product.metafields.spec.compare_hidden.value -%}
-    {%- if compare_group != blank and compare_hidden != 'TRUE' -%}
+    <p class="product-card__price">
+      {%- if product.compare_at_price > product.price -%}
+        <span class="product-card__price-current">{{ product.price | money }}</span>
+        <s class="product-card__price-compare">{{ product.compare_at_price | money }}</s>
+      {%- else -%}
+        <span class="product-card__price-current">{{ product.price | money }}</span>
+      {%- endif -%}
+    </p>
+
+    {%- comment -%} 星级：官方 Product Reviews app metafield；无数据整行不渲染 {%- endcomment -%}
+    {%- liquid
+      assign rating_value = product.metafields.reviews.rating.value.rating
+      assign rating_count = product.metafields.reviews.rating_count.value
+    -%}
+    {%- if rating_value != blank -%}
+      <a class="product-card__rating" href="{{ product.url }}#reviews">
+        <svg class="product-card__star" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+          <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9L12 2.5Z" fill="currentColor"/>
+        </svg>
+        <span class="product-card__rating-value">{{ rating_value | round: 1 }}</span>
+        {%- if rating_count != blank -%}
+          <span class="product-card__rating-count">({{ rating_count }})</span>
+        {%- endif -%}
+        <span class="visually-hidden">{{ 'products.product_card.rating_label' | t: rating: rating_value }}</span>
+      </a>
+    {%- endif -%}
+
+    {%- if product.metafields.spec.compare_group.value != blank
+      and product.metafields.spec.compare_hidden.value != 'TRUE' -%}
       <button
         type="button"
         class="product-card__compare"
         aria-pressed="false"
-        data-compare-group="{{ compare_group }}"
+        data-compare-group="{{ product.metafields.spec.compare_group.value }}"
         data-compare-handle="{{ product.handle }}"
         data-compare-title="{{ product.title | escape }}"
       >
