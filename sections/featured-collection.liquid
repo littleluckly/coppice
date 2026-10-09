@@ -1,17 +1,18 @@
 {% comment %}
   Featured collection — 首页精选集合网格（task-index T-2.4，pages-ui §2）。
-  桌面 2×4 / 移动 2 列；消费 snippets/product-card.liquid（2–3 项参数 + 对比勾选）。
-  商品循环内不做 metafield assign（在 snippet 内处理）。空集合 → 不渲染。
+  视觉基准：效果图-首页 Featured Products——桌面 6 列横排白卡（规格横排行 + 划线价
+  + 星级 + 收藏心 + Compare）。消费 snippets/product-card.liquid。空集合 → 不渲染。
   首行卡片图片 eager（LCP 候选），其余 lazy。
 {% endcomment %}
 
 {%- liquid
   assign card_collection = section.settings.collection
-  assign limit = section.settings.products_to_show | default: 8
+  assign limit = section.settings.products_to_show | default: 6
 -%}
 
 {%- if card_collection != blank and card_collection.products_count > 0 -%}
   <script src="{{ 'compare-toggle.js' | asset_url }}" defer></script>
+  <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
   <div class="featured-collection">
     {%- if section.settings.heading != blank -%}
       <h2 class="featured-collection__heading">{{ section.settings.heading | escape }}</h2>
@@ -22,28 +23,33 @@
         <li class="featured-collection__item">
           {%- liquid
             assign card_lazy = true
-            assign eager_width = false
-            assign eager_power = false
-            assign eager_weight = false
-            if forloop.index <= 4
+            assign card_width = false
+            assign card_cc = false
+            assign card_power = false
+            assign card_weight = false
+            if forloop.index <= 6
               assign card_lazy = false
             endif
             if section.settings.show_spec_width
-              assign eager_width = true
+              assign card_width = true
+            endif
+            if section.settings.show_spec_cc
+              assign card_cc = true
             endif
             if section.settings.show_spec_power
-              assign eager_power = true
+              assign card_power = true
             endif
             if section.settings.show_spec_weight
-              assign eager_weight = true
+              assign card_weight = true
             endif
           -%}
           {% render 'product-card',
             product: product,
             lazy: card_lazy,
-            show_width: eager_width,
-            show_power: eager_power,
-            show_weight: eager_weight
+            show_width: card_width,
+            show_cc: card_cc,
+            show_power: card_power,
+            show_weight: card_weight
           %}
         </li>
       {%- endfor -%}
@@ -67,14 +73,20 @@
     .featured-collection__grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
+      gap: 0.75rem;
       list-style: none;
       padding: 0;
       margin: 0;
     }
     @media (min-width: 750px) {
       .featured-collection__grid {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (min-width: 1100px) {
+      .featured-collection__grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 0.6rem;
       }
     }
     .featured-collection__view-all {
@@ -84,6 +96,133 @@
       padding-block: 10px;
       color: inherit;
       font-weight: 500;
+    }
+
+    /* 商品卡（视觉基准：效果图 Featured Products） */
+    .product-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      height: 100%;
+      padding: 0.75rem;
+      background-color: var(--color-background);
+      border: 1px solid rgb(0 0 0 / 10%);
+      border-radius: 12px;
+    }
+    .product-card__media-wrap {
+      position: relative;
+    }
+    .product-card__media {
+      display: block;
+    }
+    .product-card__media img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 8px;
+      background-color: #f6f6f4;
+    }
+    .product-card__placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+    }
+    .product-card__wishlist {
+      position: absolute;
+      inset-block-start: 0.4rem;
+      inset-inline-end: 0.4rem;
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: none;
+      background-color: rgb(255 255 255 / 85%);
+      border-radius: 50%;
+      color: #444;
+      cursor: pointer;
+    }
+    .product-card__wishlist[aria-pressed='true'] {
+      color: #c0392b;
+    }
+    .product-card__wishlist[aria-pressed='true'] .product-card__heart path {
+      fill: currentcolor;
+    }
+    .product-card__title {
+      font-size: 0.92rem;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+    .product-card__title a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .product-card__specs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.78rem;
+      color: rgb(0 0 0 / 60%);
+    }
+    .product-card__spec + .product-card__spec::before {
+      content: '·';
+      margin-inline-end: 0.3rem;
+    }
+    .spec-value--card {
+      font-size: inherit;
+    }
+    .product-card__price {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      font-weight: 500;
+    }
+    .product-card__price-compare {
+      font-weight: 400;
+      font-size: 0.85rem;
+      color: rgb(0 0 0 / 50%);
+    }
+    .product-card__rating {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.82rem;
+      color: inherit;
+      text-decoration: none;
+    }
+    .product-card__star {
+      color: #e8a33d;
+    }
+    .product-card__rating-count {
+      color: rgb(0 0 0 / 55%);
+    }
+    .product-card__compare {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-block-start: auto;
+      padding: 10px 0;
+      min-height: 44px;
+      border: none;
+      background: none;
+      font: inherit;
+      font-size: 0.85rem;
+      color: inherit;
+      cursor: pointer;
+    }
+    .product-card__compare::before {
+      content: '';
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid rgb(0 0 0 / 40%);
+      border-radius: 3px;
+      background-color: var(--color-background);
+    }
+    .product-card__compare[aria-pressed='true']::before {
+      background-color: var(--color-foreground);
+      box-shadow: inset 0 0 0 2.5px var(--color-background);
     }
   {% endstylesheet %}
 
@@ -108,11 +247,11 @@
     {
       "type": "range",
       "id": "products_to_show",
-      "min": 4,
+      "min": 3,
       "max": 12,
-      "step": 4,
+      "step": 3,
       "label": "t:labels.products_to_show",
-      "default": 8
+      "default": 6
     },
     {
       "type": "header",
@@ -122,6 +261,13 @@
       "type": "checkbox",
       "id": "show_spec_width",
       "label": "t:sections.featured_collection.labels.show_spec_width",
+      "info": "t:sections.featured_collection.labels.spec_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_spec_cc",
+      "label": "t:sections.featured_collection.labels.show_spec_cc",
       "info": "t:sections.featured_collection.labels.spec_info",
       "default": true
     },
