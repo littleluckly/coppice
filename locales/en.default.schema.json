@@ -74,7 +74,8 @@
     "platform_cards": {
       "name": "Platform cards",
       "defaults": {
-        "heading": "Shop by platform"
+        "heading": "Shop by platform",
+        "view_all_label": "View all platforms"
       },
       "blocks": {
         "card": {
@@ -138,7 +139,8 @@
       "name": "Blog posts",
       "defaults": {
         "heading": "Buying guides"
-      }
+      },
+      "read_more": "Read guide"
     }
   },
   "labels": {
@@ -170,7 +172,10 @@
     "text_style": "Text style",
     "text": "Text",
     "title_override": "Title override",
-    "view_all_label": "'View all' link label"
+    "view_all_label": "'View all' link label",
+    "brand": "Brand color (headers, banner)",
+    "brand_accent": "Brand accent (buttons, links)",
+    "view_all_link": "'View all' link target"
   },
   "options": {
     "alignment": {
