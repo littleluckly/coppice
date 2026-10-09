@@ -196,10 +196,18 @@
             </ul>
           </div>
         </template>
-      </dialog>
+        </dialog>
+      </nav-drawer>
     </div>
   </nav>
 {% endif %}
+
+{% javascript %}
+  // {% javascript %} 内的代码只在页面上出现一次（多个 section 引用同文件也不会重复执行），
+  // 但它没有内联进 HTML，所以自定义元素可能先于本脚本定义完成。
+  // 直接 import 交给浏览器模块加载，天然处理执行顺序。
+  import {{ 'nav-drawer.js' | asset_url }};
+{% endjavascript %}
 
 {% stylesheet %}
   .main-nav {
