@@ -14,9 +14,16 @@
   <script src="{{ 'compare-toggle.js' | asset_url }}" defer></script>
   <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
   <div class="featured-collection">
-    {%- if section.settings.heading != blank -%}
-      <h2 class="featured-collection__heading">{{ section.settings.heading | escape }}</h2>
-    {%- endif -%}
+    <div class="featured-collection__header">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="featured-collection__heading">{{ section.settings.heading | escape }}</h2>
+      {%- endif -%}
+      {%- if section.settings.view_all_label != blank -%}
+        <a class="featured-collection__view-all" href="{{ card_collection.url }}">
+          {{ section.settings.view_all_label | escape }}
+        </a>
+      {%- endif -%}
+    </div>
 
     <ul class="featured-collection__grid" role="list">
       {%- for product in card_collection.products limit: limit -%}
