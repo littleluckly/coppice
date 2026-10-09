@@ -165,6 +165,7 @@
     "image": "Image",
     "input_corner_radius": "Input corner radius",
     "layout_direction": "Layout direction",
+    "link": "Link",
     "menu": "Menu",
     "padding": "Padding",
     "page_margin": "Page margin",
