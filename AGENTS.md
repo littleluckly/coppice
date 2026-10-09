@@ -150,6 +150,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 
 - SDD 引用的 `tools/check-theme-name.sh`、`tools/build-import-csv.py`、`snippets/spec-value.liquid`、`docs/TASKS.md` **尚未创建**；涉及时先确认是否已立项，不要假设存在。
 - Spike A1/A2 已完成（结论已写进 SDD §3.7）；A3（对比数据岛满载体积）待实测，验收基线以实测为准。
+- **`shopify` CLI 当前不在 PATH**（2026-10-09 实测 `command not found`）——`shopify theme check` 暂时跑不了。恢复前改用 JSON/结构解析做静态兜底校验；提交前必须补跑 theme check 并确认 0 Error。
 - 主题 v1.0 范围不含发电机（演示店仅含 Hardware 分支配件分类 2 条）。
 - `assets/wishlist-toggle.js` 与 §4 红线「不实现愿望清单」冲突，**提交前必须移除**（其交互可迁至商品卡的对比/加购按钮）。`assets/compare-toggle.js` 待按 §6 新规重构为 Custom Element。
 - 页头任务清单见 `dev-docs/task-header.md`；O-1 ~ O-5 已于 2026-10-09 拍板（结论写在该文件 §1）。
