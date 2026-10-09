@@ -2,16 +2,18 @@
   Announcement bar — rotating merchant messages with a dismiss control.
 
   Behaviour notes (task-header.md T-1.1):
-  - Dismissal persists in localStorage. To avoid an empty bar flashing before the
-    script has read storage, the bar renders with data-announcement and is hidden by
-    CSS only once the script marks it as "should stay visible". See _state below.
+  - Dismissal persists in sessionStorage, NOT localStorage: a closed promotional banner
+    is a temporary intent, and localStorage would hide the message from returning
+    visitors forever even after the merchant changes the copy.
+  - To avoid an empty bar flashing before the script has read storage, the bar renders
+    visible and the script marks it hidden only when dismissal is actually recorded.
   - No autoplay. Carousels that move on their own are an accessibility cost with no
     benefit here, and SDD §7.2 forbids fabricated urgency. Multiple messages scroll
-    horizontally instead, with manual controls.
-  - The close button is rendered by Liquid (not built by JS), so it exists even before
-    the script runs. If the script never loads, it simply does nothing — hence the
-    script removes it when it detects no JS capability rather than leaving a dead
-    control behind.
+    horizontally instead, with manual controls and arrow-key support.
+  - The close button is rendered by Liquid (not built by JS), so it exists in the HTML.
+    If the script never loads it would be a dead control, so keep the pairing honest:
+    the script is the only thing that makes it work, and the section is still fully
+    readable without it.
 {% endcomment %}
 
 {%- liquid
@@ -70,12 +72,17 @@
         >
           {{ 'icon-chevron-down.svg' | inline_asset_content }}
         </button>
+        {%- comment -%}
+          计数播报：只把"分隔符"交给 JS，数字由 JS 填。
+          不用 data-* 传 {{index}} 占位符——t: 过滤器会把它当插值参数，多语言下不可靠。
+        {%- endcomment -%}
         <p
           class="announcement-bar__count visually-hidden"
           aria-live="polite"
           data-announcement-status
+          data-separator="{{ 'general.pagination_separator' | t | escape }}"
         >
-          {{ 'sections.announcement_bar.status' | t: index: 1, total: section.blocks.size }}
+          <span data-announcement-current>1</span>{{ 'general.pagination_separator' | t }}<span>{{ section.blocks.size }}</span>
         </p>
         <button
           type="button"
