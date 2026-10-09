@@ -1,0 +1,451 @@
+{% comment %}
+  Main navigation — desktop dropdown (PC) + off-canvas drawer (mobile).
+
+  Decisions in force (task-header.md §1, 2026-10-09):
+  - O-5: two separate DOM trees, never shared. Desktop is hover/focus-within driven;
+    mobile is a native <dialog> opened with showModal() so focus trapping, background
+    inert, Esc-to-close and ::backdrop come from the platform instead of hand-rolled JS.
+  - O-1: sticky is PC only, and only inside the min-width media query.
+  - BUG-023: a menu item that has children is a GROUP. Its url may be empty, so it must
+    never be rendered as an <a> — that would emit a dead href="#" link.
+  - ARIA: current page is taken from link.current / link.child_current rather than by
+    comparing URL strings ourselves.
+
+  Recursion is deliberately capped at three levels (Shop > Mowers > Walk-behind).
+{% endcomment %}
+
+{%- liquid
+  assign menu = section.settings.menu
+  assign levels = section.settings.mobile_nav_depth | default: 3
+-%}
+
+{% if menu.links.size > 0 %}
+  <nav class="main-nav" aria-label="{{ 'navigation.menu' | t }}">
+    {%- comment -%} ---------- 桌面：PC 端下拉（sticky 仅此处） ---------- {%- endcomment -%}
+    <div class="main-nav__desktop">
+      <ul class="main-nav__list" role="list">
+        {%- for link in menu.links -%}
+          {%- liquid
+            assign has_children = false
+            if link.links.size > 0
+              assign has_children = true
+            endif
+            assign is_current = false
+            if link.current
+              assign is_current = true
+            endif
+            assign in_branch = false
+            if link.child_current or link.child_active
+              assign in_branch = true
+            endif
+          -%}
+
+          <li class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}">
+            {%- if has_children -%}
+              {%- comment -%}
+                分组项：只出 <span>，不输出 <a>（BUG-023）。
+                aria-expanded 由 CSS :focus-within / :hover 驱动状态，JS 只做点击锁定。
+              {%- endcomment -%}
+              <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                {{ link.title }}
+                {{ 'icon-chevron-down.svg' | inline_asset_content }}
+              </span>
+
+              <ul class="main-nav__submenu" role="list">
+                {%- for child in link.links -%}
+                  {%- liquid
+                    assign child_has_children = false
+                    if child.links.size > 0
+                      assign child_has_children = true
+                    endif
+                  -%}
+
+                  <li class="main-nav__item">
+                    {%- if child_has_children -%}
+                      <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                        {{ child.title }}
+                        {{ 'icon-chevron-down.svg' | inline_asset_content }}
+                      </span>
+
+                      <ul class="main-nav__submenu main-nav__submenu--deep" role="list">
+                        {%- for grandchild in child.links -%}
+                          <li class="main-nav__item">
+                            <a
+                              class="main-nav__link{% if grandchild.current %} main-nav__link--current{% endif %}"
+                              href="{{ grandchild.url }}"
+                              {% if grandchild.current %}aria-current="page"{% endif %}
+                            >
+                              {{ grandchild.title }}
+                            </a>
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+                    {%- else -%}
+                      <a
+                        class="main-nav__link{% if child.current %} main-nav__link--current{% endif %}"
+                        href="{{ child.url }}"
+                        {% if child.current %}aria-current="page"{% endif %}
+                      >
+                        {{ child.title }}
+                      </a>
+                    {%- endif -%}
+                  </li>
+                {%- endfor -%}
+              </ul>
+            {%- else -%}
+              {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
+              <a
+                class="main-nav__link{% if is_current %} main-nav__link--current{% endif %}"
+                href="{{ link.url }}"
+                {% if is_current %}aria-current="page"{% endif %}
+              >
+                {{ link.title }}
+              </a>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </div>
+
+    {%- comment -%} ---------- 移动：原生 <dialog> 抽屉 ---------- {%- endcomment -%}
+    <div class="main-nav__mobile">
+      <button
+        type="button"
+        class="main-nav__burger"
+        aria-label="{{ 'navigation.menu' | t }}"
+        aria-haspopup="dialog"
+        data-nav-drawer-open
+      >
+        {{ 'icon-menu.svg' | inline_asset_content }}
+      </button>
+
+      <dialog class="nav-drawer" data-nav-drawer aria-labelledby="nav-drawer-title">
+        {%- comment -%} 内容存 <template>，首次打开才实例化（AGENTS §6） {%- endcomment -%}
+        <template data-nav-drawer-template>
+          <div class="nav-drawer__inner">
+            <div class="nav-drawer__head">
+              <h2 class="nav-drawer__title visually-hidden" id="nav-drawer-title">
+                {{ 'navigation.menu' | t }}
+              </h2>
+              <button
+                type="button"
+                class="nav-drawer__close"
+                aria-label="{{ 'navigation.close' | t }}"
+                data-nav-drawer-close
+              >
+                {{ 'icon-close.svg' | inline_asset_content }}
+              </button>
+            </div>
+
+            <ul class="nav-drawer__list" role="list">
+              {%- for link in menu.links -%}
+                {%- if link.links.size > 0 -%}
+                  {%- comment -%}
+                    details/summary：天然无 JS 可用、键盘可达，优于 JS 折叠（O-5）
+                  {%- endcomment -%}
+                  <li class="nav-drawer__item">
+                    <details class="nav-drawer__group">
+                      <summary class="nav-drawer__summary">
+                        {{ link.title }}
+                        {{ 'icon-chevron-down.svg' | inline_asset_content }}
+                      </summary>
+                      <ul class="nav-drawer__sublist" role="list">
+                        {%- for child in link.links -%}
+                          <li class="nav-drawer__item">
+                            <a
+                              class="nav-drawer__link{% if child.current %} nav-drawer__link--current{% endif %}"
+                              href="{{ child.url }}"
+                              {% if child.current %}aria-current="page"{% endif %}
+                            >
+                              {{ child.title }}
+                            </a>
+                            {%- comment -%} 第三级：仅在有子项时输出 {%- endcomment -%}
+                            {%- if child.links.size > 0 -%}
+                              <ul class="nav-drawer__sublist nav-drawer__sublist--deep" role="list">
+                                {%- for grandchild in child.links -%}
+                                  <li class="nav-drawer__item">
+                                    <a
+                                      class="nav-drawer__link{% if grandchild.current %} nav-drawer__link--current{% endif %}"
+                                      href="{{ grandchild.url }}"
+                                      {% if grandchild.current %}aria-current="page"{% endif %}
+                                    >
+                                      {{ grandchild.title }}
+                                    </a>
+                                  </li>
+                                {%- endfor -%}
+                              </ul>
+                            {%- endif -%}
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+                    </details>
+                  </li>
+                {%- else -%}
+                  <li class="nav-drawer__item">
+                    <a
+                      class="nav-drawer__link{% if link.current %} nav-drawer__link--current{% endif %}"
+                      href="{{ link.url }}"
+                      {% if link.current %}aria-current="page"{% endif %}
+                    >
+                      {{ link.title }}
+                    </a>
+                  </li>
+                {%- endif -%}
+              {%- endfor -%}
+            </ul>
+          </div>
+        </template>
+      </dialog>
+    </div>
+  </nav>
+{% endif %}
+
+{% stylesheet %}
+  .main-nav {
+    position: relative;
+  }
+
+  .main-nav__list {
+    display: flex;
+    align-items: center;
+    gap: var(--main-nav-gap, 1.25rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-nav__item {
+    position: relative;
+  }
+
+  .main-nav__link {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-height: 44px;
+    padding-block: 0.5rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .main-nav__link svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    /* 箭头旋转仅作视觉辅助，展开状态由 submenu 的 display 表达 */
+    transition: transform 0.15s ease;
+  }
+
+  .main-nav__link--current,
+  .main-nav__item--in-branch > .main-nav__link {
+    color: var(--color-brand);
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+  }
+
+  /* 分组项 hover / focus-within 展开：纯 CSS，键盘可达，不依赖 JS */
+  .main-nav__item:hover > .main-nav__submenu,
+  .main-nav__item:focus-within > .main-nav__submenu {
+    display: block;
+  }
+
+  .main-nav__item:hover > .main-nav__link svg,
+  .main-nav__item:focus-within > .main-nav__link svg {
+    transform: rotate(180deg);
+  }
+
+  .main-nav__submenu {
+    display: none;
+    position: absolute;
+    inset-inline-start: 0;
+    top: 100%;
+    z-index: 10;
+    min-width: 14rem;
+    margin: 0;
+    padding: 0.5rem 0;
+    list-style: none;
+    background-color: var(--color-background);
+    border: 1px solid currentColor;
+    border-radius: 4px;
+  }
+
+  /* 第二级：悬停靠右，避免贴边裁切 */
+  .main-nav__submenu--deep {
+    top: 0;
+    inset-inline-start: 100%;
+  }
+
+  .main-nav__submenu .main-nav__link {
+    padding-inline: 1rem;
+  }
+
+  /* 移动端抽屉相关：桌面隐藏汉堡与 dialog */
+  .main-nav__mobile {
+    display: none;
+  }
+
+  /* ---- 抽屉：<dialog> + scroll-lock 锁背景（critical.css 已配套） ---- */
+  .nav-drawer {
+    inset-block: 0;
+    inset-inline: auto 0;
+    /* 由 showModal() 置于 top layer，无需 z-index */
+    width: min(22rem, 88vw);
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-inline-end: 1px solid currentColor;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .nav-drawer::backdrop {
+    background-color: rgb(0 0 0 / 45%);
+  }
+
+  .nav-drawer__inner {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .nav-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0.5rem;
+    border-block-end: 1px solid currentColor;
+  }
+
+  .nav-drawer__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .nav-drawer__close svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .nav-drawer__list,
+  .nav-drawer__sublist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav-drawer__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  /* details 默认标记在各浏览器表现不一，统一去掉 */
+  .nav-drawer__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .nav-drawer__summary svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    transition: transform 0.15s ease;
+  }
+
+  .nav-drawer__group[open] > .nav-drawer__summary svg {
+    transform: rotate(180deg);
+  }
+
+  .nav-drawer__link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.5rem 1rem 0.5rem 2rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .nav-drawer__link--current {
+    color: var(--color-brand);
+    font-weight: 700;
+  }
+
+  .nav-drawer__sublist--deep .nav-drawer__link {
+    padding-inline-start: 3rem;
+  }
+
+  /* ---- 断点：以下为移动端 ---- */
+  @media screen and (max-width: 989px) {
+    .main-nav__desktop {
+      display: none;
+    }
+
+    .main-nav__mobile {
+      display: flex;
+      align-items: center;
+    }
+
+    .main-nav__burger {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      color: inherit;
+      background: none;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .main-nav__burger svg {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  /* ---- O-1：sticky 仅 PC，务必留在本媒体查询内 ---- */
+  @media screen and (min-width: 990px) {
+    .main-nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.main_nav",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "t:labels.menu",
+      "default": "main-menu"
+    }
+  ],
+  "blocks": [],
+  "enabled_on": {
+    "groups": ["header"]
+  }
+}
+{% endschema %}
