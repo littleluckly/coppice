@@ -26,6 +26,13 @@
         }
       }
     },
+    "account": {
+      "type": "account",
+      "settings": {
+        "customer_account_menu": "customer-account-main-menu",
+        "show_follow_on_shop": false
+      }
+    },
     "main-nav": {
       "type": "main-nav",
       "settings": {
@@ -35,6 +42,7 @@
   },
   "order": [
     "announcement-bar",
+    "account",
     "main-nav"
   ],
 }
