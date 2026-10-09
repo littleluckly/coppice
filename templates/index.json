@@ -161,7 +161,7 @@
     "blog": {
       "type": "blog-posts",
       "settings": {
-        "blog": "",
+        "blog": "news",
         "heading": "Buying guides",
         "posts_to_show": 3
       }
