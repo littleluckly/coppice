@@ -69,23 +69,25 @@
           </div>
 
           <div class="hero-slideshow__content">
-            {%- if block.settings.heading != blank -%}
-              {%- if is_first -%}
-                <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
-              {%- else -%}
-                <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
+            <div class="hero-slideshow__body">
+              {%- if block.settings.heading != blank -%}
+                {%- if is_first -%}
+                  <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
+                {%- else -%}
+                  <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
+                {%- endif -%}
               {%- endif -%}
-            {%- endif -%}
 
-            {%- if block.settings.subheading != blank -%}
-              <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
-            {%- endif -%}
+              {%- if block.settings.subheading != blank -%}
+                <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
+              {%- endif -%}
 
-            {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
-              <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
-                {{ block.settings.button_label | escape }}
-              </a>
-            {%- endif -%}
+              {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
+                <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
+                  {{ block.settings.button_label | escape }}
+                </a>
+              {%- endif -%}
+            </div>
           </div>
         </div>
       {%- endfor -%}
