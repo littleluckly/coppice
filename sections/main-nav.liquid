@@ -364,20 +364,24 @@
 {% stylesheet %}
   .main-nav {
     position: relative;
-    /* 整行的横向内边距与页面一致 */
-    padding-inline: var(--page-margin);
+    /* 根节点带 full-width：整行通栏，背景铺满视口（BUG-032 sticky 配套）。
+       内容行不在这里加 padding——由 __inner 对齐页面内容列（见下）。 */
   }
 
   /* 三段布局：logo / 菜单 / 工具。
      grid 而非 flex——菜单长度随商家配置变化，flex 下工具区会被挤压。
      white-space: nowrap（2026-10-10 刘工）：导航行内任何内容都不换行，
-     菜单项 / 品牌名超出时只压缩中间列宽度，不折行。 */
+     菜单项 / 品牌名超出时只压缩中间列宽度，不折行。
+     行宽对齐 .shopify-section 的内容列（--content-width 从包裹层继承），
+     与下方各 section 的文案同一列线。 */
   .main-nav__inner {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 1.5rem;
     white-space: nowrap;
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
   }
 
   /* Zone 0: logo + 品牌名。图标与文字并排一行，永不换行。 */
@@ -813,9 +817,13 @@
     }
   }
 
-  /* ---- O-1：sticky 仅 PC，务必留在本媒体查询内 ---- */
+  /* ---- O-1：sticky 仅 PC，务必留在本媒体查询内 ----
+     BUG-032：sticky 不能挂在 .main-nav 上——它的父级是 Shopify 生成的
+     .shopify-section 包裹层，高度只有导航行自身，sticky 没有可黏的滚动余量。
+     必须挂在包裹层（schema "class": "main-nav-section"）上：包裹层是 body
+     （flex 列）的直接子项、纵贯整页，sticky 才有作用空间。 */
   @media screen and (min-width: 990px) {
-    .main-nav {
+    .main-nav-section {
       position: sticky;
       top: 0;
       z-index: 20;
@@ -932,6 +940,7 @@
 {% schema %}
 {
   "name": "t:general.main_nav",
+  "class": "main-nav-section",
   "settings": [
     {
       "type": "image_picker",
