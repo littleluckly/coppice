@@ -1,14 +1,20 @@
 /**
  * predictive-search — Combobox + listbox type-ahead over the /search/suggest endpoint.
  *
- * Design decisions (task-header.md O-2 / O-4, 2026-10-09):
+ * Design decisions (2026-10-09 O-2 / O-4; revised 2026-10-10, drawer refactor):
  *
- * - ARIA pattern is combobox + listbox, NOT a modal dialog. DOM focus stays in the
- *   input at all times; arrow keys move a *virtual* cursor via aria-activedescendant.
- *   A <dialog> here would swallow keystrokes and defeat type-ahead.
- * - Results arrive as a rendered HTML fragment from Shopify's Section Rendering API
- *   (section_id), not as JSON we render client-side. One markup source of truth:
- *   sections/predictive-search.liquid renders both modes.
+ * - ARIA pattern is combobox + listbox. DOM focus stays in the input at all
+ *   times; arrow keys move a *virtual* cursor via aria-activedescendant. The
+ *   form lives inside the search drawer (a modal <dialog>), but the combobox
+ *   behaviour is unchanged. Escape is layered: with results open it closes the
+ *   panel; with the panel closed it bubbles to the dialog and closes the drawer.
+ * - Results arrive as a rendered HTML fragment from Shopify's Section Rendering
+ *   API. Per the official Predictive Search API reference, `section_id` takes
+ *   the SECTION FILE name and the response is HTML wrapped in
+ *   `#shopify-section-<section_id>` — parse it with DOMParser, do NOT read it
+ *   as JSON. One markup source of truth: sections/predictive-search.liquid
+ *   (BUG-028: the pre-drawer version fetched main-nav's instance id and read
+ *   response.json(), which always threw on the HTML response).
  * - No results → the whole panel stays hidden (official UX: don't show an empty
  *   "no results" box). The "View all results" link inside the fragment remains the
  *   fallback, so the customer is never stranded.
@@ -16,13 +22,17 @@
  *   JS disabled the search still works. This file only enhances it.
  *
  * Error handling (three documented failure modes — never silently swallow):
- *   422 — invalid parameters (a bug in our query building)
+ *   404 — section id not found in the theme (a bug in our wiring)
  *   417 — buyer locale not supported by the endpoint
+ *   422 — invalid parameters (a bug in our query building)
  *   429 — rate limited; response carries Retry-After
  * Any of these must leave the search usable, so we simply never open the panel.
  */
 class PredictiveSearch extends HTMLElement {
   static DEBOUNCE_MS = 250;
+
+  /** Section FILE name — what /search/suggest re-renders for the results fragment. */
+  static SECTION_ID = 'predictive-search';
 
   constructor() {
     super();
@@ -59,7 +69,7 @@ class PredictiveSearch extends HTMLElement {
   }
 
   get _sectionId() {
-    return this.closest('[data-section-id]')?.dataset.sectionId || this.dataset.sectionId;
+    return PredictiveSearch.SECTION_ID;
   }
 
   _onInput = () => {
