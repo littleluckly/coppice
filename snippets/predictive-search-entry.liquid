@@ -28,10 +28,10 @@
     data-results-limit="{{ results_limit | default: 10 }}"
   >
     {%- comment -%}
-      放大镜按钮：桌面端点击等同于聚焦输入框（输入框本就在同一行），
-      移动端则是主要的搜索入口——点它直接聚焦，少一次"先点输入框"的操作。
-      aria-hidden + tabindex="-1"：真正的可访问入口是输入框本身
-      （它已有 combobox 语义），这个按钮只是视觉与触控捷径。
+      放大镜：纯视觉图标（aria-hidden + tabindex="-1"），可访问入口是输入框
+      本身（combobox 语义）。
+      清空按钮已移除（2026-10-10 刘工：抽屉里只保留一个 close 图标）——
+      换关键词靠全选重打，关抽屉靠右上角 X / Esc / 遮罩。
     {%- endcomment -%}
     <button
       type="button"
@@ -71,20 +71,6 @@
       aria-autocomplete="list"
       aria-describedby="predictive-search-help-{{ search_section_id }}"
     >
-
-    {%- comment -%}
-      官方 UX 明确要求提供清除按钮，否则用户只能逐字删除。
-      视觉隐藏但保留在无障碍树中；由 [data-has-query] 控制显隐。
-    {%- endcomment -%}
-    <button
-      type="button"
-      class="predictive-search__clear"
-      aria-label="{{ 'search.clear' | t }}"
-      data-predictive-search-clear
-      hidden
-    >
-      {{ 'icon-close.svg' | inline_asset_content }}
-    </button>
 
     <button type="submit" class="visually-hidden">
       {{ 'search.submit' | t }}
