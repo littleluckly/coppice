@@ -98,6 +98,22 @@ class PredictiveSearch extends HTMLElement {
     this.toggleAttribute('aria-busy', busy);
   }
 
+  /** 清空按钮：显隐跟随输入框有无内容（hidden 属性驱动，无障碍树同步） */
+  _onClear = () => {
+    this._input.value = '';
+    this._syncClearButton();
+    this._controller?.abort();
+    this._setBusy(false);
+    this._close();
+    this._input.focus();
+  };
+
+  _syncClearButton() {
+    if (this._clearButton) {
+      this._clearButton.hidden = this._input.value.length === 0;
+    }
+  }
+
   _onFocusOut = (event) => {
     // focusout fires before the click lands on an option, so wait a tick
     setTimeout(() => {
