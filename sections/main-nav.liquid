@@ -354,6 +354,7 @@
   /* 焦点态必须可见（SDD §8.2）。下拉靠 :focus-within 展开，但展开不等于
      有可见指示——键盘用户需要知道自己在哪一项上。 */
   .main-nav__link:focus-visible,
+  .main-nav__logo:focus-visible,
   .nav-drawer__link:focus-visible,
   .nav-drawer__summary:focus-visible,
   .main-nav__burger:focus-visible {
@@ -700,6 +701,18 @@
 {
   "name": "t:general.main_nav",
   "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "t:labels.logo",
+      "info": "t:labels.logo_info"
+    },
+    {
+      "type": "text",
+      "id": "brand_name",
+      "label": "t:labels.brand_name",
+      "default": "Northbark"
+    },
     {
       "type": "link_list",
       "id": "menu",
