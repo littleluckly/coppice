@@ -189,10 +189,12 @@
     filter: none;
   }
 
-  /* 选中项必须有可见变化，不能只靠颜色（SDD §8.2） */
+  /* 选中项必须有可见变化，不能只靠颜色（SDD §8.2）。
+     hover 底色：品牌色 8% 透明淡染（2026-10-10 刘工）——用 color-mix
+     从 --color-brand 现派生，商家换主题色时自动跟随，不硬编码色值 */
   .predictive-search__item[aria-selected='true'] .predictive-search__link,
   .predictive-search__link:hover {
-    background-color: rgb(0 0 0 / 3%);
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
   }
 
   .predictive-search__link:focus-visible {
