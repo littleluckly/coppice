@@ -28,8 +28,13 @@ class SearchDrawer extends HTMLElement {
     this._lastOpener = null;
     this._closeButton = null;
 
-    // 一次性拆除所有监听，避免主题编辑器 / section 重新渲染后事件叠加
+    // 一次性拆除所有监听，避免主题编辑器 / section 重新渲染后事件叠加。
+    // _onClose / _onDialogClick 必须 bind：作为 listener 被调用时 this 是
+    // 被监听元素（dialog 或 close 按钮）而非本组件——BUG-030 漏 bind 导致
+    // close 按钮与遮罩点击全部失效。
     this._abort = new AbortController();
+    this._onClose = this._onClose.bind(this);
+    this._onDialogClick = this._onDialogClick.bind(this);
   }
 
   connectedCallback() {
