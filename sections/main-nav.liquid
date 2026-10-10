@@ -149,28 +149,24 @@
       {%- endif -%}
 
       {%- comment -%}
-        Zone 2: search placeholder — filled in by T-1.4 (sections/header-search.liquid).
-        Kept as a block-free div rather than dropped in, so the row's flex geometry
-        does not change when search lands.
-      {%- endcomment -%}
-      <div
-        class="main-nav__search"
-        data-section-id="{{ section.id }}"
-        data-results-limit="{{ section.settings.results_limit }}"
-      >
-        {%- comment -%}
-          T-1.4: predictive-search section mounts here. data-section-id is what the JS
-          sends as section_id so Shopify re-renders THIS section and returns its
-          results fragment — one markup source for both render modes (O-4).
-        {%- endcomment -%}
-        {% render 'predictive-search-entry', search_section_id: section.id %}
-      </div>
-
-      {%- comment -%}
-        Zone 3: tools. Rendered here (not as sibling sections) so they stay on the
+        Zone 2: tools. Rendered here (not as sibling sections) so they stay on the
         pinned row — see the file header note.
+
+        The search toggle is icon-only (2026-10-10 刘工): the input never lives on
+        the row. It opens the <search-drawer> at the bottom of this file.
+        results_limit rides along into the drawer via the snippet param.
       {%- endcomment -%}
       <div class="main-nav__tools">
+        <button
+          type="button"
+          class="main-nav__search-toggle"
+          aria-label="{{ 'search.label' | t }}"
+          aria-haspopup="dialog"
+          data-search-drawer-open
+        >
+          {{ 'icon-search.svg' | inline_asset_content }}
+        </button>
+
         {% render 'account-entry', menu: section.settings.customer_account_menu %}
         {% render 'cart-entry' %}
 
@@ -198,6 +194,17 @@
         data-nav-drawer-open
       >
         {{ 'icon-menu.svg' | inline_asset_content }}
+      </button>
+
+      {%- comment -%} 移动端：logo 居中，汉堡居左、搜索居右（logo 绝对定位，不参与 flex 挤压） {%- endcomment -%}
+      <button
+        type="button"
+        class="main-nav__search-toggle main-nav__search-toggle--mobile"
+        aria-label="{{ 'search.label' | t }}"
+        aria-haspopup="dialog"
+        data-search-drawer-open
+      >
+        {{ 'icon-search.svg' | inline_asset_content }}
       </button>
 
       <nav-drawer>
