@@ -1,0 +1,990 @@
+{% comment %}
+  Main navigation — desktop dropdown (PC) + off-canvas drawer (mobile).
+
+  Decisions in force (task-header.md §1, 2026-10-09):
+  - O-5: two separate DOM trees, never shared. Desktop is hover/focus-within driven;
+    mobile is a native <dialog> opened with showModal() so focus trapping, background
+    inert, Esc-to-close and ::backdrop come from the platform instead of hand-rolled JS.
+  - O-1: sticky is PC only, and only inside the min-width media query.
+  - BUG-023: a menu item that has children is a GROUP. Its url may be empty, so it must
+    never be rendered as an <a> — that would emit a dead href="#" link.
+  - ARIA: current page is taken from link.current / link.child_current rather than by
+    comparing URL strings ourselves.
+
+  Recursion is deliberately capped at three levels (Shop > Mowers > Walk-behind).
+{% endcomment %}
+
+{%- liquid
+  assign menu = section.settings.menu
+  assign brand_name = section.settings.brand_name | default: shop.name
+  if section.settings.logo != blank
+    assign logo_src = section.settings.logo | image_url: width: 160
+  else
+    assign logo_src = 'logo_webp.webp' | asset_url
+  endif
+-%}
+
+{% comment -%}
+  This section is the whole sticky header row (decision 2026-10-09, option A).
+
+  account and cart used to be separate sections, which broke sticky: they are
+  sibling nodes of this one, so the menu would pin to the viewport top while the
+  cart and account icons scrolled away — leaving an unusable strip. Everything that
+  belongs on the pinned row therefore lives INSIDE this section.
+
+  Layout is three zones (logo / menu / tools). Search is an icon-only toggle in
+  the tools cluster; clicking it opens a right-side drawer (the <search-drawer>
+  element at the bottom of this file) that carries the full predictive search
+  form — 2026-10-10 刘工 requirement: the row itself never grows a search input.
+
+  Mobile is unaffected: it uses the drawer at the bottom of this file, which already
+  renders its own account and cart copies.
+{% endcomment -%}
+
+<nav class="main-nav full-width" aria-label="{{ 'navigation.menu' | t }}">
+  {%- comment -%} ---------- 桌面：吸顶整行（O-1，仅 PC） ---------- {%- endcomment -%}
+  <div class="main-nav__desktop">
+    <div class="main-nav__inner">
+      {%- comment -%}
+        Zone 0: logo + brand name. Links home. The image is decorative
+        (alt="") because the visible brand text already names the link.
+        Falls back to the bundled logo_webp.webp when the merchant has not
+        picked a logo in the editor.
+      {%- endcomment -%}
+      <a class="main-nav__logo" href="{{ routes.root_url }}">
+        <img
+          class="main-nav__logo-img"
+          src="{{ logo_src }}"
+          alt=""
+          width="40"
+          height="40"
+          loading="eager"
+        >
+        <span class="main-nav__brand">{{ brand_name }}</span>
+      </a>
+
+      {%- if menu.links.size > 0 -%}
+        <ul class="main-nav__list" role="list">
+          {%- for link in menu.links -%}
+            {%- liquid
+              assign has_children = false
+              if link.links.size > 0
+                assign has_children = true
+              endif
+              assign is_current = false
+              if link.current
+                assign is_current = true
+              endif
+              assign in_branch = false
+              if link.child_current or link.child_active
+                assign in_branch = true
+              endif
+            -%}
+
+            <li class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}">
+              {%- if has_children -%}
+                {%- comment -%}
+                  分组项：只出 <span>，不输出 <a>（BUG-023）。
+                  aria-expanded 由 CSS :focus-within / :hover 驱动状态，JS 只做点击锁定。
+                {%- endcomment -%}
+                <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                  {{ link.title }}
+                  {{ 'icon-chevron-down.svg' | inline_asset_content }}
+                </span>
+
+                <ul class="main-nav__submenu" role="list">
+                  {%- for child in link.links -%}
+                    {%- liquid
+                      assign child_has_children = false
+                      if child.links.size > 0
+                        assign child_has_children = true
+                      endif
+                    -%}
+
+                    <li class="main-nav__item">
+                      {%- if child_has_children -%}
+                        <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                          {{ child.title }}
+                          {{ 'icon-chevron-down.svg' | inline_asset_content }}
+                        </span>
+
+                        <ul class="main-nav__submenu main-nav__submenu--deep" role="list">
+                          {%- for grandchild in child.links -%}
+                            <li class="main-nav__item">
+                              <a
+                                class="main-nav__link{% if grandchild.current %} main-nav__link--current{% endif %}"
+                                href="{{ grandchild.url }}"
+                                {% if grandchild.current %}
+                                  aria-current="page"
+                                {% endif %}
+                              >
+                                {{ grandchild.title }}
+                              </a>
+                            </li>
+                          {%- endfor -%}
+                        </ul>
+                      {%- else -%}
+                        <a
+                          class="main-nav__link{% if child.current %} main-nav__link--current{% endif %}"
+                          href="{{ child.url }}"
+                          {% if child.current %}
+                            aria-current="page"
+                          {% endif %}
+                        >
+                          {{ child.title }}
+                        </a>
+                      {%- endif -%}
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              {%- else -%}
+                {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
+                <a
+                  class="main-nav__link{% if is_current %} main-nav__link--current{% endif %}"
+                  href="{{ link.url }}"
+                  {% if is_current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  {{ link.title }}
+                </a>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+
+      {%- comment -%}
+        Zone 2: tools. Rendered here (not as sibling sections) so they stay on the
+        pinned row — see the file header note.
+
+        The search toggle is icon-only (2026-10-10 刘工): the input never lives on
+        the row. It opens the <search-drawer> at the bottom of this file.
+        results_limit rides along into the drawer via the snippet param.
+      {%- endcomment -%}
+      <div class="main-nav__tools">
+        <button
+          type="button"
+          class="main-nav__search-toggle"
+          aria-label="{{ 'search.label' | t }}"
+          aria-haspopup="dialog"
+          data-search-drawer-open
+        >
+          {{ 'icon-search.svg' | inline_asset_content }}
+        </button>
+
+        {% render 'account-entry', menu: section.settings.customer_account_menu %}
+        {% render 'cart-entry' %}
+
+        {%- comment -%}
+          #21 Follow on Shop. Default off: action 'follow' needs extra store config,
+          and an unconfigured button is a dead control. Colours are the component's
+          own — do not restyle (AGENTS.md §5).
+        {%- endcomment -%}
+        {%- if section.settings.show_follow_on_shop and shop.customer_accounts_enabled -%}
+          <div class="account__follow">
+            {{ shop | login_button }}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+
+  {%- comment -%} ---------- 移动：原生 <dialog> 抽屉 ---------- {%- endcomment -%}
+  <div class="main-nav__mobile">
+    <button
+      type="button"
+      class="main-nav__burger"
+      aria-label="{{ 'navigation.menu' | t }}"
+      aria-haspopup="dialog"
+      data-nav-drawer-open
+    >
+      {{ 'icon-menu.svg' | inline_asset_content }}
+    </button>
+
+    {%- comment -%} 移动端：汉堡居左、搜索图标推到最右 {%- endcomment -%}
+    <button
+      type="button"
+      class="main-nav__search-toggle main-nav__search-toggle--mobile"
+      aria-label="{{ 'search.label' | t }}"
+      aria-haspopup="dialog"
+      data-search-drawer-open
+    >
+      {{ 'icon-search.svg' | inline_asset_content }}
+    </button>
+
+    <nav-drawer>
+      <dialog class="nav-drawer" data-nav-drawer aria-labelledby="nav-drawer-title">
+        {%- comment -%} 内容存 <template>，首次打开才实例化（AGENTS §6） {%- endcomment -%}
+        <template data-nav-drawer-template>
+          <div class="nav-drawer__inner">
+            <div class="nav-drawer__head">
+              <h2 class="nav-drawer__title visually-hidden" id="nav-drawer-title">
+                {{ 'navigation.menu' | t }}
+              </h2>
+              <button
+                type="button"
+                class="nav-drawer__close"
+                aria-label="{{ 'navigation.close' | t }}"
+                data-nav-drawer-close
+              >
+                {{ 'icon-close.svg' | inline_asset_content }}
+              </button>
+            </div>
+
+            <ul class="nav-drawer__list" role="list">
+              {%- for link in menu.links -%}
+                {%- if link.links.size > 0 -%}
+                  {%- comment -%}
+                    details/summary：天然无 JS 可用、键盘可达，优于 JS 折叠（O-5）
+                  {%- endcomment -%}
+                  <li class="nav-drawer__item">
+                    <details class="nav-drawer__group">
+                      <summary class="nav-drawer__summary">
+                        {{ link.title }}
+                        {{ 'icon-chevron-down.svg' | inline_asset_content }}
+                      </summary>
+                      <ul class="nav-drawer__sublist" role="list">
+                        {%- for child in link.links -%}
+                          <li class="nav-drawer__item">
+                            <a
+                              class="nav-drawer__link{% if child.current %} nav-drawer__link--current{% endif %}"
+                              href="{{ child.url }}"
+                              {% if child.current %}
+                                aria-current="page"
+                              {% endif %}
+                            >
+                              {{ child.title }}
+                            </a>
+                            {%- comment -%} 第三级：仅在有子项时输出 {%- endcomment -%}
+                            {%- if child.links.size > 0 -%}
+                              <ul class="nav-drawer__sublist nav-drawer__sublist--deep" role="list">
+                                {%- for grandchild in child.links -%}
+                                  <li class="nav-drawer__item">
+                                    <a
+                                      class="nav-drawer__link{% if grandchild.current %} nav-drawer__link--current{% endif %}"
+                                      href="{{ grandchild.url }}"
+                                      {% if grandchild.current %}
+                                        aria-current="page"
+                                      {% endif %}
+                                    >
+                                      {{ grandchild.title }}
+                                    </a>
+                                  </li>
+                                {%- endfor -%}
+                              </ul>
+                            {%- endif -%}
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+                    </details>
+                  </li>
+                {%- else -%}
+                  <li class="nav-drawer__item">
+                    <a
+                      class="nav-drawer__link{% if link.current %} nav-drawer__link--current{% endif %}"
+                      href="{{ link.url }}"
+                      {% if link.current %}
+                        aria-current="page"
+                      {% endif %}
+                    >
+                      {{ link.title }}
+                    </a>
+                  </li>
+                {%- endif -%}
+              {%- endfor -%}
+            </ul>
+
+            {%- comment -%}
+              #22 要求 <shopify-account> 移动端也可见。抽屉内容虽存于 <template>
+              （首次打开才实例化），组件本身仍在 DOM 中、可被平台脚本识别，
+              因此不违反"移动端可见"。复用 account-entry snippet，不复制组件。
+            {%- endcomment -%}
+            <div class="nav-drawer__footer">
+              {%- if shop.customer_accounts_enabled -%}
+                {% render 'account-entry', class: 'account--in-drawer' %}
+              {%- endif -%}
+              {%- comment -%}
+                cart 入口复用同一 snippet（本期为跳转链接，非按钮——见 T-1.6）。
+              {%- endcomment -%}
+              {% render 'cart-entry', class: 'cart-entry--in-drawer' %}
+            </div>
+          </div>
+        </template>
+      </dialog>
+    </nav-drawer>
+  </div>
+
+  {%- comment -%}
+    ---------- 搜索抽屉（桌面 + 移动共用，2026-10-10 刘工） ----------
+    行上只有图标；点击后从屏幕右侧滑出本抽屉，完整搜索功能都在抽屉里。
+    内容存 <template> 首次打开才实例化（AGENTS §6）；实例化后 predictive-search
+    自定义元素自动升级，联想逻辑不变。openers 由 search-drawer.js 通过
+    [data-search-drawer-open] 在最近的 nav 里查找（桌面 + 移动两枚按钮共用）。
+
+    ⚠️ BUG-029：本元素必须挂在 <nav> 直接子级。曾误放进 .main-nav__mobile，
+    桌面端该容器 display:none——showModal() 照样成功（[open]、scroll-lock、
+    背景 inert 都生效，滚动条消失 + 页面右移），但祖先 display:none 时
+    dialog 不生成盒子，抽屉永远不可见。top layer 救不了 display:none 祖先。
+  {%- endcomment -%}
+  <search-drawer>
+    <dialog class="search-drawer" data-search-drawer aria-labelledby="search-drawer-title">
+      <template data-search-drawer-template>
+        <div class="search-drawer__inner">
+          <div class="search-drawer__head">
+            <h2 class="search-drawer__title" id="search-drawer-title">
+              {{ 'search.label' | t }}
+            </h2>
+            <button
+              type="button"
+              class="search-drawer__close"
+              aria-label="{{ 'navigation.close' | t }}"
+              data-search-drawer-close
+            >
+              {{ 'icon-close.svg' | inline_asset_content }}
+            </button>
+          </div>
+
+          <div class="search-drawer__body">
+            {% render 'predictive-search-entry',
+              search_section_id: section.id,
+              results_limit: section.settings.results_limit
+            %}
+          </div>
+        </div>
+      </template>
+    </dialog>
+  </search-drawer>
+</nav>
+
+<script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
+<script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
+<script src="{{ 'search-drawer.js' | asset_url }}" defer></script>
+
+{% stylesheet %}
+  .main-nav {
+    position: relative;
+    /* 根节点带 full-width：整行通栏，背景铺满视口（BUG-032 sticky 配套）。
+       内容行不在这里加 padding——由 __inner 对齐页面内容列（见下）。 */
+  }
+
+  /* 三段布局：logo / 菜单 / 工具。
+     grid 而非 flex——菜单长度随商家配置变化，flex 下工具区会被挤压。
+     white-space: nowrap（2026-10-10 刘工）：导航行内任何内容都不换行，
+     菜单项 / 品牌名超出时只压缩中间列宽度，不折行。
+     行宽对齐 .shopify-section 的内容列（--content-width 从包裹层继承），
+     与下方各 section 的文案同一列线。 */
+  .main-nav__inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.5rem;
+    white-space: nowrap;
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
+  }
+
+  /* Zone 0: logo + 品牌名。图标与文字并排一行，永不换行。 */
+  .main-nav__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .main-nav__logo-img {
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+  }
+
+  .main-nav__brand {
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    color: var(--color-brand);
+  }
+
+  .main-nav__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* 搜索切换按钮：行上只放图标（2026-10-10 刘工），点击开抽屉 */
+  .main-nav__search-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: var(--color-foreground);
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .main-nav__search-toggle svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .main-nav__search-toggle:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .main-nav__list {
+    display: flex;
+    align-items: center;
+    gap: var(--main-nav-gap, 1.25rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-nav__item {
+    position: relative;
+  }
+
+  .main-nav__link {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-height: 44px;
+    padding-block: 0.5rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  /* 焦点态必须可见（SDD §8.2）。下拉靠 :focus-within 展开，但展开不等于
+     有可见指示——键盘用户需要知道自己在哪一项上。 */
+  .main-nav__link:focus-visible,
+  .main-nav__logo:focus-visible,
+  .nav-drawer__link:focus-visible,
+  .nav-drawer__summary:focus-visible,
+  .main-nav__burger:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .main-nav__link svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    /* 箭头旋转仅作视觉辅助，展开状态由 submenu 的 display 表达 */
+    transition: transform 0.15s ease;
+  }
+
+  .main-nav__link--current,
+  .main-nav__item--in-branch > .main-nav__link {
+    color: var(--color-brand);
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+  }
+
+  /* 分组项 hover / focus-within 展开：纯 CSS，键盘可达，不依赖 JS */
+  .main-nav__item:hover > .main-nav__submenu,
+  .main-nav__item:focus-within > .main-nav__submenu {
+    display: block;
+  }
+
+  .main-nav__item:hover > .main-nav__link svg,
+  .main-nav__item:focus-within > .main-nav__link svg {
+    transform: rotate(180deg);
+  }
+
+  .main-nav__submenu {
+    display: none;
+    position: absolute;
+    inset-inline-start: 0;
+    top: 100%;
+    z-index: 10;
+    min-width: 14rem;
+    margin: 0;
+    padding: 0.5rem 0;
+    list-style: none;
+    background-color: var(--color-background);
+    /* 装饰性分隔线不用 currentColor（深色主题下会过重），用低透明度黑 */
+    border: 1px solid rgb(0 0 0 / 12%);
+    border-radius: 4px;
+  }
+
+  /* 第二级：悬停靠右，避免贴边裁切 */
+  .main-nav__submenu--deep {
+    top: 0;
+    inset-inline-start: 100%;
+  }
+
+  .main-nav__submenu .main-nav__link {
+    padding-inline: 1rem;
+  }
+
+  /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
+     必须有实底——否则吸顶时页面内容会透过菜单透出来。 */
+  .main-nav__desktop {
+    background-color: var(--color-background);
+  }
+
+  /* 移动端抽屉相关：桌面隐藏汉堡与 dialog */
+  .main-nav__mobile {
+    display: none;
+  }
+
+  /* ---- 抽屉：<dialog> + scroll-lock 锁背景（critical.css 已配套） ---- */
+  .nav-drawer {
+    inset-block: 0;
+    inset-inline: auto 0;
+    /* 由 showModal() 置于 top layer，无需 z-index */
+    width: min(22rem, 88vw);
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-inline-end: 1px solid rgb(0 0 0 / 12%);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .nav-drawer::backdrop {
+    background-color: rgb(0 0 0 / 45%);
+  }
+
+  /* ---- 搜索抽屉：右侧滑出，桌面 + 移动共用（2026-10-10 刘工） ----
+     结构与 nav-drawer 同款（原生 <dialog> + showModal + template 惰性实例化），
+     差异只有宽度与内部排版。 */
+  .search-drawer {
+    inset-block: 0;
+    inset-inline: auto 0;
+    /* 由 showModal() 置于 top layer，无需 z-index */
+    width: min(24rem, 92vw);
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-inline-end: 1px solid rgb(0 0 0 / 12%);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .search-drawer::backdrop {
+    background-color: rgb(0 0 0 / 45%);
+  }
+
+  .search-drawer__inner {
+    padding: 0.5rem 1rem 1.5rem;
+  }
+
+  .search-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-end: 0.5rem;
+  }
+
+  .search-drawer__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .search-drawer__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .search-drawer__close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .search-drawer__close svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* ---- 抽屉滑入 / 滑出动画（nav + search 两个抽屉同款） ----
+     @starting-style + allow-discrete：开 → 从屏外滑入；关 → 等滑动完再摘除。
+     旧浏览器不支持时降级为瞬时显隐，无功能损失（渐进增强）。
+     translate 是物理属性：本主题仅 en（LTR），100% 恒为屏外右侧。 */
+  .nav-drawer,
+  .search-drawer {
+    translate: 100% 0;
+    transition: translate 0.25s ease, display 0.25s allow-discrete, overlay 0.25s allow-discrete;
+  }
+
+  .nav-drawer[open],
+  .search-drawer[open] {
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .nav-drawer[open],
+    .search-drawer[open] {
+      translate: 100% 0;
+    }
+    .nav-drawer[open]::backdrop,
+    .search-drawer[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* 遮罩同步淡入淡出 */
+  .nav-drawer::backdrop,
+  .search-drawer::backdrop {
+    opacity: 1;
+    transition: opacity 0.25s ease;
+  }
+
+  @starting-style {
+  }
+
+  /* WCAG 2.1 / SDD §8.2：用户要求减少动效时全部关闭 */
+  @media (prefers-reduced-motion: reduce) {
+    .nav-drawer,
+    .search-drawer,
+    .nav-drawer::backdrop,
+    .search-drawer::backdrop {
+      transition: none;
+    }
+  }
+
+  /* 抽屉宽度即输入框宽度：放开 snippet 里的 32rem 上限，结果面板随输入框等宽 */
+  .search-drawer__body .predictive-search {
+    max-inline-size: none;
+  }
+
+  .nav-drawer__inner {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .nav-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0.5rem;
+    border-block-end: 1px solid rgb(0 0 0 / 12%);
+  }
+
+  .nav-drawer__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .nav-drawer__close svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .nav-drawer__list,
+  .nav-drawer__sublist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav-drawer__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  /* details 默认标记在各浏览器表现不一，统一去掉 */
+  .nav-drawer__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .nav-drawer__summary svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    transition: transform 0.15s ease;
+  }
+
+  .nav-drawer__group[open] > .nav-drawer__summary svg {
+    transform: rotate(180deg);
+  }
+
+  .nav-drawer__link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.5rem 1rem 0.5rem 2rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .nav-drawer__link--current {
+    color: var(--color-brand);
+    font-weight: 700;
+  }
+
+  .nav-drawer__sublist--deep .nav-drawer__link {
+    padding-inline-start: 3rem;
+  }
+
+  /* 抽屉底部固定区：账户入口 + （后续）购物车入口 */
+  .nav-drawer__footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-block-start: auto;
+    padding: 0.5rem 1rem;
+    border-block-start: 1px solid rgb(0 0 0 / 12%);
+  }
+
+  /* 抽屉内账户组件的 sheet 从抽屉顶部弹出，与桌面端不同 */
+  .account--in-drawer .account__component {
+    --shopify-account-dialog-position-top: 0;
+  }
+
+  /* 抽屉内购物车入口与桌面端同结构，仅确保徽标不压到抽屉边缘 */
+  .cart-entry--in-drawer .cart-entry__link {
+    min-inline-size: 44px;
+  }
+
+  /* ---- 断点：以下为移动端 ---- */
+  @media screen and (max-width: 989px) {
+    .main-nav__desktop {
+      display: none;
+    }
+
+    .main-nav__mobile {
+      display: flex;
+      align-items: center;
+    }
+
+    /* 汉堡居左，搜索图标推到最右 */
+    .main-nav__search-toggle--mobile {
+      margin-inline-start: auto;
+    }
+
+    .main-nav__burger {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      color: inherit;
+      background: none;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .main-nav__burger svg {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  /* ---- O-1：sticky 仅 PC，务必留在本媒体查询内 ----
+     BUG-032：sticky 不能挂在 .main-nav 上——它的父级是 Shopify 生成的
+     .shopify-section 包裹层，高度只有导航行自身，sticky 没有可黏的滚动余量。
+     必须挂在包裹层（schema "class": "main-nav-section"）上：包裹层是 body
+     （flex 列）的直接子项、纵贯整页，sticky 才有作用空间。 */
+  @media screen and (min-width: 990px) {
+    .main-nav-section {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    /* 桌面端汉堡与抽屉不出现；桌面区是唯一可见部分 */
+    .main-nav__desktop {
+      display: block;
+    }
+  }
+
+  /* ============ 账户与购物车（方案 A：与菜单同处吸顶行） ============
+     原 account.liquid / cart-entry.liquid 的样式随 section 合并至此——
+     那两个 section 已不再是独立节点（否则 sticky 只黏住菜单，图标会滑走）。 */
+
+  .cart-entry__link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .cart-entry__link svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  /* 徽标绝对定位：脱离文档流，将来加购更新计数时入口尺寸不变（避免 CLS） */
+  .cart-entry__count {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-end: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 视觉小，但数字不被压缩；两位数会自动横向撑开（border-radius 999px 不会破形） */
+    min-inline-size: 1.125rem;
+    block-size: 1.125rem;
+    padding-inline: 0.25rem;
+    font-size: 0.6875rem;
+    line-height: 1;
+    color: var(--color-background);
+    background-color: var(--color-brand);
+    border-radius: 999px;
+  }
+
+  .cart-entry__link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+
+  .account {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Only CSS variables and ::part() — never restructure the component (see header note). */
+  .account__component {
+    --shopify-account-avatar-size: 1.75rem;
+    --shopify-account-radius-base: var(--style-border-radius-inputs);
+    --shopify-account-color-accent: var(--color-brand);
+    --shopify-account-color-background: var(--color-background);
+    --shopify-account-color-text: var(--color-foreground);
+    --shopify-account-font-body: var(--font-primary--family);
+    --shopify-account-font-heading: var(--font-primary--family);
+    /* Sheet opens below the header, not at the very top of the viewport */
+    --shopify-account-dialog-position-top: 3.5rem;
+  }
+
+  /* 触摸目标 ≥ 44×44（AGENTS §8）：组件默认头像小于此，用伪元素把命中区扩到 44px。
+     负 50% 是相对自身尺寸的居中，与书写方向无关（inline-start 已是逻辑轴）。 */
+  .account__component::part(signed-out-avatar) {
+    position: relative;
+  }
+
+  .account__component::part(signed-out-avatar)::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 44px;
+    block-size: 44px;
+    translate: -50% -50%;
+  }
+
+  .account__avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    /* 图标随前景色走，不硬编码色值（AGENTS §6） */
+    color: var(--color-foreground);
+  }
+
+  .account__avatar svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* Follow on Shop 按钮保持组件自带配色，只调间距 */
+  .account__follow {
+    display: flex;
+    align-items: center;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.main_nav",
+  "class": "main-nav-section",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "t:labels.logo",
+      "info": "t:labels.logo_info"
+    },
+    {
+      "type": "text",
+      "id": "brand_name",
+      "label": "t:labels.brand_name",
+      "default": "Northbark"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "t:labels.menu",
+      "default": "main-menu"
+    },
+    {
+      "type": "link_list",
+      "id": "customer_account_menu",
+      "label": "t:labels.customer_account_menu",
+      "default": "customer-account-main-menu"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_follow_on_shop",
+      "label": "t:labels.follow_on_shop",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "results_limit",
+      "label": "t:labels.results_limit",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "default": 10
+    }
+  ],
+  "blocks": [],
+  "enabled_on": {
+    "groups": ["header"]
+  }
+}
+{% endschema %}

@@ -28,6 +28,14 @@
 
 **职责**：公告 + 导航 + 搜索 + 账户 + 购物车入口，商家可增删排序（SDD §4.2）。
 
+> **实现决策（2026-10-09 拍板，与 `task-header.md` §1 一致）**：
+> - **粘性**：仅 PC 端 sticky（`position: sticky` 写在 `@media (min-width: 990px)` 内），移动端随页面滚走。
+> - **cart 入口**：本期只做入口 + 服务端计数 + 跳 `routes.cart_url`；**不做抽屉 / 计数联动 / 配置项**（后续单独任务清单）。
+> - **搜索联想**：HTML 片段端点 `/search/suggest` + `section_id`（Section Rendering API），非 `suggest.json`；弹层为 **combobox + listbox**（非模态）。
+> - **移动导航**：与桌面菜单**两套 DOM、互斥渲染**；汉堡抽屉用原生 `<dialog>` + `showModal()`（加 `scroll-lock` 属性锁背景滚动），**不手写焦点陷阱**。
+> - **utility-bar**：本期启用，移动端隐藏。
+> - JS 交互组件一律 **Custom Element** 封装（AGENTS.md §6）。
+
 ```
 桌面                                    移动
 ┌────────────────────────────────────┐  ┌──────────────────┐
@@ -41,37 +49,36 @@
 | section | 职责 | blocks | 关键设置 | 数据源 |
 | --- | --- | --- | --- | --- |
 | announcement-bar | 通用物流政策横幅 | 文本块 ×N | 可关闭、链接 | settings |
-| utility-bar（建议） | 售后电话/门店自提提示 | — | 链接 ×N | linklists |
+| utility-bar | 售后电话/门店自提提示（本期启用，移动端隐藏） | — | 链接 ×N | linklists |
 | main-nav | 三级以内下拉；`Shop by Platform` 指向 battery_platform 自动化集合（§4.3/§6.5） | 菜单项 | 菜单选择、下拉样式 | `linklists.main-menu` |
-| header-search | 预测搜索输入（#16 Search + predictive） | — | 展开样式 | `/search/suggest.json` |
+| header-search | 预测搜索输入（#16 Search + predictive） | — | 展开样式 | `/search/suggest`（Section Rendering API + `section_id`，返回渲染好的 HTML 片段） |
 | account | `<shopify-account>` 原生组件，**桌面与移动均可见**（#22） | — | 登录态样式 | 平台组件 |
-| cart-entry | 购物车抽屉入口 + 计数 | — | 抽屉/页面切换 | `cart` 对象 |
+| cart-entry | 购物车入口 + 计数（本期仅跳 `routes.cart_url`，**不做抽屉交互**，后续另立清单） | — | 本期无 | `cart` 对象 |
 
-**状态要点**：移动端 ☰ 抽屉 = 焦点锁定 + Esc 回焦；搜索联想键盘 ↑↓ 选择；对比栏不在此（见 §7 对比页与商品卡）。
+**状态要点**：移动端 ☰ 抽屉用原生 `<dialog>` + `showModal()`（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`，**不手写焦点陷阱**）；搜索联想为 combobox + listbox（**非模态**：DOM 焦点始终留在输入框，靠 `aria-activedescendant` 移动；禁用 `<dialog>`）；对比栏不在此（见 §7 对比页与商品卡）。
 
 #### 1.1.1 主导航菜单树（SDD §4.3 逐项展开）
 
 > 菜单在后台 **Navigation → Main menu** 配置；主题只负责渲染（三级以内，#10）。下表是商家侧建菜单的完整规格。指向类型分三类：**集合 / 页面 / 博客**（SDD §4.3 底注）。
 
-| 一级 | 二级 | 三级子项 | 指向类型 | 建议建法（自动化条件） |
-| --- | --- | --- | --- | --- |
-| **Shop** | Mowers | Walk-behind | 集合 | `operation_type = Walk-behind` **且** `drive_type = Push`（条件 ALL） |
-| | | Self-propelled | 集合 | `operation_type = Walk-behind` **且** `drive_type is not equal to Push`（条件 ALL；CSV 自走款 drive_type 实际值为 Rear-wheel drive，不能用'等于 Self-propelled'） |
-| | | Riding | 集合 | `operation_type = Riding` |
-| | Chainsaws | — | 集合 | `compare_group = chainsaw` 或 `Product category` 条件 |
-| | Trimmers | — | 集合 | `compare_group = string-trimmer` |
-| | Accessories | Blades & Bars | 集合 | Product category 条件（刀片/导板类） |
-| | | Filters | 集合 | Product category（滤清器无叶子节点 → 降级类目，SDD §3.5） |
-| | | Oils & Fuel | 集合 | `… > Lubricants > Oil`（Hardware 分支） |
-| | | Batteries & Chargers | 集合 | `… > Power Tool Chargers`（Hardware 分支） |
-| **Shop by Platform** | 20V Battery | — | 集合 | `platform.battery_platform = 20V`（空则暂不挂菜单项） |
-| | 40V Battery | — | 集合 | `= 40V` |
-| | 60V Battery | — | 集合 | `= 60V`（空则暂不挂） |
-| | 80V Battery | — | 集合 | `= 80V`（值域含 80V，见 metafield-reference #17；当前演示数据非空，须挂） |
-| | Gas Series | — | 集合 | `spec.power_source = Gasoline` |
-| **Support** | Shipping & Oversized Delivery | — | **页面**（page.json） | 写超大件交付政策，公告栏文案链接至此 |
-| | Warranty | — | **页面**（page.json） | 保修政策总览（各型号月数走 metafield，此处写通用条款） |
-| | Maintenance Guides | — | **博客**（blog.json） | 维护教程文章集合 |
+| 一级 | 二级 | 三级子项 | 指向类型 | 含义（这一项给顾客看什么） | 建议建法（自动化条件） |
+| --- | --- | --- | --- | --- | --- |
+| **Shop**（按品类进） | Mowers 割草机 | Walk-behind | 集合 | **人力推着走**的割草机：无双轮、无驾驶位。适合小院与轻中庭 | `operation_type = Walk-behind` **且** `drive_type = Push`（条件 ALL） |
+|  |  | Self-propelled | 集合 | **机器自己走、人只扶方向**（无驾驶位）。割草更快，适合中等草坪 | `operation_type = Walk-behind` **且** `drive_type is not equal to Push`（条件 ALL；CSV 自走款 drive_type 实际值为 Rear-wheel drive，不能用'等于 Self-propelled'） |
+|  |  | Riding | 集合 | **人骑在上面割**（有驾驶位／方向盘）。大片草坪与斜坡 | `operation_type = Riding` |
+|  | Chainsaws 链锯 | — | 集合 | 伐木、砍枝、清理倒木与堆料 | `compare_group = chainsaw` 或 `Product category` 条件 |
+|  | Trimmers 打草机 | — | 集合 | 修边、割灌木丛与篱笆边缘（细窄、轻量） | `compare_group = string-trimmer` |
+|  | **Accessories 配件与耗材** | Blades & Bars | 集合 | **磨损件**：割草刀、链锯锯条。最常复购，单价低、消耗快 | Product category 条件（刀片/导板类） |
+|  |  | Filters | 集合 | **保养件**：空气滤芯／机油滤芯。按周期更换 | Product category（滤清器无叶子节点 → 降级类目，SDD §3.5） |
+|  |  | Batteries & Chargers | 集合 | **平台配件**：同平台通用——一块电池可跨多款工具复用，是电池生态的复购入口 | `… > Power Tool Chargers`（Hardware 分支） |
+| **Shop by Platform**（按动力平台进） | 20V Battery | — | 集合 | **入门电压档**：轻量、单电池续航，适合小体量工具 | `platform.battery_platform = 20V`（空则暂不挂菜单项） |
+|  | 40V Battery | — | 集合 | **主力电压档**：家用中大草坪主力平台，兼容工具最多 | `= 40V` |
+|  | 60V Battery | — | 集合 | **中高电压档**：更强功率，面向较大作业面 | `= 60V`（空则暂不挂） |
+|  | 80V Battery | — | 集合 | **高压旗舰档**：接近汽油机动力，电池容量最大 | `= 80V`（值域含 80V，见 metafield-reference #17；当前演示数据非空，须挂） |
+|  | Gas Series 汽油系列 | — | 集合 | **汽油机线**：无电池续航约束，长时间大作业首选 | `spec.power_source = Gasoline` |
+| **Support**（售后与支持） | Shipping & Oversized Delivery 配送与超大件交付 | — | **页面**（page.json） | **大件物流说明**：割草机／骑乘机体积大，需说明尾板、预约交付、备货期 | 写超大件交付政策，公告栏文案链接至此 |
+|  | Warranty 保修政策 | — | **页面**（page.json） | **保修总览**：各型号保修月数走 metafield，此处只写通用条款 | 保修政策总览（各型号月数走 metafield，此处写通用条款） |
+|  | Maintenance Guides 维护指南 | — | **博客**（blog.json） | **教程内容**：换刀、换滤芯、季节性保养怎么做 | 维护教程文章集合 |
 
 **菜单树规则**：
 
@@ -80,6 +87,7 @@
 - 空集合的菜单项**暂不挂**（避免点进空页）；空集合卡片在首页/list-collections 隐藏（§2/§5 同规则）。
 - Support 三项是内容入口，演示店需建 2 个 page + 1 个 blog 并填实质内容（§9.4 禁止空页）。
 - 当前演示店只有割草机 → Chainsaws / Trimmers / Accessories 建集合但**暂不挂菜单**。
+- **`Oils & Fuel` 机油与燃油已从主导航移除（SDD v4.3）**——不是漏写。改为两处承载：产品页耗材关联（§6.3 `acc.consumables`，本主题主转化路径）+ footer 耗材分类入口（§1.2）。理由：主导航深度已达三级上限（§7.1 #10），且机油的跨分类归属（§3.5 `Hardware > Lubricants > Oil`）使它更适合作为内容型入口。**菜单不建该节点，但集合与耗材商品照常导入**——它在产品页仍会被 `acc.consumables` 带出来。
 
 ### 1.2 `sections/footer-group.json`（各页底部，[G]）
 

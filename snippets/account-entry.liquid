@@ -1,0 +1,31 @@
+{% comment %}
+  Reusable <shopify-account> entry (#22).
+
+  Rendered by both sections/account.liquid (desktop header bar) and the mobile
+  nav drawer inside sections/main-nav.liquid. Two call sites, one implementation —
+  the platform component is defined by Shopify and we must not duplicate its logic.
+
+  Kept as a snippet rather than inlined twice so the CSS custom properties and the
+  signed-out-avatar slot stay in sync (AGENTS.md §6: single source for shared markup).
+
+  Parameters:
+    menu       — link_list handle for the account menu
+    class      — extra class hook for the wrapper (optional)
+{% endcomment %}
+
+{%- if shop.customer_accounts_enabled -%}
+  <div class="account{% if class != blank %} {{ class }}{% endif %}">
+    <shopify-account
+      class="account__component"
+      menu="{{ menu | default: 'customer-account-main-menu' }}"
+    >
+      {%- comment -%}
+        Signed-out avatar slot: our icon inherits currentColor so it matches the
+        rest of the header instead of the component's built-in glyph.
+      {%- endcomment -%}
+      <div slot="signed-out-avatar" class="account__avatar">
+        {{ 'icon-account.svg' | inline_asset_content }}
+      </div>
+    </shopify-account>
+  </div>
+{%- endif -%}

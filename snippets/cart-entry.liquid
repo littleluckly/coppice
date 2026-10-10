@@ -1,0 +1,36 @@
+{% comment %}
+  Reusable cart entry — link + server-rendered item count.
+
+  A snippet (not a section) so the mobile nav drawer can render the same entry
+  alongside the account component. Sections cannot be rendered from other files;
+  snippets can.
+
+  Scope (task-header.md O-3, revised 2026-10-09): static entry only. No drawer, no
+  <cart-toggle>, no count sync — those live in their own task list.
+
+  The accessible name is built with capture so the attribute holds one clean
+  string; putting Liquid control flow inside an attribute leaves stray whitespace
+  that screen readers announce.
+{% endcomment %}
+
+{%- if cart.item_count > 0 -%}
+  {%- capture cart_label -%}
+    {{- 'cart.cart_with_items' | t: count: cart.item_count -}}
+  {%- endcapture -%}
+{%- else -%}
+  {%- capture cart_label -%}{{- 'cart.cart_empty' | t -}}{%- endcapture -%}
+{%- endif -%}
+
+<div class="cart-entry{% if class != blank %} {{ class }}{% endif %}" data-cart-entry>
+  <a class="cart-entry__link" href="{{ routes.cart_url }}" aria-label="{{ cart_label }}">
+    {{ 'icon-cart.svg' | inline_asset_content }}
+
+    {%- comment -%}
+      Count badge is absolutely positioned so it never occupies layout space — the
+      later cart-updated sync then can't shift the entry and cause CLS.
+    {%- endcomment -%}
+    {%- if cart.item_count > 0 -%}
+      <span class="cart-entry__count" aria-hidden="true">{{ cart.item_count }}</span>
+    {%- endif -%}
+  </a>
+</div>

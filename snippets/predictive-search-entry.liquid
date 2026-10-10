@@ -1,0 +1,211 @@
+{% comment %}
+  Predictive search input — rendered from the <search-drawer> template inside
+  sections/main-nav.liquid (2026-10-10 刘工: the header row shows an icon only;
+  the full form lives in the right-side drawer).
+
+  Split from sections/predictive-search.liquid on purpose: a section cannot be
+  rendered into another file, but a snippet can. main-nav owns the drawer, so
+  the input lives here, while the RESULTS markup lives in the section — that
+  file must stand alone because Shopify re-renders it by section_id
+  (`section_id=predictive-search` targets the section FILE name).
+
+  Parameters:
+    search_section_id — used for input/panel id pairing (unique per section).
+    results_limit     — forwarded as data-results-limit for the JS fetch.
+
+  ARIA: the input keeps its combobox + listbox pattern INSIDE the drawer. The
+  drawer itself is a modal <dialog>, but the combobox behaviour is unchanged:
+  DOM focus stays in the input; arrow keys move a virtual cursor via
+  aria-activedescendant. Escape is left to bubble when the results panel is
+  closed, so it closes the drawer (layered dismiss: panel → drawer).
+
+  Progressive enhancement baseline: action points at the real search URL, so with JS
+  disabled the form still searches. The script only enhances it.
+{% endcomment %}
+
+  <predictive-search
+    class="predictive-search"
+    data-results-limit="{{ results_limit | default: 10 }}"
+  >
+    {%- comment -%}
+      放大镜按钮：桌面端点击等同于聚焦输入框（输入框本就在同一行），
+      移动端则是主要的搜索入口——点它直接聚焦，少一次"先点输入框"的操作。
+      aria-hidden + tabindex="-1"：真正的可访问入口是输入框本身
+      （它已有 combobox 语义），这个按钮只是视觉与触控捷径。
+    {%- endcomment -%}
+    <button
+      type="button"
+      class="predictive-search__submit"
+      data-predictive-search-submit
+      aria-hidden="true"
+      tabindex="-1"
+    >
+      {{ 'icon-search.svg' | inline_asset_content }}
+      <span class="visually-hidden">{{ 'search.submit' | t }}</span>
+    </button>
+
+    <form
+      class="predictive-search__form"
+      action="{{ routes.search_url }}"
+      method="get"
+      role="search"
+    >
+    <label class="visually-hidden" for="search-input-{{ search_section_id }}">
+      {{ 'search.label' | t }}
+    </label>
+
+    <input
+      id="search-input-{{ search_section_id }}"
+      class="predictive-search__input"
+      type="search"
+      name="q"
+      value="{{ search.terms | escape }}"
+      placeholder="{{ 'search.placeholder' | t | escape }}"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+      role="combobox"
+      aria-expanded="false"
+      aria-controls="predictive-search-results-{{ search_section_id }}"
+      aria-autocomplete="list"
+      aria-describedby="predictive-search-help-{{ search_section_id }}"
+    >
+
+    {%- comment -%}
+      官方 UX 明确要求提供清除按钮，否则用户只能逐字删除。
+      视觉隐藏但保留在无障碍树中；由 [data-has-query] 控制显隐。
+    {%- endcomment -%}
+    <button
+      type="button"
+      class="predictive-search__clear"
+      aria-label="{{ 'search.clear' | t }}"
+      data-predictive-search-clear
+      hidden
+    >
+      {{ 'icon-close.svg' | inline_asset_content }}
+    </button>
+
+    <button type="submit" class="visually-hidden">
+      {{ 'search.submit' | t }}
+    </button>
+
+    {%- comment -%}
+      说明键盘操作方式。无结果时也保留——它解释的是控件行为，不是结果内容。
+    {%- endcomment -%}
+    <p id="predictive-search-help-{{ search_section_id }}" class="visually-hidden">
+      {{ 'search.instructions' | t }}
+    </p>
+
+    {%- comment -%}
+      结果容器由 JS 注入 HTML 片段。aria-controls 指向这个 id，
+      JS 注入内容时复用同一个 id。
+    {%- endcomment -%}
+    <div
+      class="predictive-search__panel"
+      id="predictive-search-results-{{ search_section_id }}"
+      hidden
+    ></div>
+  </form>
+</predictive-search>
+
+{% stylesheet %}
+  .predictive-search {
+    position: relative;
+    display: block;
+    inline-size: 100%;
+    max-inline-size: 32rem;
+  }
+
+  .predictive-search__form {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .predictive-search__submit {
+    position: absolute;
+    inset-inline-start: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    /* 图标按钮压在输入框左侧，输入框留出等宽内边距 */
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    color: var(--color-foreground);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    pointer-events: none; /* 点击穿透到输入框：它只是视觉图标 */
+  }
+
+  .predictive-search__submit svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .predictive-search__input {
+    inline-size: 100%;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-block-size: 44px;
+    padding: 0.5rem 2.75rem 0.5rem 2.75rem;
+    color: var(--color-foreground);
+    background-color: var(--color-background);
+    border: 1px solid rgb(0 0 0 / 20%);
+    border-radius: var(--style-border-radius-inputs);
+    font: inherit;
+    appearance: none;
+  }
+
+  .predictive-search__input:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+  }
+
+  .predictive-search__clear {
+    position: absolute;
+    inset-inline-end: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  /* 无输入时隐藏（JS 用 hidden 属性控制，此处兜底初始态） */
+  .predictive-search__clear[hidden] {
+    display: none;
+  }
+
+  .predictive-search__clear svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  .predictive-search__panel {
+    position: absolute;
+    inset-block-start: calc(100% + 0.25rem);
+    inset-inline: 0;
+    z-index: 30;
+    max-block-size: min(70vh, 32rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background-color: var(--color-background);
+    border: 1px solid rgb(0 0 0 / 12%);
+    border-radius: 4px;
+  }
+
+  .predictive-search__panel[hidden] {
+    display: none;
+  }
+{% endstylesheet %}

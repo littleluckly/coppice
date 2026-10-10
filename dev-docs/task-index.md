@@ -13,7 +13,7 @@
 | 依赖 | 现状（2026-09-30） | 影响 | 处置 |
 | --- | --- | --- | --- |
 | header-group 改造（公告栏、三级菜单、`<shopify-account>`、预测搜索、cart 入口，pages-ui §1.1） | Skeleton 默认结构，仅 1 个 header section | 首页开发期间真机预览看到的是 Skeleton 头部；对比勾选、账户等全局交互不可端到端验证 | 待全局组件任务清单立项；**不阻塞** section 开发 |
-| footer-group 改造（newsletter、localization、支付图标，pages-ui §1.2） | Skeleton 默认结构 | 同上 | 同上 |
+| footer-group 改造（newsletter、localization、支付图标，pages-ui §1.2） | Skeleton 默认结构 | 同上 | ✅ 已立项 → `task-footer.md`（v1.0，7.0 人日） |
 | `snippets/spec-value.liquid` | 未创建 | 首页商品卡参数需要它 → 已立项进本清单 T-1.1（首页为第一消费方） | 本清单内解决 |
 | 演示素材（hero/平台卡/用例图） | assets/ 仅 3 个 SVG | preset 要求可用示例内容 → 已立项进本清单 T-0.2 | 本清单内解决 |
 

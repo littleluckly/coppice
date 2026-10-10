@@ -1,4 +1,4 @@
-# SDD — 园艺机械 Shopify 主题需求规格书（v4.2 最终版）
+# SDD — 园艺机械 Shopify 主题需求规格书（v4.3）
 
 | 项       | 内容                                                                                               |
 | -------- | -------------------------------------------------------------------------------------------------- |
@@ -8,7 +8,7 @@
 | 主市场   | 北美（美/加），货币单位与筛选项文案按北美口径                                                      |
 | 技术基线 | Shopify Online Store 2.0，基于官方 Skeleton Theme                                                  |
 | 配套文件 | `AGENTS.md`、`docs/TASKS.md`、`tools/check-theme-name.sh`                                          |
-| 版本     | v4.2（修复列数算式、USPTO 状态、battery_platform 筛选、drive_type 必填、对比表白名单按分组列字段） |
+| 版本     | v4.3（移除主导航 `Oils & Fuel` 菜单节点——该品类进 footer 与产品页耗材关联，不占主导航位） |
 
 ---
 
@@ -214,7 +214,6 @@ Shop                               全店入口：按品类进入集合
 └── Accessories       配件与耗材
     ├── Blades & Bars   刀片与导板
     ├── Filters         滤芯
-    ├── Oils & Fuel     机油与燃油
     └── Batteries & Chargers  电池与充电器
 Shop by Platform      动力平台导航：同平台电池可共用，服务存量用户
 ├── 20V Battery       指向 platform.battery_platform = 20V 的自动化集合
@@ -229,6 +228,12 @@ Support               售后与支持
 ```
 
 > 菜单末尾的指向分三类：**集合**（自动化或手动集合）、**页面**（内容页）、**博客**。
+
+> **`Oils & Fuel` 已从主导航移除（v4.3）**：机油／燃油不进主导航，改为以下入口承载，耗材复购路径不受影响：
+> - **产品页耗材关联**（§6.3，`acc.consumables`）——主机页直接挂可加购的耗材，这是本主题的主转化路径；
+> - **footer 耗材分类入口**（§4.2 footer-group 的耗材链接组）。
+>
+> 移除理由：主导航一级二级共 3 组 × 4 层，深度已到三级上限（§7.1 #10）；机油的跨分类归属（§3.5 `Hardware > Lubricants > Oil`）也使它更适合作为内容型入口而非主导航品类。
 > `Shop by Platform` 下的每一项都指向由 `platform.battery_platform` 条件自动生成的集合，
 > 不是手工维护的菜单链接 —— 新增商品并填好该字段后会自动进入对应集合。
 

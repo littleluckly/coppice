@@ -23,9 +23,15 @@ shopify theme dev          # 本地开发预览
 shopify theme check        # Theme Check 静态检查 —— 必须 0 Error 才允许提交
 shopify theme push         # 推送到开发店
 shopify theme pull         # 拉取线上主题
+
+python3 tools/check-locale-keys.py    # 校验 t: 翻译键在两个 locale 文件里都存在
+python3 tools/check-tag-balance.py   # 校验 HTML 标签配对（theme check 的本地补充）
 ```
 
 - 提交审核前：`shopify theme check` 不得出现任何 Error（Warning 尽量清零）。
+- **`shopify theme check` 优先于一切本地检查**。Agent 侧的自查脚本只能做近似判断，`check-tag-balance.py` 尤其容易因属性里的 `>` 误报——它用于「改动后快速发现明显缺口」，**最终以 theme check 为准**。
+- **Agent 沙箱内 `shopify` CLI 不可见**（`command not found`），但刘工本机正常——需要跑 theme check 时请刘工代跑并回贴结果。
+- **已知 warning 不必追**：`OrphanedSnippet` 在当前 theme check 版本上会误报全部 snippet（连 Skeleton 自带的 `css-variables`、`meta-tags`、`image` 都被报），`ValidScopedCSSClass` 对「标记在 snippet、样式在调用方 section」这种既有模式也会报。判定依据见 `dev-docs/bugs.md` 末尾的说明。
 - Lighthouse 验收线见 §7 / §8。
 
 ## 3. 目录结构
@@ -58,6 +64,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 资源一律走 Shopify CDN：`asset_url` / `image_url`；**不得**硬编码 `http://` / `https://` 外部资源链接，不得依赖外部 CDN / 外部 API / 第三方服务。
 - 站内 URL 一律用 `routes` 对象，不得手拼路径。
 - 所有面向商家/顾客的文案走 `t:` 翻译键，键值落在 `locales/`；不得硬编码英文文案（除非是数据本身）。
+- **Shopify 有两个独立的 locale 命名空间**：正文 `{{ 'x' | t }}` 查 `locales/en.default.json`，**schema 块里的 `"name": "t:x"` 查 `locales/en.default.schema.json`**。写 section 时两个文件要分别确认，新增后跑 `python3 tools/check-locale-keys.py` 全量校验（缺键时退出码 1）。
 - 不实现依赖 App 的功能（愿望清单、购物车折扣、买赠捆绑定价、预约、Instagram feed 等）。
 - 不伪造数据：库存紧张提示、倒计时、浏览量为禁止项。
 - 不得包含外部营销内容或联盟链接。
@@ -86,6 +93,12 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 区块可复用样式优先 `{% stylesheet %}` / `{% javascript %}` 标签（多次声明只输出一次）；全局关键样式放 `assets/critical.css`。
 - **样式归属判据**：section 自有布局样式 → `{% stylesheet %}`（聚合加载，section 移除时自动卸载，且**必须位于 section 顶层**，不得嵌套在 if/for 内）。仅当样式为**大体积可选增强**或**跨 section 全局功能**（如对比栏、Dawn mask-blobs 类设置级变体）时，才拆独立 `.css` + 条件 `stylesheet_tag`——不为省 1–2 KB 把 section 自有样式拆成独立请求。
 - **箭头准则**：`→` 仅用于两类位置——View All 链接、行尾导航元素（如 platform 横条卡右端）。卡内文字链接**不加**箭头；新增箭头前先数同屏总数（≤5）。
+- **`{% javascript %}` / `{% stylesheet %}` 内不渲染 Liquid**（theme check 会报 `StaticStylesheetAndJavascriptTags`）。这两个标签的内容被聚合成单一 `scripts.js` / `styles.css` 并自动 defer 注入，**只能放静态代码**，每个文件有且仅有一个。加载 `assets/` 里的外部文件时**手写 script 标签**——`script_tag` filter 不支持 `defer`/`async`（theme check 会报 `ParserBlockingScript`）：
+  ```liquid
+  <script src="{{ 'x.js' | asset_url }}" defer></script>
+  ```
+  执行顺序有依赖用 `defer`，无依赖用 `async`。
+- **不留未使用的 `assign`**：theme check 的 `UnusedAssign` 会抓出"写了但没接线"的残留变量——写 section 时每个 assign 都要有消费点。
 - **脚本改 CSS 后必查产物**：grep 检查重复规则块、裸选择器（如孤立 `::after {`）、缩进损坏；locale/JSON 文件校验前先剥 Shopify dev 同步的 `/* */` 注释头。
 - 单一 CSS 属性的设置 → CSS 变量（`style="--gap: {{ ... }}px"`）；多属性设置 → 修饰类（`.collection--narrow`）。
 - 类名用 Skeleton 风格 BEM：`block__element--modifier`；品牌色等设计令牌走 `snippets/css-variables.liquid` 输出，不硬编码色值。
@@ -96,6 +109,17 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 商家未填 metafield / 设置时：**该行/该模块不渲染**，不留空壳、不崩页、参数缺值显示 `—` 而**永不显示 0**。
 - JS 一律 `defer` 或 `async`；隐藏组件（抽屉、对比栏）**首次打开才构建 DOM**。
 - 图片统一 `image_tag` + `width` / `height` + srcset；尊重焦点裁剪；非首屏 lazy。
+
+**JS 组件化：优先 Web Components（Custom Elements）**
+
+- **可交互组件一律用 Custom Element 封装**（`class XxxEl extends HTMLElement` + `customElements.define`），标签名用连字符命名（`cart-drawer`、`predictive-search`、`nav-drawer`、`cart-toggle`）。
+- **禁止用 `document.addEventListener('click', ...)` 全局委托 + `closest()` 遍历做组件行为**。这是本项目的硬性约定（2026-10-09 刘工拍板）：全局委托让组件无法自包含、无法复用、无法单测，且在 Section Rendering（`/search/suggest` 片段替换、主题编辑器动态注入）下容易重复绑定。
+- 每个元素的 `connectedCallback` / `disconnectedCallback` 自行绑定与解绑监听；重复绑定用 `AbortController`（`{ signal }`）一次性拆除，避免 Section 重新渲染后事件叠加。
+- **状态靠 attribute 反映，样式与 `:has()` / `[open]` 等选择器挂钩**，不靠 JS 切 class 硬编码视觉状态（例：`<cart-drawer open>` → CSS `:has()` 决定遮罩显隐）。
+- 元素内部 DOM **优先延迟构建**：`<template>` 惰性实例化，首次打开才 `append`（延续"隐藏组件首次打开才建 DOM"）。
+- **平台原生组件优先于自建**：能用原生 `<dialog>` + `showModal()` 解决的模态（焦点锁定、`inert` 背景、`Esc` 关闭、`::backdrop`）就不要手写模态管理。
+- 一律 ES6+ 类与 `classList` / `dataset`，不用 jQuery、不用全局 `var` 挂函数。
+- 现有 `assets/compare-toggle.js` / `wishlist-toggle.js` 为本规则落地前的产物，**新增组件不再沿用其全局委托写法**；改到相关功能时顺手重构为 Custom Element。
 
 ## 7. 性能（SDD §8.1，验收硬线）
 
@@ -111,7 +135,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 每页一个 `h1`；焦点顺序 = DOM 顺序；无正 `tabindex`；禁用 `autofocus`；skip link 必备。
 - `lang="{{ request.locale.iso_code }}"`；不禁用缩放；所有 `img` 有 `alt`（装饰性 `alt=""`）。
 - 动态区域（筛选计数、对比数量、加购结果、变体切换）一律 `aria-live="polite"`。
-- 抽屉/模态：`role="dialog"` + 打开移焦 + 焦点锁定 + `Esc` 关闭回焦。
+- 抽屉/模态：**优先原生 `<dialog>` + `showModal()`**（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`），并按 Skeleton 约定给 `<dialog>` 加 `scroll-lock` 属性（`critical.css` 已有 `html:has(dialog[scroll-lock][open]) { overflow: hidden }`）。**此时不再手写 `role="dialog"` / `aria-modal` / 焦点陷阱脚本**——`showModal()` 已让外部内容 `inert`，重复实现只会打架。不使用 `<dialog>` 的浮层（如预测搜索下拉）才手写 `role="dialog"` + 打开移焦 + 焦点锁定 + `Esc` 回焦。抽屉一律用 Custom Element 封装（AGENTS.md §6）。
 - 表格（对比/参数）：`caption` + `th scope`。
 - 对比度：正文 4.5:1，大字号与图标 3:1；颜色不作唯一信息载体。
 - 触摸目标 ≥ 44×44 px（高危控件：对比勾选框、耗材变体选择器、数量步进器）。
@@ -135,8 +159,13 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - [ ] 全部文案走 `t:` 键；无硬编码外链
 - [ ] 演示店内容符合 §9 演示店规范（虚拟品牌 + AI 产品图，见 SDD §9）
 
-## 11. 已知状态与待办（截至 2026-09-30）
+## 11. 已知状态与待办（截至 2026-10-09）
 
-- SDD 引用的 `tools/check-theme-name.sh`、`tools/build-import-csv.py`、`snippets/spec-value.liquid`、`docs/TASKS.md` **尚未创建**；涉及时先确认是否已立项，不要假设存在。
+- SDD 引用的 `tools/check-theme-name.sh`、`tools/build-import-csv.py`、`snippets/spec-value.liquid`、`docs/TASKS.md` **尚未创建**；涉及时先确认是否已立项，不要假设存在。（`tools/check-locale-keys.py` 已于 2026-10-09 落地，用于校验 `t:` 键。）
 - Spike A1/A2 已完成（结论已写进 SDD §3.7）；A3（对比数据岛满载体积）待实测，验收基线以实测为准。
+- **⚠️ `shopify` CLI 在 Agent 沙箱内不可见（`command not found`），但刘工本机正常**（2026-10-09 实测确认，`shopify theme check` 46 文件 0 offenses）。Agent 侧跑不了 theme check 时**请刘工代跑并回贴结果**，不要误判成"CLI 未装"或"验收跑不了"。
 - 主题 v1.0 范围不含发电机（演示店仅含 Hardware 分支配件分类 2 条）。
+- `assets/wishlist-toggle.js` 与 §4 红线「不实现愿望清单」冲突，**提交前必须移除**（其交互可迁至商品卡的对比/加购按钮）。`assets/compare-toggle.js` 待按 §6 新规重构为 Custom Element。
+- 页头任务清单见 `dev-docs/task-header.md`；O-1 ~ O-5 已于 2026-10-09 拍板（结论写在该文件 §1）。
+- **cart 交互本期不做**（抽屉本体、`<cart-toggle>`、计数 AJAX 同步、`cart_action` 配置项），后续单独开任务清单；页头 T-1.6 仅做静态入口 + 服务端计数，开工前先确认该清单是否已立项。
+
