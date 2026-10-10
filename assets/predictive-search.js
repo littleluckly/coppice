@@ -177,16 +177,15 @@ class PredictiveSearch extends HTMLElement {
       window.location.origin
     );
     url.searchParams.set('q', term);
-    url.searchParams.set('section_id', this._sectionId);
+    // 官方 API：section_id 传 section 文件名，响应该 section 的渲染结果
+    url.searchParams.set('section_id', PredictiveSearch.SECTION_ID);
     url.searchParams.set('resources[type]', 'product,collection,page,article');
     url.searchParams.set('resources[limit]', limit);
     url.searchParams.set('predictive_search', 'true');
 
     try {
-      const response = await fetch(url, {
-        signal: this._controller.signal,
-        headers: { Accept: 'application/json' },
-      });
+      // 注意：section_id 请求返回的是 HTML（不是 JSON）——官方示例即用 text() + DOMParser
+      const response = await fetch(url, { signal: this._controller.signal });
 
       // 429 rate limited — back off entirely, leave the search usable
       if (response.status === 429) return;
@@ -197,8 +196,12 @@ class PredictiveSearch extends HTMLElement {
 
       if (!response.ok) return;
 
-      const payload = await response.json();
-      const html = payload?.sections?.[this._sectionId]?.html;
+      const text = await response.text();
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      const wrapper = doc.querySelector(
+        `#shopify-section-${PredictiveSearch.SECTION_ID}`
+      );
+      const html = (wrapper ?? doc.body).innerHTML.trim();
 
       // No results → keep the panel closed entirely (official UX).
       if (!html) {
