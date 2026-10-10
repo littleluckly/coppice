@@ -624,6 +624,55 @@
     block-size: 1.25rem;
   }
 
+  /* ---- 抽屉滑入 / 滑出动画（nav + search 两个抽屉同款） ----
+     @starting-style + allow-discrete：开 → 从屏外滑入；关 → 等滑动完再摘除。
+     旧浏览器不支持时降级为瞬时显隐，无功能损失（渐进增强）。
+     translate 是物理属性：本主题仅 en（LTR），100% 恒为屏外右侧。 */
+  .nav-drawer,
+  .search-drawer {
+    translate: 100% 0;
+    transition:
+      translate 0.25s ease,
+      display 0.25s allow-discrete,
+      overlay 0.25s allow-discrete;
+  }
+
+  .nav-drawer[open],
+  .search-drawer[open] {
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .nav-drawer[open],
+    .search-drawer[open] {
+      translate: 100% 0;
+    }
+  }
+
+  /* 遮罩同步淡入淡出 */
+  .nav-drawer::backdrop,
+  .search-drawer::backdrop {
+    opacity: 1;
+    transition: opacity 0.25s ease;
+  }
+
+  @starting-style {
+    .nav-drawer[open]::backdrop,
+    .search-drawer[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* WCAG 2.1 / SDD §8.2：用户要求减少动效时全部关闭 */
+  @media (prefers-reduced-motion: reduce) {
+    .nav-drawer,
+    .search-drawer,
+    .nav-drawer::backdrop,
+    .search-drawer::backdrop {
+      transition: none;
+    }
+  }
+
   /* 抽屉宽度即输入框宽度：放开 snippet 里的 32rem 上限，结果面板随输入框等宽 */
   .search-drawer__body .predictive-search {
     max-inline-size: none;
