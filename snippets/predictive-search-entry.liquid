@@ -242,7 +242,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .predictive-search[aria-busy='true'] .predictive-search__form::after {
+    .predictive-search[aria-busy='true'] .predictive-search__field::after {
       animation: none;
       inline-size: 100%;
       opacity: 0.4;
@@ -282,14 +282,15 @@
     border-radius: 2px;
   }
 
+  /* 结果面板：不再是绝对定位浮层——form 纵向 flex 的最后一个子项，
+     flex:1 吃满 dialog 剩余高度，滚动条只出现在列表上 */
   .predictive-search__panel {
-    position: absolute;
-    inset-block-start: calc(100% + 0.5rem);
-    inset-inline: 0;
-    z-index: 30;
-    max-block-size: min(65vh, 40rem);
+    flex: 1;
+    min-height: 0;
+    margin-block-start: 0.75rem;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scrollbar-width: thin;
     background-color: var(--color-background);
   }
 
