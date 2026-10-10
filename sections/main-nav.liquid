@@ -301,11 +301,48 @@
         </template>
         </dialog>
       </nav-drawer>
+
+      {%- comment -%}
+        ---------- 搜索抽屉（桌面 + 移动共用，2026-10-10 刘工） ----------
+        行上只有图标；点击后从屏幕右侧滑出本抽屉，完整搜索功能都在抽屉里。
+        内容存 <template> 首次打开才实例化（AGENTS §6）；实例化后 predictive-search
+        自定义元素自动升级，联想逻辑不变。openers 由 search-drawer.js 通过
+        [data-search-drawer-open] 在最近的 nav 里查找（桌面 + 移动两枚按钮共用）。
+      {%- endcomment -%}
+      <search-drawer>
+        <dialog class="search-drawer" data-search-drawer aria-labelledby="search-drawer-title">
+          <template data-search-drawer-template>
+            <div class="search-drawer__inner">
+              <div class="search-drawer__head">
+                <h2 class="search-drawer__title" id="search-drawer-title">
+                  {{ 'search.label' | t }}
+                </h2>
+                <button
+                  type="button"
+                  class="search-drawer__close"
+                  aria-label="{{ 'navigation.close' | t }}"
+                  data-search-drawer-close
+                >
+                  {{ 'icon-close.svg' | inline_asset_content }}
+                </button>
+              </div>
+
+              <div class="search-drawer__body">
+                {% render 'predictive-search-entry',
+                  search_section_id: section.id,
+                  results_limit: section.settings.results_limit
+                %}
+              </div>
+            </div>
+          </template>
+        </dialog>
+      </search-drawer>
     </div>
   </nav>
 
 <script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
 <script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
+<script src="{{ 'search-drawer.js' | asset_url }}" defer></script>
 
 {% stylesheet %}
   .main-nav {
