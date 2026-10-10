@@ -105,7 +105,15 @@ class PredictiveSearch extends HTMLElement {
   };
 
   _onKeydown = (event) => {
-    if (this._options.length === 0 && event.key !== 'Escape') return;
+    // Tab 总是收起面板（焦点移动即离开联想上下文）。
+    if (event.key === 'Tab') {
+      this._close();
+      return;
+    }
+
+    // 面板未开时不拦任何键——尤其是 Escape：让它冒泡给外层
+    // <dialog>（search-drawer），实现「面板关 → 抽屉关」的分层退出。
+    if (this._options.length === 0) return;
 
     switch (event.key) {
       case 'ArrowDown':
@@ -124,11 +132,8 @@ class PredictiveSearch extends HTMLElement {
         }
         break;
       case 'Escape':
+        // 面板开着时 Esc 只收面板（不再往外冒），焦点留在输入框。
         event.preventDefault();
-        this._close();
-        this._input.focus();
-        break;
-      case 'Tab':
         this._close();
         break;
       default:
