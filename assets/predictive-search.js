@@ -42,24 +42,22 @@ class PredictiveSearch extends HTMLElement {
     this._controller = null;
     this._cursor = -1;
     this._options = [];
+    // 递增序号：只有"最新一次请求"才允许关掉 loading（过期请求的 finally 不算数）
+    this._requestSeq = 0;
   }
 
   connectedCallback() {
     this._input = this.querySelector('.predictive-search__input');
     this._results = this.querySelector('.predictive-search__panel');
-    this._clearButton = this.querySelector('[data-predictive-search-clear]');
 
     if (!this._input || !this._results) return;
 
     const { signal } = this._abort;
     this._input.addEventListener('input', this._onInput, { signal });
     this._input.addEventListener('keydown', this._onKeydown, { signal });
-    this._clearButton?.addEventListener('click', this._onClear, { signal });
 
     // 点击面板外关闭；blur 不用（会与点击列表项竞争）
     this.addEventListener('focusout', this._onFocusOut, { signal });
-
-    this._syncClearButton();
   }
 
   disconnectedCallback() {
@@ -73,28 +71,22 @@ class PredictiveSearch extends HTMLElement {
   }
 
   _onInput = () => {
-    this._syncClearButton();
     if (this._timer) clearTimeout(this._timer);
 
     const term = this._input.value.trim();
     if (term.length < 2) {
+      // 掐掉在途请求并立即结束 loading——面板关闭时不能留着扫描线空转
+      this._controller?.abort();
+      this._setBusy(false);
       this._close();
       return;
     }
     this._timer = setTimeout(() => this._fetch(term), PredictiveSearch.DEBOUNCE_MS);
   };
 
-  _onClear = () => {
-    this._input.value = '';
-    this._syncClearButton();
-    this._close();
-    this._input.focus();
-  };
-
-  _syncClearButton() {
-    if (this._clearButton) {
-      this._clearButton.hidden = this._input.value.length === 0;
-    }
+  /** loading 状态：扫描线由 CSS 挂在 [aria-busy] 上（也顺带对读屏声明忙碌） */
+  _setBusy(busy) {
+    this.toggleAttribute('aria-busy', busy);
   }
 
   _onFocusOut = (event) => {
