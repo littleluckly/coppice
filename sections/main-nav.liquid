@@ -32,9 +32,10 @@
   cart and account icons scrolled away — leaving an unusable strip. Everything that
   belongs on the pinned row therefore lives INSIDE this section.
 
-  Layout is four zones (logo / menu / search / tools). The search slot is a
-  placeholder until T-1.4 lands; it is here so the row does not need
-  restructuring afterwards.
+  Layout is three zones (logo / menu / tools). Search is an icon-only toggle in
+  the tools cluster; clicking it opens a right-side drawer (the <search-drawer>
+  element at the bottom of this file) that carries the full predictive search
+  form — 2026-10-10 刘工 requirement: the row itself never grows a search input.
 
   Mobile is unaffected: it uses the drawer at the bottom of this file, which already
   renders its own account and cart copies.
