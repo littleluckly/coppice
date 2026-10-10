@@ -27,23 +27,6 @@
     class="predictive-search"
     data-results-limit="{{ results_limit | default: 10 }}"
   >
-    {%- comment -%}
-      放大镜按钮：桌面端点击等同于聚焦输入框（输入框本就在同一行），
-      移动端则是主要的搜索入口——点它直接聚焦，少一次"先点输入框"的操作。
-      aria-hidden + tabindex="-1"：真正的可访问入口是输入框本身
-      （它已有 combobox 语义），这个按钮只是视觉与触控捷径。
-    {%- endcomment -%}
-    <button
-      type="button"
-      class="predictive-search__submit"
-      data-predictive-search-submit
-      aria-hidden="true"
-      tabindex="-1"
-    >
-      {{ 'icon-search.svg' | inline_asset_content }}
-      <span class="visually-hidden">{{ 'search.submit' | t }}</span>
-    </button>
-
     <form
       class="predictive-search__form"
       action="{{ routes.search_url }}"
@@ -54,37 +37,61 @@
       {{ 'search.label' | t }}
     </label>
 
-    <input
-      id="search-input-{{ search_section_id }}"
-      class="predictive-search__input"
-      type="search"
-      name="q"
-      value="{{ search.terms | escape }}"
-      placeholder="{{ 'search.placeholder' | t | escape }}"
-      autocomplete="off"
-      autocorrect="off"
-      autocapitalize="off"
-      spellcheck="false"
-      role="combobox"
-      aria-expanded="false"
-      aria-controls="predictive-search-results-{{ search_section_id }}"
-      aria-autocomplete="list"
-      aria-describedby="predictive-search-help-{{ search_section_id }}"
-    >
-
     {%- comment -%}
-      官方 UX 明确要求提供清除按钮，否则用户只能逐字删除。
-      视觉隐藏但保留在无障碍树中；由 [data-has-query] 控制显隐。
+      输入区：放大镜（左）、输入框、清空按钮（右）与加载扫描线都锚定在
+      这个相对定位的 field 上——form 自身改为纵向 flex 后，
+      它的底边不再是"输入框下沿"，扫描线必须跟着 field 走。
     {%- endcomment -%}
-    <button
-      type="button"
-      class="predictive-search__clear"
-      aria-label="{{ 'search.clear' | t }}"
-      data-predictive-search-clear
-      hidden
-    >
-      {{ 'icon-close.svg' | inline_asset_content }}
-    </button>
+    <div class="predictive-search__field">
+      {%- comment -%}
+        放大镜：纯视觉图标（aria-hidden + tabindex="-1"），可访问入口是输入框
+        本身（combobox 语义）。
+        清空按钮恢复（2026-10-10 刘工）：type=search 的原生 WebKit 清除 X
+        无法定制样式，隐藏之，用与抽屉右上角关闭键同款的自定义按钮替代。
+      {%- endcomment -%}
+      <button
+        type="button"
+        class="predictive-search__submit"
+        data-predictive-search-submit
+        aria-hidden="true"
+        tabindex="-1"
+      >
+        {{ 'icon-search.svg' | inline_asset_content }}
+        <span class="visually-hidden">{{ 'search.submit' | t }}</span>
+      </button>
+
+      <input
+        id="search-input-{{ search_section_id }}"
+        class="predictive-search__input"
+        type="search"
+        name="q"
+        value="{{ search.terms | escape }}"
+        placeholder="{{ 'search.placeholder' | t | escape }}"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="predictive-search-results-{{ search_section_id }}"
+        aria-autocomplete="list"
+        aria-describedby="predictive-search-help-{{ search_section_id }}"
+      >
+
+      {%- comment -%}
+        清空输入：显隐由 JS 用 hidden 属性驱动（无输入时彻底离开无障碍树）。
+        样式与抽屉右上角关闭键同款（2026-10-10 刘工）。
+      {%- endcomment -%}
+      <button
+        type="button"
+        class="predictive-search__clear"
+        aria-label="{{ 'search.clear' | t }}"
+        data-predictive-search-clear
+        hidden
+      >
+        {{ 'icon-close.svg' | inline_asset_content }}
+      </button>
+    </div>
 
     <button type="submit" class="visually-hidden">
       {{ 'search.submit' | t }}
@@ -99,7 +106,8 @@
 
     {%- comment -%}
       结果容器由 JS 注入 HTML 片段。aria-controls 指向这个 id，
-      JS 注入内容时复用同一个 id。
+      JS 注入内容时复用同一个 id。不再是浮层：作为 flex 子项吃满
+      dialog 剩余高度，滚动条只出现在列表上（2026-10-10 刘工）。
     {%- endcomment -%}
     <div
       class="predictive-search__panel"
@@ -110,17 +118,33 @@
 </predictive-search>
 
 {% stylesheet %}
+  /* 视觉基调（2026-10-10 刘工：极简 / 高端 / 沉浸式 / 工业力量感）：
+     输入框去边框只留发丝底线，聚焦换品牌色；加载用一条细扫描线。
+     布局（2026-10-10 刘工）：抽屉是纵向 flex 链——结果面板作为
+     flex 子项吃满 dialog 剩余高度，滚动只发生在列表上。 */
   .predictive-search {
     position: relative;
-    display: block;
+    display: flex;
+    flex-direction: column;
     inline-size: 100%;
-    max-inline-size: 32rem;
+    flex: 1;
+    /* 经典 flex 陷阱：子项默认 min-height:auto，不锁 0 就无法收缩，
+       溢出会把 dialog 撑出滚动而不是列表自己滚 */
+    min-height: 0;
   }
 
   .predictive-search__form {
     position: relative;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 输入区：放大镜 / 输入框 / 清空按钮 / 扫描线的共同锚点 */
+  .predictive-search__field {
+    position: relative;
+    flex: none;
   }
 
   .predictive-search__submit {
@@ -134,10 +158,10 @@
     inline-size: 44px;
     block-size: 44px;
     padding: 0;
-    /* 图标按钮压在输入框左侧，输入框留出等宽内边距 */
+    /* 图标压在输入框左侧，输入框留出等宽内边距 */
     inset-block-start: 50%;
     translate: 0 -50%;
-    color: var(--color-foreground);
+    color: rgb(0 0 0 / 45%);
     background: none;
     border: 0;
     cursor: pointer;
@@ -145,31 +169,95 @@
   }
 
   .predictive-search__submit svg {
-    inline-size: 1.125rem;
-    block-size: 1.125rem;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
   }
 
   .predictive-search__input {
     inline-size: 100%;
     /* 触摸目标 ≥ 44×44（AGENTS §8） */
-    min-block-size: 44px;
-    padding: 0.5rem 2.75rem 0.5rem 2.75rem;
+    min-block-size: 48px;
+    padding: 0.625rem 2.75rem 0.625rem 2.75rem;
     color: var(--color-foreground);
     background-color: var(--color-background);
-    border: 1px solid rgb(0 0 0 / 20%);
-    border-radius: var(--style-border-radius-inputs);
+    /* 极简线型：无框，只有发丝底线；聚焦换品牌色加粗 */
+    border: 0;
+    border-block-end: 1px solid rgb(0 0 0 / 25%);
+    border-radius: 0;
     font: inherit;
+    font-size: 1.0625rem;
     appearance: none;
   }
 
-  .predictive-search__input:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 1px;
+  /* 原生 WebKit search 清除 X 无法定制，隐藏——用下方自定义清空按钮替代 */
+  .predictive-search__input::-webkit-search-cancel-button,
+  .predictive-search__input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
   }
 
+  .predictive-search__input::placeholder {
+    color: rgb(0 0 0 / 40%);
+  }
+
+  /* 焦点指示：底线由灰转品牌色并加粗（可见变化，替代外框 outline）。
+     outline: none 是刻意的——线型输入框外框 outline 破坏极简基调，
+     且底线变化满足 WCAG 2.1「焦点位置可见」要求（SDD §8.2）。 */
+  .predictive-search__input:focus {
+    outline: none;
+    border-block-end: 2px solid var(--color-brand-accent);
+    padding-block-end: calc(0.625rem - 1px);
+  }
+
+  /* ---- 加载扫描线：请求进行中，输入框下沿一条细线往返 ----
+     aria-busy 由 JS 在请求生命周期内驱动（过期的请求不会误关）。
+     锚在 field 上（form 的底边现在是面板底，不再是输入框下沿）。 */
+  .predictive-search__field::after {
+    content: '';
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    inline-size: 35%;
+    block-size: 2px;
+    background-color: var(--color-brand-accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .predictive-search[aria-busy='true'] .predictive-search__field::after {
+    opacity: 1;
+    animation: predictive-search-sweep 0.9s ease-in-out infinite;
+  }
+
+  @keyframes predictive-search-sweep {
+    0% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 186% 0;
+    }
+    100% {
+      translate: 0 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .predictive-search[aria-busy='true'] .predictive-search__field::after {
+      animation: none;
+      inline-size: 100%;
+      opacity: 0.4;
+    }
+  }
+
+  /* 结果面板：沉浸式——与抽屉同底色、无框无圆角，分区靠发丝线（见 section 样式） */
+  /* 清空按钮：与抽屉右上角关闭键（.search-drawer__close）同款。
+     垂直位置必须显式居中——form 改纵向 flex 后，绝对定位元素的
+     "静态位置"在输入框下方，不设 top 会被挤出去（BUG 2026-10-10）。 */
   .predictive-search__clear {
     position: absolute;
+    inset-block-start: 50%;
     inset-inline-end: 0;
+    translate: 0 -50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -188,21 +276,26 @@
   }
 
   .predictive-search__clear svg {
-    inline-size: 1rem;
-    block-size: 1rem;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
   }
 
+  .predictive-search__clear:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+    border-radius: 2px;
+  }
+
+  /* 结果面板：不再是绝对定位浮层——form 纵向 flex 的最后一个子项，
+     flex:1 吃满 dialog 剩余高度，滚动条只出现在列表上 */
   .predictive-search__panel {
-    position: absolute;
-    inset-block-start: calc(100% + 0.25rem);
-    inset-inline: 0;
-    z-index: 30;
-    max-block-size: min(70vh, 32rem);
+    flex: 1;
+    min-height: 0;
+    margin-block-start: 0.75rem;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scrollbar-width: thin;
     background-color: var(--color-background);
-    border: 1px solid rgb(0 0 0 / 12%);
-    border-radius: 4px;
   }
 
   .predictive-search__panel[hidden] {

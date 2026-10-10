@@ -568,7 +568,8 @@
     inset-block: 0;
     inset-inline: auto 0;
     /* 由 showModal() 置于 top layer，无需 z-index */
-    width: min(24rem, 92vw);
+    /* 宽度（2026-10-10 刘工：最小 600px）：窄屏用 92vw 兜底，≥600px 时锁 600 起 */
+    width: max(600px, min(40rem, 92vw));
     max-width: none;
     height: 100%;
     max-height: none;
@@ -582,12 +583,31 @@
     overscroll-behavior: contain;
   }
 
+  /* 竖屏手机：全宽（600px 下限在手机上必然溢出） */
+  @media screen and (max-width: 749px) {
+    .search-drawer {
+      width: 100vw;
+    }
+  }
+
   .search-drawer::backdrop {
     background-color: rgb(0 0 0 / 45%);
   }
 
   .search-drawer__inner {
+    /* 纵向 flex：head 固定，body（含结果面板）吃满剩余高度。
+       结果多时滚动只发生在列表上，dialog 自身不再出滚动条。 */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     padding: 0.5rem 1rem 1.5rem;
+  }
+
+  .search-drawer__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
   }
 
   .search-drawer__head {
@@ -600,8 +620,12 @@
 
   .search-drawer__title {
     margin: 0;
-    font-size: 1.125rem;
-    font-weight: 700;
+    /* 工业小标签风格：与结果分组标题同款（uppercase + 大字距） */
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(0 0 0 / 45%);
   }
 
   .search-drawer__close {
@@ -674,10 +698,7 @@
     }
   }
 
-  /* 抽屉宽度即输入框宽度：放开 snippet 里的 32rem 上限，结果面板随输入框等宽 */
-  .search-drawer__body .predictive-search {
-    max-inline-size: none;
-  }
+  /* 抽屉宽度即输入框宽度（snippet 已无 32rem 上限，此规则留作宽度解耦的文档锚点） */
 
   .nav-drawer__inner {
     display: flex;

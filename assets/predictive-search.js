@@ -21,6 +21,17 @@
  * - Progressive enhancement baseline: the <form action> is a real search URL, so with
  *   JS disabled the search still works. This file only enhances it.
  *
+ * - Loading: `aria-busy` is toggled on this element for the duration of the
+ *   newest request (CSS paints a thin sweep line); superseded requests never
+ *   clear a newer one's loading state (monotonic request token).
+ * - Inline clear button: restored 2026-10-10 (styled to match the drawer's
+ *   close button) after the native WebKit search-cancel X proved unstyleable;
+ *   the drawer head keeps the only other close icon.
+ * - Panel lifecycle follows the QUERY, not the focus: clicking blank space in
+ *   the drawer keeps results visible (刘工 bug 反馈 2026-10-10). The panel
+ *   closes when the query drops under 2 chars, when there are no results, or
+ *   via Esc (panel → drawer) / Tab.
+ *
  * Error handling (three documented failure modes — never silently swallow):
  *   404 — section id not found in the theme (a bug in our wiring)
  *   417 — buyer locale not supported by the endpoint
@@ -42,6 +53,8 @@ class PredictiveSearch extends HTMLElement {
     this._controller = null;
     this._cursor = -1;
     this._options = [];
+    // 递增序号：只有"最新一次请求"才允许关掉 loading（过期请求的 finally 不算数）
+    this._requestSeq = 0;
   }
 
   connectedCallback() {
@@ -56,10 +69,9 @@ class PredictiveSearch extends HTMLElement {
     this._input.addEventListener('keydown', this._onKeydown, { signal });
     this._clearButton?.addEventListener('click', this._onClear, { signal });
 
-    // 点击面板外关闭；blur 不用（会与点击列表项竞争）
-    this.addEventListener('focusout', this._onFocusOut, { signal });
-
-    this._syncClearButton();
+    // 注意：不监听 focusout 关面板（2026-10-10 刘工 bug 反馈）——
+    // 点抽屉空白处会把焦点移出输入框，结果列表跟着消失，反直觉。
+    // 面板的生命周期跟查询词走：词 <2 字、无结果、Esc/Tab 才收起。
   }
 
   disconnectedCallback() {
@@ -78,15 +90,26 @@ class PredictiveSearch extends HTMLElement {
 
     const term = this._input.value.trim();
     if (term.length < 2) {
+      // 掐掉在途请求并立即结束 loading——面板关闭时不能留着扫描线空转
+      this._controller?.abort();
+      this._setBusy(false);
       this._close();
       return;
     }
     this._timer = setTimeout(() => this._fetch(term), PredictiveSearch.DEBOUNCE_MS);
   };
 
+  /** loading 状态：扫描线由 CSS 挂在 [aria-busy] 上（也顺带对读屏声明忙碌） */
+  _setBusy(busy) {
+    this.toggleAttribute('aria-busy', busy);
+  }
+
+  /** 清空按钮：显隐跟随输入框有无内容（hidden 属性驱动，无障碍树同步） */
   _onClear = () => {
     this._input.value = '';
     this._syncClearButton();
+    this._controller?.abort();
+    this._setBusy(false);
     this._close();
     this._input.focus();
   };
@@ -96,13 +119,6 @@ class PredictiveSearch extends HTMLElement {
       this._clearButton.hidden = this._input.value.length === 0;
     }
   }
-
-  _onFocusOut = (event) => {
-    // focusout fires before the click lands on an option, so wait a tick
-    setTimeout(() => {
-      if (!this.contains(document.activeElement)) this._close();
-    }, 0);
-  };
 
   _onKeydown = (event) => {
     // Tab 总是收起面板（焦点移动即离开联想上下文）。
@@ -170,6 +186,7 @@ class PredictiveSearch extends HTMLElement {
     // overwrite a newer one.
     this._controller?.abort();
     this._controller = new AbortController();
+    const token = ++this._requestSeq;
 
     const limit = this.dataset.resultsLimit || 10;
     const url = new URL(
@@ -183,6 +200,9 @@ class PredictiveSearch extends HTMLElement {
     url.searchParams.set('resources[limit]', limit);
     url.searchParams.set('predictive_search', 'true');
 
+    // loading 从发请求亮到本请求生命周期结束；被更新请求顶替时
+    // token 不匹配，finally 不会把新请求的 loading 关掉
+    this._setBusy(true);
     try {
       // 注意：section_id 请求返回的是 HTML（不是 JSON）——官方示例即用 text() + DOMParser
       const response = await fetch(url, { signal: this._controller.signal });
@@ -215,6 +235,8 @@ class PredictiveSearch extends HTMLElement {
       // AbortError is expected when superseded; anything else is a real failure.
       // Either way the form still submits, so we degrade quietly.
       if (error.name !== 'AbortError') this._close();
+    } finally {
+      if (token === this._requestSeq) this._setBusy(false);
     }
   }
 
