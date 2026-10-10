@@ -44,11 +44,7 @@
               {{
                 product.featured_image
                 | image_url: width: 112
-                | image_tag:
-                  loading: 'lazy',
-                  widths: '56, 112',
-                  sizes: '56px',
-                  alt: product.featured_image.alt
+                | image_tag: loading: 'lazy', widths: '56, 112', sizes: '112px', alt: product.featured_image.alt
               }}
             {%- endif -%}
             <span class="predictive-search__text">
@@ -272,13 +268,27 @@
     animation: predictive-search-item-in 0.3s ease backwards;
   }
 
-  .predictive-search__item:nth-child(1) { animation-delay: 0.03s; }
-  .predictive-search__item:nth-child(2) { animation-delay: 0.06s; }
-  .predictive-search__item:nth-child(3) { animation-delay: 0.09s; }
-  .predictive-search__item:nth-child(4) { animation-delay: 0.12s; }
-  .predictive-search__item:nth-child(5) { animation-delay: 0.15s; }
-  .predictive-search__item:nth-child(6) { animation-delay: 0.18s; }
-  .predictive-search__item:nth-child(n + 7) { animation-delay: 0.21s; }
+  .predictive-search__item:nth-child(1) {
+    animation-delay: 0.03s;
+  }
+  .predictive-search__item:nth-child(2) {
+    animation-delay: 0.06s;
+  }
+  .predictive-search__item:nth-child(3) {
+    animation-delay: 0.09s;
+  }
+  .predictive-search__item:nth-child(4) {
+    animation-delay: 0.12s;
+  }
+  .predictive-search__item:nth-child(5) {
+    animation-delay: 0.15s;
+  }
+  .predictive-search__item:nth-child(6) {
+    animation-delay: 0.18s;
+  }
+  .predictive-search__item:nth-child(n + 7) {
+    animation-delay: 0.21s;
+  }
 
   @keyframes predictive-search-item-in {
     from {
