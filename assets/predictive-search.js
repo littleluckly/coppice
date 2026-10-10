@@ -24,7 +24,13 @@
  * - Loading: `aria-busy` is toggled on this element for the duration of the
  *   newest request (CSS paints a thin sweep line); superseded requests never
  *   clear a newer one's loading state (monotonic request token).
- * - No inline clear button (2026-10-10 刘工: only one close icon in the drawer).
+ * - Inline clear button: restored 2026-10-10 (styled to match the drawer's
+ *   close button) after the native WebKit search-cancel X proved unstyleable;
+ *   the drawer head keeps the only other close icon.
+ * - Panel lifecycle follows the QUERY, not the focus: clicking blank space in
+ *   the drawer keeps results visible (刘工 bug 反馈 2026-10-10). The panel
+ *   closes when the query drops under 2 chars, when there are no results, or
+ *   via Esc (panel → drawer) / Tab.
  *
  * Error handling (three documented failure modes — never silently swallow):
  *   404 — section id not found in the theme (a bug in our wiring)
@@ -113,13 +119,6 @@ class PredictiveSearch extends HTMLElement {
       this._clearButton.hidden = this._input.value.length === 0;
     }
   }
-
-  _onFocusOut = (event) => {
-    // focusout fires before the click lands on an option, so wait a tick
-    setTimeout(() => {
-      if (!this.contains(document.activeElement)) this._close();
-    }, 0);
-  };
 
   _onKeydown = (event) => {
     // Tab 总是收起面板（焦点移动即离开联想上下文）。
