@@ -1,23 +1,32 @@
 {% comment %}
-  Predictive search input — rendered from sections/main-nav.liquid.
+  Predictive search input — rendered from the <search-drawer> template inside
+  sections/main-nav.liquid (2026-10-10 刘工: the header row shows an icon only;
+  the full form lives in the right-side drawer).
 
   Split from sections/predictive-search.liquid on purpose: a section cannot be
-  rendered into another file, but a snippet can. main-nav owns the header row, so
-  the input lives here, while the RESULTS markup lives in the section — that file
-  must stand alone because Shopify re-renders it by section_id.
+  rendered into another file, but a snippet can. main-nav owns the drawer, so
+  the input lives here, while the RESULTS markup lives in the section — that
+  file must stand alone because Shopify re-renders it by section_id
+  (`section_id=predictive-search` targets the section FILE name).
 
-  Parameter:
-    search_section_id — the id Shopify re-renders for the results fragment.
+  Parameters:
+    search_section_id — used for input/panel id pairing (unique per section).
+    results_limit     — forwarded as data-results-limit for the JS fetch.
 
-  ARIA: combobox + listbox, NOT a modal dialog (O-2 / AGENTS §8). DOM focus stays in
-  the input at all times; arrow keys move a virtual cursor via aria-activedescendant.
-  A <dialog> would swallow keystrokes and defeat type-ahead.
+  ARIA: the input keeps its combobox + listbox pattern INSIDE the drawer. The
+  drawer itself is a modal <dialog>, but the combobox behaviour is unchanged:
+  DOM focus stays in the input; arrow keys move a virtual cursor via
+  aria-activedescendant. Escape is left to bubble when the results panel is
+  closed, so it closes the drawer (layered dismiss: panel → drawer).
 
   Progressive enhancement baseline: action points at the real search URL, so with JS
   disabled the form still searches. The script only enhances it.
 {% endcomment %}
 
-  <predictive-search class="predictive-search">
+  <predictive-search
+    class="predictive-search"
+    data-results-limit="{{ results_limit | default: 10 }}"
+  >
     {%- comment -%}
       放大镜按钮：桌面端点击等同于聚焦输入框（输入框本就在同一行），
       移动端则是主要的搜索入口——点它直接聚焦，少一次"先点输入框"的操作。
