@@ -39,7 +39,7 @@
 
   Mobile is unaffected: it uses the drawer at the bottom of this file, which already
   renders its own account and cart copies.
-{%- endcomment -%}
+{% endcomment -%}
 
 <nav class="main-nav" aria-label="{{ 'navigation.menu' | t }}">
   {%- comment -%} ---------- 桌面：吸顶整行（O-1，仅 PC） ---------- {%- endcomment -%}
@@ -67,84 +67,90 @@
         <ul class="main-nav__list" role="list">
           {%- for link in menu.links -%}
             {%- liquid
-            assign has_children = false
-            if link.links.size > 0
-              assign has_children = true
-            endif
-            assign is_current = false
-            if link.current
-              assign is_current = true
-            endif
-            assign in_branch = false
-            if link.child_current or link.child_active
-              assign in_branch = true
-            endif
-          -%}
+              assign has_children = false
+              if link.links.size > 0
+                assign has_children = true
+              endif
+              assign is_current = false
+              if link.current
+                assign is_current = true
+              endif
+              assign in_branch = false
+              if link.child_current or link.child_active
+                assign in_branch = true
+              endif
+            -%}
 
-          <li class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}">
-            {%- if has_children -%}
-              {%- comment -%}
-                分组项：只出 <span>，不输出 <a>（BUG-023）。
-                aria-expanded 由 CSS :focus-within / :hover 驱动状态，JS 只做点击锁定。
-              {%- endcomment -%}
-              <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
-                {{ link.title }}
-                {{ 'icon-chevron-down.svg' | inline_asset_content }}
-              </span>
+            <li class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}">
+              {%- if has_children -%}
+                {%- comment -%}
+                  分组项：只出 <span>，不输出 <a>（BUG-023）。
+                  aria-expanded 由 CSS :focus-within / :hover 驱动状态，JS 只做点击锁定。
+                {%- endcomment -%}
+                <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                  {{ link.title }}
+                  {{ 'icon-chevron-down.svg' | inline_asset_content }}
+                </span>
 
-              <ul class="main-nav__submenu" role="list">
-                {%- for child in link.links -%}
-                  {%- liquid
-                    assign child_has_children = false
-                    if child.links.size > 0
-                      assign child_has_children = true
-                    endif
-                  -%}
+                <ul class="main-nav__submenu" role="list">
+                  {%- for child in link.links -%}
+                    {%- liquid
+                      assign child_has_children = false
+                      if child.links.size > 0
+                        assign child_has_children = true
+                      endif
+                    -%}
 
-                  <li class="main-nav__item">
-                    {%- if child_has_children -%}
-                      <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
-                        {{ child.title }}
-                        {{ 'icon-chevron-down.svg' | inline_asset_content }}
-                      </span>
+                    <li class="main-nav__item">
+                      {%- if child_has_children -%}
+                        <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                          {{ child.title }}
+                          {{ 'icon-chevron-down.svg' | inline_asset_content }}
+                        </span>
 
-                      <ul class="main-nav__submenu main-nav__submenu--deep" role="list">
-                        {%- for grandchild in child.links -%}
-                          <li class="main-nav__item">
-                            <a
-                              class="main-nav__link{% if grandchild.current %} main-nav__link--current{% endif %}"
-                              href="{{ grandchild.url }}"
-                              {% if grandchild.current %}aria-current="page"{% endif %}
-                            >
-                              {{ grandchild.title }}
-                            </a>
-                          </li>
-                        {%- endfor -%}
-                      </ul>
-                    {%- else -%}
-                      <a
-                        class="main-nav__link{% if child.current %} main-nav__link--current{% endif %}"
-                        href="{{ child.url }}"
-                        {% if child.current %}aria-current="page"{% endif %}
-                      >
-                        {{ child.title }}
-                      </a>
-                    {%- endif -%}
-                  </li>
-                {%- endfor -%}
-              </ul>
-            {%- else -%}
-              {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
-              <a
-                class="main-nav__link{% if is_current %} main-nav__link--current{% endif %}"
-                href="{{ link.url }}"
-                {% if is_current %}aria-current="page"{% endif %}
-              >
-                {{ link.title }}
-              </a>
-            {%- endif -%}
-          </li>
-        {%- endfor -%}
+                        <ul class="main-nav__submenu main-nav__submenu--deep" role="list">
+                          {%- for grandchild in child.links -%}
+                            <li class="main-nav__item">
+                              <a
+                                class="main-nav__link{% if grandchild.current %} main-nav__link--current{% endif %}"
+                                href="{{ grandchild.url }}"
+                                {% if grandchild.current %}
+                                  aria-current="page"
+                                {% endif %}
+                              >
+                                {{ grandchild.title }}
+                              </a>
+                            </li>
+                          {%- endfor -%}
+                        </ul>
+                      {%- else -%}
+                        <a
+                          class="main-nav__link{% if child.current %} main-nav__link--current{% endif %}"
+                          href="{{ child.url }}"
+                          {% if child.current %}
+                            aria-current="page"
+                          {% endif %}
+                        >
+                          {{ child.title }}
+                        </a>
+                      {%- endif -%}
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              {%- else -%}
+                {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
+                <a
+                  class="main-nav__link{% if is_current %} main-nav__link--current{% endif %}"
+                  href="{{ link.url }}"
+                  {% if is_current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  {{ link.title }}
+                </a>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
         </ul>
       {%- endif -%}
 
@@ -182,33 +188,33 @@
         {%- endif -%}
       </div>
     </div>
-    </div>
+  </div>
 
-    {%- comment -%} ---------- 移动：原生 <dialog> 抽屉 ---------- {%- endcomment -%}
-    <div class="main-nav__mobile">
-      <button
-        type="button"
-        class="main-nav__burger"
-        aria-label="{{ 'navigation.menu' | t }}"
-        aria-haspopup="dialog"
-        data-nav-drawer-open
-      >
-        {{ 'icon-menu.svg' | inline_asset_content }}
-      </button>
+  {%- comment -%} ---------- 移动：原生 <dialog> 抽屉 ---------- {%- endcomment -%}
+  <div class="main-nav__mobile">
+    <button
+      type="button"
+      class="main-nav__burger"
+      aria-label="{{ 'navigation.menu' | t }}"
+      aria-haspopup="dialog"
+      data-nav-drawer-open
+    >
+      {{ 'icon-menu.svg' | inline_asset_content }}
+    </button>
 
-      {%- comment -%} 移动端：汉堡居左、搜索图标推到最右 {%- endcomment -%}
-      <button
-        type="button"
-        class="main-nav__search-toggle main-nav__search-toggle--mobile"
-        aria-label="{{ 'search.label' | t }}"
-        aria-haspopup="dialog"
-        data-search-drawer-open
-      >
-        {{ 'icon-search.svg' | inline_asset_content }}
-      </button>
+    {%- comment -%} 移动端：汉堡居左、搜索图标推到最右 {%- endcomment -%}
+    <button
+      type="button"
+      class="main-nav__search-toggle main-nav__search-toggle--mobile"
+      aria-label="{{ 'search.label' | t }}"
+      aria-haspopup="dialog"
+      data-search-drawer-open
+    >
+      {{ 'icon-search.svg' | inline_asset_content }}
+    </button>
 
-      <nav-drawer>
-        <dialog class="nav-drawer" data-nav-drawer aria-labelledby="nav-drawer-title">
+    <nav-drawer>
+      <dialog class="nav-drawer" data-nav-drawer aria-labelledby="nav-drawer-title">
         {%- comment -%} 内容存 <template>，首次打开才实例化（AGENTS §6） {%- endcomment -%}
         <template data-nav-drawer-template>
           <div class="nav-drawer__inner">
@@ -244,7 +250,9 @@
                             <a
                               class="nav-drawer__link{% if child.current %} nav-drawer__link--current{% endif %}"
                               href="{{ child.url }}"
-                              {% if child.current %}aria-current="page"{% endif %}
+                              {% if child.current %}
+                                aria-current="page"
+                              {% endif %}
                             >
                               {{ child.title }}
                             </a>
@@ -256,7 +264,9 @@
                                     <a
                                       class="nav-drawer__link{% if grandchild.current %} nav-drawer__link--current{% endif %}"
                                       href="{{ grandchild.url }}"
-                                      {% if grandchild.current %}aria-current="page"{% endif %}
+                                      {% if grandchild.current %}
+                                        aria-current="page"
+                                      {% endif %}
                                     >
                                       {{ grandchild.title }}
                                     </a>
@@ -274,7 +284,9 @@
                     <a
                       class="nav-drawer__link{% if link.current %} nav-drawer__link--current{% endif %}"
                       href="{{ link.url }}"
-                      {% if link.current %}aria-current="page"{% endif %}
+                      {% if link.current %}
+                        aria-current="page"
+                      {% endif %}
                     >
                       {{ link.title }}
                     </a>
@@ -299,46 +311,46 @@
             </div>
           </div>
         </template>
-        </dialog>
-      </nav-drawer>
+      </dialog>
+    </nav-drawer>
 
-      {%- comment -%}
-        ---------- 搜索抽屉（桌面 + 移动共用，2026-10-10 刘工） ----------
-        行上只有图标；点击后从屏幕右侧滑出本抽屉，完整搜索功能都在抽屉里。
-        内容存 <template> 首次打开才实例化（AGENTS §6）；实例化后 predictive-search
-        自定义元素自动升级，联想逻辑不变。openers 由 search-drawer.js 通过
-        [data-search-drawer-open] 在最近的 nav 里查找（桌面 + 移动两枚按钮共用）。
-      {%- endcomment -%}
-      <search-drawer>
-        <dialog class="search-drawer" data-search-drawer aria-labelledby="search-drawer-title">
-          <template data-search-drawer-template>
-            <div class="search-drawer__inner">
-              <div class="search-drawer__head">
-                <h2 class="search-drawer__title" id="search-drawer-title">
-                  {{ 'search.label' | t }}
-                </h2>
-                <button
-                  type="button"
-                  class="search-drawer__close"
-                  aria-label="{{ 'navigation.close' | t }}"
-                  data-search-drawer-close
-                >
-                  {{ 'icon-close.svg' | inline_asset_content }}
-                </button>
-              </div>
-
-              <div class="search-drawer__body">
-                {% render 'predictive-search-entry',
-                  search_section_id: section.id,
-                  results_limit: section.settings.results_limit
-                %}
-              </div>
+    {%- comment -%}
+      ---------- 搜索抽屉（桌面 + 移动共用，2026-10-10 刘工） ----------
+      行上只有图标；点击后从屏幕右侧滑出本抽屉，完整搜索功能都在抽屉里。
+      内容存 <template> 首次打开才实例化（AGENTS §6）；实例化后 predictive-search
+      自定义元素自动升级，联想逻辑不变。openers 由 search-drawer.js 通过
+      [data-search-drawer-open] 在最近的 nav 里查找（桌面 + 移动两枚按钮共用）。
+    {%- endcomment -%}
+    <search-drawer>
+      <dialog class="search-drawer" data-search-drawer aria-labelledby="search-drawer-title">
+        <template data-search-drawer-template>
+          <div class="search-drawer__inner">
+            <div class="search-drawer__head">
+              <h2 class="search-drawer__title" id="search-drawer-title">
+                {{ 'search.label' | t }}
+              </h2>
+              <button
+                type="button"
+                class="search-drawer__close"
+                aria-label="{{ 'navigation.close' | t }}"
+                data-search-drawer-close
+              >
+                {{ 'icon-close.svg' | inline_asset_content }}
+              </button>
             </div>
-          </template>
-        </dialog>
-      </search-drawer>
-    </div>
-  </nav>
+
+            <div class="search-drawer__body">
+              {% render 'predictive-search-entry',
+                search_section_id: section.id,
+                results_limit: section.settings.results_limit
+              %}
+            </div>
+          </div>
+        </template>
+      </dialog>
+    </search-drawer>
+  </div>
+</nav>
 
 <script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
 <script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
@@ -382,6 +394,7 @@
     font-weight: 700;
     letter-spacing: 0.02em;
     white-space: nowrap;
+    color: var(--color-brand);
   }
 
   .main-nav__tools {
