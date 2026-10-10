@@ -351,23 +351,69 @@
     padding-inline: var(--page-margin);
   }
 
-  /* 三段布局：菜单 / 搜索 / 工具。
-     grid 而非 flex——菜单长度随商家配置变化，flex 下搜索区会被挤压。 */
+  /* 三段布局：logo / 菜单 / 工具。
+     grid 而非 flex——菜单长度随商家配置变化，flex 下工具区会被挤压。
+     white-space: nowrap（2026-10-10 刘工）：导航行内任何内容都不换行，
+     菜单项 / 品牌名超出时只压缩中间列宽度，不折行。 */
   .main-nav__inner {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 1.5rem;
+    white-space: nowrap;
   }
 
-  .main-nav__search {
-    min-inline-size: 0;
+  /* Zone 0: logo + 品牌名。图标与文字并排一行，永不换行。 */
+  .main-nav__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .main-nav__logo-img {
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+  }
+
+  .main-nav__brand {
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
 
   .main-nav__tools {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+  }
+
+  /* 搜索切换按钮：行上只放图标（2026-10-10 刘工），点击开抽屉 */
+  .main-nav__search-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: var(--color-foreground);
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .main-nav__search-toggle svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .main-nav__search-toggle:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
   .main-nav__list {
