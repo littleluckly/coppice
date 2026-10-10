@@ -138,16 +138,13 @@ body {
 /**
  * Main landmark — the skip link target (see layout/theme.liquid).
  *
- * The id/role/tabindex live in the markup; only layout belongs here. Centring here
- * rather than on each section keeps every section's own max-width free to differ
- * (e.g. list-collections wants a wider grid than article does).
+ * 这里刻意【不限宽、不加内边距】（2026-10-10 刘工）：
+ * 页宽与页边距统一由每个 .shopify-section 的内容网格管理——
+ *   第 2 列 = 内容列（所有 section 的文案都落在这列，天然对齐）；
+ *   根节点带 .full-width 的 section 通栏（hero 由此占满屏幕宽度）。
+ * 此前在这里加 max-width + padding，既框死了 full-width，
+ * 又与网格的 minmax(page-margin, 1fr) 边距列叠加成双倍页边距。
  */
-.main-content {
-  inline-size: 100%;
-  max-inline-size: var(--page-width);
-  margin-inline: auto;
-  padding-inline: var(--page-margin);
-}
 
 /**
  * Skip link.
