@@ -16,6 +16,12 @@
 
 {%- liquid
   assign menu = section.settings.menu
+  assign brand_name = section.settings.brand_name | default: shop.name
+  if section.settings.logo != blank
+    assign logo_src = section.settings.logo | image_url: width: 160
+  else
+    assign logo_src = 'logo_webp.webp' | asset_url
+  endif
 -%}
 
 {% comment -%}
@@ -26,8 +32,9 @@
   cart and account icons scrolled away — leaving an unusable strip. Everything that
   belongs on the pinned row therefore lives INSIDE this section.
 
-  Layout is three zones (menu / search / tools). The search slot is a placeholder
-  until T-1.4 lands; it is here so the row does not need restructuring afterwards.
+  Layout is four zones (logo / menu / search / tools). The search slot is a
+  placeholder until T-1.4 lands; it is here so the row does not need
+  restructuring afterwards.
 
   Mobile is unaffected: it uses the drawer at the bottom of this file, which already
   renders its own account and cart copies.
@@ -37,6 +44,24 @@
   {%- comment -%} ---------- 桌面：吸顶整行（O-1，仅 PC） ---------- {%- endcomment -%}
   <div class="main-nav__desktop">
     <div class="main-nav__inner">
+      {%- comment -%}
+        Zone 0: logo + brand name. Links home. The image is decorative
+        (alt="") because the visible brand text already names the link.
+        Falls back to the bundled logo_webp.webp when the merchant has not
+        picked a logo in the editor.
+      {%- endcomment -%}
+      <a class="main-nav__logo" href="{{ routes.root_url }}">
+        <img
+          class="main-nav__logo-img"
+          src="{{ logo_src }}"
+          alt=""
+          width="40"
+          height="40"
+          loading="eager"
+        >
+        <span class="main-nav__brand">{{ brand_name }}</span>
+      </a>
+
       {%- if menu.links.size > 0 -%}
         <ul class="main-nav__list" role="list">
           {%- for link in menu.links -%}
