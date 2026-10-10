@@ -539,6 +539,78 @@
     background-color: rgb(0 0 0 / 45%);
   }
 
+  /* ---- 搜索抽屉：右侧滑出，桌面 + 移动共用（2026-10-10 刘工） ----
+     结构与 nav-drawer 同款（原生 <dialog> + showModal + template 惰性实例化），
+     差异只有宽度与内部排版。 */
+  .search-drawer {
+    inset-block: 0;
+    inset-inline: auto 0;
+    /* 由 showModal() 置于 top layer，无需 z-index */
+    width: min(24rem, 92vw);
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-inline-end: 1px solid rgb(0 0 0 / 12%);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .search-drawer::backdrop {
+    background-color: rgb(0 0 0 / 45%);
+  }
+
+  .search-drawer__inner {
+    padding: 0.5rem 1rem 1.5rem;
+  }
+
+  .search-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-end: 0.5rem;
+  }
+
+  .search-drawer__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .search-drawer__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .search-drawer__close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .search-drawer__close svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* 抽屉宽度即输入框宽度：放开 snippet 里的 32rem 上限，结果面板随输入框等宽 */
+  .search-drawer__body .predictive-search {
+    max-inline-size: none;
+  }
+
   .nav-drawer__inner {
     display: flex;
     flex-direction: column;
