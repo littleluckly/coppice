@@ -27,24 +27,6 @@
     class="predictive-search"
     data-results-limit="{{ results_limit | default: 10 }}"
   >
-    {%- comment -%}
-      放大镜：纯视觉图标（aria-hidden + tabindex="-1"），可访问入口是输入框
-      本身（combobox 语义）。
-      清空按钮恢复（2026-10-10 刘工）：type=search 的原生 WebKit 清除 X
-      无法定制样式，隐藏之，用与抽屉右上角关闭键同款的自定义按钮替代——
-      抽屉内视觉上仍是"两个 X、同一种长相"。
-    {%- endcomment -%}
-    <button
-      type="button"
-      class="predictive-search__submit"
-      data-predictive-search-submit
-      aria-hidden="true"
-      tabindex="-1"
-    >
-      {{ 'icon-search.svg' | inline_asset_content }}
-      <span class="visually-hidden">{{ 'search.submit' | t }}</span>
-    </button>
-
     <form
       class="predictive-search__form"
       action="{{ routes.search_url }}"
@@ -55,37 +37,61 @@
       {{ 'search.label' | t }}
     </label>
 
-    <input
-      id="search-input-{{ search_section_id }}"
-      class="predictive-search__input"
-      type="search"
-      name="q"
-      value="{{ search.terms | escape }}"
-      placeholder="{{ 'search.placeholder' | t | escape }}"
-      autocomplete="off"
-      autocorrect="off"
-      autocapitalize="off"
-      spellcheck="false"
-      role="combobox"
-      aria-expanded="false"
-      aria-controls="predictive-search-results-{{ search_section_id }}"
-      aria-autocomplete="list"
-      aria-describedby="predictive-search-help-{{ search_section_id }}"
-    >
-
     {%- comment -%}
-      清空输入：显隐由 JS 用 hidden 属性驱动（无输入时彻底离开无障碍树）。
-      样式与抽屉右上角关闭键同款（2026-10-10 刘工）。
+      输入区：放大镜（左）、输入框、清空按钮（右）与加载扫描线都锚定在
+      这个相对定位的 field 上——form 自身改为纵向 flex 后，
+      它的底边不再是"输入框下沿"，扫描线必须跟着 field 走。
     {%- endcomment -%}
-    <button
-      type="button"
-      class="predictive-search__clear"
-      aria-label="{{ 'search.clear' | t }}"
-      data-predictive-search-clear
-      hidden
-    >
-      {{ 'icon-close.svg' | inline_asset_content }}
-    </button>
+    <div class="predictive-search__field">
+      {%- comment -%}
+        放大镜：纯视觉图标（aria-hidden + tabindex="-1"），可访问入口是输入框
+        本身（combobox 语义）。
+        清空按钮恢复（2026-10-10 刘工）：type=search 的原生 WebKit 清除 X
+        无法定制样式，隐藏之，用与抽屉右上角关闭键同款的自定义按钮替代。
+      {%- endcomment -%}
+      <button
+        type="button"
+        class="predictive-search__submit"
+        data-predictive-search-submit
+        aria-hidden="true"
+        tabindex="-1"
+      >
+        {{ 'icon-search.svg' | inline_asset_content }}
+        <span class="visually-hidden">{{ 'search.submit' | t }}</span>
+      </button>
+
+      <input
+        id="search-input-{{ search_section_id }}"
+        class="predictive-search__input"
+        type="search"
+        name="q"
+        value="{{ search.terms | escape }}"
+        placeholder="{{ 'search.placeholder' | t | escape }}"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="predictive-search-results-{{ search_section_id }}"
+        aria-autocomplete="list"
+        aria-describedby="predictive-search-help-{{ search_section_id }}"
+      >
+
+      {%- comment -%}
+        清空输入：显隐由 JS 用 hidden 属性驱动（无输入时彻底离开无障碍树）。
+        样式与抽屉右上角关闭键同款（2026-10-10 刘工）。
+      {%- endcomment -%}
+      <button
+        type="button"
+        class="predictive-search__clear"
+        aria-label="{{ 'search.clear' | t }}"
+        data-predictive-search-clear
+        hidden
+      >
+        {{ 'icon-close.svg' | inline_asset_content }}
+      </button>
+    </div>
 
     <button type="submit" class="visually-hidden">
       {{ 'search.submit' | t }}
@@ -100,7 +106,8 @@
 
     {%- comment -%}
       结果容器由 JS 注入 HTML 片段。aria-controls 指向这个 id，
-      JS 注入内容时复用同一个 id。
+      JS 注入内容时复用同一个 id。不再是浮层：作为 flex 子项吃满
+      dialog 剩余高度，滚动条只出现在列表上（2026-10-10 刘工）。
     {%- endcomment -%}
     <div
       class="predictive-search__panel"
