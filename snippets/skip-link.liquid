@@ -1,0 +1,19 @@
+{% comment %}
+  Skip link — the first focusable element on every page.
+
+  Why it lives in layout/theme.liquid rather than in a section:
+    SDD §8.2 requires a skip link on every page, and it must be the FIRST thing
+    keyboard focus reaches. Sections sit inside header-group, which a merchant can
+    reorder or delete in the theme editor — a skip link living there stops existing
+    the moment the section is dragged away. Rendering it from layout means nothing
+    a merchant does can remove it.
+
+  Target: #MainContent, the main landmark in theme.liquid. The href and the id must
+  stay in sync, or the link jumps nowhere.
+
+  Styles live in critical.css, not in a section stylesheet block here. It has to
+  paint the moment the header is parsed — a skip link that appears late is useless
+  for the keyboard users it exists for.
+{% endcomment %}
+
+<a class="skip-link" href="#MainContent">{{ 'accessibility.skip_to_text' | t }}</a>

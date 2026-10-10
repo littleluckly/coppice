@@ -26,11 +26,17 @@
         }
       }
     },
-    "account": {
-      "type": "account",
-      "settings": {
-        "customer_account_menu": "customer-account-main-menu",
-        "show_follow_on_shop": false
+    "utility-bar": {
+      "type": "utility-bar",
+      "settings": {},
+      "blocks": {
+        "utility-1": {
+          "type": "utility_item",
+          "settings": {
+            "text": "Free freight on liftgate delivery",
+            "link": "/pages/shipping-and-oversized-delivery"
+          }
+        }
       }
     },
     "main-nav": {
@@ -42,7 +48,7 @@
   },
   "order": [
     "announcement-bar",
-    "account",
+    "utility-bar",
     "main-nav"
-  ],
+  ]
 }

@@ -18,13 +18,29 @@
   assign menu = section.settings.menu
 -%}
 
-{% if menu.links.size > 0 %}
-  <nav class="main-nav" aria-label="{{ 'navigation.menu' | t }}">
-    {%- comment -%} ---------- 桌面：PC 端下拉（sticky 仅此处） ---------- {%- endcomment -%}
-    <div class="main-nav__desktop">
-      <ul class="main-nav__list" role="list">
-        {%- for link in menu.links -%}
-          {%- liquid
+{% comment -%}
+  This section is the whole sticky header row (decision 2026-10-09, option A).
+
+  account and cart used to be separate sections, which broke sticky: they are
+  sibling nodes of this one, so the menu would pin to the viewport top while the
+  cart and account icons scrolled away — leaving an unusable strip. Everything that
+  belongs on the pinned row therefore lives INSIDE this section.
+
+  Layout is three zones (menu / search / tools). The search slot is a placeholder
+  until T-1.4 lands; it is here so the row does not need restructuring afterwards.
+
+  Mobile is unaffected: it uses the drawer at the bottom of this file, which already
+  renders its own account and cart copies.
+{%- endcomment -%}
+
+<nav class="main-nav" aria-label="{{ 'navigation.menu' | t }}">
+  {%- comment -%} ---------- 桌面：吸顶整行（O-1，仅 PC） ---------- {%- endcomment -%}
+  <div class="main-nav__desktop">
+    <div class="main-nav__inner">
+      {%- if menu.links.size > 0 -%}
+        <ul class="main-nav__list" role="list">
+          {%- for link in menu.links -%}
+            {%- liquid
             assign has_children = false
             if link.links.size > 0
               assign has_children = true
@@ -103,7 +119,47 @@
             {%- endif -%}
           </li>
         {%- endfor -%}
-      </ul>
+        </ul>
+      {%- endif -%}
+
+      {%- comment -%}
+        Zone 2: search placeholder — filled in by T-1.4 (sections/header-search.liquid).
+        Kept as a block-free div rather than dropped in, so the row's flex geometry
+        does not change when search lands.
+      {%- endcomment -%}
+      <div
+        class="main-nav__search"
+        data-section-id="{{ section.id }}"
+        data-results-limit="{{ section.settings.results_limit }}"
+      >
+        {%- comment -%}
+          T-1.4: predictive-search section mounts here. data-section-id is what the JS
+          sends as section_id so Shopify re-renders THIS section and returns its
+          results fragment — one markup source for both render modes (O-4).
+        {%- endcomment -%}
+        {% render 'predictive-search-entry', search_section_id: section.id %}
+      </div>
+
+      {%- comment -%}
+        Zone 3: tools. Rendered here (not as sibling sections) so they stay on the
+        pinned row — see the file header note.
+      {%- endcomment -%}
+      <div class="main-nav__tools">
+        {% render 'account-entry', menu: section.settings.customer_account_menu %}
+        {% render 'cart-entry' %}
+
+        {%- comment -%}
+          #21 Follow on Shop. Default off: action 'follow' needs extra store config,
+          and an unconfigured button is a dead control. Colours are the component's
+          own — do not restyle (AGENTS.md §5).
+        {%- endcomment -%}
+        {%- if section.settings.show_follow_on_shop and shop.customer_accounts_enabled -%}
+          <div class="account__follow">
+            {{ shop | login_button }}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
     </div>
 
     {%- comment -%} ---------- 移动：原生 <dialog> 抽屉 ---------- {%- endcomment -%}
@@ -203,20 +259,45 @@
               {%- if shop.customer_accounts_enabled -%}
                 {% render 'account-entry', class: 'account--in-drawer' %}
               {%- endif -%}
+              {%- comment -%}
+                cart 入口复用同一 snippet（本期为跳转链接，非按钮——见 T-1.6）。
+              {%- endcomment -%}
+              {% render 'cart-entry', class: 'cart-entry--in-drawer' %}
             </div>
           </div>
         </template>
-      </dialog>
+        </dialog>
       </nav-drawer>
     </div>
   </nav>
-{% endif %}
 
 <script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
+<script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
 
 {% stylesheet %}
   .main-nav {
     position: relative;
+    /* 整行的横向内边距与页面一致 */
+    padding-inline: var(--page-margin);
+  }
+
+  /* 三段布局：菜单 / 搜索 / 工具。
+     grid 而非 flex——菜单长度随商家配置变化，flex 下搜索区会被挤压。 */
+  .main-nav__inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .main-nav__search {
+    min-inline-size: 0;
+  }
+
+  .main-nav__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .main-nav__list {
@@ -243,6 +324,17 @@
     text-decoration: none;
     white-space: nowrap;
     cursor: pointer;
+  }
+
+  /* 焦点态必须可见（SDD §8.2）。下拉靠 :focus-within 展开，但展开不等于
+     有可见指示——键盘用户需要知道自己在哪一项上。 */
+  .main-nav__link:focus-visible,
+  .nav-drawer__link:focus-visible,
+  .nav-drawer__summary:focus-visible,
+  .main-nav__burger:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
   .main-nav__link svg {
@@ -281,7 +373,8 @@
     padding: 0.5rem 0;
     list-style: none;
     background-color: var(--color-background);
-    border: 1px solid currentColor;
+    /* 装饰性分隔线不用 currentColor（深色主题下会过重），用低透明度黑 */
+    border: 1px solid rgb(0 0 0 / 12%);
     border-radius: 4px;
   }
 
@@ -293,6 +386,12 @@
 
   .main-nav__submenu .main-nav__link {
     padding-inline: 1rem;
+  }
+
+  /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
+     必须有实底——否则吸顶时页面内容会透过菜单透出来。 */
+  .main-nav__desktop {
+    background-color: var(--color-background);
   }
 
   /* 移动端抽屉相关：桌面隐藏汉堡与 dialog */
@@ -312,7 +411,7 @@
     margin: 0;
     padding: 0;
     border: 0;
-    border-inline-end: 1px solid currentColor;
+    border-inline-end: 1px solid rgb(0 0 0 / 12%);
     background-color: var(--color-background);
     color: var(--color-foreground);
     overflow-y: auto;
@@ -334,7 +433,7 @@
     align-items: center;
     justify-content: flex-end;
     padding: 0.5rem;
-    border-block-end: 1px solid currentColor;
+    border-block-end: 1px solid rgb(0 0 0 / 12%);
   }
 
   .nav-drawer__close {
@@ -413,12 +512,17 @@
     gap: 1rem;
     margin-block-start: auto;
     padding: 0.5rem 1rem;
-    border-block-start: 1px solid currentColor;
+    border-block-start: 1px solid rgb(0 0 0 / 12%);
   }
 
   /* 抽屉内账户组件的 sheet 从抽屉顶部弹出，与桌面端不同 */
   .account--in-drawer .account__component {
     --shopify-account-dialog-position-top: 0;
+  }
+
+  /* 抽屉内购物车入口与桌面端同结构，仅确保徽标不压到抽屉边缘 */
+  .cart-entry--in-drawer .cart-entry__link {
+    min-inline-size: 44px;
   }
 
   /* ---- 断点：以下为移动端 ---- */
@@ -458,6 +562,112 @@
       top: 0;
       z-index: 20;
     }
+
+    /* 桌面端汉堡与抽屉不出现；桌面区是唯一可见部分 */
+    .main-nav__desktop {
+      display: block;
+    }
+  }
+
+  /* ============ 账户与购物车（方案 A：与菜单同处吸顶行） ============
+     原 account.liquid / cart-entry.liquid 的样式随 section 合并至此——
+     那两个 section 已不再是独立节点（否则 sticky 只黏住菜单，图标会滑走）。 */
+
+  .cart-entry__link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .cart-entry__link svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  /* 徽标绝对定位：脱离文档流，将来加购更新计数时入口尺寸不变（避免 CLS） */
+  .cart-entry__count {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-end: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 视觉小，但数字不被压缩；两位数会自动横向撑开（border-radius 999px 不会破形） */
+    min-inline-size: 1.125rem;
+    block-size: 1.125rem;
+    padding-inline: 0.25rem;
+    font-size: 0.6875rem;
+    line-height: 1;
+    color: var(--color-background);
+    background-color: var(--color-brand);
+    border-radius: 999px;
+  }
+
+  .cart-entry__link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+
+  .account {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Only CSS variables and ::part() — never restructure the component (see header note). */
+  .account__component {
+    --shopify-account-avatar-size: 1.75rem;
+    --shopify-account-radius-base: var(--style-border-radius-inputs);
+    --shopify-account-color-accent: var(--color-brand);
+    --shopify-account-color-background: var(--color-background);
+    --shopify-account-color-text: var(--color-foreground);
+    --shopify-account-font-body: var(--font-primary--family);
+    --shopify-account-font-heading: var(--font-primary--family);
+    /* Sheet opens below the header, not at the very top of the viewport */
+    --shopify-account-dialog-position-top: 3.5rem;
+  }
+
+  /* 触摸目标 ≥ 44×44（AGENTS §8）：组件默认头像小于此，用伪元素把命中区扩到 44px。
+     负 50% 是相对自身尺寸的居中，与书写方向无关（inline-start 已是逻辑轴）。 */
+  .account__component::part(signed-out-avatar) {
+    position: relative;
+  }
+
+  .account__component::part(signed-out-avatar)::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 44px;
+    block-size: 44px;
+    translate: -50% -50%;
+  }
+
+  .account__avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    /* 图标随前景色走，不硬编码色值（AGENTS §6） */
+    color: var(--color-foreground);
+  }
+
+  .account__avatar svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* Follow on Shop 按钮保持组件自带配色，只调间距 */
+  .account__follow {
+    display: flex;
+    align-items: center;
   }
 {% endstylesheet %}
 
@@ -470,6 +680,27 @@
       "id": "menu",
       "label": "t:labels.menu",
       "default": "main-menu"
+    },
+    {
+      "type": "link_list",
+      "id": "customer_account_menu",
+      "label": "t:labels.customer_account_menu",
+      "default": "customer-account-main-menu"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_follow_on_shop",
+      "label": "t:labels.follow_on_shop",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "results_limit",
+      "label": "t:labels.results_limit",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "default": 10
     }
   ],
   "blocks": [],

@@ -24,11 +24,14 @@ shopify theme check        # Theme Check 静态检查 —— 必须 0 Error 才�
 shopify theme push         # 推送到开发店
 shopify theme pull         # 拉取线上主题
 
-python3 tools/check-locale-keys.py   # 校验 t: 翻译键在两个 locale 文件里都存在
+python3 tools/check-locale-keys.py    # 校验 t: 翻译键在两个 locale 文件里都存在
+python3 tools/check-tag-balance.py   # 校验 HTML 标签配对（theme check 的本地补充）
 ```
 
 - 提交审核前：`shopify theme check` 不得出现任何 Error（Warning 尽量清零）。
+- **`shopify theme check` 优先于一切本地检查**。Agent 侧的自查脚本只能做近似判断，`check-tag-balance.py` 尤其容易因属性里的 `>` 误报——它用于「改动后快速发现明显缺口」，**最终以 theme check 为准**。
 - **Agent 沙箱内 `shopify` CLI 不可见**（`command not found`），但刘工本机正常——需要跑 theme check 时请刘工代跑并回贴结果。
+- **已知 warning 不必追**：`OrphanedSnippet` 在当前 theme check 版本上会误报全部 snippet（连 Skeleton 自带的 `css-variables`、`meta-tags`、`image` 都被报），`ValidScopedCSSClass` 对「标记在 snippet、样式在调用方 section」这种既有模式也会报。判定依据见 `dev-docs/bugs.md` 末尾的说明。
 - Lighthouse 验收线见 §7 / §8。
 
 ## 3. 目录结构

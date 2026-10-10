@@ -131,7 +131,49 @@ body {
   padding-block-end: 1.5rem;
 }
 
-/** Visually hidden, screen-reader accessible only */
+/**
+ * Main landmark — the skip link target (see layout/theme.liquid).
+ *
+ * The id/role/tabindex live in the markup; only layout belongs here. Centring here
+ * rather than on each section keeps every section's own max-width free to differ
+ * (e.g. list-collections wants a wider grid than article does).
+ */
+.main-content {
+  inline-size: 100%;
+  max-inline-size: var(--page-width);
+  margin-inline: auto;
+  padding-inline: var(--page-margin);
+}
+
+/**
+ * Skip link.
+ *
+ * Lives here rather than only in the section's {% stylesheet %} because it must be
+ * painted the instant the header is parsed — a skip link that flashes in late is
+ * useless for the keyboard users it exists for.
+ */
+.skip-link {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 100;
+  /* Off-screen until focused. NOT display:none — that would remove it from the
+     focus order entirely and defeat the purpose. */
+  padding: 0.75rem 1rem;
+  color: var(--color-background);
+  background-color: var(--color-foreground);
+  text-decoration: none;
+  translate: 0 -100%;
+}
+
+.skip-link:focus-visible {
+  translate: 0 0;
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+/**
+ * Visually hidden, screen-reader accessible only */
 .visually-hidden {
   position: absolute !important;
   width: 1px;
@@ -139,7 +181,33 @@ body {
   padding: 0;
   margin: -1px;
   overflow: hidden;
+  /* clip-path 是 clip 的现代替代：clip 在 flex/grid 容器里仍可能占位，
+     clip-path: inset(50%) 会真正移出流（AGENTS §8）。两者并存以兼容旧浏览器。 */
   clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/**
+ * 移除 visually-hidden 的绝对定位。
+ *
+ * 用于「视觉隐藏但仍需占位」的场合，例如移动端汉堡按钮：
+ * 焦点可达、读屏可播报，但不推开同排的其他元素（AGENTS §8）。
+ */
+.visually-hidden--inline {
+  position: static !important;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+}
+
+/** 焦点可见的统一口径（SDD §8.2） */
+:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }

@@ -27,9 +27,27 @@
   </head>
 
   <body>
+    {% comment %}
+      Skip link first, before any landmark. It is the first thing keyboard focus
+      reaches, letting people bypass the header. Rendered from layout rather than
+      from a section so a merchant cannot delete it in the theme editor (SDD §8.2).
+    {% endcomment %}
+    {% render 'skip-link' %}
+
+    {% # Header group: announcement-bar → utility-bar → main-nav (the sticky row) %}
     {% sections 'header-group' %}
 
-    {{ content_for_layout }}
+    {% comment %}
+      Main landmark — the skip link target. The id here and the href in
+      snippets/skip-link.liquid must stay in sync.
+
+      tabindex="-1" lets the skip link move focus here. Without it the browser moves
+      the scroll position but not the focus, and the next Tab continues from the
+      header instead of from the content (SDD §8.2).
+    {% endcomment %}
+    <main id="MainContent" class="main-content" role="main" tabindex="-1">
+      {{ content_for_layout }}
+    </main>
 
     {% sections 'footer-group' %}
   </body>

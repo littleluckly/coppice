@@ -10,7 +10,6 @@
 {
   "general": {
     "404": "Not found",
-    "account": "Account",
     "announcement_bar": "Announcement bar",
     "article": "Article",
     "block": "Block",
@@ -33,6 +32,7 @@
     "main_nav": "Main menu",
     "page": "Page",
     "password": "Password",
+    "predictive_search": "Predictive search",
     "primary": "Primary",
     "product": "Product",
     "row": "Row",
@@ -44,7 +44,8 @@
     "spec_units": "Specification units",
     "text": "Text",
     "theme": "Theme",
-    "typography": "Typography"
+    "typography": "Typography",
+    "utility_bar": "Utility bar"
   },
   "sections": {
     "hero_slideshow": {
@@ -174,6 +175,7 @@
     "page_width": "Page width",
     "posts_to_show": "Posts to show",
     "products_to_show": "Products to show",
+    "results_limit": "Number of results",
     "show_payment_icons": "Show payment icons",
     "spec_unit_system": "Specification unit system",
     "spec_unit_system_info": "Data is stored in metric. Imperial (ft/lb) is the default display for the North American market.",
@@ -181,6 +183,7 @@
     "text": "Text",
     "text_style": "Text style",
     "title_override": "Title override",
+    "utility_item": "Item",
     "view_all_label": "'View all' link label",
     "view_all_link": "'View all' link target"
   },

@@ -19,7 +19,7 @@
             "image_mobile": "shopify://shop_images/mower-small-yard-ride-on-mobile-3x4_webp.webp",
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
-            "button_label": "Shop mowers dddd",
+            "button_label": "Shop mowers",
             "button_link": "shopify://collections/20v-battery"
           }
         },
@@ -42,7 +42,7 @@
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
             "button_label": "Shop mowers",
-            "button_link": "#"
+            "button_link": ""
           }
         },
         "slide_6VKME8": {
@@ -161,7 +161,7 @@
     "blog": {
       "type": "blog-posts",
       "settings": {
-        "blog": "news",
+        "blog": "",
         "heading": "Buying guides",
         "posts_to_show": 3
       }
