@@ -162,6 +162,7 @@ class PredictiveSearch extends HTMLElement {
     // overwrite a newer one.
     this._controller?.abort();
     this._controller = new AbortController();
+    const token = ++this._requestSeq;
 
     const limit = this.dataset.resultsLimit || 10;
     const url = new URL(
@@ -175,6 +176,9 @@ class PredictiveSearch extends HTMLElement {
     url.searchParams.set('resources[limit]', limit);
     url.searchParams.set('predictive_search', 'true');
 
+    // loading 从发请求亮到本请求生命周期结束；被更新请求顶替时
+    // token 不匹配，finally 不会把新请求的 loading 关掉
+    this._setBusy(true);
     try {
       // 注意：section_id 请求返回的是 HTML（不是 JSON）——官方示例即用 text() + DOMParser
       const response = await fetch(url, { signal: this._controller.signal });
@@ -207,6 +211,8 @@ class PredictiveSearch extends HTMLElement {
       // AbortError is expected when superseded; anything else is a real failure.
       // Either way the form still submits, so we degrade quietly.
       if (error.name !== 'AbortError') this._close();
+    } finally {
+      if (token === this._requestSeq) this._setBusy(false);
     }
   }
 
