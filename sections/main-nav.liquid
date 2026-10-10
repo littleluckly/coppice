@@ -568,7 +568,8 @@
     inset-block: 0;
     inset-inline: auto 0;
     /* 由 showModal() 置于 top layer，无需 z-index */
-    width: min(24rem, 92vw);
+    /* 宽度（2026-10-10 刘工：最小 600px）：窄屏用 92vw 兜底，≥600px 时锁 600 起 */
+    width: max(600px, min(40rem, 92vw));
     max-width: none;
     height: 100%;
     max-height: none;
@@ -580,6 +581,13 @@
     color: var(--color-foreground);
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  /* 竖屏手机：全宽（600px 下限在手机上必然溢出） */
+  @media screen and (max-width: 749px) {
+    .search-drawer {
+      width: 100vw;
+    }
   }
 
   .search-drawer::backdrop {
