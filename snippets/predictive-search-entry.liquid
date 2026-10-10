@@ -155,7 +155,7 @@
     inline-size: 100%;
     /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-block-size: 48px;
-    padding: 0.625rem 0.75rem 0.625rem 2.75rem;
+    padding: 0.625rem 2.75rem 0.625rem 2.75rem;
     color: var(--color-foreground);
     background-color: var(--color-background);
     /* 极简线型：无框，只有发丝底线；聚焦换品牌色加粗 */
@@ -164,6 +164,13 @@
     border-radius: 0;
     font: inherit;
     font-size: 1.0625rem;
+    appearance: none;
+  }
+
+  /* 原生 WebKit search 清除 X 无法定制，隐藏——用下方自定义清空按钮替代 */
+  .predictive-search__input::-webkit-search-cancel-button,
+  .predictive-search__input::-webkit-search-decoration {
+    -webkit-appearance: none;
     appearance: none;
   }
 
@@ -220,6 +227,38 @@
   }
 
   /* 结果面板：沉浸式——与抽屉同底色、无框无圆角，分区靠发丝线（见 section 样式） */
+  /* 清空按钮：与抽屉右上角关闭键（.search-drawer__close）同款 */
+  .predictive-search__clear {
+    position: absolute;
+    inset-inline-end: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  /* 无输入时隐藏（JS 用 hidden 属性控制，此处兜底初始态） */
+  .predictive-search__clear[hidden] {
+    display: none;
+  }
+
+  .predictive-search__clear svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .predictive-search__clear:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+    border-radius: 2px;
+  }
+
   .predictive-search__panel {
     position: absolute;
     inset-block-start: calc(100% + 0.5rem);
