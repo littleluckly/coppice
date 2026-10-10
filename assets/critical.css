@@ -15,6 +15,10 @@ body {
 
 html:has(dialog[scroll-lock][open], details[scroll-lock][open]) {
   overflow: hidden;
+  /* 锁滚动时滚动条从布局中消失，内容区凭空变宽一个滚动条宽度 → 页面抖动。
+     scrollbar-gutter: stable 在锁定期间保留滚动条占位（经典滚动条系统；
+     overlay 滚动条本无布局宽度，不受影响）。仅在锁定时生效，短页面不常驻空槽。 */
+  scrollbar-gutter: stable;
 }
 
 img,
