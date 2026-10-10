@@ -21,6 +21,11 @@
  * - Progressive enhancement baseline: the <form action> is a real search URL, so with
  *   JS disabled the search still works. This file only enhances it.
  *
+ * - Loading: `aria-busy` is toggled on this element for the duration of the
+ *   newest request (CSS paints a thin sweep line); superseded requests never
+ *   clear a newer one's loading state (monotonic request token).
+ * - No inline clear button (2026-10-10 刘工: only one close icon in the drawer).
+ *
  * Error handling (three documented failure modes — never silently swallow):
  *   404 — section id not found in the theme (a bug in our wiring)
  *   417 — buyer locale not supported by the endpoint
@@ -49,15 +54,18 @@ class PredictiveSearch extends HTMLElement {
   connectedCallback() {
     this._input = this.querySelector('.predictive-search__input');
     this._results = this.querySelector('.predictive-search__panel');
+    this._clearButton = this.querySelector('[data-predictive-search-clear]');
 
     if (!this._input || !this._results) return;
 
     const { signal } = this._abort;
     this._input.addEventListener('input', this._onInput, { signal });
     this._input.addEventListener('keydown', this._onKeydown, { signal });
+    this._clearButton?.addEventListener('click', this._onClear, { signal });
 
-    // 点击面板外关闭；blur 不用（会与点击列表项竞争）
-    this.addEventListener('focusout', this._onFocusOut, { signal });
+    // 注意：不监听 focusout 关面板（2026-10-10 刘工 bug 反馈）——
+    // 点抽屉空白处会把焦点移出输入框，结果列表跟着消失，反直觉。
+    // 面板的生命周期跟查询词走：词 <2 字、无结果、Esc/Tab 才收起。
   }
 
   disconnectedCallback() {
@@ -71,6 +79,7 @@ class PredictiveSearch extends HTMLElement {
   }
 
   _onInput = () => {
+    this._syncClearButton();
     if (this._timer) clearTimeout(this._timer);
 
     const term = this._input.value.trim();
