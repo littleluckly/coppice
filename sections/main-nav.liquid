@@ -631,10 +631,7 @@
   .nav-drawer,
   .search-drawer {
     translate: 100% 0;
-    transition:
-      translate 0.25s ease,
-      display 0.25s allow-discrete,
-      overlay 0.25s allow-discrete;
+    transition: translate 0.25s ease, display 0.25s allow-discrete, overlay 0.25s allow-discrete;
   }
 
   .nav-drawer[open],
@@ -647,6 +644,10 @@
     .search-drawer[open] {
       translate: 100% 0;
     }
+    .nav-drawer[open]::backdrop,
+    .search-drawer[open]::backdrop {
+      opacity: 0;
+    }
   }
 
   /* 遮罩同步淡入淡出 */
@@ -654,13 +655,6 @@
   .search-drawer::backdrop {
     opacity: 1;
     transition: opacity 0.25s ease;
-  }
-
-  @starting-style {
-    .nav-drawer[open]::backdrop,
-    .search-drawer[open]::backdrop {
-      opacity: 0;
-    }
   }
 
   /* WCAG 2.1 / SDD §8.2：用户要求减少动效时全部关闭 */
