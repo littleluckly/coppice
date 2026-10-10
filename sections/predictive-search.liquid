@@ -43,11 +43,11 @@
             {%- if product.featured_image -%}
               {{
                 product.featured_image
-                | image_url: width: 80
+                | image_url: width: 112
                 | image_tag:
                   loading: 'lazy',
-                  widths: '40, 80',
-                  sizes: '40px',
+                  widths: '56, 112',
+                  sizes: '56px',
                   alt: product.featured_image.alt
               }}
             {%- endif -%}
