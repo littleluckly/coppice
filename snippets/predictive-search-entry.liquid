@@ -119,17 +119,32 @@
 
 {% stylesheet %}
   /* 视觉基调（2026-10-10 刘工：极简 / 高端 / 沉浸式 / 工业力量感）：
-     输入框去边框只留发丝底线，聚焦换品牌色；加载用一条细扫描线。 */
+     输入框去边框只留发丝底线，聚焦换品牌色；加载用一条细扫描线。
+     布局（2026-10-10 刘工）：抽屉是纵向 flex 链——结果面板作为
+     flex 子项吃满 dialog 剩余高度，滚动只发生在列表上。 */
   .predictive-search {
     position: relative;
-    display: block;
+    display: flex;
+    flex-direction: column;
     inline-size: 100%;
+    flex: 1;
+    /* 经典 flex 陷阱：子项默认 min-height:auto，不锁 0 就无法收缩，
+       溢出会把 dialog 撑出滚动而不是列表自己滚 */
+    min-height: 0;
   }
 
   .predictive-search__form {
     position: relative;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 输入区：放大镜 / 输入框 / 清空按钮 / 扫描线的共同锚点 */
+  .predictive-search__field {
+    position: relative;
+    flex: none;
   }
 
   .predictive-search__submit {
@@ -195,8 +210,9 @@
   }
 
   /* ---- 加载扫描线：请求进行中，输入框下沿一条细线往返 ----
-     aria-busy 由 JS 在请求生命周期内驱动（过期的请求不会误关）。 */
-  .predictive-search__form::after {
+     aria-busy 由 JS 在请求生命周期内驱动（过期的请求不会误关）。
+     锚在 field 上（form 的底边现在是面板底，不再是输入框下沿）。 */
+  .predictive-search__field::after {
     content: '';
     position: absolute;
     inset-block-end: 0;
@@ -208,7 +224,7 @@
     pointer-events: none;
   }
 
-  .predictive-search[aria-busy='true'] .predictive-search__form::after {
+  .predictive-search[aria-busy='true'] .predictive-search__field::after {
     opacity: 1;
     animation: predictive-search-sweep 0.9s ease-in-out infinite;
   }
