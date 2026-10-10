@@ -250,10 +250,14 @@
   }
 
   /* 结果面板：沉浸式——与抽屉同底色、无框无圆角，分区靠发丝线（见 section 样式） */
-  /* 清空按钮：与抽屉右上角关闭键（.search-drawer__close）同款 */
+  /* 清空按钮：与抽屉右上角关闭键（.search-drawer__close）同款。
+     垂直位置必须显式居中——form 改纵向 flex 后，绝对定位元素的
+     "静态位置"在输入框下方，不设 top 会被挤出去（BUG 2026-10-10）。 */
   .predictive-search__clear {
     position: absolute;
+    inset-block-start: 50%;
     inset-inline-end: 0;
+    translate: 0 -50%;
     display: flex;
     align-items: center;
     justify-content: center;

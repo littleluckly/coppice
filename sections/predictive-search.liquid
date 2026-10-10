@@ -232,8 +232,14 @@
     font-weight: 700;
   }
 
+  /* View all 钉底（2026-10-10 刘工）：sticky bottom——列表可滚时它
+     常驻面板可视区底边（自带底色，滚过的内容不透出），列表不足一屏时
+     呆在自然位置（列表底部），两种情况都不会超出 dialog 下边缘 */
   .predictive-search__footer {
-    border-block-start: none;
+    position: sticky;
+    bottom: 0;
+    background-color: var(--color-background);
+    border-block-start: 1px solid rgb(0 0 0 / 7%);
   }
 
   /* View all：通栏行 + 行尾箭头（AGENTS §6 箭头准则允许的两类位置之一） */
