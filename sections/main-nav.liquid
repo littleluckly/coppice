@@ -196,7 +196,7 @@
         {{ 'icon-menu.svg' | inline_asset_content }}
       </button>
 
-      {%- comment -%} 移动端：logo 居中，汉堡居左、搜索居右（logo 绝对定位，不参与 flex 挤压） {%- endcomment -%}
+      {%- comment -%} 移动端：汉堡居左、搜索图标推到最右 {%- endcomment -%}
       <button
         type="button"
         class="main-nav__search-toggle main-nav__search-toggle--mobile"
@@ -723,6 +723,11 @@
     .main-nav__mobile {
       display: flex;
       align-items: center;
+    }
+
+    /* 汉堡居左，搜索图标推到最右 */
+    .main-nav__search-toggle--mobile {
+      margin-inline-start: auto;
     }
 
     .main-nav__burger {
