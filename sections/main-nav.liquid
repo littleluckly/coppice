@@ -595,7 +595,19 @@
   }
 
   .search-drawer__inner {
+    /* 纵向 flex：head 固定，body（含结果面板）吃满剩余高度。
+       结果多时滚动只发生在列表上，dialog 自身不再出滚动条。 */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     padding: 0.5rem 1rem 1.5rem;
+  }
+
+  .search-drawer__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
   }
 
   .search-drawer__head {
