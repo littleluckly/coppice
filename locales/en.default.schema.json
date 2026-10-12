@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin language editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "general": {
     "404": "Not found",
@@ -21,6 +30,7 @@
     "layout": "Layout",
     "main": "Main",
     "main_nav": "Main menu",
+    "mega_promo": "Mega menu promo",
     "page": "Page",
     "password": "Password",
     "predictive_search": "Predictive search",
@@ -163,6 +173,8 @@
     "link": "Link",
     "logo": "Logo",
     "logo_info": "Falls back to the bundled theme logo when empty",
+    "mega_menu_item": "Attach to menu item",
+    "mega_menu_item_info": "Enter the top-level menu item title exactly as it appears in your menu. The promo card shows inside that item's mega menu panel. Image and link are both required.",
     "menu": "Menu",
     "padding": "Padding",
     "page_margin": "Page margin",
