@@ -549,7 +549,7 @@
     z-index: 1;
     /* 水平 padding 承担条目间距（2026-10-12 第三轮）：padding 计入 trigger 的
        测量范围，药丸覆盖整宽，hover 区域与药丸完全重合 */
-    padding-inline: 0.875rem;
+    padding-inline: 1rem;
     /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-height: 44px;
     padding-block: 0.5rem;
@@ -709,9 +709,7 @@
     opacity: 0;
     visibility: hidden;
     /* visibility 离散过渡：淡出播完才真正隐藏，避免残影闪断 */
-    transition:
-      opacity 0.25s ease,
-      visibility 0.25s;
+    transition: opacity 0.25s ease, visibility 0.25s;
   }
 
   .main-nav__desktop:has(.main-nav__item--group:hover)::after,
