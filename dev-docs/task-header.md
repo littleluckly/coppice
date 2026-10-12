@@ -3,9 +3,9 @@
 > **性质**：SDD 驱动开发的全局组件任务清单（v1.1）。拆解自 `dev-docs/pages-ui.md` §1.1（含 §1.1.1 主导航菜单树）与 `dev-docs/sdd.md` §4.2 / §4.3 / §7.1，不引入新决策。
 > **权威关系**：与 SDD / pages-ui 冲突时以 `dev-docs/sdd.md` 为准；本清单只负责把页头工作切成可执行、可验收的任务。
 > **范围**：`sections/header-group.json` 及其 6 个 section + 移动汉堡抽屉 + 预测搜索。**不含** footer-group（另立清单）、**cart 交互（抽屉 / 计数联动 / 配置项，后续单独开清单）**、主导航菜单的**店侧**建菜单动作（拆为 T-0.2）。
-> **版本**：v2.0 ｜ 2026-10-10 ｜ 总额 **7.75 人日**（已完成 6.25，**剩余待做 1.5**）｜ T-2.2 自查全部通过
-> **进度**：T-0.1 ✅ ｜ T-1.1 ✅ ｜ T-1.2 ✅ ｜ T-1.3 ✅ ｜ T-1.4 ✅ ｜ T-1.5 ✅ ｜ T-1.6 ✅ ｜ T-2.1 ✅ ｜ T-2.2 ✅ ｜ T-3.2 ✅
-> **剩余**：T-3.1 验收 1.0（需刘工在真实店铺环境操作）
+> **版本**：v2.1 ｜ 2026-10-12 ｜ 总额 **9.25 人日**（已完成 7.75，**剩余待做 1.5**）｜ T-2.2 自查全部通过 ｜ v2.1 追加 T-1.7（桌面导航 mega 化改版 1.0 + 同日第二轮滑动药丸 0.5，已完成）
+> **进度**：T-0.1 ✅ ｜ T-1.1 ✅ ｜ T-1.2 ✅ ｜ T-1.3 ✅ ｜ T-1.4 ✅ ｜ T-1.5 ✅ ｜ T-1.6 ✅ ｜ T-1.7 ✅ ｜ T-2.1 ✅ ｜ T-2.2 ✅ ｜ T-3.2 ✅
+> **剩余**：T-3.1 验收 1.0（需刘工在真实店铺环境操作，**T-1.7 的 theme check / Lighthouse 对比并入该任务**）+ T-0.2 店侧 0.5
 > **范围外**：cart 交互（抽屉 / 计数联动 / 配置项）**后续单独开清单**，本清单 T-1.6 仅做静态入口。
 > **实现规约（不在各任务重复）**：交互组件一律 **Custom Element** 封装；模态一律原生 `<dialog>` + `showModal()`，不手写焦点陷阱（AGENTS.md §6 / §8）。
 > **通用约束**（以下不逐任务重复——文案走 `t:` 键、URL 走 `routes`、图片 `image_tag` + width/height、JS 一律 defer/async、隐藏组件首次打开才建 DOM、类名 Skeleton 风格 BEM、设计令牌走 `css-variables.liquid`，AGENTS.md §4/§6）：
@@ -241,6 +241,65 @@
 - `aria-label` 用 `capture` 构造后注入属性，**不在属性值里写 Liquid 控制流**（会留多余空白被读屏念出）；复数走 `one`/`other` 两个键（`cart.cart_with_items`）。
 - 抽屉底部用 `cart-entry--in-drawer` modifier。
 
+#### T-1.7 桌面导航 mega 化改版（对齐参考主题下拉模式）· 1.5 人日 · 依赖：T-1.3 ✅ 2026-10-12 完成（theme check 待刘工代跑）
+
+> **来源**：刘工 2026-10-12 提供某 Shopify 主题商店 demo 的顶部导航三张截图并逐点分析，要求对齐其下拉模式。
+> **落点**：只改 `sections/main-nav.liquid`（标记 + 样式 + schema blocks）与 `locales/en.default.schema.json`（新增 3 键）。移动端抽屉不动（mega 是桌面专属 DOM，O-5 两套 DOM 约定不变）。
+
+**第二轮（同日刘工追加需求）：滑动药丸指示器 · +0.5 人日**
+
+- [x] **桌面导航去下拉箭头**：一级分组项的 chevron 图标删除（asset 保留，移动端抽屉 summary 仍在用）；关联的旋转 CSS 一并删（无消费点，避免 UnusedAssign 类残留）
+- [x] **滑动药丸**：新增 `assets/nav-pill.js`（Custom Element `nav-pill`，约 130 行）——深色药丸（`--color-foreground` 底）滑动跟随 hover / 键盘焦点，鼠标离开整个导航列表即隐藏还原；首次显示无动画定位（避免从列表起点滑穿全导航）；resize 与 `document.fonts.ready` 后重定位；事件绑在元素自身根（非 document 委托），`disconnectedCallback` 走 AbortController 一次拆除
+- [x] **反色文字**：JS 接管后 hover/focus 项 `color: --color-background`（深灰底白字 12.63:1，T-2.2 实测值）；药丸 z-index 垫在 list 之下
+- [x] **无 JS 降级**：custom element 未升级时（`:not(.nav-pill--ready)`），hover/focus 项自身显深色药丸（无滑动），mega 展开不受影响；药丸 span 由 JS 创建，无 JS 时 DOM 无无效元素
+- [x] **当前页指示改文字色**：`--current` / in-branch 从药丸底色降为品牌色文字——"你在哪"的静态指示不能随悬浮态消失（SDD §8.2），深色药丸专职交互反馈。**代价**：当前页高亮弱于第一轮的实心药丸；若要"滑块默认停在当前页、离开导航区滑回"模式，另改
+- [x] `nav-pill.js` 通过 node 语法检查；`check-tag-balance.py` 29 文件平衡；**theme check 待刘工代跑**
+
+**第六轮（同日刘工）：药丸锚点显式化 + 导航行 padding · 并入第二轮 0.5 人日，不另计**
+
+- [x] **锚点显式化**：`.main-nav__desktop` 加 `data-nav-pill-anchor`；`nav-pill.js` 量测基准改为「anchor 校验（position 非 static）+ 与 offsetParent 比对」——不一致（中间层新加定位）时按**实际包含块**量测保证视觉正确并 `console.warn`，anchor 失效时回退 offsetParent。此前裸用 offsetParent 是隐式依赖：祖先全 static 时返回 body、中间层加定位时静默变锚，都是无告警的错位
+- [x] **导航行 padding-block 16px（1rem）**：桌面 `.main-nav__inner` 与移动 `.main-nav__mobile` 各加；链接 44px 触摸目标不变，行高增至 ~76px；mega 面板 top:100% 相对 desktop（含 padding）仍贴行底
+- [x] node 语法检查 ✓、`check-tag-balance.py` 29 文件平衡；theme check 待刘工代跑
+
+**第五轮（同日刘工反馈）：面板真通栏修复 + 层下钻出动画 · 并入第二轮 0.5 人日，不另计**
+
+- [x] **通栏修复（根因）**：面板没占满屏宽不是锚点写错——是第二三轮给药丸分层加的 `ul` / `nav-pill` 包裹层 `position: relative` **劫持了 mega 的定位包含块**（面板缩到菜单宽度）。两处定位删除，分层职责收拢到链接自身（`.main-nav__link` relative + z-index 1，垫在药丸上）；连带 `nav-pill.js` 量测基准改用 `offsetParent`（动态取被定位祖先，结构再变不错位）
+- [x] **层下钻出**：原方案（行底色 ::before z2 + inner z3 + mega z1）**被推翻**——inner 抬 z-index 会创建层叠上下文，把作为后代的 mega 兜住，永远压不到行底色之下。改用 **clip-path 揭示**：面板固定行下，隐藏态 `inset(0 0 100% 0)`（裁切边贴行底），展开 `inset(0 0 -3rem 0)` 向下揭示 + inner 同步 `translateY(-0.75rem → 0)`——视觉即"从导航行底下抽出"，零层级依赖。阴影弃 `box-shadow`（会被 clip 裁掉）改 `filter: drop-shadow`（基于裁切后形状绘制）；display 显隐仍走 allow-discrete（关闭反向播完再摘除）
+- [x] **教训**：动画要"被某元素遮住"时，先查遮罩物与目标是否同一层叠上下文、目标是否在遮罩物的祖先 SC 里——祖先是 positioned+z-index 时后代永远出不去
+- [x] node 语法检查通过、`check-tag-balance.py` 29 文件平衡；**theme check 待刘工代跑**
+
+**第四轮（同日刘工追加）：面板通栏 + 滑入滑出 · 并入第二轮 0.5 人日，不另计**
+
+- [x] **通栏面板**：背景/投影/圆角从 inner 移到 `.main-nav__mega` 本体（占满整行），inner 只保留 `max-inline-size: var(--content-width)` 对齐内容列——与其他主体内容同列线。底角 12px 圆角、顶角贴行，行与面板间 1px 细线分隔；悬停桥 padding 删除（面板紧贴行底，无缝隙）
+- [x] **滑入滑出**：`display` 过渡 + `transition-behavior: allow-discrete`（0.22s，opacity + translateY -0.5rem）——关闭时反向播完再摘除。**降级**：旧浏览器忽略 `transition-behavior` 单独声明，opacity/translate 过渡保留（开启仍有动画、关闭瞬时），不整条失效；`prefers-reduced-motion` 关闭
+- [x] 清理：reduced-motion 块里残留的 `.main-nav__mega-inner`（动画已移到 mega 本体）
+
+**第三轮（同日刘工追加）：条目间距去 gap 改水平 padding · 并入第二轮 0.5 人日，不另计**
+
+- [x] `--main-nav-gap` 删除（全项目仅 list 一处引用，无定义方）；条目间距改由 `.main-nav__link` 自身 `padding-inline: 0.875rem` 提供——gap 空隙是 hover 盲区，鼠标扫过时药丸悬空；padding 计入 trigger 测量范围，hover 区域与药丸完全重合，相邻项无缝衔接
+
+**第一轮**
+
+- [x] **悬浮卡片下拉**：去 1px 边框，改双层阴影（`0 2px 8px /6%` + `0 16px 40px /12%`）、12px 圆角、去分割线、靠间距分层——demo 的"无边框悬浮感"
+- [x] **一级分组改 mega 面板**：废弃"窄下拉 + 二级右侧飞出"，改为锚定 `.main-nav__desktop` 的整行宽面板（内层对齐 `--content-width` 内容列）；每个二级项一列，三级列表直接铺在列内；二级叶子项列标题即链接，不留空壳列。展开仍是纯 CSS hover/focus-within（T-1.3 无 JS 底线不变）；`li` 不再 `position: relative`（面板锚点移到 desktop 容器，注释已写明原因）
+- [x] **当前页药丸高亮**：`link.current` → 实心药丸（品牌绿底白字，9.87:1 为 T-2.2 实测值）；`child_active/child_current` 父级 → 10% 品牌色淡药丸（`color-mix`，不支持时降级为无底色）。废弃旧下划线样式
+- [x] **菜单居中**：`.main-nav__list` 加 `justify-self: center`，logo 左 / 菜单中 / 工具右
+- [x] **转化位 block**：新增 `mega_promo` block（limit 3）——按 `menu_item` 设置与一级项标题**精确匹配**（双侧 strip）挂进对应 mega 面板，每面板只渲染第一个命中；图与链接**必填**，缺一不渲染（不留空壳）。带 `shopify_attributes` 供编辑器选中
+
+**有意不做（代价已明示）**
+
+- [ ] ~~促销卡文字叠图~~（demo "Build your bundle" 式）→ **图下文字**：商家自选图上无法保证 WCAG 4.5:1，SDD §8.2 硬线不赌；代价是卡片视觉冲击弱于叠图
+- [ ] ~~公告栏加社媒/语言货币入口~~ → SDD 已拍板 localization 归 footer（§7.1 #8/#9 只要求提供入口），不重复
+- [ ] ~~"All Products" 出口~~ → 一级分组项无 URL（BUG-023），链接是商家数据，主题侧无法造；如需该出口由店侧在菜单里加叶子项
+
+**实现细节（回查锚点）**
+
+- 面板开启动画：仅入场淡入（`@starting-style` opacity/translate 0.18s），关闭瞬时——不引入 `allow-discrete` 反向动画复杂度；`prefers-reduced-motion` 时关闭
+- promo 图：`image_url: width: 600` + `image_tag`（widths 240–600、`sizes: '15rem'`、lazy），CSS `aspect-ratio: 4/3 + object-fit: cover` 稳 CLS
+- hover 桥：面板 `padding-block: 0.5rem`，触发行与卡片间移动鼠标不丢面板
+- locale：`general.mega_promo` / `labels.mega_menu_item` / `labels.mega_menu_item_info`，`check-locale-keys.py` 通过（33 文件全命中）；schema JSON 合法
+- `check-tag-balance.py` 29 文件全平衡。**`shopify theme check` 沙箱不可见，待刘工代跑确认 0 Error**
+
 ### P2 组装与无障碍底座
 
 #### T-2.1 组装 + skip link · 0.5 人日 · 依赖：T-1.1 ~ T-1.6 ✅ 2026-10-10 完成
@@ -314,8 +373,9 @@ T-0.1 0.5 ✅ + T-0.2 0.5 = 1.0        （T-0.1 已完成 2026-10-09）
 + T-1.1 0.5 + T-1.2 0.5 + T-1.3 1.5 + T-1.4 1.5 + T-1.5 0.5 + T-1.6 0.25 = 4.75   （累计 5.75）
 + T-2.1 0.5 + T-2.2 0.5 = 1.0   （累计 6.75）
 + T-3.1 1.0   （累计 7.75）
++ T-1.7 1.0 ✅ + 第二轮滑动药丸 0.5 ✅ （累计 9.25，v2.1 追加 2026-10-12）
 ────────────────────────────
-合计 7.75 人日（含已完成的 T-0.1 0.5；**剩余待做 7.25**）
+合计 9.25 人日（含已完成的 T-0.1 0.5；**剩余待做 1.5** = T-0.2 0.5 + T-3.1 1.0）
 
 T-3.2 文档回填 0 人日 ✅ 已完成 2026-10-09
 ```

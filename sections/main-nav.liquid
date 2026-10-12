@@ -1,7 +1,7 @@
 {% comment %}
-  Main navigation — desktop dropdown (PC) + off-canvas drawer (mobile).
+  Main navigation — desktop mega menu (PC) + off-canvas drawer (mobile).
 
-  Decisions in force (task-header.md §1, 2026-10-09):
+  Decisions in force (task-header.md, 2026-10-09 / 2026-10-12):
   - O-5: two separate DOM trees, never shared. Desktop is hover/focus-within driven;
     mobile is a native <dialog> opened with showModal() so focus trapping, background
     inert, Esc-to-close and ::backdrop come from the platform instead of hand-rolled JS.
@@ -10,6 +10,20 @@
     never be rendered as an <a> — that would emit a dead href="#" link.
   - ARIA: current page is taken from link.current / link.child_current rather than by
     comparing URL strings ourselves.
+  - 2026-10-12 mega rework: top-level groups render a full-width mega panel
+    (columns per second-level item, third level listed inside the column) instead of a
+    narrow dropdown with a flyout. The panel spans the whole viewport width (anchored
+    against the desktop row), while its inner content stays aligned to the content
+    column. It slides in and out (display transition with allow-discrete, graceful
+    degradation to instant hide on older browsers). Optional conversion card: a
+    mega_promo section block whose "menu item" setting matches the top-level item
+    title renders inside that panel. Promo text sits BELOW the image, never overlaid
+    — contrast on merchant-picked imagery cannot be guaranteed (SDD §8.2).
+  - 2026-10-12 second round (刘工): no dropdown chevrons on desktop. A dark sliding
+    pill (assets/nav-pill.js, custom element nav-pill) follows hover/keyboard focus
+    across the top-level items and hides when the pointer leaves the nav. aria-current
+    stays as static brand-color text — a "you are here" cue must not vanish with the
+    hover state (SDD §8.2). No-JS fallback: hovered item tints itself dark, no sliding.
 
   Recursion is deliberately capped at three levels (Shop > Mowers > Walk-behind).
 {% endcomment %}
@@ -43,7 +57,13 @@
 
 <nav class="main-nav full-width" aria-label="{{ 'navigation.menu' | t }}">
   {%- comment -%} ---------- 桌面：吸顶整行（O-1，仅 PC） ---------- {%- endcomment -%}
-  <div class="main-nav__desktop">
+  {%- comment -%}
+    data-nav-pill-anchor（第五轮，刘工）：药丸与 mega 面板约定共用的定位锚点。
+    CSS 包含块由本元素自身的 position: relative 决定（样式里已写）；
+    JS（nav-pill.js）量测时优先认这个属性并校验其 position——
+    中间层结构变化时告警而不是静默错位。
+  {%- endcomment -%}
+  <div class="main-nav__desktop" data-nav-pill-anchor>
     <div class="main-nav__inner">
       {%- comment -%}
         Zone 0: logo + brand name. Links home. The image is decorative
@@ -64,94 +84,143 @@
       </a>
 
       {%- if menu.links.size > 0 -%}
-        <ul class="main-nav__list" role="list">
-          {%- for link in menu.links -%}
-            {%- liquid
-              assign has_children = false
-              if link.links.size > 0
-                assign has_children = true
-              endif
-              assign is_current = false
-              if link.current
-                assign is_current = true
-              endif
-              assign in_branch = false
-              if link.child_current or link.child_active
-                assign in_branch = true
-              endif
-            -%}
+        <nav-pill class="main-nav__list-wrap">
+          <ul class="main-nav__list" role="list">
+            {%- for link in menu.links -%}
+              {%- liquid
+                assign has_children = false
+                if link.links.size > 0
+                  assign has_children = true
+                endif
+                assign is_current = false
+                if link.current
+                  assign is_current = true
+                endif
+                assign in_branch = false
+                if link.child_current or link.child_active
+                  assign in_branch = true
+                endif
+                assign link_title = link.title | strip
+              -%}
 
-            <li class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}">
-              {%- if has_children -%}
-                {%- comment -%}
-                  分组项：只出 <span>，不输出 <a>（BUG-023）。
-                  aria-expanded 由 CSS :focus-within / :hover 驱动状态，JS 只做点击锁定。
-                {%- endcomment -%}
-                <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
-                  {{ link.title }}
-                  {{ 'icon-chevron-down.svg' | inline_asset_content }}
-                </span>
+              <li
+                class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}{% if has_children %} main-nav__item--group{% endif %}"
+              >
+                {%- if has_children -%}
+                  {%- comment -%}
+                    分组项：只出 <span>，不输出 <a>（BUG-023）。
+                    面板锚定在 .main-nav__desktop 上（整行宽、内容列对齐），
+                    所以 li 自身不能创建定位上下文。
+                    不带下拉箭头（2026-10-12 刘工）：选中态交给滑动药丸指示器。
+                  {%- endcomment -%}
+                  <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                    {{ link.title }}
+                  </span>
 
-                <ul class="main-nav__submenu" role="list">
-                  {%- for child in link.links -%}
-                    {%- liquid
-                      assign child_has_children = false
-                      if child.links.size > 0
-                        assign child_has_children = true
-                      endif
-                    -%}
-
-                    <li class="main-nav__item">
-                      {%- if child_has_children -%}
-                        <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
-                          {{ child.title }}
-                          {{ 'icon-chevron-down.svg' | inline_asset_content }}
-                        </span>
-
-                        <ul class="main-nav__submenu main-nav__submenu--deep" role="list">
-                          {%- for grandchild in child.links -%}
-                            <li class="main-nav__item">
+                  {%- comment -%}
+                    Mega 面板：每个二级项一列；二级是分组时三级列表直接铺在列内，
+                    不再向右飞出（与三级树的展示方式一致，也避免飞出菜单在窄视口贴边裁切）。
+                  {%- endcomment -%}
+                  <div class="main-nav__mega">
+                    <div class="main-nav__mega-inner">
+                      <ul class="main-nav__mega-columns" role="list">
+                        {%- for child in link.links -%}
+                          <li class="main-nav__mega-col">
+                            {%- if child.links.size > 0 -%}
+                              <span class="main-nav__mega-heading">{{ child.title }}</span>
+                              <ul class="main-nav__mega-links" role="list">
+                                {%- for grandchild in child.links -%}
+                                  <li class="main-nav__mega-item">
+                                    <a
+                                      class="main-nav__mega-link{% if grandchild.current %} main-nav__mega-link--current{% endif %}"
+                                      href="{{ grandchild.url }}"
+                                      {% if grandchild.current %}
+                                        aria-current="page"
+                                      {% endif %}
+                                    >
+                                      {{ grandchild.title }}
+                                    </a>
+                                  </li>
+                                {%- endfor -%}
+                              </ul>
+                            {%- else -%}
+                              {%- comment -%} 二级叶子：列标题即链接，不输出空壳列 {%- endcomment -%}
                               <a
-                                class="main-nav__link{% if grandchild.current %} main-nav__link--current{% endif %}"
-                                href="{{ grandchild.url }}"
-                                {% if grandchild.current %}
+                                class="main-nav__mega-heading main-nav__mega-heading--link{% if child.current %} main-nav__mega-link--current{% endif %}"
+                                href="{{ child.url }}"
+                                {% if child.current %}
                                   aria-current="page"
                                 {% endif %}
                               >
-                                {{ grandchild.title }}
+                                {{ child.title }}
                               </a>
-                            </li>
-                          {%- endfor -%}
-                        </ul>
-                      {%- else -%}
-                        <a
-                          class="main-nav__link{% if child.current %} main-nav__link--current{% endif %}"
-                          href="{{ child.url }}"
-                          {% if child.current %}
-                            aria-current="page"
-                          {% endif %}
-                        >
-                          {{ child.title }}
-                        </a>
-                      {%- endif -%}
-                    </li>
-                  {%- endfor -%}
-                </ul>
-              {%- else -%}
-                {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
-                <a
-                  class="main-nav__link{% if is_current %} main-nav__link--current{% endif %}"
-                  href="{{ link.url }}"
-                  {% if is_current %}
-                    aria-current="page"
-                  {% endif %}
-                >
-                  {{ link.title }}
-                </a>
-              {%- endif -%}
-            </li>
-          {%- endfor -%}
-        </ul>
+                            {%- endif -%}
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+
+                      {%- comment -%}
+                        转化位：mega_promo block，按 menu_item 设置与一级项标题精确匹配。
+                        只渲染第一个命中的 block；图与链接必填，缺一不渲染（不留空壳）。
+                        文字在图下方——不叠图，对比度不赌商家自选图（SDD §8.2）。
+                      {%- endcomment -%}
+                      {%- assign promo_rendered = false -%}
+                      {%- for block in section.blocks -%}
+                        {%- if promo_rendered -%}
+                          {%- continue -%}
+                        {%- endif -%}
+                        {%- assign wanted = block.settings.menu_item | strip -%}
+                        {%- if block.type == 'mega_promo'
+                          and wanted == link_title
+                          and block.settings.image != blank
+                          and block.settings.link != blank
+                        -%}
+                          {%- assign promo_rendered = true -%}
+                          <a
+                            class="main-nav__mega-promo"
+                            href="{{ block.settings.link }}"
+                            {{ block.shopify_attributes }}
+                          >
+                            {{
+                              block.settings.image
+                              | image_url: width: 600
+                              | image_tag:
+                                widths: '240, 360, 480, 600',
+                                sizes: '15rem',
+                                loading: 'lazy',
+                                class: 'main-nav__mega-promo-img'
+                            }}
+                            {%- if block.settings.heading != blank or block.settings.subheading != blank -%}
+                              <span class="main-nav__mega-promo-body">
+                                {%- if block.settings.heading != blank -%}
+                                  <span class="main-nav__mega-promo-heading">{{ block.settings.heading }}</span>
+                                {%- endif -%}
+                                {%- if block.settings.subheading != blank -%}
+                                  <span class="main-nav__mega-promo-subheading">{{ block.settings.subheading }}</span>
+                                {%- endif -%}
+                              </span>
+                            {%- endif -%}
+                          </a>
+                        {%- endif -%}
+                      {%- endfor -%}
+                    </div>
+                  </div>
+                {%- else -%}
+                  {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
+                  <a
+                    class="main-nav__link{% if is_current %} main-nav__link--current{% endif %}"
+                    href="{{ link.url }}"
+                    {% if is_current %}
+                      aria-current="page"
+                    {% endif %}
+                  >
+                    {{ link.title }}
+                  </a>
+                {%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+        </nav-pill>
       {%- endif -%}
 
       {%- comment -%}
@@ -357,6 +426,7 @@
   </search-drawer>
 </nav>
 
+<script src="{{ 'nav-pill.js' | asset_url }}" defer></script>
 <script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
 <script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
 <script src="{{ 'search-drawer.js' | asset_url }}" defer></script>
@@ -382,6 +452,12 @@
     white-space: nowrap;
     max-inline-size: var(--content-width);
     margin-inline: auto;
+    /* 导航行上下 16px（第六轮，刘工）——链接自身 min-height 44px 不变，
+       行高随之增加；mega 面板 top:100% 相对 desktop（含此 padding），仍贴行底 */
+    padding-block: 1rem;
+    /* 注意：inner 不能创建 stacking context（position+z-index）——
+       mega 是 inner 的后代，一旦被兜进它的层叠上下文，"面板从行下
+       滑出"就永远做不出来（层级被 inner 整体抬走）。第五轮结论。 */
   }
 
   /* Zone 0: logo + 品牌名。图标与文字并排一行，永不换行。 */
@@ -438,23 +514,42 @@
     border-radius: 2px;
   }
 
+  /* 菜单列包裹层（<nav-pill>）：菜单在中间列内居中。
+     注意不能加 position: relative——它和 ul 的定位都会劫持 mega 面板的
+     包含块（面板会缩到菜单宽度而不是整行宽）；药丸定位用 JS 量测
+     getBoundingClientRect，不依赖 CSS 锚点（2026-10-12 第五轮）。 */
+  .main-nav__list-wrap {
+    display: flex;
+    justify-content: center;
+  }
+
   .main-nav__list {
     display: flex;
     align-items: center;
-    gap: var(--main-nav-gap, 1.25rem);
+    /* 不用 gap（2026-10-12 第三轮，刘工）：条目之间的空隙是 hover 盲区，
+       鼠标扫过时药丸会停在上一个目标上。间距改由链接自身水平 padding 提供，
+       相邻项 hover 区域无缝衔接，药丸滑动连贯。 */
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  /* 注意：这里不能写 position: relative——mega 面板锚定在 .main-nav__desktop
+     上（整行宽），li 一旦创建定位上下文，面板就会缩回单项宽度。 */
   .main-nav__item {
-    position: relative;
+    min-inline-size: 0;
   }
 
   .main-nav__link {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    /* 链接自身抬层（z-index 1）垫在药丸之上——ul/wrap 去定位后（第五轮，
+       为 mega 让出锚点），分层职责收拢到链接自身 */
+    position: relative;
+    z-index: 1;
+    /* 水平 padding 承担条目间距（2026-10-12 第三轮）：padding 计入 trigger 的
+       测量范围，药丸覆盖整宽，hover 区域与药丸完全重合 */
+    padding-inline: 0.875rem;
     /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-height: 44px;
     padding-block: 0.5rem;
@@ -462,6 +557,8 @@
     text-decoration: none;
     white-space: nowrap;
     cursor: pointer;
+    /* 反色随药丸滑动同步过渡 */
+    transition: color 0.18s ease;
   }
 
   /* 焦点态必须可见（SDD §8.2）。下拉靠 :focus-within 展开，但展开不等于
@@ -476,60 +573,234 @@
     border-radius: 2px;
   }
 
-  .main-nav__link svg {
-    width: 0.75rem;
-    height: 0.75rem;
-    /* 箭头旋转仅作视觉辅助，展开状态由 submenu 的 display 表达 */
-    transition: transform 0.15s ease;
-  }
-
+  /* 当前页（2026-10-12 第二轮）：品牌色文字。深色药丸改由滑动指示器承担
+     hover 反馈，但静态"你在哪"不能跟着悬浮态一起消失（SDD §8.2 / aria-current），
+     所以当前页降为文字色指示，不再用药丸底色。 */
   .main-nav__link--current,
   .main-nav__item--in-branch > .main-nav__link {
     color: var(--color-brand);
-    text-decoration: underline;
-    text-underline-offset: 0.25rem;
   }
 
-  /* 分组项 hover / focus-within 展开：纯 CSS，键盘可达，不依赖 JS */
-  .main-nav__item:hover > .main-nav__submenu,
-  .main-nav__item:focus-within > .main-nav__submenu {
+  /* ---- 滑动药丸指示器（2026-10-12 第二轮，配 assets/nav-pill.js） ----
+     深色药丸滑动跟随 hover / 键盘焦点，鼠标离开整个导航区即隐藏还原。
+     JS（nav-pill--ready）接管时链接自身不出底色，文字反色由下方规则处理。 */
+  .main-nav__pill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 999px;
+    background-color: var(--color-foreground);
+    opacity: 0;
+    transition: transform 0.25s ease, width 0.25s ease, height 0.25s ease, opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  .main-nav__pill--on {
+    opacity: 1;
+  }
+
+  /* JS 接管后：悬浮 / 焦点项文字反色（药丸垫底）。
+     深灰底白字 12.63:1（T-2.2 实测值），品牌色文字项同样被覆盖反色。 */
+  .nav-pill--ready .main-nav__item:hover > .main-nav__link,
+  .nav-pill--ready .main-nav__item:focus-within > .main-nav__link {
+    color: var(--color-background);
+  }
+
+  /* 无 JS 降级：custom element 未升级时，hover/focus 项自身显深色药丸（无滑动），
+     mega 面板展开不受影响。 */
+  .main-nav__list-wrap:not(.nav-pill--ready) .main-nav__item:hover > .main-nav__link,
+  .main-nav__list-wrap:not(.nav-pill--ready) .main-nav__item:focus-within > .main-nav__link {
+    color: var(--color-background);
+    background-color: var(--color-foreground);
+    border-radius: 999px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .main-nav__pill,
+    .main-nav__mega,
+    .main-nav__mega-inner {
+      transition: none;
+    }
+  }
+
+  /* ---- Mega 面板（2026-10-12 第五轮）：通栏、整面板滑入滑出、层级行下面 ----
+     锚定 .main-nav__desktop（整行宽），内容区由 inner 对齐内容列。
+     "在导航层级之下滑入"用 clip-path 揭示实现：面板固定在行下方，
+     隐藏态从顶部裁到 0 高（裁切边缘贴着行底边），展开时向下揭示——
+     视觉上就是面板从导航行底下抽出，且不需要任何 z-index 层游戏
+     （层游戏做过一版被否：inner 抬层会创建层叠上下文把面板兜住）。
+     内容位移（inner 的 translate）叠加在揭示上，强化"滑"的动感。
+     展开纯 CSS：hover / focus-within，无 JS 依赖（T-1.3 底线不变）。 */
+  .main-nav__mega {
+    display: none;
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    z-index: 10;
+    /* 通栏实底：与导航行同色，底部圆角；阴影用 drop-shadow——
+       box-shadow 画在盒外，会被 clip-path 一并裁掉；drop-shadow
+       基于裁切后的形状绘制，静止与动画中都可见 */
+    background-color: var(--color-background);
+    border-radius: 0 0 12px 12px;
+    filter: drop-shadow(0 18px 32px rgb(0 0 0 / 16%));
+    /* 面板紧贴导航行（无缝隙）；露出的行界靠细线分隔 */
+    border-block-start: 1px solid rgb(0 0 0 / 8%);
+    /* 整面板滑入滑出：隐藏态 = 从底部裁掉 100%（只留贴行的一条缝），
+       展开态 = 完整。裁切边始终贴着行底边 → "从行下钻出"。
+       display 的显隐用 allow-discrete 延迟到动画播完再摘除；
+       旧浏览器不支持时忽略该单独声明——揭示动画保留（关闭瞬时） */
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path 0.25s ease, display 0.25s;
+    transition-behavior: allow-discrete;
+  }
+
+  .main-nav__item--group:hover > .main-nav__mega,
+  .main-nav__item--group:focus-within > .main-nav__mega {
+    display: block;
+    clip-path: inset(0 0 -3rem 0);
+  }
+
+  @starting-style {
+    .main-nav__item--group:hover > .main-nav__mega,
+    .main-nav__item--group:focus-within > .main-nav__mega {
+      clip-path: inset(0 0 100% 0);
+    }
+  }
+
+  /* 内容区：只管对齐内容列，视觉（底色/投影/圆角）全在通栏面板上。
+     位移与面板揭示同步：从 -0.75rem 滑到 0，"抽出"的动感主要来自这里。 */
+  .main-nav__mega-inner {
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    padding: 1.75rem 2rem;
+    translate: 0 -0.75rem;
+    transition: translate 0.25s ease;
+  }
+
+  .main-nav__item--group:hover > .main-nav__mega .main-nav__mega-inner,
+  .main-nav__item--group:focus-within > .main-nav__mega .main-nav__mega-inner {
+    translate: 0 0;
+  }
+
+  .main-nav__mega-columns {
+    flex: 1 1 auto;
+    display: grid;
+    grid-auto-flow: column;
+    /* 列宽随二级项数量自适应，但设下限避免窄列挤压换行 */
+    grid-auto-columns: minmax(8.5rem, 1fr);
+    gap: 2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    align-content: start;
+  }
+
+  .main-nav__mega-heading {
+    display: block;
+    padding-block: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+    /* 与搜索抽屉标题同款工业小标签风格；对比度 5.74:1（T-2.2 实测） */
+  }
+
+  .main-nav__mega-heading--link {
+    color: var(--color-foreground);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: normal;
+    text-transform: none;
+    text-decoration: none;
+  }
+
+  .main-nav__mega-heading--link:hover {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-links {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.125rem;
+  }
+
+  .main-nav__mega-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 0.25rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .main-nav__mega-link:hover {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-link--current,
+  .main-nav__mega-heading--link.main-nav__mega-link--current {
+    color: var(--color-brand);
+    font-weight: 700;
+  }
+
+  .main-nav__mega-link:focus-visible,
+  .main-nav__mega-heading--link:focus-visible,
+  .main-nav__mega-promo:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* 转化位卡片：图上文下（不叠图——商家自选图上无法保证文字对比度） */
+  .main-nav__mega-promo {
+    flex: 0 0 15rem;
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: var(--color-background);
+    text-decoration: none;
+  }
+
+  .main-nav__mega-promo-img {
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
     display: block;
   }
 
-  .main-nav__item:hover > .main-nav__link svg,
-  .main-nav__item:focus-within > .main-nav__link svg {
-    transform: rotate(180deg);
+  .main-nav__mega-promo-body {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem 1rem;
   }
 
-  .main-nav__submenu {
-    display: none;
-    position: absolute;
-    inset-inline-start: 0;
-    top: 100%;
-    z-index: 10;
-    min-width: 14rem;
-    margin: 0;
-    padding: 0.5rem 0;
-    list-style: none;
-    background-color: var(--color-background);
-    /* 装饰性分隔线不用 currentColor（深色主题下会过重），用低透明度黑 */
-    border: 1px solid rgb(0 0 0 / 12%);
-    border-radius: 4px;
+  .main-nav__mega-promo-heading {
+    font-weight: 700;
+    color: var(--color-foreground);
   }
 
-  /* 第二级：悬停靠右，避免贴边裁切 */
-  .main-nav__submenu--deep {
-    top: 0;
-    inset-inline-start: 100%;
+  .main-nav__mega-promo-subheading {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
   }
 
-  .main-nav__submenu .main-nav__link {
-    padding-inline: 1rem;
-  }
+  /* 面板含转化位时列区不要被压缩：卡片定宽在先，列吃剩余空间（flex 已保证） */
 
   /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
-     必须有实底——否则吸顶时页面内容会透过菜单透出来。 */
+     必须有实底——否则吸顶时页面内容会透过菜单透出来。
+     position: relative 是 mega 面板的锚点（整行宽），不能移到 li / ul 上。 */
   .main-nav__desktop {
+    position: relative;
     background-color: var(--color-background);
   }
 
@@ -812,6 +1083,8 @@
     .main-nav__mobile {
       display: flex;
       align-items: center;
+      /* 移动导航行上下 16px，与桌面行一致（第六轮） */
+      padding-block: 1rem;
     }
 
     /* 汉堡居左，搜索图标推到最右 */
@@ -1003,7 +1276,42 @@
       "default": 10
     }
   ],
-  "blocks": [],
+  "blocks": [
+    {
+      "type": "mega_promo",
+      "name": "t:general.mega_promo",
+      "limit": 3,
+      "settings": [
+        {
+          "type": "text",
+          "id": "menu_item",
+          "label": "t:labels.mega_menu_item",
+          "info": "t:labels.mega_menu_item_info"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.image"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:labels.heading"
+        },
+        {
+          "type": "text",
+          "id": "subheading",
+          "label": "t:labels.subheading"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:labels.link"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 3,
   "enabled_on": {
     "groups": ["header"]
   }
