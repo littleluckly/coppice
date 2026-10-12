@@ -600,38 +600,9 @@
     }
   }
 
-  .main-nav__link svg {
-    width: 0.75rem;
-    height: 0.75rem;
-    /* 箭头旋转仅作视觉辅助，展开状态由 submenu 的 display 表达 */
-    transition: transform 0.15s ease;
-  }
-
-  /* 当前页：实心药丸（2026-10-12）。品牌绿底白字 9.87:1（T-2.2 实测值）。
-     去掉旧的下划线样式——药丸本身就是强指示，两种叠加反而噪音。 */
-  .main-nav__link--current {
-    color: var(--color-background);
-    background-color: var(--color-brand);
-    border-radius: 999px;
-    padding-inline: 0.875rem;
-  }
-
-  /* 所在分支（父级）：淡色药丸。color-mix 不支持时降级为无底色，
-     前景变品牌色仍可指示位置。 */
-  .main-nav__item--in-branch > .main-nav__link {
-    color: var(--color-brand);
-    background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
-    border-radius: 999px;
-    padding-inline: 0.875rem;
-  }
-
   /* ---- Mega 面板（2026-10-12）：悬浮卡片，去边框、无分割线 ----
      锚定 .main-nav__desktop（整行宽），内层对齐 --content-width 内容列。
      展开纯 CSS：hover / focus-within，无 JS 依赖（T-1.3 底线不变）。 */
-  .main-nav__desktop {
-    position: relative;
-  }
-
   .main-nav__mega {
     display: none;
     position: absolute;
