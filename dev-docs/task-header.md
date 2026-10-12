@@ -255,6 +255,13 @@
 - [x] **当前页指示改文字色**：`--current` / in-branch 从药丸底色降为品牌色文字——"你在哪"的静态指示不能随悬浮态消失（SDD §8.2），深色药丸专职交互反馈。**代价**：当前页高亮弱于第一轮的实心药丸；若要"滑块默认停在当前页、离开导航区滑回"模式，另改
 - [x] `nav-pill.js` 通过 node 语法检查；`check-tag-balance.py` 29 文件平衡；**theme check 待刘工代跑**
 
+**第七轮（同日刘工）：页面背景模糊遮罩（apple.com 风格）· 并入第二轮 0.5 人日，不另计**
+
+- [x] mega 展开时行下方整屏暗化（黑 25%）+ `backdrop-filter: blur(8px)`（含 `-webkit-` 前缀，Safari 兼容）
+- [x] 挂 `desktop::after`：**不能挂 mega**（其 clip-path 会把伪元素一起裁掉）；`top: 100%` 向下一屏——不盖导航行、sticky 吸顶时随行、始终覆盖可视区域
+- [x] 显示条件与 mega 一致（hover/focus-within），用 `:has()` 上溯表达（Baseline 2023）；淡入淡出 0.25s 与面板同步，`visibility` 离散过渡防残影；`pointer-events: none` 纯视觉不拦截交互（关闭仍由鼠标离开导航驱动）；reduced-motion 关闭
+- [x] `check-tag-balance.py` 29 文件平衡；theme check 待刘工代跑
+
 **第六轮（同日刘工）：药丸锚点显式化 + 导航行 padding · 并入第二轮 0.5 人日，不另计**
 
 - [x] **锚点显式化**：`.main-nav__desktop` 加 `data-nav-pill-anchor`；`nav-pill.js` 量测基准改为「anchor 校验（position 非 static）+ 与 offsetParent 比对」——不一致（中间层新加定位）时按**实际包含块**量测保证视觉正确并 `console.warn`，anchor 失效时回退 offsetParent。此前裸用 offsetParent 是隐式依赖：祖先全 static 时返回 body、中间层加定位时静默变锚，都是无告警的错位
