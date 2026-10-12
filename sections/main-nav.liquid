@@ -57,7 +57,13 @@
 
 <nav class="main-nav full-width" aria-label="{{ 'navigation.menu' | t }}">
   {%- comment -%} ---------- 桌面：吸顶整行（O-1，仅 PC） ---------- {%- endcomment -%}
-  <div class="main-nav__desktop">
+  {%- comment -%}
+    data-nav-pill-anchor（第五轮，刘工）：药丸与 mega 面板约定共用的定位锚点。
+    CSS 包含块由本元素自身的 position: relative 决定（样式里已写）；
+    JS（nav-pill.js）量测时优先认这个属性并校验其 position——
+    中间层结构变化时告警而不是静默错位。
+  {%- endcomment -%}
+  <div class="main-nav__desktop" data-nav-pill-anchor>
     <div class="main-nav__inner">
       {%- comment -%}
         Zone 0: logo + brand name. Links home. The image is decorative
