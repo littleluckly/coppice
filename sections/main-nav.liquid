@@ -496,6 +496,13 @@
     border-radius: 2px;
   }
 
+  /* 菜单列包裹层（<nav-pill>）：菜单在中间列内居中，同时是滑动药丸的定位锚点 */
+  .main-nav__list-wrap {
+    display: flex;
+    justify-content: center;
+    position: relative;
+  }
+
   .main-nav__list {
     display: flex;
     align-items: center;
@@ -503,8 +510,9 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    /* 菜单在中间列居中（2026-10-12，对齐参考 demo 的对称三段布局） */
-    justify-self: center;
+    /* 药丸垫在链接文字下方（z-index 0 在 list 之下） */
+    position: relative;
+    z-index: 1;
   }
 
   /* 注意：这里不能写 position: relative——mega 面板锚定在 .main-nav__desktop
@@ -524,6 +532,8 @@
     text-decoration: none;
     white-space: nowrap;
     cursor: pointer;
+    /* 反色随药丸滑动同步过渡 */
+    transition: color 0.18s ease;
   }
 
   /* 焦点态必须可见（SDD §8.2）。下拉靠 :focus-within 展开，但展开不等于
