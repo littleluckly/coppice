@@ -72,7 +72,8 @@
       </a>
 
       {%- if menu.links.size > 0 -%}
-        <ul class="main-nav__list" role="list">
+        <nav-pill class="main-nav__list-wrap">
+          <ul class="main-nav__list" role="list">
           {%- for link in menu.links -%}
             {%- liquid
               assign has_children = false
@@ -98,10 +99,10 @@
                   分组项：只出 <span>，不输出 <a>（BUG-023）。
                   面板锚定在 .main-nav__desktop 上（整行宽、内容列对齐），
                   所以 li 自身不能创建定位上下文。
+                  不带下拉箭头（2026-10-12 刘工）：选中态交给滑动药丸指示器。
                 {%- endcomment -%}
                 <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
                   {{ link.title }}
-                  {{ 'icon-chevron-down.svg' | inline_asset_content }}
                 </span>
 
                 {%- comment -%}
