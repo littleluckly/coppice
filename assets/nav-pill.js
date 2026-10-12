@@ -96,9 +96,11 @@ class NavPill extends HTMLElement {
     this._current = item;
 
     /* 量测基准 = 药丸的定位父级：
-       1) 优先 [data-nav-pill-anchor]（校验过 position 非 static）；
+       1) [data-nav-pill-anchor]（校验过 position 非 static）且它就是
+          药丸的实际包含块（offsetParent）→ 按约定量测；
        2) 属性缺失 / 失效 → 回退 offsetParent（CSS 实际包含块）；
-       3) 两者同时存在但不一致 → 按实际包含块量测并告警（结构变化信号）。 */
+       3) 两者不一致 → 中间层结构变了，实际包含块才是 CSS 真正认的锚点，
+          按它量测（保证视觉正确）并告警（提醒同步结构）。 */
     const rect = trigger.getBoundingClientRect();
     const anchor = this._anchor;
     const anchorOk =
@@ -112,7 +114,10 @@ class NavPill extends HTMLElement {
         '— check for a newly positioned element between them.'
       );
     }
-    const baseEl = anchorOk ? anchor : containing || this;
+    const baseEl =
+      anchorOk && (!containing || containing === anchor)
+        ? anchor
+        : containing || this;
     const base = baseEl.getBoundingClientRect();
     const x = rect.left - base.left;
     const y = rect.top - base.top;
