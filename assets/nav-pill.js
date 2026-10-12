@@ -1,0 +1,121 @@
+/**
+ * nav-pill — 桌面主导航的滑动药丸指示器（2026-10-12 刘工需求）。
+ *
+ * 行为：
+ * - 深色药丸（视觉由 main-nav.liquid 的 .main-nav__pill 控制）默认隐藏；
+ *   鼠标悬浮 / 键盘焦点进入某个一级导航项时，药丸滑动到该项下方，
+ *   该项文字同步反色（CSS :hover / :focus-within 配合）。
+ * - 鼠标离开整个列表 / 焦点全部移出列表时，药丸隐藏，还原默认状态。
+ * - 当前页（aria-current）另有静态的品牌色文字指示（SDD §8.2 不能只靠
+ *   悬浮态表达"你在哪"），本组件只负责交互反馈。
+ *
+ * 约定（AGENTS §6）：
+ * - Custom Element 封装；事件绑在自身根上（非 document 全局委托），
+ *   connectedCallback 绑定，disconnectedCallback 里 AbortController 一次拆除，
+ *   主题编辑器 / Section Rendering 重渲染不会叠加监听。
+ * - 无 JS 降级：本元素未升级时（无 nav-pill--ready 类），main-nav.liquid 里
+ *   的 :not(.nav-pill--ready) 兜底规则让 hover 项自身显深色，功能不丢。
+ * - 药丸 span 由本组件创建——无 JS 时 DOM 里不存在无效元素。
+ */
+class NavPill extends HTMLElement {
+  connectedCallback() {
+    const list = this.querySelector('.main-nav__list');
+    if (!list) return;
+
+    this.classList.add('nav-pill--ready');
+    this._list = list;
+    this._current = null;
+
+    const pill = document.createElement('span');
+    pill.className = 'main-nav__pill';
+    pill.setAttribute('aria-hidden', 'true');
+    this.appendChild(pill);
+    this._pill = pill;
+
+    const controller = new AbortController();
+    this._controller = controller;
+    const { signal } = controller;
+
+    list.addEventListener(
+      'mouseover',
+      (event) => {
+        const item = event.target.closest('.main-nav__item');
+        if (item && this.contains(item)) this._move(item);
+      },
+      { signal }
+    );
+
+    list.addEventListener('mouseleave', () => this._hide(), { signal });
+
+    list.addEventListener(
+      'focusin',
+      (event) => {
+        const item = event.target.closest('.main-nav__item');
+        if (item && this.contains(item)) this._move(item);
+      },
+      { signal }
+    );
+
+    list.addEventListener('focusout', (event) => {
+      if (!list.contains(event.relatedTarget)) this._hide();
+    }, { signal });
+
+    window.addEventListener('resize', () => {
+      if (this._isOn()) this._move(this._current);
+    }, { signal });
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        if (this._isOn()) this._move(this._current);
+      });
+    }
+  }
+
+  disconnectedCallback() {
+    if (this._controller) this._controller.abort();
+    if (this._pill) this._pill.remove();
+    this._current = null;
+  }
+
+  _isOn() {
+    return this._pill && this._pill.classList.contains('main-nav__pill--on');
+  }
+
+  _move(item) {
+    if (!item || !this.contains(item)) return;
+    const trigger = item.querySelector(':scope > .main-nav__link');
+    if (!trigger) return;
+
+    this._current = item;
+
+    const rect = trigger.getBoundingClientRect();
+    const base = this.getBoundingClientRect();
+    const x = rect.left - base.left;
+    const y = rect.top - base.top;
+    const pill = this._pill;
+    const wasOn = this._isOn();
+
+    if (!wasOn) {
+      /* 首次显示：先无动画定位到目标，再开透明度——避免药丸从列表起点滑穿整个导航 */
+      pill.style.transition = 'none';
+      pill.style.width = rect.width + 'px';
+      pill.style.height = rect.height + 'px';
+      pill.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+      pill.getBoundingClientRect(); /* 强制 reflow，让下面的 transition 生效 */
+      pill.style.transition = '';
+      pill.classList.add('main-nav__pill--on');
+    } else {
+      pill.style.width = rect.width + 'px';
+      pill.style.height = rect.height + 'px';
+      pill.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+    }
+  }
+
+  _hide() {
+    if (!this._pill) return;
+    this._pill.classList.remove('main-nav__pill--on');
+    this._current = null;
+  }
+}
+
+customElements.define('nav-pill', NavPill);
