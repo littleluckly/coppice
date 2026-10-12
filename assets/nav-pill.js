@@ -26,6 +26,13 @@ class NavPill extends HTMLElement {
     this._list = list;
     this._current = null;
 
+    /* 显式锚点（第五轮，刘工）：[data-nav-pill-anchor] 是药丸与 mega 面板
+       约定的定位父级（main-nav.liquid 里该元素同时持有 position: relative，
+       即 CSS 包含块）。量测基准优先认它；若它不是 positioned、或药丸的
+       实际包含块（offsetParent）与它不一致——说明结构改了没同步，
+       回退到实际包含块并告警，而不是静默错位。 */
+    this._anchor = this.closest('[data-nav-pill-anchor]');
+
     const pill = document.createElement('span');
     pill.className = 'main-nav__pill';
     pill.setAttribute('aria-hidden', 'true');
