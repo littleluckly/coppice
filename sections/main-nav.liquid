@@ -207,7 +207,8 @@
               {%- endif -%}
             </li>
           {%- endfor -%}
-        </ul>
+          </ul>
+        </nav-pill>
       {%- endif -%}
 
       {%- comment -%}
@@ -413,6 +414,7 @@
   </search-drawer>
 </nav>
 
+<script src="{{ 'nav-pill.js' | asset_url }}" defer></script>
 <script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
 <script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
 <script src="{{ 'search-drawer.js' | asset_url }}" defer></script>
