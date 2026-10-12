@@ -95,14 +95,25 @@ class NavPill extends HTMLElement {
 
     this._current = item;
 
-    /* 量测基准必须是药丸的定位包含块（offsetParent）。
-       第五轮起 ul/wrap 去 position（为 mega 让出整行锚点），包含块是
-       .main-nav__desktop 而非包裹层自身——用 offsetParent 动态取，
-       以后定位结构再变也不会错位。 */
+    /* 量测基准 = 药丸的定位父级：
+       1) 优先 [data-nav-pill-anchor]（校验过 position 非 static）；
+       2) 属性缺失 / 失效 → 回退 offsetParent（CSS 实际包含块）；
+       3) 两者同时存在但不一致 → 按实际包含块量测并告警（结构变化信号）。 */
     const rect = trigger.getBoundingClientRect();
-    const base = this._pill.offsetParent
-      ? this._pill.offsetParent.getBoundingClientRect()
-      : this.getBoundingClientRect();
+    const anchor = this._anchor;
+    const anchorOk =
+      anchor && getComputedStyle(anchor).position !== 'static';
+    const containing = this._pill.offsetParent;
+    if (anchorOk && containing && containing !== anchor) {
+      console.warn(
+        '[nav-pill] anchor mismatch: measured against actual containing block.',
+        'expected:', anchor,
+        'actual:', containing,
+        '— check for a newly positioned element between them.'
+      );
+    }
+    const baseEl = anchorOk ? anchor : containing || this;
+    const base = baseEl.getBoundingClientRect();
     const x = rect.left - base.left;
     const y = rect.top - base.top;
     const pill = this._pill;
