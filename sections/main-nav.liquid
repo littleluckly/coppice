@@ -18,6 +18,11 @@
     "menu item" setting matches the top-level item title renders inside that panel.
     Promo text sits BELOW the image, never overlaid — contrast on merchant-picked
     imagery cannot be guaranteed (SDD §8.2).
+  - 2026-10-12 second round (刘工): no dropdown chevrons on desktop. A dark sliding
+    pill (assets/nav-pill.js, custom element nav-pill) follows hover/keyboard focus
+    across the top-level items and hides when the pointer leaves the nav. aria-current
+    stays as static brand-color text — a "you are here" cue must not vanish with the
+    hover state (SDD §8.2). No-JS fallback: hovered item tints itself dark, no sliding.
 
   Recursion is deliberately capped at three levels (Shop > Mowers > Walk-behind).
 {% endcomment %}
