@@ -511,7 +511,9 @@
   .main-nav__list {
     display: flex;
     align-items: center;
-    gap: var(--main-nav-gap, 1.25rem);
+    /* 不用 gap（2026-10-12 第三轮，刘工）：条目之间的空隙是 hover 盲区，
+       鼠标扫过时药丸会停在上一个目标上。间距改由链接自身水平 padding 提供，
+       相邻项 hover 区域无缝衔接，药丸滑动连贯。 */
     margin: 0;
     padding: 0;
     list-style: none;
@@ -529,7 +531,9 @@
   .main-nav__link {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    /* 水平 padding 承担条目间距（2026-10-12 第三轮）：padding 计入 trigger 的
+       测量范围，药丸覆盖整宽，hover 区域与药丸完全重合 */
+    padding-inline: 0.875rem;
     /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-height: 44px;
     padding-block: 0.5rem;
