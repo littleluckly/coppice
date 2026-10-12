@@ -502,11 +502,13 @@
     border-radius: 2px;
   }
 
-  /* 菜单列包裹层（<nav-pill>）：菜单在中间列内居中，同时是滑动药丸的定位锚点 */
+  /* 菜单列包裹层（<nav-pill>）：菜单在中间列内居中。
+     注意不能加 position: relative——它和 ul 的定位都会劫持 mega 面板的
+     包含块（面板会缩到菜单宽度而不是整行宽）；药丸定位用 JS 量测
+     getBoundingClientRect，不依赖 CSS 锚点（2026-10-12 第五轮）。 */
   .main-nav__list-wrap {
     display: flex;
     justify-content: center;
-    position: relative;
   }
 
   .main-nav__list {
@@ -518,9 +520,6 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    /* 药丸垫在链接文字下方（z-index 0 在 list 之下） */
-    position: relative;
-    z-index: 1;
   }
 
   /* 注意：这里不能写 position: relative——mega 面板锚定在 .main-nav__desktop
@@ -532,6 +531,10 @@
   .main-nav__link {
     display: flex;
     align-items: center;
+    /* 链接自身抬层（z-index 1）垫在药丸之上——ul/wrap 去定位后（第五轮，
+       为 mega 让出锚点），分层职责收拢到链接自身 */
+    position: relative;
+    z-index: 1;
     /* 水平 padding 承担条目间距（2026-10-12 第三轮）：padding 计入 trigger 的
        测量范围，药丸覆盖整宽，hover 区域与药丸完全重合 */
     padding-inline: 0.875rem;
