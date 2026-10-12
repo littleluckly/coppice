@@ -80,139 +80,139 @@
       {%- if menu.links.size > 0 -%}
         <nav-pill class="main-nav__list-wrap">
           <ul class="main-nav__list" role="list">
-          {%- for link in menu.links -%}
-            {%- liquid
-              assign has_children = false
-              if link.links.size > 0
-                assign has_children = true
-              endif
-              assign is_current = false
-              if link.current
-                assign is_current = true
-              endif
-              assign in_branch = false
-              if link.child_current or link.child_active
-                assign in_branch = true
-              endif
-              assign link_title = link.title | strip
-            -%}
+            {%- for link in menu.links -%}
+              {%- liquid
+                assign has_children = false
+                if link.links.size > 0
+                  assign has_children = true
+                endif
+                assign is_current = false
+                if link.current
+                  assign is_current = true
+                endif
+                assign in_branch = false
+                if link.child_current or link.child_active
+                  assign in_branch = true
+                endif
+                assign link_title = link.title | strip
+              -%}
 
-            <li
-              class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}{% if has_children %} main-nav__item--group{% endif %}"
-            >
-              {%- if has_children -%}
-                {%- comment -%}
-                  分组项：只出 <span>，不输出 <a>（BUG-023）。
-                  面板锚定在 .main-nav__desktop 上（整行宽、内容列对齐），
-                  所以 li 自身不能创建定位上下文。
-                  不带下拉箭头（2026-10-12 刘工）：选中态交给滑动药丸指示器。
-                {%- endcomment -%}
-                <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
-                  {{ link.title }}
-                </span>
+              <li
+                class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}{% if has_children %} main-nav__item--group{% endif %}"
+              >
+                {%- if has_children -%}
+                  {%- comment -%}
+                    分组项：只出 <span>，不输出 <a>（BUG-023）。
+                    面板锚定在 .main-nav__desktop 上（整行宽、内容列对齐），
+                    所以 li 自身不能创建定位上下文。
+                    不带下拉箭头（2026-10-12 刘工）：选中态交给滑动药丸指示器。
+                  {%- endcomment -%}
+                  <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                    {{ link.title }}
+                  </span>
 
-                {%- comment -%}
-                  Mega 面板：每个二级项一列；二级是分组时三级列表直接铺在列内，
-                  不再向右飞出（与三级树的展示方式一致，也避免飞出菜单在窄视口贴边裁切）。
-                {%- endcomment -%}
-                <div class="main-nav__mega">
-                  <div class="main-nav__mega-inner">
-                    <ul class="main-nav__mega-columns" role="list">
-                      {%- for child in link.links -%}
-                        <li class="main-nav__mega-col">
-                          {%- if child.links.size > 0 -%}
-                            <span class="main-nav__mega-heading">{{ child.title }}</span>
-                            <ul class="main-nav__mega-links" role="list">
-                              {%- for grandchild in child.links -%}
-                                <li class="main-nav__mega-item">
-                                  <a
-                                    class="main-nav__mega-link{% if grandchild.current %} main-nav__mega-link--current{% endif %}"
-                                    href="{{ grandchild.url }}"
-                                    {% if grandchild.current %}
-                                      aria-current="page"
-                                    {% endif %}
-                                  >
-                                    {{ grandchild.title }}
-                                  </a>
-                                </li>
-                              {%- endfor -%}
-                            </ul>
-                          {%- else -%}
-                            {%- comment -%} 二级叶子：列标题即链接，不输出空壳列 {%- endcomment -%}
-                            <a
-                              class="main-nav__mega-heading main-nav__mega-heading--link{% if child.current %} main-nav__mega-link--current{% endif %}"
-                              href="{{ child.url }}"
-                              {% if child.current %}
-                                aria-current="page"
-                              {% endif %}
-                            >
-                              {{ child.title }}
-                            </a>
-                          {%- endif -%}
-                        </li>
+                  {%- comment -%}
+                    Mega 面板：每个二级项一列；二级是分组时三级列表直接铺在列内，
+                    不再向右飞出（与三级树的展示方式一致，也避免飞出菜单在窄视口贴边裁切）。
+                  {%- endcomment -%}
+                  <div class="main-nav__mega">
+                    <div class="main-nav__mega-inner">
+                      <ul class="main-nav__mega-columns" role="list">
+                        {%- for child in link.links -%}
+                          <li class="main-nav__mega-col">
+                            {%- if child.links.size > 0 -%}
+                              <span class="main-nav__mega-heading">{{ child.title }}</span>
+                              <ul class="main-nav__mega-links" role="list">
+                                {%- for grandchild in child.links -%}
+                                  <li class="main-nav__mega-item">
+                                    <a
+                                      class="main-nav__mega-link{% if grandchild.current %} main-nav__mega-link--current{% endif %}"
+                                      href="{{ grandchild.url }}"
+                                      {% if grandchild.current %}
+                                        aria-current="page"
+                                      {% endif %}
+                                    >
+                                      {{ grandchild.title }}
+                                    </a>
+                                  </li>
+                                {%- endfor -%}
+                              </ul>
+                            {%- else -%}
+                              {%- comment -%} 二级叶子：列标题即链接，不输出空壳列 {%- endcomment -%}
+                              <a
+                                class="main-nav__mega-heading main-nav__mega-heading--link{% if child.current %} main-nav__mega-link--current{% endif %}"
+                                href="{{ child.url }}"
+                                {% if child.current %}
+                                  aria-current="page"
+                                {% endif %}
+                              >
+                                {{ child.title }}
+                              </a>
+                            {%- endif -%}
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+
+                      {%- comment -%}
+                        转化位：mega_promo block，按 menu_item 设置与一级项标题精确匹配。
+                        只渲染第一个命中的 block；图与链接必填，缺一不渲染（不留空壳）。
+                        文字在图下方——不叠图，对比度不赌商家自选图（SDD §8.2）。
+                      {%- endcomment -%}
+                      {%- assign promo_rendered = false -%}
+                      {%- for block in section.blocks -%}
+                        {%- if promo_rendered -%}
+                          {%- continue -%}
+                        {%- endif -%}
+                        {%- assign wanted = block.settings.menu_item | strip -%}
+                        {%- if block.type == 'mega_promo'
+                          and wanted == link_title
+                          and block.settings.image != blank
+                          and block.settings.link != blank
+                        -%}
+                          {%- assign promo_rendered = true -%}
+                          <a
+                            class="main-nav__mega-promo"
+                            href="{{ block.settings.link }}"
+                            {{ block.shopify_attributes }}
+                          >
+                            {{
+                              block.settings.image
+                              | image_url: width: 600
+                              | image_tag:
+                                widths: '240, 360, 480, 600',
+                                sizes: '15rem',
+                                loading: 'lazy',
+                                class: 'main-nav__mega-promo-img'
+                            }}
+                            {%- if block.settings.heading != blank or block.settings.subheading != blank -%}
+                              <span class="main-nav__mega-promo-body">
+                                {%- if block.settings.heading != blank -%}
+                                  <span class="main-nav__mega-promo-heading">{{ block.settings.heading }}</span>
+                                {%- endif -%}
+                                {%- if block.settings.subheading != blank -%}
+                                  <span class="main-nav__mega-promo-subheading">{{ block.settings.subheading }}</span>
+                                {%- endif -%}
+                              </span>
+                            {%- endif -%}
+                          </a>
+                        {%- endif -%}
                       {%- endfor -%}
-                    </ul>
-
-                    {%- comment -%}
-                      转化位：mega_promo block，按 menu_item 设置与一级项标题精确匹配。
-                      只渲染第一个命中的 block；图与链接必填，缺一不渲染（不留空壳）。
-                      文字在图下方——不叠图，对比度不赌商家自选图（SDD §8.2）。
-                    {%- endcomment -%}
-                    {%- assign promo_rendered = false -%}
-                    {%- for block in section.blocks -%}
-                      {%- if promo_rendered -%}
-                        {%- continue -%}
-                      {%- endif -%}
-                      {%- assign wanted = block.settings.menu_item | strip -%}
-                      {%- if block.type == 'mega_promo'
-                        and wanted == link_title
-                        and block.settings.image != blank
-                        and block.settings.link != blank
-                      -%}
-                        {%- assign promo_rendered = true -%}
-                        <a
-                          class="main-nav__mega-promo"
-                          href="{{ block.settings.link }}"
-                          {{ block.shopify_attributes }}
-                        >
-                          {{
-                            block.settings.image
-                            | image_url: width: 600
-                            | image_tag:
-                              widths: '240, 360, 480, 600',
-                              sizes: '15rem',
-                              loading: 'lazy',
-                              class: 'main-nav__mega-promo-img'
-                          }}
-                          {%- if block.settings.heading != blank or block.settings.subheading != blank -%}
-                            <span class="main-nav__mega-promo-body">
-                              {%- if block.settings.heading != blank -%}
-                                <span class="main-nav__mega-promo-heading">{{ block.settings.heading }}</span>
-                              {%- endif -%}
-                              {%- if block.settings.subheading != blank -%}
-                                <span class="main-nav__mega-promo-subheading">{{ block.settings.subheading }}</span>
-                              {%- endif -%}
-                            </span>
-                          {%- endif -%}
-                        </a>
-                      {%- endif -%}
-                    {%- endfor -%}
+                    </div>
                   </div>
-                </div>
-              {%- else -%}
-                {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
-                <a
-                  class="main-nav__link{% if is_current %} main-nav__link--current{% endif %}"
-                  href="{{ link.url }}"
-                  {% if is_current %}
-                    aria-current="page"
-                  {% endif %}
-                >
-                  {{ link.title }}
-                </a>
-              {%- endif -%}
-            </li>
-          {%- endfor -%}
+                {%- else -%}
+                  {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
+                  <a
+                    class="main-nav__link{% if is_current %} main-nav__link--current{% endif %}"
+                    href="{{ link.url }}"
+                    {% if is_current %}
+                      aria-current="page"
+                    {% endif %}
+                  >
+                    {{ link.title }}
+                  </a>
+                {%- endif -%}
+              </li>
+            {%- endfor -%}
           </ul>
         </nav-pill>
       {%- endif -%}
@@ -576,11 +576,7 @@
     border-radius: 999px;
     background-color: var(--color-foreground);
     opacity: 0;
-    transition:
-      transform 0.25s ease,
-      width 0.25s ease,
-      height 0.25s ease,
-      opacity 0.15s ease;
+    transition: transform 0.25s ease, width 0.25s ease, height 0.25s ease, opacity 0.15s ease;
     pointer-events: none;
   }
 
@@ -632,10 +628,7 @@
        opacity/translate 过渡保留（开启仍有动画，关闭瞬时），功能无损 */
     opacity: 0;
     translate: 0 -0.5rem;
-    transition:
-      opacity 0.22s ease,
-      translate 0.22s ease,
-      display 0.22s;
+    transition: opacity 0.5s ease, translate 0.5s ease, display 0.5s;
     transition-behavior: allow-discrete;
   }
 
