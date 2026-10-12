@@ -446,10 +446,9 @@
     white-space: nowrap;
     max-inline-size: var(--content-width);
     margin-inline: auto;
-    /* 行内容（logo/菜单/工具）抬到行底色（desktop::before，z-index 2）之上，
-       面板（mega，z-index 1）之下——面板滑入时顶部被行遮住（第五轮） */
-    position: relative;
-    z-index: 3;
+    /* 注意：inner 不能创建 stacking context（position+z-index）——
+       mega 是 inner 的后代，一旦被兜进它的层叠上下文，"面板从行下
+       滑出"就永远做不出来（层级被 inner 整体抬走）。第五轮结论。 */
   }
 
   /* Zone 0: logo + 品牌名。图标与文字并排一行，永不换行。 */
@@ -777,22 +776,11 @@
   /* 面板含转化位时列区不要被压缩：卡片定宽在先，列吃剩余空间（flex 已保证） */
 
   /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
-     position: relative 是 mega 面板的锚点（整行宽），不能移到 li / ul 上。
-     行底色放在 ::before（z-index 2）而非元素自身——元素自身背景永远画在
-     所有后代之下，盖不住滑入中的面板；::before 与 mega(z1)/inner(z3) 同层
-     比较，才能实现"面板在导航行之下滑入"（第五轮）。 */
+     必须有实底——否则吸顶时页面内容会透过菜单透出来。
+     position: relative 是 mega 面板的锚点（整行宽），不能移到 li / ul 上。 */
   .main-nav__desktop {
     position: relative;
-  }
-
-  .main-nav__desktop::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 2;
     background-color: var(--color-background);
-    /* 只做遮罩，不吃指针事件——面板滑入途中与行重叠的部分仍可点 */
-    pointer-events: none;
   }
 
   /* 移动端抽屉相关：桌面隐藏汉堡与 dialog */
