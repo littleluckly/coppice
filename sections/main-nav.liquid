@@ -446,6 +446,10 @@
     white-space: nowrap;
     max-inline-size: var(--content-width);
     margin-inline: auto;
+    /* 行内容（logo/菜单/工具）抬到行底色（desktop::before，z-index 2）之上，
+       面板（mega，z-index 1）之下——面板滑入时顶部被行遮住（第五轮） */
+    position: relative;
+    z-index: 3;
   }
 
   /* Zone 0: logo + 品牌名。图标与文字并排一行，永不换行。 */
