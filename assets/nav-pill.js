@@ -88,8 +88,14 @@ class NavPill extends HTMLElement {
 
     this._current = item;
 
+    /* 量测基准必须是药丸的定位包含块（offsetParent）。
+       第五轮起 ul/wrap 去 position（为 mega 让出整行锚点），包含块是
+       .main-nav__desktop 而非包裹层自身——用 offsetParent 动态取，
+       以后定位结构再变也不会错位。 */
     const rect = trigger.getBoundingClientRect();
-    const base = this.getBoundingClientRect();
+    const base = this._pill.offsetParent
+      ? this._pill.offsetParent.getBoundingClientRect()
+      : this.getBoundingClientRect();
     const x = rect.left - base.left;
     const y = rect.top - base.top;
     const pill = this._pill;
