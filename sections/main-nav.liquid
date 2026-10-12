@@ -10,14 +10,15 @@
     never be rendered as an <a> — that would emit a dead href="#" link.
   - ARIA: current page is taken from link.current / link.child_current rather than by
     comparing URL strings ourselves.
-  - 2026-10-12 mega rework: top-level groups render a full-width floating mega panel
+  - 2026-10-12 mega rework: top-level groups render a full-width mega panel
     (columns per second-level item, third level listed inside the column) instead of a
-    narrow dropdown with a flyout. The panel is absolutely positioned against the
-    desktop row and aligned to the content column, floating card style (shadow, no
-    border, no dividers). Optional conversion card: a mega_promo section block whose
-    "menu item" setting matches the top-level item title renders inside that panel.
-    Promo text sits BELOW the image, never overlaid — contrast on merchant-picked
-    imagery cannot be guaranteed (SDD §8.2).
+    narrow dropdown with a flyout. The panel spans the whole viewport width (anchored
+    against the desktop row), while its inner content stays aligned to the content
+    column. It slides in and out (display transition with allow-discrete, graceful
+    degradation to instant hide on older browsers). Optional conversion card: a
+    mega_promo section block whose "menu item" setting matches the top-level item
+    title renders inside that panel. Promo text sits BELOW the image, never overlaid
+    — contrast on merchant-picked imagery cannot be guaranteed (SDD §8.2).
   - 2026-10-12 second round (刘工): no dropdown chevrons on desktop. A dark sliding
     pill (assets/nav-pill.js, custom element nav-pill) follows hover/keyboard focus
     across the top-level items and hides when the pointer leaves the nav. aria-current
