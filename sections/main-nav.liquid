@@ -190,7 +190,94 @@
 
                       <div class="main-nav__mega-content">
                         {%- for child in link.links -%}
-                          {%- if child.links.size > 0 -%}
+                          {%- liquid
+                            assign child_title = child.title | strip
+                            assign popular_collection = blank
+                            for block in section.blocks
+                              if block.type == 'mega_category_icon' and popular_collection == blank
+                                assign wanted = block.settings.menu_item | strip
+                                if wanted == child_title
+                                  assign popular_collection = block.settings.popular_collection
+                                endif
+                              endif
+                            endfor
+                          -%}
+                          {%- if popular_collection != blank and popular_collection.products.size > 0 -%}
+                            {%- comment -%}
+                              产品卡阵列（2026-10-13 刘工）：popular 集合前 3 个产品，
+                              组头带 "All {集合名} (n) →" 出口（View All 型链接，箭头合规）。
+                              三级链接收进组底小链接行，导航功能不丢。
+                            {%- endcomment -%}
+                            <div class="main-nav__mega-group">
+                              <div class="main-nav__mega-group-head">
+                                <span class="main-nav__mega-group-title">{{ child.title }}</span>
+                                <a
+                                  class="main-nav__mega-group-all"
+                                  href="{{ popular_collection.url }}"
+                                >
+                                  {{ popular_collection.title }}
+                                  ({{ popular_collection.all_products_count }})
+                                  <span class="main-nav__mega-group-all-arrow" aria-hidden="true">&rarr;</span>
+                                </a>
+                              </div>
+                              <ul class="main-nav__mega-cards" role="list">
+                                {%- for product in popular_collection.products limit: 3 -%}
+                                  <li class="main-nav__mega-card">
+                                    <a
+                                      class="main-nav__mega-card-link"
+                                      href="{{ product.url }}"
+                                    >
+                                      {%- assign card_image = product.featured_image -%}
+                                      {%- if card_image != blank -%}
+                                        <span class="main-nav__mega-card-media">
+                                          {{
+                                            card_image
+                                            | image_url: width: 480
+                                            | image_tag:
+                                              widths: '160, 240, 360, 480',
+                                              sizes: '13rem',
+                                              loading: 'lazy',
+                                              alt: '',
+                                              class: 'main-nav__mega-card-img'
+                                          }}
+                                        </span>
+                                      {%- else -%}
+                                        <span class="main-nav__mega-card-media main-nav__mega-card-media--empty" aria-hidden="true"></span>
+                                      {%- endif -%}
+                                      {%- if product.vendor != blank -%}
+                                        <span class="main-nav__mega-card-vendor">{{ product.vendor }}</span>
+                                      {%- endif -%}
+                                      <span class="main-nav__mega-card-title">{{ product.title }}</span>
+                                      <span class="main-nav__mega-card-price">
+                                        {{ product.price | money }}
+                                      </span>
+                                    </a>
+                                  </li>
+                                {%- endfor -%}
+                              </ul>
+                              {%- if child.links.size > 0 -%}
+                                <ul class="main-nav__mega-sublinks" role="list">
+                                  {%- for grandchild in child.links -%}
+                                    <li>
+                                      <a
+                                        class="main-nav__mega-sublink{% if grandchild.current %} main-nav__mega-sublink--current{% endif %}"
+                                        href="{{ grandchild.url }}"
+                                        {% if grandchild.current %}
+                                          aria-current="page"
+                                        {% endif %}
+                                      >
+                                        {{ grandchild.title }}
+                                      </a>
+                                    </li>
+                                  {%- endfor -%}
+                                </ul>
+                              {%- endif -%}
+                            </div>
+                          {%- elsif child.links.size > 0 -%}
+                            {%- comment -%}
+                              回退：未配 popular 集合的分组二级项 → 三级集合卡组
+                              （第八轮逻辑，保证没配 block 也体面）
+                            {%- endcomment -%}
                             <div class="main-nav__mega-group">
                               <span class="main-nav__mega-group-title">{{ child.title }}</span>
                               <ul class="main-nav__mega-cards" role="list">
