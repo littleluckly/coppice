@@ -118,46 +118,124 @@
                   </span>
 
                   {%- comment -%}
-                    Mega 面板：每个二级项一列；二级是分组时三级列表直接铺在列内，
-                    不再向右飞出（与三级树的展示方式一致，也避免飞出菜单在窄视口贴边裁切）。
+                    Mega 面板（2026-10-13 第八轮，参考 demo 截图三段式）：
+                    左列 = 二级分类导航（图标走 mega_category_icon block 配置，
+                    商家可配可删）；中区 = 二级分组的集合卡组（图 + 标题 +
+                    真实产品数，数据走 link.object，不伪造）；右列 = promo 卡。
+                    叶子二级项只在左列出链接，中区不输出空壳组。
                   {%- endcomment -%}
                   <div class="main-nav__mega">
                     <div class="main-nav__mega-inner">
-                      <ul class="main-nav__mega-columns" role="list">
+                      <div class="main-nav__mega-nav">
+                        <span class="main-nav__mega-label">{{ link.title }}</span>
+                        <ul class="main-nav__mega-cats" role="list">
+                          {%- for child in link.links -%}
+                            {%- liquid
+                              assign child_title = child.title | strip
+                              assign icon_kind = ''
+                              for block in section.blocks
+                                if block.type == 'mega_category_icon' and icon_kind == ''
+                                  assign wanted = block.settings.menu_item | strip
+                                  if wanted == child_title
+                                    assign icon_kind = block.settings.icon
+                                  endif
+                                endif
+                              endfor
+                            -%}
+                            <li class="main-nav__mega-cat">
+                              {%- if child.links.size > 0 -%}
+                                <span
+                                  class="main-nav__mega-cat-link main-nav__mega-cat-link--group{% if child.child_current or child.child_active %} main-nav__mega-cat-link--current{% endif %}"
+                                >
+                                  {%- if icon_kind != blank -%}
+                                    {%- assign icon_file = icon_kind | prepend: 'icon-' | append: '.svg' -%}
+                                    <span class="main-nav__mega-cat-icon" aria-hidden="true">
+                                      {{ icon_file | inline_asset_content }}
+                                    </span>
+                                  {%- endif -%}
+                                  {{ child.title }}
+                                </span>
+                              {%- else -%}
+                                <a
+                                  class="main-nav__mega-cat-link{% if child.current %} main-nav__mega-cat-link--current{% endif %}"
+                                  href="{{ child.url }}"
+                                  {% if child.current %}
+                                    aria-current="page"
+                                  {% endif %}
+                                >
+                                  {%- if icon_kind != blank -%}
+                                    {%- assign icon_file = icon_kind | prepend: 'icon-' | append: '.svg' -%}
+                                    <span class="main-nav__mega-cat-icon" aria-hidden="true">
+                                      {{ icon_file | inline_asset_content }}
+                                    </span>
+                                  {%- endif -%}
+                                  {{ child.title }}
+                                </a>
+                              {%- endif -%}
+                            </li>
+                          {%- endfor -%}
+                        </ul>
+                      </div>
+
+                      <div class="main-nav__mega-content">
                         {%- for child in link.links -%}
-                          <li class="main-nav__mega-col">
-                            {%- if child.links.size > 0 -%}
-                              <span class="main-nav__mega-heading">{{ child.title }}</span>
-                              <ul class="main-nav__mega-links" role="list">
+                          {%- if child.links.size > 0 -%}
+                            <div class="main-nav__mega-group">
+                              <span class="main-nav__mega-group-title">{{ child.title }}</span>
+                              <ul class="main-nav__mega-cards" role="list">
                                 {%- for grandchild in child.links -%}
-                                  <li class="main-nav__mega-item">
+                                  <li class="main-nav__mega-card">
                                     <a
-                                      class="main-nav__mega-link{% if grandchild.current %} main-nav__mega-link--current{% endif %}"
+                                      class="main-nav__mega-card-link{% if grandchild.current %} main-nav__mega-card-link--current{% endif %}"
                                       href="{{ grandchild.url }}"
                                       {% if grandchild.current %}
                                         aria-current="page"
                                       {% endif %}
                                     >
-                                      {{ grandchild.title }}
+                                      {%- if grandchild.type == 'collection_link' and grandchild.object != blank -%}
+                                        {%- liquid
+                                          assign coll = grandchild.object
+                                          assign card_image = coll.featured_image
+                                          if card_image == blank
+                                            assign card_image = coll.products.first.image
+                                          endif
+                                        -%}
+                                        {%- if card_image != blank -%}
+                                          <span class="main-nav__mega-card-media">
+                                            {{
+                                              card_image
+                                              | image_url: width: 480
+                                              | image_tag:
+                                                widths: '160, 240, 360, 480',
+                                                sizes: '13rem',
+                                                loading: 'lazy',
+                                                alt: grandchild.title,
+                                                class: 'main-nav__mega-card-img'
+                                            }}
+                                          </span>
+                                        {%- else -%}
+                                          {%- comment -%} 集合无图：色块占位，不渲染空 img {%- endcomment -%}
+                                          <span class="main-nav__mega-card-media main-nav__mega-card-media--empty" aria-hidden="true"></span>
+                                        {%- endif -%}
+                                        <span class="main-nav__mega-card-title">{{ grandchild.title }}</span>
+                                        {%- if coll.all_products_count > 0 -%}
+                                          <span class="main-nav__mega-card-count">
+                                            {{ 'navigation.products_count' | t: count: coll.all_products_count }}
+                                          </span>
+                                        {%- endif -%}
+                                      {%- else -%}
+                                        {%- comment -%} 非集合链接的三级项：纯文字卡，体面降级 {%- endcomment -%}
+                                        <span class="main-nav__mega-card-media main-nav__mega-card-media--empty" aria-hidden="true"></span>
+                                        <span class="main-nav__mega-card-title">{{ grandchild.title }}</span>
+                                      {%- endif -%}
                                     </a>
                                   </li>
                                 {%- endfor -%}
                               </ul>
-                            {%- else -%}
-                              {%- comment -%} 二级叶子：列标题即链接，不输出空壳列 {%- endcomment -%}
-                              <a
-                                class="main-nav__mega-heading main-nav__mega-heading--link{% if child.current %} main-nav__mega-link--current{% endif %}"
-                                href="{{ child.url }}"
-                                {% if child.current %}
-                                  aria-current="page"
-                                {% endif %}
-                              >
-                                {{ child.title }}
-                              </a>
-                            {%- endif -%}
-                          </li>
+                            </div>
+                          {%- endif -%}
                         {%- endfor -%}
-                      </ul>
+                      </div>
 
                       {%- comment -%}
                         转化位：mega_promo block，按 menu_item 设置与一级项标题精确匹配。
