@@ -1039,9 +1039,22 @@
   .main-nav__mega-card-link {
     display: block;
     text-decoration: none;
-    border-radius: 10px;
+    /* 浅色卡底 + 圆角（2026-10-13 刘工）：前景 4% 叠加，深浅主题都成立；
+       hover 微加深提示可点 */
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+    border-radius: 12px;
+    padding: 0.5rem 0.5rem 0.75rem;
+    transition:
+      background-color 0.15s ease,
+      translate 0.15s ease;
   }
 
+  .main-nav__mega-card-link:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+    translate: 0 -2px;
+  }
+
+  /* 图在卡内上缘，跟随卡圆角内缩 */
   .main-nav__mega-card-media {
     display: block;
     aspect-ratio: 4 / 3;
