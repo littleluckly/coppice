@@ -146,6 +146,8 @@
                               {%- if child.links.size > 0 -%}
                                 <span
                                   class="main-nav__mega-cat-link main-nav__mega-cat-link--group{% if child.child_current or child.child_active %} main-nav__mega-cat-link--current{% endif %}"
+                                  tabindex="0"
+                                  data-mega-tab="{{ forloop.index }}"
                                 >
                                   {%- if icon_kind != blank -%}
                                     {%- assign icon_file = icon_kind | prepend: 'icon-' | append: '.svg' -%}
@@ -159,6 +161,8 @@
                                 <a
                                   class="main-nav__mega-cat-link{% if child.current %} main-nav__mega-cat-link--current{% endif %}"
                                   href="{{ child.url }}"
+                                  tabindex="0"
+                                  data-mega-tab="{{ forloop.index }}"
                                   {% if child.current %}
                                     aria-current="page"
                                   {% endif %}
@@ -208,7 +212,7 @@
                               组头带 "All {集合名} (n) →" 出口（View All 型链接，箭头合规）。
                               三级链接收进组底小链接行，导航功能不丢。
                             {%- endcomment -%}
-                            <div class="main-nav__mega-group">
+                            <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
                               <div class="main-nav__mega-group-head">
                                 <span class="main-nav__mega-group-title">{{ child.title }}</span>
                                 <a
@@ -281,7 +285,7 @@
                               回退：未配 popular 集合的分组二级项 → 三级集合卡组
                               （第八轮逻辑，保证没配 block 也体面）
                             {%- endcomment -%}
-                            <div class="main-nav__mega-group">
+                            <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
                               <span class="main-nav__mega-group-title">{{ child.title }}</span>
                               <ul class="main-nav__mega-cards" role="list">
                                 {%- for grandchild in child.links -%}
