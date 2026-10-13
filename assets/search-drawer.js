@@ -49,7 +49,7 @@ class SearchDrawer extends HTMLElement {
 
     const openers = this.closest('nav')?.querySelectorAll('[data-search-drawer-open]');
     openers?.forEach((opener) => {
-      opener.addEventListener('click', () => this._onOpen(opener), { signal });
+      opener.addEventListener('click', () => this.open(opener), { signal });
     });
 
     this._closeButton = this._dialog.querySelector('[data-search-drawer-close]');
