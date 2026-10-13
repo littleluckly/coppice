@@ -511,6 +511,18 @@
                 <h2 class="nav-drawer__title visually-hidden" id="nav-drawer-title">
                   {{ 'navigation.menu' | t }}
                 </h2>
+                {%- comment -%}
+                  搜索图标（2026-10-13 刘工）：放头部、关闭按钮左侧。
+                  点击叠加打开搜索抽屉，不关本抽屉（nav-drawer.js 的 _onSearch）。
+                {%- endcomment -%}
+                <button
+                  type="button"
+                  class="nav-drawer__search"
+                  aria-label="{{ 'search.label' | t }}"
+                  data-nav-search
+                >
+                  {{ 'icon-search.svg' | inline_asset_content }}
+                </button>
                 <button
                   type="button"
                   class="nav-drawer__close"
@@ -522,16 +534,6 @@
               </div>
 
               <ul class="nav-drawer__list" role="list">
-                {%- comment -%}
-                  搜索行（2026-10-13 刘工）：样式不复刻图中的输入框（搜索除外），
-                  交互为整行按钮——点击叠加打开搜索抽屉，关闭后回到菜单层级。
-                {%- endcomment -%}
-                <li class="nav-drawer__item">
-                  <button type="button" class="nav-drawer__link" data-nav-search>
-                    <span>{{ 'search.label' | t }}</span>
-                    {{ 'icon-search.svg' | inline_asset_content }}
-                  </button>
-                </li>
                 {%- for link in menu.links -%}
                   <li class="nav-drawer__item">
                     {%- if link.links.size > 0 -%}
@@ -1679,7 +1681,8 @@
   }
 
   .nav-drawer__close,
-  .nav-drawer__back {
+  .nav-drawer__back,
+  .nav-drawer__search {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1693,13 +1696,15 @@
   }
 
   .nav-drawer__close svg,
-  .nav-drawer__back svg {
+  .nav-drawer__back svg,
+  .nav-drawer__search svg {
     width: 1.25rem;
     height: 1.25rem;
   }
 
   .nav-drawer__close:focus-visible,
-  .nav-drawer__back:focus-visible {
+  .nav-drawer__back:focus-visible,
+  .nav-drawer__search:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
     border-radius: 2px;
