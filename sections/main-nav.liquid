@@ -209,7 +209,7 @@
                                                 widths: '160, 240, 360, 480',
                                                 sizes: '13rem',
                                                 loading: 'lazy',
-                                                alt: grandchild.title,
+                                                alt: '',
                                                 class: 'main-nav__mega-card-img'
                                             }}
                                           </span>
@@ -980,7 +980,7 @@
     color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
   }
 
-  /* 面板含转化位时列区不要被压缩：卡片定宽在先，列吃剩余空间（flex 已保证） */
+  /* promo 定宽在先（flex 0 0 15rem），中区吃剩余空间（flex 1 1 auto 已保证） */
 
   /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
      必须有实底——否则吸顶时页面内容会透过菜单透出来。
