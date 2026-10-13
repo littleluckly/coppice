@@ -796,22 +796,14 @@
     visibility: visible;
   }
 
-  .main-nav__mega-columns {
-    flex: 1 1 auto;
-    display: grid;
-    grid-auto-flow: column;
-    /* 列宽随二级项数量自适应，但设下限避免窄列挤压换行 */
-    grid-auto-columns: minmax(8.5rem, 1fr);
-    gap: 2rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    align-content: start;
+  /* ---- 面板三段（2026-10-13 第八轮，参考 demo）：分类列 / 内容区 / promo ---- */
+  .main-nav__mega-nav {
+    flex: 0 0 12rem;
   }
 
-  .main-nav__mega-heading {
+  .main-nav__mega-label {
     display: block;
-    padding-block: 0.25rem 0.5rem;
+    padding-block: 0.25rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.14em;
@@ -820,20 +812,7 @@
     /* 与搜索抽屉标题同款工业小标签风格；对比度 5.74:1（T-2.2 实测） */
   }
 
-  .main-nav__mega-heading--link {
-    color: var(--color-foreground);
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: normal;
-    text-transform: none;
-    text-decoration: none;
-  }
-
-  .main-nav__mega-heading--link:hover {
-    color: var(--color-brand);
-  }
-
-  .main-nav__mega-links {
+  .main-nav__mega-cats {
     margin: 0;
     padding: 0;
     list-style: none;
@@ -841,32 +820,128 @@
     gap: 0.125rem;
   }
 
-  .main-nav__mega-link {
+  .main-nav__mega-cat-link {
     display: flex;
     align-items: center;
+    gap: 0.625rem;
     min-height: 44px;
-    padding-inline: 0.25rem;
-    color: var(--color-foreground);
+    /* 触控目标 ≥44（AGENTS §8）；行高由 min-height 保证 */
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    font-size: 0.9375rem;
+    font-weight: 500;
     text-decoration: none;
-    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.15s ease;
   }
 
-  .main-nav__mega-link:hover {
-    color: var(--color-brand);
+  .main-nav__mega-cat-link:hover {
+    color: var(--color-foreground);
   }
 
-  .main-nav__mega-link--current,
-  .main-nav__mega-heading--link.main-nav__mega-link--current {
+  .main-nav__mega-cat-link--current {
     color: var(--color-brand);
     font-weight: 700;
   }
 
-  .main-nav__mega-link:focus-visible,
-  .main-nav__mega-heading--link:focus-visible,
+  /* 图标线框随文字色走（svg 内 stroke=currentColor，尺寸由 CSS 控制） */
+  .main-nav__mega-cat-icon {
+    display: flex;
+    color: inherit;
+  }
+
+  .main-nav__mega-cat-icon svg {
+    inline-size: 1.375rem;
+    block-size: 1.375rem;
+  }
+
+  /* 中区：二级分组的集合卡组，纵向堆叠（无切换依赖，无 JS 可用） */
+  .main-nav__mega-content {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    display: grid;
+    gap: 1.5rem;
+    align-content: start;
+  }
+
+  .main-nav__mega-group-title {
+    display: block;
+    padding-block: 0 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-foreground);
+  }
+
+  .main-nav__mega-cards {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: 1.25rem;
+  }
+
+  .main-nav__mega-card-link {
+    display: block;
+    text-decoration: none;
+    border-radius: 10px;
+  }
+
+  .main-nav__mega-card-media {
+    display: block;
+    aspect-ratio: 4 / 3;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+
+  .main-nav__mega-card-media--empty {
+    /* 集合无图占位：色块内嵌一圈极淡描边，读作"图位"而不是破图 */
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+
+  .main-nav__mega-card-img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+
+  /* 产品图 hover 动画：图片缩放 + 标题着色（2026-10-13 刘工） */
+  .main-nav__mega-card-link:hover .main-nav__mega-card-img,
+  .main-nav__mega-card-link:focus-visible .main-nav__mega-card-img {
+    transform: scale(1.06);
+  }
+
+  .main-nav__mega-card-title {
+    display: block;
+    margin-block-start: 0.5rem;
+    font-weight: 600;
+    color: var(--color-foreground);
+    transition: color 0.15s ease;
+  }
+
+  .main-nav__mega-card-link:hover .main-nav__mega-card-title {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-card-count {
+    display: block;
+    margin-block-start: 0.125rem;
+    font-size: 0.8125rem;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+  }
+
+  .main-nav__mega-card-link--current .main-nav__mega-card-title {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-cat-link:focus-visible,
+  .main-nav__mega-card-link:focus-visible,
   .main-nav__mega-promo:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 4px;
   }
 
   /* 转化位卡片：图上文下（不叠图——商家自选图上无法保证文字对比度） */
