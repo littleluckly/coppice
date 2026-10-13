@@ -64,6 +64,7 @@
   "navigation": {
     "menu": "Menu",
     "close": "Close",
+    "view_all_products": "View all products",
     "products_count": {
       "one": "{{ count }} product",
       "other": "{{ count }} products"
