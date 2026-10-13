@@ -1762,13 +1762,14 @@
     font-weight: 700;
   }
 
-  /* 抽屉底部固定区：账户入口 + （后续）购物车入口 */
+  /* 抽屉底部固定区（2026-10-13 参考图）：Account / Cart 竖排两行，
+     行内边距与菜单行对齐，行间 hairline 同菜单列表 */
   .nav-drawer__footer {
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    align-items: stretch;
     margin-block-start: auto;
-    padding: 0.5rem 1rem;
+    padding: 0;
     border-block-start: 1px solid rgb(0 0 0 / 12%);
   }
 
@@ -1777,9 +1778,27 @@
     --shopify-account-dialog-position-top: 0;
   }
 
-  /* 抽屉内购物车入口与桌面端同结构，仅确保徽标不压到抽屉边缘 */
+  /* 账户行：占满一行；触发器是平台组件（内部结构不可控），只对齐行距 */
+  .account--in-drawer {
+    padding: 0.5rem 1rem;
+    border-block-end: 1px solid rgb(0 0 0 / 8%);
+  }
+
+  /* 购物车行：图标 + "Cart" 文字 + 右上角计数徽标（snippet 传 show_label）。
+     徽标保持绝对定位——不占布局空间，cart-updated 同步不会推移布局（防 CLS）。 */
   .cart-entry--in-drawer .cart-entry__link {
-    min-inline-size: 44px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .cart-entry--in-drawer .cart-entry__label {
+    flex: 1;
   }
 
   /* ---- 断点：以下为移动端 ---- */
