@@ -33,6 +33,20 @@ class NavPill extends HTMLElement {
        回退到实际包含块并告警，而不是静默错位。 */
     this._anchor = this.closest('[data-nav-pill-anchor]');
 
+    /* mega 面板分类切换（第九轮补，刘工）：左列 [data-mega-tab] 切换
+       中区 [data-mega-panel]。渐进增强——组件升级前所有面板可见
+       （无 JS 底线不破）；升级后默认第一组，hover / 键盘焦点切换，
+       鼠标离开面板回默认组。 */
+    this._tabs = Array.from(this.querySelectorAll('[data-mega-tab]'));
+    this._panels = Array.from(this.querySelectorAll('[data-mega-panel]'));
+    this._defaultPanelIndex = this._panels.length
+      ? this._panels[0].dataset.megaPanel
+      : null;
+    this._activePanelIndex = null;
+    if (this._panels.length && this._tabs.length) {
+      this.classList.add('nav-mega-tabs--ready');
+    }
+
     const pill = document.createElement('span');
     pill.className = 'main-nav__pill';
     pill.setAttribute('aria-hidden', 'true');
@@ -46,8 +60,20 @@ class NavPill extends HTMLElement {
     list.addEventListener(
       'mouseover',
       (event) => {
+        const tab = event.target.closest('[data-mega-tab]');
+        if (tab && this.contains(tab)) this._switchTabs(tab.dataset.megaTab);
         const item = event.target.closest('.main-nav__item');
-        if (item && this.contains(item)) this._move(item);
+        if (item && this.contains(item)) {
+          this._move(item);
+          /* 鼠标重新压上一级 trigger 时重置为默认组；
+             面板内部移动不触发（面板内元素不在 .main-nav__link 里） */
+          if (
+            event.target.closest('.main-nav__link') &&
+            item.classList.contains('main-nav__item--group')
+          ) {
+            this._switchTabs(this._defaultPanelIndex);
+          }
+        }
       },
       { signal }
     );
@@ -57,11 +83,21 @@ class NavPill extends HTMLElement {
     list.addEventListener(
       'focusin',
       (event) => {
+        const tab = event.target.closest('[data-mega-tab]');
+        if (tab && this.contains(tab)) this._switchTabs(tab.dataset.megaTab);
         const item = event.target.closest('.main-nav__item');
         if (item && this.contains(item)) this._move(item);
       },
       { signal }
     );
+
+    /* 鼠标离开整个面板内容区（含左列与中区）→ 回默认组 */
+    const megaInner = this.querySelector('.main-nav__mega-inner');
+    if (megaInner) {
+      megaInner.addEventListener('mouseleave', () => {
+        this._switchTabs(this._defaultPanelIndex);
+      }, { signal });
+    }
 
     list.addEventListener('focusout', (event) => {
       if (!list.contains(event.relatedTarget)) this._hide();
