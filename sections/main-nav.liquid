@@ -928,7 +928,10 @@
 
   .main-nav__mega-label {
     display: block;
-    padding-block: 0.25rem 0.75rem;
+    /* 顶部三区对齐（2026-10-13 刘工）：去 0.25rem 顶距；
+       0.125rem 是小字 cap 高度补偿（1.125rem 组标题的行盒顶留白更大，
+       小字需微沉才与大字字面齐线），真机不满意再微调 */
+    padding-block: 0.125rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.14em;
