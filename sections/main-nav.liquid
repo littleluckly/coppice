@@ -871,8 +871,8 @@
     margin-inline: auto;
     display: flex;
     align-items: flex-start;
-    gap: 2rem;
-    padding: 1.75rem 2rem;
+    gap: 2.5rem;
+    padding: 2.25rem 2.5rem;
     translate: 0 -0.75rem;
     transition: translate 0.25s ease;
     /* 导航行的不换行约定只属于行本身——面板里的产品名/价格必须可换行
@@ -1111,7 +1111,9 @@
 
   .main-nav__mega-card-count {
     display: block;
-    margin-block-start: 0.375rem;
+    /* auto margin 沉底（等高卡，与 price 同机制） */
+    margin-block-start: auto;
+    padding-block-start: 0.375rem;
     font-size: 0.8125rem;
     color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
   }
@@ -1183,7 +1185,9 @@
   /* 产品卡：名称与价格同行（demo 同款） */
   .main-nav__mega-card-price {
     display: block;
-    margin-block-start: 0.375rem;
+    /* auto margin 沉底（等高卡），0.375rem 是与标题的最小间距 */
+    margin-block-start: auto;
+    padding-block-start: 0.375rem;
     font-size: 0.875rem;
     color: color-mix(in srgb, var(--color-foreground) 80%, transparent);
   }
