@@ -175,6 +175,17 @@
                             </li>
                           {%- endfor -%}
                         </ul>
+                        {%- comment -%}
+                          View all products（2026-10-13 刘工）：官方内置的
+                          /collections/all 路由，箭头符合准则（View All 链接）。
+                        {%- endcomment -%}
+                        <a
+                          class="main-nav__mega-viewall"
+                          href="{{ routes.all_products_collection_url }}"
+                        >
+                          {{ 'navigation.view_all_products' | t }}
+                          <span class="main-nav__mega-viewall-arrow" aria-hidden="true">&rarr;</span>
+                        </a>
                       </div>
 
                       <div class="main-nav__mega-content">
