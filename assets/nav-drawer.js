@@ -114,9 +114,6 @@ class NavDrawer extends HTMLElement {
       this._opener = opener;
       opener.addEventListener('click', this._onOpen, { signal });
     }
-
-    this._closeButton = this._dialog.querySelector('[data-nav-drawer-close]');
-    this._closeButton?.addEventListener('click', this._onClose, { signal });
   }
 
   disconnectedCallback() {
@@ -143,6 +140,13 @@ class NavDrawer extends HTMLElement {
 
     // 锁背景滚动：属性驱动，样式在 critical.css
     this._dialog.setAttribute('scroll-lock', '');
+
+    // 关闭按钮每层面板各有一枚，全量绑定；焦点初始落点取根面板那枚
+    const closeButtons = this._dialog.querySelectorAll('[data-nav-drawer-close]');
+    this._closeButton = closeButtons[0] ?? null;
+    closeButtons.forEach((button) => {
+      button.addEventListener('click', this._onClose, { signal });
+    });
 
     // 面板栈初始化：根面板 = 第一个 data-nav-panel（main-nav.liquid 保证顺序）
     this._root = this._dialog.querySelector('[data-nav-panel]');
