@@ -1387,23 +1387,24 @@
     display: none;
   }
 
-  /* ---- 抽屉：<dialog> + scroll-lock 锁背景（critical.css 已配套） ---- */
+  /* ---- 抽屉：<dialog> + scroll-lock 锁背景（critical.css 已配套） ----
+     2026-10-13 刘工（参考效果图）：移动抽屉改为底部面板——全宽、满高，
+     点击汉堡后从屏幕底边往上滑入。滚动发生在面板内部（见 __panel），
+     dialog 自身 overflow hidden。 */
   .nav-drawer {
-    inset-block: 0;
-    inset-inline: auto 0;
+    inset: 0;
     /* 由 showModal() 置于 top layer，无需 z-index */
-    width: min(22rem, 88vw);
+    width: 100%;
     max-width: none;
     height: 100%;
+    height: 100dvh;
     max-height: none;
     margin: 0;
     padding: 0;
     border: 0;
-    border-inline-end: 1px solid rgb(0 0 0 / 12%);
     background-color: var(--color-background);
     color: var(--color-foreground);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    overflow: hidden;
   }
 
   .nav-drawer::backdrop {
