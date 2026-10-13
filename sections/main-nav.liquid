@@ -492,7 +492,22 @@
           <div class="nav-drawer__panels">
             {%- comment -%} ---- 面板 0：根菜单 ---- {%- endcomment -%}
             <div class="nav-drawer__panel is-active" data-nav-panel>
-              <div class="nav-drawer__head">
+              <div class="nav-drawer__head nav-drawer__head--root">
+                {%- comment -%}
+                  品牌区复刻参考图：logo + 品牌名，链回首页。图片 alt=""
+                  ——可见的品牌文字已命名该链接（与桌面 Zone 0 同一约定）。
+                {%- endcomment -%}
+                <a class="nav-drawer__brand" href="{{ routes.root_url }}">
+                  <img
+                    class="nav-drawer__brand-img"
+                    src="{{ logo_src }}"
+                    alt=""
+                    width="32"
+                    height="32"
+                    loading="lazy"
+                  >
+                  <span class="nav-drawer__brand-name">{{ brand_name }}</span>
+                </a>
                 <h2 class="nav-drawer__title visually-hidden" id="nav-drawer-title">
                   {{ 'navigation.menu' | t }}
                 </h2>
@@ -507,6 +522,16 @@
               </div>
 
               <ul class="nav-drawer__list" role="list">
+                {%- comment -%}
+                  搜索行（2026-10-13 刘工）：样式不复刻图中的输入框（搜索除外），
+                  交互为整行按钮——点击叠加打开搜索抽屉，关闭后回到菜单层级。
+                {%- endcomment -%}
+                <li class="nav-drawer__item">
+                  <button type="button" class="nav-drawer__link" data-nav-search>
+                    <span>{{ 'search.label' | t }}</span>
+                    {{ 'icon-search.svg' | inline_asset_content }}
+                  </button>
+                </li>
                 {%- for link in menu.links -%}
                   <li class="nav-drawer__item">
                     {%- if link.links.size > 0 -%}
@@ -537,15 +562,17 @@
                 #22 要求 <shopify-account> 移动端也可见。抽屉内容虽存于 <template>
                 （首次打开才实例化），组件本身仍在 DOM 中、可被平台脚本识别，
                 因此不违反"移动端可见"。复用 account-entry snippet，不复制组件。
+                2026-10-13：footer 改为与参考图一致的竖排行式（Account / Cart 各一行）。
               {%- endcomment -%}
               <div class="nav-drawer__footer">
                 {%- if shop.customer_accounts_enabled -%}
                   {% render 'account-entry', class: 'account--in-drawer' %}
                 {%- endif -%}
                 {%- comment -%}
-                  cart 入口复用同一 snippet（本期为跳转链接，非按钮——见 T-1.6）。
+                  cart 入口复用同一 snippet（本期为跳转链接，非按钮——见 T-1.6）；
+                  show_label 参考图的行式布局：图标 + "Cart" 文字 + 计数徽标。
                 {%- endcomment -%}
-                {% render 'cart-entry', class: 'cart-entry--in-drawer' %}
+                {% render 'cart-entry', class: 'cart-entry--in-drawer', show_label: true %}
               </div>
             </div>
 
