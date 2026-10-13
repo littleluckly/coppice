@@ -530,9 +530,8 @@
     white-space: nowrap;
     max-inline-size: var(--content-width);
     margin-inline: auto;
-    /* 导航行上下 16px（第六轮，刘工）——链接自身 min-height 44px 不变，
-       行高随之增加；mega 面板 top:100% 相对 desktop（含此 padding），仍贴行底 */
-    padding-block: 1rem;
+    /* 行的上下 padding 由 li 承担（BUG-034，见 .main-nav__item 注释），
+       inner 自身不加 padding-block——否则 trigger 与面板之间出现 hover 盲区 */
     /* 注意：inner 不能创建 stacking context（position+z-index）——
        mega 是 inner 的后代，一旦被兜进它的层叠上下文，"面板从行下
        滑出"就永远做不出来（层级被 inner 整体抬走）。第五轮结论。 */
