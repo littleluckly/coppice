@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <!-- 背景（透明） -->
+  
+  <!-- ================= 电池部分 ================= -->
+  <!-- 电池主体 -->
+  <rect x="480" y="115" width="55" height="85" rx="8" fill="#2b2b2b" stroke="#111" stroke-width="2"/>
+  <!-- 电池橙色装饰 -->
+  <rect x="485" y="120" width="45" height="30" rx="4" fill="#e8720c"/>
+  <!-- 电池底部格栅 -->
+  <rect x="485" y="160" width="45" height="35" rx="3" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+  <line x1="490" y1="168" x2="525" y2="168" stroke="#444" stroke-width="1.5"/>
+  <line x1="490" y1="175" x2="525" y2="175" stroke="#444" stroke-width="1.5"/>
+  <line x1="490" y1="182" x2="525" y2="182" stroke="#444" stroke-width="1.5"/>
+  <line x1="490" y1="189" x2="525" y2="189" stroke="#444" stroke-width="1.5"/>
+
+  <!-- ================= 主机与把手连接部分 ================= -->
+  <!-- 主机外壳 -->
+  <path d="M 470 130 L 400 160 L 395 200 L 440 205 L 490 170 Z" fill="#2b2b2b" stroke="#111" stroke-width="2"/>
+  <!-- 把手杆 -->
+  <path d="M 400 160 L 370 175" stroke="#2b2b2b" stroke-width="18" stroke-linecap="round"/>
+  <!-- D型把手 -->
+  <path d="M 370 155 Q 340 140 320 160 L 320 200 Q 340 215 370 195" fill="none" stroke="#2b2b2b" stroke-width="14" stroke-linecap="round"/>
+  <!-- 把手防滑纹 -->
+  <line x1="345" y1="152" x2="345" y2="208" stroke="#444" stroke-width="2"/>
+  <line x1="355" y1="150" x2="355" y2="210" stroke="#444" stroke-width="2"/>
+  <line x1="365" y1="152" x2="365" y2="208" stroke="#444" stroke-width="2"/>
+
+  <!-- ================= 伸缩杆 ================= -->
+  <!-- 上段杆 -->
+  <rect x="300" y="195" width="80" height="16" rx="6" fill="#3a3a3a" stroke="#222" stroke-width="2" transform="rotate(25 340 203)"/>
+  <!-- 中段杆（带调节环） -->
+  <rect x="220" y="240" width="90" height="14" rx="5" fill="#3a3a3a" stroke="#222" stroke-width="2" transform="rotate(25 265 247)"/>
+  <!-- 调节环 -->
+  <rect x="245" y="235" width="18" height="24" rx="4" fill="#555" stroke="#222" stroke-width="1.5" transform="rotate(25 254 247)"/>
+  <!-- 下段杆 -->
+  <rect x="150" y="280" width="85" height="16" rx="6" fill="#3a3a3a" stroke="#222" stroke-width="2" transform="rotate(25 192 288)"/>
+
+  <!-- ================= 电机头 ================= -->
+  <!-- 电机外壳 -->
+  <path d="M 160 310 L 130 330 L 120 390 L 160 410 L 200 380 L 200 330 Z" fill="#2b2b2b" stroke="#111" stroke-width="2"/>
+  <!-- 散热片 -->
+  <line x1="140" y1="335" x2="140" y2="385" stroke="#444" stroke-width="3"/>
+  <line x1="150" y1="330" x2="150" y2="390" stroke="#444" stroke-width="3"/>
+  <line x1="160" y1="328" x2="160" y2="392" stroke="#444" stroke-width="3"/>
+  <line x1="170" y1="330" x2="170" y2="388" stroke="#444" stroke-width="3"/>
+  <!-- 橙色标签 -->
+  <rect x="175" y="350" width="20" height="12" rx="2" fill="#e8720c"/>
+
+  <!-- ================= 底部护罩 ================= -->
+  <!-- 护罩主体 -->
+  <path d="M 100 420 Q 60 430 50 460 Q 70 480 120 480 L 220 480 Q 250 460 240 420 Q 200 410 160 415 Z" fill="#1f1f1f" stroke="#111" stroke-width="2"/>
+  <!-- 护罩高光 -->
+  <path d="M 110 425 Q 80 435 75 455" fill="none" stroke="#555" stroke-width="2"/>
+  <!-- 护罩边缘 -->
+  <path d="M 50 460 Q 70 485 120 485 L 220 485 Q 255 465 240 420" fill="none" stroke="#333" stroke-width="2"/>
+
+  <!-- ================= 打草头 ================= -->
+  <!-- 转轴 -->
+  <rect x="155" y="475" width="30" height="25" rx="4" fill="#333" stroke="#111" stroke-width="2"/>
+  <!-- 打草头圆盘 -->
+  <ellipse cx="170" cy="510" rx="35" ry="12" fill="#2b2b2b" stroke="#111" stroke-width="2"/>
+  <!-- 中心旋钮 -->
+  <ellipse cx="170" cy="512" rx="12" ry="6" fill="#444" stroke="#222" stroke-width="1.5"/>
+
+  <!-- ================= 打草绳 ================= -->
+  <!-- 左侧草绳 -->
+  <path d="M 135 515 Q 100 530 60 540" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+  <!-- 右侧草绳 -->
+  <path d="M 205 515 Q 240 535 280 545" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- ================= 细节高光 ================= -->
+  <!-- 杆上高光 -->
+  <line x1="310" y1="198" x2="360" y2="215" stroke="#666" stroke-width="1.5" opacity="0.6"/>
+  <line x1="230" y1="245" x2="280" y2="262" stroke="#666" stroke-width="1.5" opacity="0.6"/>
+  <line x1="160" y1="285" x2="210" y2="302" stroke="#666" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- 把手高光 -->
+  <path d="M 370 158 Q 345 145 325 162" fill="none" stroke="#555" stroke-width="2" opacity="0.5"/>
+
+  <!-- 电机高光 -->
+  <path d="M 165 315 L 140 332" fill="none" stroke="#666" stroke-width="1.5" opacity="0.5"/>
+</svg>
