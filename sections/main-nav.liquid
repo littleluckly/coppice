@@ -902,6 +902,10 @@
   /* ---- 面板三段（2026-10-13 第八轮，参考 demo）：分类列 / 内容区 / promo ---- */
   .main-nav__mega-nav {
     flex: 0 0 12rem;
+    /* 左列纵向排布：分类列表在上，View all 出口压到底部 */
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
   }
 
   .main-nav__mega-label {
