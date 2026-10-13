@@ -15,34 +15,60 @@
       "type": "announcement-bar",
       "settings": {
         "dismissible": true
-      },
-      "blocks": {
-        "announcement-1": {
-          "type": "announcement",
-          "settings": {
-            "text": "Oversized orders ship by freight with liftgate delivery — see shipping details",
-            "link": "/pages/shipping-and-oversized-delivery"
-          }
-        }
       }
     },
     "utility-bar": {
       "type": "utility-bar",
-      "settings": {},
-      "blocks": {
-        "utility-1": {
-          "type": "utility_item",
-          "settings": {
-            "text": "Free freight on liftgate delivery",
-            "link": "/pages/shipping-and-oversized-delivery"
-          }
-        }
-      }
+      "settings": {}
     },
     "main-nav": {
       "type": "main-nav",
+      "blocks": {
+        "mega_category_icon_bMTbBr": {
+          "type": "mega_category_icon",
+          "settings": {
+            "menu_item": "Accessories",
+            "icon": "accessories",
+            "popular_collection": "featured"
+          }
+        },
+        "mega_category_icon_X4g7yq": {
+          "type": "mega_category_icon",
+          "settings": {
+            "menu_item": "Trimmers",
+            "icon": "trimmer",
+            "popular_collection": "self-propelled"
+          }
+        },
+        "mega_category_icon_8Jt6np": {
+          "type": "mega_category_icon",
+          "settings": {
+            "menu_item": "Chainsaws",
+            "icon": "chainsaw",
+            "popular_collection": "chainsaw-popular"
+          }
+        },
+        "mega_category_icon_mgPtg6": {
+          "type": "mega_category_icon",
+          "settings": {
+            "menu_item": "Mowers",
+            "icon": "mower",
+            "popular_collection": "mower-popular"
+          }
+        }
+      },
+      "block_order": [
+        "mega_category_icon_bMTbBr",
+        "mega_category_icon_X4g7yq",
+        "mega_category_icon_8Jt6np",
+        "mega_category_icon_mgPtg6"
+      ],
       "settings": {
-        "menu": "main-menu"
+        "brand_name": "Northbark",
+        "menu": "main-menu",
+        "customer_account_menu": "customer-account-main-menu",
+        "show_follow_on_shop": false,
+        "results_limit": 10
       }
     }
   },
