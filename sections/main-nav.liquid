@@ -242,7 +242,10 @@
                                           }}
                                         </span>
                                       {%- else -%}
-                                        <span class="main-nav__mega-card-media main-nav__mega-card-media--empty" aria-hidden="true"></span>
+                                        <span
+                                          class="main-nav__mega-card-media main-nav__mega-card-media--empty"
+                                          aria-hidden="true"
+                                        ></span>
                                       {%- endif -%}
                                       {%- if product.vendor != blank -%}
                                         <span class="main-nav__mega-card-vendor">{{ product.vendor }}</span>
@@ -313,7 +316,10 @@
                                           </span>
                                         {%- else -%}
                                           {%- comment -%} 集合无图：色块占位，不渲染空 img {%- endcomment -%}
-                                          <span class="main-nav__mega-card-media main-nav__mega-card-media--empty" aria-hidden="true"></span>
+                                          <span
+                                            class="main-nav__mega-card-media main-nav__mega-card-media--empty"
+                                            aria-hidden="true"
+                                          ></span>
                                         {%- endif -%}
                                         <span class="main-nav__mega-card-title">{{ grandchild.title }}</span>
                                         {%- if coll.all_products_count > 0 -%}
@@ -323,7 +329,10 @@
                                         {%- endif -%}
                                       {%- else -%}
                                         {%- comment -%} 非集合链接的三级项：纯文字卡，体面降级 {%- endcomment -%}
-                                        <span class="main-nav__mega-card-media main-nav__mega-card-media--empty" aria-hidden="true"></span>
+                                        <span
+                                          class="main-nav__mega-card-media main-nav__mega-card-media--empty"
+                                          aria-hidden="true"
+                                        ></span>
                                         <span class="main-nav__mega-card-title">{{ grandchild.title }}</span>
                                       {%- endif -%}
                                     </a>
