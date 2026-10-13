@@ -1464,6 +1464,43 @@
   ],
   "blocks": [
     {
+      "type": "mega_category_icon",
+      "name": "t:general.mega_category_icon",
+      "limit": 10,
+      "settings": [
+        {
+          "type": "text",
+          "id": "menu_item",
+          "label": "t:labels.mega_category_menu_item",
+          "info": "t:labels.mega_category_menu_item_info"
+        },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "t:labels.category_icon",
+          "options": [
+            {
+              "value": "none",
+              "label": "t:options.category_icon.none"
+            },
+            {
+              "value": "mower",
+              "label": "t:options.category_icon.mower"
+            },
+            {
+              "value": "chainsaw",
+              "label": "t:options.category_icon.chainsaw"
+            },
+            {
+              "value": "trimmer",
+              "label": "t:options.category_icon.trimmer"
+            }
+          ],
+          "default": "none"
+        }
+      ]
+    },
+    {
       "type": "mega_promo",
       "name": "t:general.mega_promo",
       "limit": 3,
