@@ -983,17 +983,21 @@
     display: none;
   }
 
-  /* 切换淡入（2026-10-13 刘工）：新组从 display:none 出现时
-     @starting-style 给 0 透明度起步 → 0.18s 淡入。
-     只做单侧淡入：两个组都在文档流里，旧组若延迟消失会布局跳动。 */
+  /* 切换过渡（2026-10-13 刘工：0.45s + 位移）：新组从下方 0.5rem 浮入 + 淡入。
+     只做单侧入场——两组都在文档流里，旧组若延迟消失会布局跳动。
+     @starting-style 不支持的浏览器降级瞬时显隐。 */
   .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group {
     opacity: 1;
-    transition: opacity 0.18s ease;
+    translate: 0 0;
+    transition:
+      opacity 0.45s ease,
+      translate 0.45s ease;
   }
 
   @starting-style {
     .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group:not([hidden]) {
       opacity: 0;
+      translate: 0 0.5rem;
     }
   }
 
