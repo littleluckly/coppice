@@ -1043,6 +1043,117 @@
     color: var(--color-brand);
   }
 
+  /* 左列底部 View all 出口（2026-10-13 刘工）：/collections/all 官方路由。
+     箭头符合准则（View All 链接）。 */
+  .main-nav__mega-viewall {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-start: auto;
+    padding-block: 0.75rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    color: var(--color-foreground);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .main-nav__mega-viewall:hover {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-viewall-arrow {
+    transition: translate 0.15s ease;
+  }
+
+  .main-nav__mega-viewall:hover .main-nav__mega-viewall-arrow {
+    translate: 0.25rem 0;
+  }
+
+  /* 组头：分类名（左）+ All 集合出口（右，View All 型链接，箭头合规） */
+  .main-nav__mega-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .main-nav__mega-group-all {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 44px;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+  }
+
+  .main-nav__mega-group-all:hover {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-group-all-arrow {
+    transition: translate 0.15s ease;
+  }
+
+  .main-nav__mega-group-all:hover .main-nav__mega-group-all-arrow {
+    translate: 0.25rem 0;
+  }
+
+  /* 产品卡：名称与价格同行（demo 同款） */
+  .main-nav__mega-card-price {
+    display: block;
+    margin-block-start: 0.125rem;
+    font-size: 0.9375rem;
+    color: var(--color-foreground);
+  }
+
+  .main-nav__mega-card-vendor {
+    display: block;
+    margin-block-start: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+  }
+
+  .main-nav__mega-card-vendor + .main-nav__mega-card-title {
+    margin-block-start: 0.125rem;
+  }
+
+  /* 组底三级小链接行：popular 阵列模式下三级入口不丢 */
+  .main-nav__mega-sublinks {
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.5rem;
+  }
+
+  .main-nav__mega-sublink {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .main-nav__mega-sublink:hover {
+    color: var(--color-foreground);
+  }
+
+  .main-nav__mega-sublink--current {
+    color: var(--color-brand);
+    font-weight: 600;
+  }
+
   .main-nav__mega-cat-link:focus-visible,
   .main-nav__mega-card-link:focus-visible,
   .main-nav__mega-promo:focus-visible {
