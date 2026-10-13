@@ -24,6 +24,14 @@
     across the top-level items and hides when the pointer leaves the nav. aria-current
     stays as static brand-color text — a "you are here" cue must not vanish with the
     hover state (SDD §8.2). No-JS fallback: hovered item tints itself dark, no sliding.
+  - 2026-10-13 mobile drawer rework (刘工, 参考效果图): the mobile drawer is a
+    bottom sheet — dialog slides UP from the bottom edge (translate 0 100% → 0).
+    Submenus are drill-down panels instead of an in-place accordion: tapping a
+    group row slides a full panel in from the right (iOS-style stack: the panel
+    being left slides out to -100%). Each sub panel carries its own head row
+    (back arrow / title / close). Panels are all rendered server-side (flat list,
+    three capped loops) and toggled by nav-drawer.js via an explicit stack —
+    no DOM building at navigation time.
 
   Recursion is deliberately capped at three levels (Shop > Mowers > Walk-behind).
 {% endcomment %}
