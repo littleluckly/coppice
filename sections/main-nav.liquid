@@ -813,6 +813,8 @@
     .main-nav__pill,
     .main-nav__mega,
     .main-nav__mega-inner,
+    .main-nav__mega-group,
+    .main-nav__mega-card-img,
     .main-nav__desktop::after {
       transition: none;
     }
@@ -979,6 +981,20 @@
      全部组可见——底线不破 */
   .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group[hidden] {
     display: none;
+  }
+
+  /* 切换淡入（2026-10-13 刘工）：新组从 display:none 出现时
+     @starting-style 给 0 透明度起步 → 0.18s 淡入。
+     只做单侧淡入：两个组都在文档流里，旧组若延迟消失会布局跳动。 */
+  .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group {
+    opacity: 1;
+    transition: opacity 0.18s ease;
+  }
+
+  @starting-style {
+    .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group:not([hidden]) {
+      opacity: 0;
+    }
   }
 
   /* 图标线框随文字色走（svg 内 stroke=currentColor，尺寸由 CSS 控制） */
