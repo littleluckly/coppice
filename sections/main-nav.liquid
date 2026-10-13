@@ -483,98 +483,186 @@
       <dialog class="nav-drawer" data-nav-drawer aria-labelledby="nav-drawer-title">
         {%- comment -%} 内容存 <template>，首次打开才实例化（AGENTS §6） {%- endcomment -%}
         <template data-nav-drawer-template>
-          <div class="nav-drawer__inner">
-            <div class="nav-drawer__head">
-              <h2 class="nav-drawer__title visually-hidden" id="nav-drawer-title">
-                {{ 'navigation.menu' | t }}
-              </h2>
-              <button
-                type="button"
-                class="nav-drawer__close"
-                aria-label="{{ 'navigation.close' | t }}"
-                data-nav-drawer-close
-              >
-                {{ 'icon-close.svg' | inline_asset_content }}
-              </button>
+          {%- comment -%}
+            2026-10-13 钻入式抽屉（刘工，参考效果图）：
+            面板平铺渲染（根面板 + 每个分组一个子面板，三层封顶），由 nav-drawer.js
+            用显式栈在面板间切换——右滑进子面板 / 左滑退回。分组行是 <button>
+            （BUG-023：有子项即 GROUP，无 url，绝不渲染成 <a>）。
+          {%- endcomment -%}
+          <div class="nav-drawer__panels">
+            {%- comment -%} ---- 面板 0：根菜单 ---- {%- endcomment -%}
+            <div class="nav-drawer__panel is-active" data-nav-panel>
+              <div class="nav-drawer__head">
+                <h2 class="nav-drawer__title visually-hidden" id="nav-drawer-title">
+                  {{ 'navigation.menu' | t }}
+                </h2>
+                <button
+                  type="button"
+                  class="nav-drawer__close"
+                  aria-label="{{ 'navigation.close' | t }}"
+                  data-nav-drawer-close
+                >
+                  {{ 'icon-close.svg' | inline_asset_content }}
+                </button>
+              </div>
+
+              <ul class="nav-drawer__list" role="list">
+                {%- for link in menu.links -%}
+                  <li class="nav-drawer__item">
+                    {%- if link.links.size > 0 -%}
+                      <button
+                        type="button"
+                        class="nav-drawer__link nav-drawer__link--group"
+                        data-nav-open="{{ section.id }}-nav-panel-{{ forloop.index }}"
+                      >
+                        <span>{{ link.title }}</span>
+                        {{ 'icon-chevron-right.svg' | inline_asset_content }}
+                      </button>
+                    {%- else -%}
+                      <a
+                        class="nav-drawer__link{% if link.current %} nav-drawer__link--current{% endif %}"
+                        href="{{ link.url }}"
+                        {% if link.current %}
+                          aria-current="page"
+                        {% endif %}
+                      >
+                        <span>{{ link.title }}</span>
+                      </a>
+                    {%- endif -%}
+                  </li>
+                {%- endfor -%}
+              </ul>
+
+              {%- comment -%}
+                #22 要求 <shopify-account> 移动端也可见。抽屉内容虽存于 <template>
+                （首次打开才实例化），组件本身仍在 DOM 中、可被平台脚本识别，
+                因此不违反"移动端可见"。复用 account-entry snippet，不复制组件。
+              {%- endcomment -%}
+              <div class="nav-drawer__footer">
+                {%- if shop.customer_accounts_enabled -%}
+                  {% render 'account-entry', class: 'account--in-drawer' %}
+                {%- endif -%}
+                {%- comment -%}
+                  cart 入口复用同一 snippet（本期为跳转链接，非按钮——见 T-1.6）。
+                {%- endcomment -%}
+                {% render 'cart-entry', class: 'cart-entry--in-drawer' %}
+              </div>
             </div>
 
-            <ul class="nav-drawer__list" role="list">
-              {%- for link in menu.links -%}
-                {%- if link.links.size > 0 -%}
-                  {%- comment -%}
-                    details/summary：天然无 JS 可用、键盘可达，优于 JS 折叠（O-5）
-                  {%- endcomment -%}
-                  <li class="nav-drawer__item">
-                    <details class="nav-drawer__group">
-                      <summary class="nav-drawer__summary">
-                        {{ link.title }}
-                        {{ 'icon-chevron-down.svg' | inline_asset_content }}
-                      </summary>
-                      <ul class="nav-drawer__sublist" role="list">
-                        {%- for child in link.links -%}
+            {%- comment -%} ---- 面板 1：每个一级分组的子菜单（二层 + 三层入口） ---- {%- endcomment -%}
+            {%- for link in menu.links -%}
+              {%- if link.links.size > 0 -%}
+                <div
+                  class="nav-drawer__panel"
+                  data-nav-panel
+                  id="{{ section.id }}-nav-panel-{{ forloop.index }}"
+                  aria-labelledby="{{ section.id }}-nav-panel-{{ forloop.index }}-title"
+                >
+                  <div class="nav-drawer__head nav-drawer__head--sub">
+                    <button
+                      type="button"
+                      class="nav-drawer__back"
+                      aria-label="{{ 'navigation.back' | t }}"
+                      data-nav-back
+                    >
+                      {{ 'icon-arrow-left.svg' | inline_asset_content }}
+                    </button>
+                    <h3 class="nav-drawer__heading" id="{{ section.id }}-nav-panel-{{ forloop.index }}-title">
+                      {{ link.title }}
+                    </h3>
+                    <button
+                      type="button"
+                      class="nav-drawer__close"
+                      aria-label="{{ 'navigation.close' | t }}"
+                      data-nav-drawer-close
+                    >
+                      {{ 'icon-close.svg' | inline_asset_content }}
+                    </button>
+                  </div>
+
+                  <ul class="nav-drawer__list" role="list">
+                    {%- for child in link.links -%}
+                      <li class="nav-drawer__item">
+                        {%- if child.links.size > 0 -%}
+                          <button
+                            type="button"
+                            class="nav-drawer__link nav-drawer__link--group"
+                            data-nav-open="{{ section.id }}-nav-panel-{{ forloop.parentloop.index }}-{{ forloop.index }}"
+                          >
+                            <span>{{ child.title }}</span>
+                            {{ 'icon-chevron-right.svg' | inline_asset_content }}
+                          </button>
+                        {%- else -%}
+                          <a
+                            class="nav-drawer__link{% if child.current %} nav-drawer__link--current{% endif %}"
+                            href="{{ child.url }}"
+                            {% if child.current %}
+                              aria-current="page"
+                            {% endif %}
+                          >
+                            <span>{{ child.title }}</span>
+                          </a>
+                        {%- endif -%}
+                      </li>
+                    {%- endfor -%}
+                  </ul>
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+
+            {%- comment -%} ---- 面板 2：每个二级分组的三层叶子列表 ---- {%- endcomment -%}
+            {%- for link in menu.links -%}
+              {%- if link.links.size > 0 -%}
+                {%- for child in link.links -%}
+                  {%- if child.links.size > 0 -%}
+                    <div
+                      class="nav-drawer__panel"
+                      data-nav-panel
+                      id="{{ section.id }}-nav-panel-{{ forloop.parentloop.index }}-{{ forloop.index }}"
+                      aria-labelledby="{{ section.id }}-nav-panel-{{ forloop.parentloop.index }}-{{ forloop.index }}-title"
+                    >
+                      <div class="nav-drawer__head nav-drawer__head--sub">
+                        <button
+                          type="button"
+                          class="nav-drawer__back"
+                          aria-label="{{ 'navigation.back' | t }}"
+                          data-nav-back
+                        >
+                          {{ 'icon-arrow-left.svg' | inline_asset_content }}
+                        </button>
+                        <h3 class="nav-drawer__heading" id="{{ section.id }}-nav-panel-{{ forloop.parentloop.index }}-{{ forloop.index }}-title">
+                          {{ child.title }}
+                        </h3>
+                        <button
+                          type="button"
+                          class="nav-drawer__close"
+                          aria-label="{{ 'navigation.close' | t }}"
+                          data-nav-drawer-close
+                        >
+                          {{ 'icon-close.svg' | inline_asset_content }}
+                        </button>
+                      </div>
+
+                      <ul class="nav-drawer__list" role="list">
+                        {%- for grandchild in child.links -%}
                           <li class="nav-drawer__item">
                             <a
-                              class="nav-drawer__link{% if child.current %} nav-drawer__link--current{% endif %}"
-                              href="{{ child.url }}"
-                              {% if child.current %}
+                              class="nav-drawer__link{% if grandchild.current %} nav-drawer__link--current{% endif %}"
+                              href="{{ grandchild.url }}"
+                              {% if grandchild.current %}
                                 aria-current="page"
                               {% endif %}
                             >
-                              {{ child.title }}
+                              <span>{{ grandchild.title }}</span>
                             </a>
-                            {%- comment -%} 第三级：仅在有子项时输出 {%- endcomment -%}
-                            {%- if child.links.size > 0 -%}
-                              <ul class="nav-drawer__sublist nav-drawer__sublist--deep" role="list">
-                                {%- for grandchild in child.links -%}
-                                  <li class="nav-drawer__item">
-                                    <a
-                                      class="nav-drawer__link{% if grandchild.current %} nav-drawer__link--current{% endif %}"
-                                      href="{{ grandchild.url }}"
-                                      {% if grandchild.current %}
-                                        aria-current="page"
-                                      {% endif %}
-                                    >
-                                      {{ grandchild.title }}
-                                    </a>
-                                  </li>
-                                {%- endfor -%}
-                              </ul>
-                            {%- endif -%}
                           </li>
                         {%- endfor -%}
                       </ul>
-                    </details>
-                  </li>
-                {%- else -%}
-                  <li class="nav-drawer__item">
-                    <a
-                      class="nav-drawer__link{% if link.current %} nav-drawer__link--current{% endif %}"
-                      href="{{ link.url }}"
-                      {% if link.current %}
-                        aria-current="page"
-                      {% endif %}
-                    >
-                      {{ link.title }}
-                    </a>
-                  </li>
-                {%- endif -%}
-              {%- endfor -%}
-            </ul>
-
-            {%- comment -%}
-              #22 要求 <shopify-account> 移动端也可见。抽屉内容虽存于 <template>
-              （首次打开才实例化），组件本身仍在 DOM 中、可被平台脚本识别，
-              因此不违反"移动端可见"。复用 account-entry snippet，不复制组件。
-            {%- endcomment -%}
-            <div class="nav-drawer__footer">
-              {%- if shop.customer_accounts_enabled -%}
-                {% render 'account-entry', class: 'account--in-drawer' %}
+                    </div>
+                  {%- endif -%}
+                {%- endfor -%}
               {%- endif -%}
-              {%- comment -%}
-                cart 入口复用同一 snippet（本期为跳转链接，非按钮——见 T-1.6）。
-              {%- endcomment -%}
-              {% render 'cart-entry', class: 'cart-entry--in-drawer' %}
-            </div>
+            {%- endfor -%}
           </div>
         </template>
       </dialog>
