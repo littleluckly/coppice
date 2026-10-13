@@ -170,6 +170,9 @@ class NavDrawer extends HTMLElement {
     this._dialog.querySelectorAll('[data-nav-back]').forEach((button) => {
       button.addEventListener('click', this._pop, { signal });
     });
+    this._dialog.querySelectorAll('[data-nav-search]').forEach((button) => {
+      button.addEventListener('click', () => this._onSearch(button), { signal });
+    });
   }
 }
 
