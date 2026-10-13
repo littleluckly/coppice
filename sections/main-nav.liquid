@@ -1137,6 +1137,18 @@
     block-size: 1.75rem;
   }
 
+  /* 线宽修正（2026-10-13 刘工：高亮态图标灰蒙蒙）：
+     图标按 680 viewBox 设计，缩到 1.75rem 后 stroke 12~14 被等比压到
+     ~0.5px——亚像素线在白底上就是灰蒙蒙的，与 currentColor 深浅无关。
+     non-scaling-stroke 让线宽按屏幕像素解释，统一 1.5px 后激活色才立得住。
+     代价：原设计的主轮廓/细节粗细层次（12 vs 6）在小尺寸下放弃；
+     虚线段的 dasharray 仍按 viewBox 单位，观感为密集点线，可接受。 */
+  .main-nav__mega-cat-icon svg,
+  .main-nav__mega-cat-icon svg * {
+    vector-effect: non-scaling-stroke;
+    stroke-width: 1.5px;
+  }
+
   /* 中区：二级分组的集合卡组，纵向堆叠（无切换依赖，无 JS 可用） */
   .main-nav__mega-content {
     flex: 1 1 auto;
