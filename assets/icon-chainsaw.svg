@@ -1,16 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 680" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="链锯线框图标">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="链锯线框图标">
   <title>链锯</title>
   <desc>链锯：机身、顶部手环、后手柄、前护手、导板、链条与切削齿尖</desc>
-  <path d="M 370 290 C 370 228, 490 228, 490 290" stroke-width="13"/>
-  <path d="M 540 315 C 596 315, 596 385, 540 385" stroke-width="12"/>
-  <path d="M 320 288 C 252 280, 238 330, 296 344" stroke-width="12"/>
-  <rect x="310" y="290" width="230" height="140" rx="32" stroke-width="13"/>
-  <line x1="445" y1="320" x2="445" y2="400" stroke-width="9"/>
-  <line x1="470" y1="360" x2="515" y2="360" stroke-width="9"/>
-  <line x1="470" y1="385" x2="515" y2="385" stroke-width="9"/>
-  <rect x="78" y="348" width="225" height="62" rx="24" stroke-width="10"/>
-  <rect x="100" y="362" width="180" height="34" rx="15" stroke-width="9"/>
-  <line x1="105" y1="340" x2="278" y2="340" stroke-width="8" stroke-dasharray="12 10"/>
-  <line x1="105" y1="418" x2="278" y2="418" stroke-width="8" stroke-dasharray="12 10"/>
-  <path d="M 316 430 L 268 458 L 320 462" stroke-width="10"/>
+  <pathd="M 13.06 10.24 C 13.06 8.05 17.29 8.05 17.29 10.24"stroke-width="1.5"/>
+  <pathd="M 19.06 11.12 C 21.04 11.12 21.04 13.59 19.06 13.59"stroke-width="1.5"/>
+  <pathd="M 11.29 10.16 C 8.89 9.88 8.4 11.65 10.45 12.14"stroke-width="1.5"/>
+  <rectx="10.94"y="10.24"width="8.12"height="4.94"rx="1.13"stroke-width="1.5"/>
+  <line x1="445" y1="320" x2="445" y2="400"stroke-width="1.5"/>
+  <line x1="470" y1="360" x2="515" y2="360"stroke-width="1.5"/>
+  <line x1="470" y1="385" x2="515" y2="385"stroke-width="1.5"/>
+  <rectx="2.75"y="12.28"width="7.94"height="2.19"rx="0.85"stroke-width="1.5"/>
+  <rectx="3.53"y="12.78"width="6.35"height="1.2"rx="0.53"stroke-width="1.5"/>
+  <line x1="105" y1="340" x2="278" y2="340"stroke-width="1.5"stroke-dasharray="1.7 1.4"/>
+  <line x1="105" y1="418" x2="278" y2="418"stroke-width="1.5"stroke-dasharray="1.7 1.4"/>
+  <pathd="M 11.15 15.18 L 9.46 16.16 L 11.29 16.31"stroke-width="1.5"/>
 </svg>
