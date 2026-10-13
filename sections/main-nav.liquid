@@ -1047,7 +1047,8 @@
        hover 微加深提示可点 */
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
     border-radius: 12px;
-    padding: 0.5rem 0.5rem 0.75rem;
+    /* 内距放宽（刘工：视觉拥挤）——图与文字、文字行间都拉开 */
+    padding: 0.625rem 0.75rem 1rem;
     transition:
       background-color 0.15s ease,
       translate 0.15s ease;
