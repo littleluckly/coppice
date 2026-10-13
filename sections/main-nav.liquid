@@ -873,6 +873,9 @@
     padding: 1.75rem 2rem;
     translate: 0 -0.75rem;
     transition: translate 0.25s ease;
+    /* 导航行的不换行约定只属于行本身——面板里的产品名/价格必须可换行
+       （2026-10-13 刘工：卡内文字溢出）。左列分类名单独恢复 nowrap。 */
+    white-space: normal;
   }
 
   .main-nav__item--group:hover > .main-nav__mega .main-nav__mega-inner,
@@ -952,6 +955,8 @@
     text-decoration: none;
     cursor: pointer;
     transition: color 0.15s ease;
+    /* 分类名短，不折行（面板整体已恢复 normal） */
+    white-space: nowrap;
   }
 
   .main-nav__mega-cat-link:hover {
