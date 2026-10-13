@@ -20,9 +20,14 @@ class NavDrawer extends HTMLElement {
     this._opener = null;
     this._closeButton = null;
 
-    // 一次性拆除所有监听，避免主题编辑器 / section 重新渲染后事件叠加
+    // 一次性拆除所有监听，避免主题编辑器 / section 重新渲染后事件叠加。
+    // 三个方法都必须 bind：作为 listener 被调用时 this 是被监听元素
+    // （burger 按钮 / dialog / close 按钮）而非本组件——BUG-033 漏 bind
+    // _onOpen 导致移动端汉堡点击静默失效（守卫短路，连报错都没有）。
     this._abort = new AbortController();
+    this._onOpen = this._onOpen.bind(this);
     this._onClose = this._onClose.bind(this);
+    this._onDialogClick = this._onDialogClick.bind(this);
   }
 
   connectedCallback() {
