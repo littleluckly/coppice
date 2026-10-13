@@ -1502,13 +1502,19 @@
     block-size: 1.25rem;
   }
 
-  /* ---- 抽屉滑入 / 滑出动画（nav + search 两个抽屉同款） ----
+  /* ---- 抽屉滑入 / 滑出动画 ----
      @starting-style + allow-discrete：开 → 从屏外滑入；关 → 等滑动完再摘除。
      旧浏览器不支持时降级为瞬时显隐，无功能损失（渐进增强）。
-     translate 是物理属性：本主题仅 en（LTR），100% 恒为屏外右侧。 */
-  .nav-drawer,
+     translate 是物理属性：本主题仅 en（LTR），100% 恒为屏外。
+     2026-10-13：nav 抽屉改为底部面板——translate 0 100%（屏外正下方）；
+     search 抽屉保持右侧滑出（translate 100% 0）。 */
   .search-drawer {
     translate: 100% 0;
+    transition: translate 0.25s ease, display 0.25s allow-discrete, overlay 0.25s allow-discrete;
+  }
+
+  .nav-drawer {
+    translate: 0 100%;
     transition: translate 0.25s ease, display 0.25s allow-discrete, overlay 0.25s allow-discrete;
   }
 
@@ -1518,7 +1524,9 @@
   }
 
   @starting-style {
-    .nav-drawer[open],
+    .nav-drawer[open] {
+      translate: 0 100%;
+    }
     .search-drawer[open] {
       translate: 100% 0;
     }
@@ -1533,9 +1541,6 @@
   .search-drawer::backdrop {
     opacity: 1;
     transition: opacity 0.25s ease;
-  }
-
-  @starting-style {
   }
 
   /* WCAG 2.1 / SDD §8.2：用户要求减少动效时全部关闭 */
