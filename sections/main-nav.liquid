@@ -617,7 +617,10 @@
      mega 面板之间造出 16px"死亡区"（既不在 li 内也不在面板内），
      鼠标穿过时 hover 链断掉、面板自动收起。padding 移到 li 自身：
      li 高度覆盖整行，hover 链从 trigger 无缝延续到面板。 */
+  /* 注意：这里不能写 position: relative——mega 面板锚定在 .main-nav__desktop
+     上（整行宽），li 一旦创建定位上下文，面板就会缩回单项宽度。 */
   .main-nav__item {
+    min-inline-size: 0;
     padding-block: 1rem;
   }
 
