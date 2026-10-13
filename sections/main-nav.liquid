@@ -1555,21 +1555,67 @@
 
   /* 抽屉宽度即输入框宽度（snippet 已无 32rem 上限，此规则留作宽度解耦的文档锚点） */
 
-  .nav-drawer__inner {
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
+  /* ---- 钻入式面板栈（2026-10-13 刘工，参考效果图） ----
+     所有面板服务端渲染、绝对定位堆叠：is-active = 当前可见（translateX 0），
+     is-left = 已被覆盖、滑出到左侧。visibility 用 allow-discrete 延迟到
+     滑动结束再摘除，动画期间两块面板同屏。旧浏览器降级为瞬时切换。 */
+  .nav-drawer__panels {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
   }
 
+  .nav-drawer__panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-background);
+    transform: translateX(100%);
+    visibility: hidden;
+    transition:
+      transform 0.25s ease,
+      visibility 0.25s allow-discrete;
+  }
+
+  .nav-drawer__panel.is-active {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .nav-drawer__panel.is-left {
+    transform: translateX(-100%);
+  }
+
+  /* 面板头：根面板只有关闭按钮（标题视觉隐藏）；子面板为 返回 / 标题 / 关闭 */
   .nav-drawer__head {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    flex: none;
     padding: 0.5rem;
     border-block-end: 1px solid rgb(0 0 0 / 12%);
   }
 
-  .nav-drawer__close {
+  .nav-drawer__head--sub {
+    justify-content: flex-start;
+    gap: 0.25rem;
+  }
+
+  .nav-drawer__heading {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding-inline: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .nav-drawer__close,
+  .nav-drawer__back {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1582,60 +1628,72 @@
     cursor: pointer;
   }
 
-  .nav-drawer__close svg {
+  .nav-drawer__close svg,
+  .nav-drawer__back svg {
     width: 1.25rem;
     height: 1.25rem;
   }
 
-  .nav-drawer__list,
-  .nav-drawer__sublist {
+  .nav-drawer__close:focus-visible,
+  .nav-drawer__back:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* 列表是面板内的滚动区：head / footer 固定，长菜单只滚列表 */
+  .nav-drawer__list {
+    flex: 1;
+    min-height: 0;
     margin: 0;
-    padding: 0;
+    padding: 0.5rem 0;
     list-style: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
-  .nav-drawer__summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    min-height: 44px;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    list-style: none;
+  .nav-drawer__item {
+    border-block-end: 1px solid rgb(0 0 0 / 8%);
   }
 
-  /* details 默认标记在各浏览器表现不一，统一去掉 */
-  .nav-drawer__summary::-webkit-details-marker {
-    display: none;
+  .nav-drawer__item:last-child {
+    border-block-end: 0;
   }
 
-  .nav-drawer__summary svg {
-    width: 0.75rem;
-    height: 0.75rem;
-    transition: transform 0.15s ease;
-  }
-
-  .nav-drawer__group[open] > .nav-drawer__summary svg {
-    transform: rotate(180deg);
-  }
-
+  /* 行：分组是 <button>（BUG-023：GROUP 无 url，绝不渲染成 <a>），
+     叶子是 <a>——两者共用行样式，button 侧补表单元素重置 */
   .nav-drawer__link {
     display: flex;
     align-items: center;
-    min-height: 44px;
-    padding: 0.5rem 1rem 0.5rem 2rem;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
     color: inherit;
+    font: inherit;
+    text-align: start;
     text-decoration: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .nav-drawer__link svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    color: rgb(0 0 0 / 45%);
+  }
+
+  .nav-drawer__link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
   }
 
   .nav-drawer__link--current {
     color: var(--color-brand);
     font-weight: 700;
-  }
-
-  .nav-drawer__sublist--deep .nav-drawer__link {
-    padding-inline-start: 3rem;
   }
 
   /* 抽屉底部固定区：账户入口 + （后续）购物车入口 */
