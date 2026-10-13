@@ -958,9 +958,22 @@
     color: var(--color-foreground);
   }
 
+  /* 左列激活分类（第九轮补，JS 切换）：深色加粗，对齐 demo 默认选中项 */
+  .main-nav__mega-cat-link--active {
+    color: var(--color-foreground);
+    font-weight: 700;
+  }
+
   .main-nav__mega-cat-link--current {
     color: var(--color-brand);
     font-weight: 700;
+  }
+
+  /* 面板切换：hidden 属性的 UA 默认 display:none 已生效，
+     这里显式兜底防未来 display 规则覆盖；无 JS（未升级）时不加 hidden，
+     全部组可见——底线不破 */
+  .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group[hidden] {
+    display: none;
   }
 
   /* 图标线框随文字色走（svg 内 stroke=currentColor，尺寸由 CSS 控制） */
