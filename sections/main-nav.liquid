@@ -1089,8 +1089,9 @@
 
   .main-nav__mega-card-title {
     display: block;
-    margin-block-start: 0.5rem;
+    margin-block-start: 0.625rem;
     font-weight: 600;
+    line-height: 1.4;
     color: var(--color-foreground);
     transition: color 0.15s ease;
   }
@@ -1173,14 +1174,14 @@
   /* 产品卡：名称与价格同行（demo 同款） */
   .main-nav__mega-card-price {
     display: block;
-    margin-block-start: 0.125rem;
-    font-size: 0.9375rem;
-    color: var(--color-foreground);
+    margin-block-start: 0.375rem;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--color-foreground) 80%, transparent);
   }
 
   .main-nav__mega-card-vendor {
     display: block;
-    margin-block-start: 0.5rem;
+    margin-block-start: 0.75rem;
     font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.14em;
@@ -1189,7 +1190,7 @@
   }
 
   .main-nav__mega-card-vendor + .main-nav__mega-card-title {
-    margin-block-start: 0.125rem;
+    margin-block-start: 0.25rem;
   }
 
   /* 组底三级小链接行：popular 阵列模式下三级入口不丢 */
