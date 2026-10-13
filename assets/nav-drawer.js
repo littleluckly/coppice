@@ -91,6 +91,16 @@ class NavDrawer extends HTMLElement {
     entry.trigger?.focus();
   };
 
+  /**
+   * 抽屉内搜索行 → 打开搜索抽屉（叠加 modal，不关本抽屉——
+   * 关掉搜索后回到菜单层级，与参考图"搜索就在菜单里"的动线一致）。
+   * search-drawer 的 opener 绑定发生在页面加载时，够不到此时才
+   * 实例化的本抽屉内容，所以这里直接调它的公开 open()。
+   */
+  _onSearch = (button) => {
+    this.closest('nav')?.querySelector('search-drawer')?.open(button);
+  };
+
   _resetPanels = () => {
     for (const { panel } of this._stack) {
       panel.classList.remove('is-active', 'is-left');
