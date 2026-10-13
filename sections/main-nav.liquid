@@ -928,16 +928,14 @@
 
   .main-nav__mega-label {
     display: block;
-    /* 顶部三区对齐（2026-10-13 刘工，两轮校准）：
-       小字 cap 顶比 1.125rem 组标题的 cap 顶高——差值 ≈ 字号差 × (行高−0.7)/2，
-       body 行高 1.6~1.7 时约 6px，故 padding-top 0.375rem。
-       ⚠️ 微调锚点：真机差 1px 量级时直接改这个值，别动其他两区 */
-    padding-block: 0.375rem 0.75rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+    /* color: color-mix(in srgb, var(--color-foreground) 60%, transparent); */
     /* 与搜索抽屉标题同款工业小标签风格；对比度 5.74:1（T-2.2 实测） */
   }
 
@@ -993,9 +991,7 @@
   .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group {
     opacity: 1;
     translate: 0 0;
-    transition:
-      opacity 0.45s ease,
-      translate 0.45s ease;
+    transition: opacity 0.45s ease, translate 0.45s ease;
   }
 
   @starting-style {
@@ -1062,9 +1058,7 @@
     border-radius: 12px;
     /* 内距放宽（刘工：视觉拥挤）——图与文字、文字行间都拉开 */
     padding: 0.625rem 0.75rem 1rem;
-    transition:
-      background-color 0.15s ease,
-      translate 0.15s ease;
+    transition: background-color 0.15s ease, translate 0.15s ease;
   }
 
   .main-nav__mega-card-link:hover {
