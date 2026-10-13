@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 680" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="手推式割草机线框图标">
+  <title>手推式割草机</title>
+  <desc>手推式割草机：底盘、双轮、发动机、推杆、排草口与地面线</desc>
+  <circle cx="460" cy="545" r="78" stroke-width="12"/>
+  <circle cx="460" cy="545" r="26" stroke-width="9"/>
+  <circle cx="185" cy="568" r="55" stroke-width="12"/>
+  <circle cx="185" cy="568" r="18" stroke-width="9"/>
+  <path d="M 310 575 A 40 40 0 0 0 380 575" stroke-width="6" stroke-dasharray="2 16"/>
+  <rect x="115" y="395" width="460" height="115" rx="28" stroke-width="13"/>
+  <path d="M 116 430 C 66 430, 56 468, 110 472" stroke-width="11"/>
+  <rect x="290" y="275" width="150" height="120" rx="20" stroke-width="13"/>
+  <rect x="330" y="252" width="44" height="22" rx="10" stroke-width="10"/>
+  <line x1="320" y1="312" x2="372" y2="312" stroke-width="9"/>
+  <line x1="320" y1="336" x2="372" y2="336" stroke-width="9"/>
+  <line x1="320" y1="360" x2="372" y2="360" stroke-width="9"/>
+  <circle cx="406" cy="334" r="17" stroke-width="9"/>
+  <line x1="545" y1="398" x2="602" y2="178" stroke-width="14"/>
+  <rect x="565" y="145" width="80" height="26" rx="13" stroke-width="11" transform="rotate(16 605 158)"/>
+  <line x1="70" y1="623" x2="615" y2="623" stroke-width="8"/>
+  <path d="M 95 620 Q 88 588 70 576" stroke-width="9"/>
+  <path d="M 115 623 Q 118 594 106 578" stroke-width="9"/>
+</svg>

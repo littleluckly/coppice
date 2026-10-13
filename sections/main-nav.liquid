@@ -118,46 +118,235 @@
                   </span>
 
                   {%- comment -%}
-                    Mega 面板：每个二级项一列；二级是分组时三级列表直接铺在列内，
-                    不再向右飞出（与三级树的展示方式一致，也避免飞出菜单在窄视口贴边裁切）。
+                    Mega 面板（2026-10-13 第八轮，参考 demo 截图三段式）：
+                    左列 = 二级分类导航（图标走 mega_category_icon block 配置，
+                    商家可配可删）；中区 = 二级分组的集合卡组（图 + 标题 +
+                    真实产品数，数据走 link.object，不伪造）；右列 = promo 卡。
+                    叶子二级项只在左列出链接，中区不输出空壳组。
                   {%- endcomment -%}
                   <div class="main-nav__mega">
                     <div class="main-nav__mega-inner">
-                      <ul class="main-nav__mega-columns" role="list">
+                      <div class="main-nav__mega-nav">
+                        <span class="main-nav__mega-label">{{ link.title }}</span>
+                        <ul class="main-nav__mega-cats" role="list">
+                          {%- for child in link.links -%}
+                            {%- liquid
+                              assign child_title = child.title | strip
+                              assign icon_kind = ''
+                              for block in section.blocks
+                                if block.type == 'mega_category_icon' and icon_kind == ''
+                                  assign wanted = block.settings.menu_item | strip
+                                  if wanted == child_title
+                                    assign icon_kind = block.settings.icon
+                                  endif
+                                endif
+                              endfor
+                            -%}
+                            <li class="main-nav__mega-cat">
+                              {%- if child.links.size > 0 -%}
+                                <span
+                                  class="main-nav__mega-cat-link main-nav__mega-cat-link--group{% if child.child_current or child.child_active %} main-nav__mega-cat-link--current{% endif %}"
+                                  tabindex="0"
+                                  data-mega-tab="{{ forloop.index }}"
+                                >
+                                  {%- if icon_kind != blank -%}
+                                    {%- assign icon_file = icon_kind | prepend: 'icon-' | append: '.svg' -%}
+                                    <span class="main-nav__mega-cat-icon" aria-hidden="true">
+                                      {{ icon_file | inline_asset_content }}
+                                    </span>
+                                  {%- endif -%}
+                                  {{ child.title }}
+                                </span>
+                              {%- else -%}
+                                <a
+                                  class="main-nav__mega-cat-link{% if child.current %} main-nav__mega-cat-link--current{% endif %}"
+                                  href="{{ child.url }}"
+                                  tabindex="0"
+                                  data-mega-tab="{{ forloop.index }}"
+                                  {% if child.current %}
+                                    aria-current="page"
+                                  {% endif %}
+                                >
+                                  {%- if icon_kind != blank -%}
+                                    {%- assign icon_file = icon_kind | prepend: 'icon-' | append: '.svg' -%}
+                                    <span class="main-nav__mega-cat-icon" aria-hidden="true">
+                                      {{ icon_file | inline_asset_content }}
+                                    </span>
+                                  {%- endif -%}
+                                  {{ child.title }}
+                                </a>
+                              {%- endif -%}
+                            </li>
+                          {%- endfor -%}
+                        </ul>
+                        {%- comment -%}
+                          View all products（2026-10-13 刘工）：官方内置的
+                          /collections/all 路由，箭头符合准则（View All 链接）。
+                        {%- endcomment -%}
+                        <a
+                          class="main-nav__mega-viewall"
+                          href="{{ routes.all_products_collection_url }}"
+                        >
+                          {{ 'navigation.view_all_products' | t }}
+                          <span class="main-nav__mega-viewall-arrow" aria-hidden="true">&rarr;</span>
+                        </a>
+                      </div>
+
+                      <div class="main-nav__mega-content">
                         {%- for child in link.links -%}
-                          <li class="main-nav__mega-col">
-                            {%- if child.links.size > 0 -%}
-                              <span class="main-nav__mega-heading">{{ child.title }}</span>
-                              <ul class="main-nav__mega-links" role="list">
-                                {%- for grandchild in child.links -%}
-                                  <li class="main-nav__mega-item">
+                          {%- liquid
+                            assign child_title = child.title | strip
+                            assign popular_collection = blank
+                            for block in section.blocks
+                              if block.type == 'mega_category_icon' and popular_collection == blank
+                                assign wanted = block.settings.menu_item | strip
+                                if wanted == child_title
+                                  assign popular_collection = block.settings.popular_collection
+                                endif
+                              endif
+                            endfor
+                          -%}
+                          {%- if popular_collection != blank and popular_collection.products.size > 0 -%}
+                            {%- comment -%}
+                              产品卡阵列（2026-10-13 刘工）：popular 集合前 3 个产品，
+                              组头带 "All {集合名} (n) →" 出口（View All 型链接，箭头合规）。
+                              三级链接收进组底小链接行，导航功能不丢。
+                            {%- endcomment -%}
+                            <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
+                              <div class="main-nav__mega-group-head">
+                                <span class="main-nav__mega-group-title">{{ child.title }}</span>
+                                <a
+                                  class="main-nav__mega-group-all"
+                                  href="{{ popular_collection.url }}"
+                                >
+                                  {{ popular_collection.title }}
+                                  ({{ popular_collection.all_products_count }})
+                                  <span class="main-nav__mega-group-all-arrow" aria-hidden="true">&rarr;</span>
+                                </a>
+                              </div>
+                              <ul class="main-nav__mega-cards" role="list">
+                                {%- for product in popular_collection.products limit: 3 -%}
+                                  <li class="main-nav__mega-card">
                                     <a
-                                      class="main-nav__mega-link{% if grandchild.current %} main-nav__mega-link--current{% endif %}"
+                                      class="main-nav__mega-card-link"
+                                      href="{{ product.url }}"
+                                    >
+                                      {%- assign card_image = product.featured_image -%}
+                                      {%- if card_image != blank -%}
+                                        <span class="main-nav__mega-card-media">
+                                          {{
+                                            card_image
+                                            | image_url: width: 480
+                                            | image_tag:
+                                              widths: '160, 240, 360, 480',
+                                              sizes: '13rem',
+                                              loading: 'lazy',
+                                              alt: '',
+                                              class: 'main-nav__mega-card-img'
+                                          }}
+                                        </span>
+                                      {%- else -%}
+                                        <span
+                                          class="main-nav__mega-card-media main-nav__mega-card-media--empty"
+                                          aria-hidden="true"
+                                        ></span>
+                                      {%- endif -%}
+                                      {%- if product.vendor != blank -%}
+                                        <span class="main-nav__mega-card-vendor">{{ product.vendor }}</span>
+                                      {%- endif -%}
+                                      <span class="main-nav__mega-card-title">{{ product.title }}</span>
+                                      <span class="main-nav__mega-card-price">
+                                        {{ product.price | money }}
+                                      </span>
+                                    </a>
+                                  </li>
+                                {%- endfor -%}
+                              </ul>
+                              {%- if child.links.size > 0 -%}
+                                <ul class="main-nav__mega-sublinks" role="list">
+                                  {%- for grandchild in child.links -%}
+                                    <li>
+                                      <a
+                                        class="main-nav__mega-sublink{% if grandchild.current %} main-nav__mega-sublink--current{% endif %}"
+                                        href="{{ grandchild.url }}"
+                                        {% if grandchild.current %}
+                                          aria-current="page"
+                                        {% endif %}
+                                      >
+                                        {{ grandchild.title }}
+                                      </a>
+                                    </li>
+                                  {%- endfor -%}
+                                </ul>
+                              {%- endif -%}
+                            </div>
+                          {%- elsif child.links.size > 0 -%}
+                            {%- comment -%}
+                              回退：未配 popular 集合的分组二级项 → 三级集合卡组
+                              （第八轮逻辑，保证没配 block 也体面）
+                            {%- endcomment -%}
+                            <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
+                              <span class="main-nav__mega-group-title">{{ child.title }}</span>
+                              <ul class="main-nav__mega-cards" role="list">
+                                {%- for grandchild in child.links -%}
+                                  <li class="main-nav__mega-card">
+                                    <a
+                                      class="main-nav__mega-card-link{% if grandchild.current %} main-nav__mega-card-link--current{% endif %}"
                                       href="{{ grandchild.url }}"
                                       {% if grandchild.current %}
                                         aria-current="page"
                                       {% endif %}
                                     >
-                                      {{ grandchild.title }}
+                                      {%- if grandchild.type == 'collection_link' and grandchild.object != blank -%}
+                                        {%- liquid
+                                          assign coll = grandchild.object
+                                          assign card_image = coll.featured_image
+                                          if card_image == blank
+                                            assign card_image = coll.products.first.image
+                                          endif
+                                        -%}
+                                        {%- if card_image != blank -%}
+                                          <span class="main-nav__mega-card-media">
+                                            {{
+                                              card_image
+                                              | image_url: width: 480
+                                              | image_tag:
+                                                widths: '160, 240, 360, 480',
+                                                sizes: '13rem',
+                                                loading: 'lazy',
+                                                alt: '',
+                                                class: 'main-nav__mega-card-img'
+                                            }}
+                                          </span>
+                                        {%- else -%}
+                                          {%- comment -%} 集合无图：色块占位，不渲染空 img {%- endcomment -%}
+                                          <span
+                                            class="main-nav__mega-card-media main-nav__mega-card-media--empty"
+                                            aria-hidden="true"
+                                          ></span>
+                                        {%- endif -%}
+                                        <span class="main-nav__mega-card-title">{{ grandchild.title }}</span>
+                                        {%- if coll.all_products_count > 0 -%}
+                                          <span class="main-nav__mega-card-count">
+                                            {{ 'navigation.products_count' | t: count: coll.all_products_count }}
+                                          </span>
+                                        {%- endif -%}
+                                      {%- else -%}
+                                        {%- comment -%} 非集合链接的三级项：纯文字卡，体面降级 {%- endcomment -%}
+                                        <span
+                                          class="main-nav__mega-card-media main-nav__mega-card-media--empty"
+                                          aria-hidden="true"
+                                        ></span>
+                                        <span class="main-nav__mega-card-title">{{ grandchild.title }}</span>
+                                      {%- endif -%}
                                     </a>
                                   </li>
                                 {%- endfor -%}
                               </ul>
-                            {%- else -%}
-                              {%- comment -%} 二级叶子：列标题即链接，不输出空壳列 {%- endcomment -%}
-                              <a
-                                class="main-nav__mega-heading main-nav__mega-heading--link{% if child.current %} main-nav__mega-link--current{% endif %}"
-                                href="{{ child.url }}"
-                                {% if child.current %}
-                                  aria-current="page"
-                                {% endif %}
-                              >
-                                {{ child.title }}
-                              </a>
-                            {%- endif -%}
-                          </li>
+                            </div>
+                          {%- endif -%}
                         {%- endfor -%}
-                      </ul>
+                      </div>
 
                       {%- comment -%}
                         转化位：mega_promo block，按 menu_item 设置与一级项标题精确匹配。
@@ -452,9 +641,8 @@
     white-space: nowrap;
     max-inline-size: var(--content-width);
     margin-inline: auto;
-    /* 导航行上下 16px（第六轮，刘工）——链接自身 min-height 44px 不变，
-       行高随之增加；mega 面板 top:100% 相对 desktop（含此 padding），仍贴行底 */
-    padding-block: 1rem;
+    /* 行的上下 padding 由 li 承担（BUG-034，见 .main-nav__item 注释），
+       inner 自身不加 padding-block——否则 trigger 与面板之间出现 hover 盲区 */
     /* 注意：inner 不能创建 stacking context（position+z-index）——
        mega 是 inner 的后代，一旦被兜进它的层叠上下文，"面板从行下
        滑出"就永远做不出来（层级被 inner 整体抬走）。第五轮结论。 */
@@ -534,10 +722,16 @@
     list-style: none;
   }
 
+  /* BUG-034（2026-10-13 刘工）：行 padding 不能放在 inner 上——
+     li 只包住 trigger（44px），inner 的 padding-block 会在 trigger 与
+     mega 面板之间造出 16px"死亡区"（既不在 li 内也不在面板内），
+     鼠标穿过时 hover 链断掉、面板自动收起。padding 移到 li 自身：
+     li 高度覆盖整行，hover 链从 trigger 无缝延续到面板。 */
   /* 注意：这里不能写 position: relative——mega 面板锚定在 .main-nav__desktop
      上（整行宽），li 一旦创建定位上下文，面板就会缩回单项宽度。 */
   .main-nav__item {
     min-inline-size: 0;
+    padding-block: 1rem;
   }
 
   .main-nav__link {
@@ -549,7 +743,7 @@
     z-index: 1;
     /* 水平 padding 承担条目间距（2026-10-12 第三轮）：padding 计入 trigger 的
        测量范围，药丸覆盖整宽，hover 区域与药丸完全重合 */
-    padding-inline: 1rem;
+    padding-inline: 1.25rem;
     /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-height: 44px;
     padding-block: 0.5rem;
@@ -619,6 +813,8 @@
     .main-nav__pill,
     .main-nav__mega,
     .main-nav__mega-inner,
+    .main-nav__mega-group,
+    .main-nav__mega-card-img,
     .main-nav__desktop::after {
       transition: none;
     }
@@ -675,10 +871,13 @@
     margin-inline: auto;
     display: flex;
     align-items: flex-start;
-    gap: 2rem;
-    padding: 1.75rem 2rem;
+    gap: 2.5rem;
+    padding: 2.25rem 2.5rem;
     translate: 0 -0.75rem;
     transition: translate 0.25s ease;
+    /* 导航行的不换行约定只属于行本身——面板里的产品名/价格必须可换行
+       （2026-10-13 刘工：卡内文字溢出）。左列分类名单独恢复 nowrap。 */
+    white-space: normal;
   }
 
   .main-nav__item--group:hover > .main-nav__mega .main-nav__mega-inner,
@@ -718,44 +917,29 @@
     visibility: visible;
   }
 
-  .main-nav__mega-columns {
-    flex: 1 1 auto;
-    display: grid;
-    grid-auto-flow: column;
-    /* 列宽随二级项数量自适应，但设下限避免窄列挤压换行 */
-    grid-auto-columns: minmax(8.5rem, 1fr);
-    gap: 2rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    align-content: start;
+  /* ---- 面板三段（2026-10-13 第八轮，参考 demo）：分类列 / 内容区 / promo ---- */
+  .main-nav__mega-nav {
+    flex: 0 0 12rem;
+    /* 左列纵向排布：分类列表在上，View all 出口压到底部 */
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
   }
 
-  .main-nav__mega-heading {
+  .main-nav__mega-label {
     display: block;
-    padding-block: 0.25rem 0.5rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+    /* color: color-mix(in srgb, var(--color-foreground) 60%, transparent); */
     /* 与搜索抽屉标题同款工业小标签风格；对比度 5.74:1（T-2.2 实测） */
   }
 
-  .main-nav__mega-heading--link {
-    color: var(--color-foreground);
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: normal;
-    text-transform: none;
-    text-decoration: none;
-  }
-
-  .main-nav__mega-heading--link:hover {
-    color: var(--color-brand);
-  }
-
-  .main-nav__mega-links {
+  .main-nav__mega-cats {
     margin: 0;
     padding: 0;
     list-style: none;
@@ -763,32 +947,297 @@
     gap: 0.125rem;
   }
 
-  .main-nav__mega-link {
+  .main-nav__mega-cat-link {
     display: flex;
     align-items: center;
+    gap: 0.625rem;
     min-height: 44px;
-    padding-inline: 0.25rem;
-    color: var(--color-foreground);
+    /* 触控目标 ≥44（AGENTS §8）；行高由 min-height 保证 */
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    font-size: 0.9375rem;
+    font-weight: 500;
     text-decoration: none;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    /* 分类名短，不折行（面板整体已恢复 normal） */
     white-space: nowrap;
   }
 
-  .main-nav__mega-link:hover {
-    color: var(--color-brand);
+  .main-nav__mega-cat-link:hover {
+    color: var(--color-foreground);
   }
 
-  .main-nav__mega-link--current,
-  .main-nav__mega-heading--link.main-nav__mega-link--current {
+  /* 左列激活分类（第九轮补，JS 切换）：深色加粗，对齐 demo 默认选中项 */
+  .main-nav__mega-cat-link--active {
+    color: var(--color-foreground);
+    font-weight: 700;
+  }
+
+  .main-nav__mega-cat-link--current {
     color: var(--color-brand);
     font-weight: 700;
   }
 
-  .main-nav__mega-link:focus-visible,
-  .main-nav__mega-heading--link:focus-visible,
+  /* 面板切换：hidden 属性的 UA 默认 display:none 已生效，
+     这里显式兜底防未来 display 规则覆盖；无 JS（未升级）时不加 hidden，
+     全部组可见——底线不破 */
+  .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group[hidden] {
+    display: none;
+  }
+
+  /* 切换过渡（2026-10-13 刘工：0.45s + 位移）：新组从下方 0.5rem 浮入 + 淡入。
+     只做单侧入场——两组都在文档流里，旧组若延迟消失会布局跳动。
+     @starting-style 不支持的浏览器降级瞬时显隐。 */
+  .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group {
+    opacity: 1;
+    translate: 0 0;
+    transition: opacity 0.45s ease, translate 0.45s ease;
+  }
+
+  @starting-style {
+    .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group:not([hidden]) {
+      opacity: 0;
+      translate: 0 0.5rem;
+    }
+  }
+
+  /* 图标线框随文字色走（svg 内 stroke=currentColor，尺寸由 CSS 控制） */
+  .main-nav__mega-cat-icon {
+    display: flex;
+    color: inherit;
+  }
+
+  .main-nav__mega-cat-icon svg {
+    /* 图标比文字大一点（2026-10-13 刘工）：文字 0.9375rem，图标 1.75rem */
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+  }
+
+  /* 中区：二级分组的集合卡组，纵向堆叠（无切换依赖，无 JS 可用） */
+  .main-nav__mega-content {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    display: grid;
+    gap: 2.25rem;
+    align-content: start;
+  }
+
+  .main-nav__mega-group-title {
+    display: block;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-foreground);
+  }
+
+  .main-nav__mega-cards {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    /* 12rem 下限（2026-10-13 刘工：仍紧凑压抑——卡更宽、间距更大），
+       每行少一张卡换呼吸感 */
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* 等高卡：li 是 grid item（默认 stretch 等行高），link 拉满列向，
+     价格/计数用 auto margin 沉底——内容差异不影响卡底色高度 */
+  .main-nav__mega-card {
+    display: flex;
+  }
+
+  .main-nav__mega-card-link {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    text-decoration: none;
+    /* 浅色卡底 + 圆角（2026-10-13 刘工）：前景 4% 叠加，深浅主题都成立；
+       hover 微加深提示可点 */
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+    border-radius: 12px;
+    /* 内距放宽（刘工：视觉拥挤）——图与文字、文字行间都拉开 */
+    padding: 0.625rem 0.75rem 1rem;
+    transition: background-color 0.15s ease, translate 0.15s ease;
+  }
+
+  .main-nav__mega-card-link:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+    translate: 0 -2px;
+  }
+
+  /* 图在卡内上缘，跟随卡圆角内缩 */
+  .main-nav__mega-card-media {
+    display: block;
+    aspect-ratio: 4 / 3;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+
+  .main-nav__mega-card-media--empty {
+    /* 集合无图占位：色块内嵌一圈极淡描边，读作"图位"而不是破图 */
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+
+  .main-nav__mega-card-img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+
+  /* 产品图 hover 动画：图片缩放 + 标题着色（2026-10-13 刘工） */
+  .main-nav__mega-card-link:hover .main-nav__mega-card-img,
+  .main-nav__mega-card-link:focus-visible .main-nav__mega-card-img {
+    transform: scale(1.06);
+  }
+
+  .main-nav__mega-card-title {
+    display: block;
+    margin-block-start: 0.625rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-foreground);
+    transition: color 0.15s ease;
+  }
+
+  .main-nav__mega-card-link:hover .main-nav__mega-card-title {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-card-count {
+    display: block;
+    /* auto margin 沉底（等高卡，与 price 同机制） */
+    margin-block-start: auto;
+    padding-block-start: 0.375rem;
+    font-size: 0.8125rem;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+  }
+
+  .main-nav__mega-card-link--current .main-nav__mega-card-title {
+    color: var(--color-brand);
+  }
+
+  /* 左列底部 View all 出口（2026-10-13 刘工）：/collections/all 官方路由。
+     箭头符合准则（View All 链接）。 */
+  .main-nav__mega-viewall {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-start: auto;
+    padding-block: 0.75rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    color: var(--color-foreground);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .main-nav__mega-viewall:hover {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-viewall-arrow {
+    transition: translate 0.15s ease;
+  }
+
+  .main-nav__mega-viewall:hover .main-nav__mega-viewall-arrow {
+    translate: 0.25rem 0;
+  }
+
+  /* 组头：分类名（左）+ All 集合出口（右，View All 型链接，箭头合规） */
+  .main-nav__mega-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .main-nav__mega-group-all {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 44px;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+  }
+
+  .main-nav__mega-group-all:hover {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-group-all-arrow {
+    transition: translate 0.15s ease;
+  }
+
+  .main-nav__mega-group-all:hover .main-nav__mega-group-all-arrow {
+    translate: 0.25rem 0;
+  }
+
+  /* 产品卡：名称与价格同行（demo 同款） */
+  .main-nav__mega-card-price {
+    display: block;
+    /* auto margin 沉底（等高卡），0.375rem 是与标题的最小间距 */
+    margin-block-start: auto;
+    padding-block-start: 0.375rem;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--color-foreground) 80%, transparent);
+  }
+
+  .main-nav__mega-card-vendor {
+    display: block;
+    margin-block-start: 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+  }
+
+  .main-nav__mega-card-vendor + .main-nav__mega-card-title {
+    margin-block-start: 0.25rem;
+  }
+
+  /* 组底三级小链接行：popular 阵列模式下三级入口不丢 */
+  .main-nav__mega-sublinks {
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.5rem;
+  }
+
+  .main-nav__mega-sublink {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .main-nav__mega-sublink:hover {
+    color: var(--color-foreground);
+  }
+
+  .main-nav__mega-sublink--current {
+    color: var(--color-brand);
+    font-weight: 600;
+  }
+
+  .main-nav__mega-cat-link:focus-visible,
+  .main-nav__mega-card-link:focus-visible,
   .main-nav__mega-promo:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 4px;
   }
 
   /* 转化位卡片：图上文下（不叠图——商家自选图上无法保证文字对比度） */
@@ -827,7 +1276,7 @@
     color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
   }
 
-  /* 面板含转化位时列区不要被压缩：卡片定宽在先，列吃剩余空间（flex 已保证） */
+  /* promo 定宽在先（flex 0 0 15rem），中区吃剩余空间（flex 1 1 auto 已保证） */
 
   /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
      必须有实底——否则吸顶时页面内容会透过菜单透出来。
@@ -1311,6 +1760,53 @@
   ],
   "blocks": [
     {
+      "type": "mega_category_icon",
+      "name": "t:general.mega_category_icon",
+      "limit": 10,
+      "settings": [
+        {
+          "type": "text",
+          "id": "menu_item",
+          "label": "t:labels.mega_category_menu_item",
+          "info": "t:labels.mega_category_menu_item_info"
+        },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "t:labels.category_icon",
+          "options": [
+            {
+              "value": "none",
+              "label": "t:options.category_icon.none"
+            },
+            {
+              "value": "mower",
+              "label": "t:options.category_icon.mower"
+            },
+            {
+              "value": "chainsaw",
+              "label": "t:options.category_icon.chainsaw"
+            },
+            {
+              "value": "trimmer",
+              "label": "t:options.category_icon.trimmer"
+            },
+            {
+              "value": "accessories",
+              "label": "t:options.category_icon.accessories"
+            }
+          ],
+          "default": "none"
+        },
+        {
+          "type": "collection",
+          "id": "popular_collection",
+          "label": "t:labels.mega_popular_collection",
+          "info": "t:labels.mega_popular_collection_info"
+        }
+      ]
+    },
+    {
       "type": "mega_promo",
       "name": "t:general.mega_promo",
       "limit": 3,
@@ -1344,7 +1840,7 @@
       ]
     }
   ],
-  "max_blocks": 3,
+  "max_blocks": 13,
   "enabled_on": {
     "groups": ["header"]
   }

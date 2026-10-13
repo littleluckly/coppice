@@ -3,7 +3,7 @@
 > **性质**：SDD 驱动开发的全局组件任务清单（v1.1）。拆解自 `dev-docs/pages-ui.md` §1.1（含 §1.1.1 主导航菜单树）与 `dev-docs/sdd.md` §4.2 / §4.3 / §7.1，不引入新决策。
 > **权威关系**：与 SDD / pages-ui 冲突时以 `dev-docs/sdd.md` 为准；本清单只负责把页头工作切成可执行、可验收的任务。
 > **范围**：`sections/header-group.json` 及其 6 个 section + 移动汉堡抽屉 + 预测搜索。**不含** footer-group（另立清单）、**cart 交互（抽屉 / 计数联动 / 配置项，后续单独开清单）**、主导航菜单的**店侧**建菜单动作（拆为 T-0.2）。
-> **版本**：v2.1 ｜ 2026-10-12 ｜ 总额 **9.25 人日**（已完成 7.75，**剩余待做 1.5**）｜ T-2.2 自查全部通过 ｜ v2.1 追加 T-1.7（桌面导航 mega 化改版 1.0 + 同日第二轮滑动药丸 0.5，已完成）
+> **版本**：v2.5 ｜ 2026-10-13 ｜ 总额 **11.75 人日**（已完成 10.25，**剩余待做 1.5**）｜ T-2.2 自查全部通过 ｜ v2.1 T-1.7（mega 化 1.0 + 滑动药丸等后续轮次 0.5）｜ v2.2 第八轮三段式面板 1.0 ｜ v2.3 第九轮（BUG-034 + popular 阵列 + View all）0.75 ｜ v2.4 第十轮（accessories 图标 + 左列切换）0.5 ｜ v2.5 第十一轮（换行/图标/LCP 答疑/淡入）0.25
 > **进度**：T-0.1 ✅ ｜ T-1.1 ✅ ｜ T-1.2 ✅ ｜ T-1.3 ✅ ｜ T-1.4 ✅ ｜ T-1.5 ✅ ｜ T-1.6 ✅ ｜ T-1.7 ✅ ｜ T-2.1 ✅ ｜ T-2.2 ✅ ｜ T-3.2 ✅
 > **剩余**：T-3.1 验收 1.0（需刘工在真实店铺环境操作，**T-1.7 的 theme check / Lighthouse 对比并入该任务**）+ T-0.2 店侧 0.5
 > **范围外**：cart 交互（抽屉 / 计数联动 / 配置项）**后续单独开清单**，本清单 T-1.6 仅做静态入口。
@@ -255,6 +255,80 @@
 - [x] **当前页指示改文字色**：`--current` / in-branch 从药丸底色降为品牌色文字——"你在哪"的静态指示不能随悬浮态消失（SDD §8.2），深色药丸专职交互反馈。**代价**：当前页高亮弱于第一轮的实心药丸；若要"滑块默认停在当前页、离开导航区滑回"模式，另改
 - [x] `nav-pill.js` 通过 node 语法检查；`check-tag-balance.py` 29 文件平衡；**theme check 待刘工代跑**
 
+**第十六轮（2026-10-13 刘工）：顶部对齐二次校准 · 并入第十一轮 0.25 人日，不另计**
+
+- [x] 上轮 0.125rem 补偿不足（主题 body 行高比估算大）→ 0.375rem（公式：字号差 × (行高−0.7)/2 ≈ 6px），注释标注微调锚点——剩余 1px 量级由真机 devtools 定值
+
+**第十五轮（2026-10-13 刘工）：面板三区顶部对齐 · 并入第十一轮 0.25 人日，不另计**
+
+- [x] 错位来源：左列 label 自带 0.25rem 顶距 + 大小字号 cap 高度差；promo 图卡顶以行盒对齐本已齐
+- [x] 修：label 去顶距 + 0.125rem cap 补偿（小字行盒顶留白小于大字，微沉才与大字字面齐线）；组标题/promo 不动
+- [x] tag balance 29 文件 ✓；**theme check 待刘工代跑**
+
+**第十四轮（2026-10-13 刘工）：面板呼吸感二档 + 等高卡 · 并入第十一轮 0.25 人日，不另计**
+
+- [x] **呼吸感二档**：卡下限 11→12rem、卡间 1.25→1.5rem、组间 1.5→2.25rem、组标题下距 1rem、面板 padding 1.75/2 → 2.25/2.5rem、左列-中区 gap 2→2.5rem——上一档只调了卡内，这档调容器
+- [x] **等高卡**：li 是 grid item 默认 stretch 等行高，但 link 高度随内容 → link 改 flex column + width 100% 拉满；price/count `margin-block-start: auto` 沉底（0.375rem 为最小间距）——内容差异只影响文字，不影响卡底色高度
+- [x] tag balance 29 文件 ✓；**theme check 待刘工代跑**
+
+**第十三轮（2026-10-13 刘工）：产品卡呼吸感 · 并入第十一轮 0.25 人日，不另计**
+
+- [x] 卡内距 `0.5/0.5/0.75` → `0.625/0.75/1rem`；图-文字 0.5 → 0.625rem 且 title 加 line-height 1.4（换行行距）；price 下移 0.375 + 字号 0.875 + 80% 灰（层级让位标题）；vendor 上距 0.75rem；count 同步 0.375
+
+**第十二轮（2026-10-13 刘工）：产品卡底色 + 切换过渡调参 · 并入第十一轮 0.25 人日，不另计**
+
+- [x] 产品卡：浅色卡底（前景 4% `color-mix`，hover 7% + 上浮 2px）+ 12px 圆角 + 内 padding（图 8px 圆角内嵌上缘）——深浅主题都成立
+- [x] 切换过渡：0.18s 纯淡入 → **0.45s 淡入 + 下方 0.5rem 浮入**；仍单侧入场（文档流约束不变，旧组瞬时消失）；降级路径不变
+
+**第十一轮（2026-10-13 刘工）：卡内换行 + 图标尺寸 + LCP 答疑 + 切换淡入 · 0.25 人日，总额 11.5 → 11.75，已完成 10.25，剩余 1.5**
+
+- [x] **卡内文字换行**：根因是 `.main-nav__inner` 的 `white-space: nowrap`（导航行约定）继承进面板 → `.main-nav__mega-inner` 恢复 normal，左列分类名单独 nowrap；卡片 `minmax(10rem,1fr)` → `11rem`
+- [x] **左列图标**：1.375rem → 1.75rem（比 0.9375rem 文字大）
+- [x] **mega 与 LCP（答疑结论：不用 template）**：面板 `display:none` 不参与渲染、不会成为 LCP 候选；面板内全部图片 `loading: lazy`，无盒子即无 viewport 相交 → **首屏零图片请求**；template 方案省的只是几 KB HTML，代价是**无 JS 时面板完全不可用**（T-1.3 红线）+ 编辑器复杂度——否决。LCP 实测值回填 T-3.1 时复核
+- [x] **切换淡入**：新组 `@starting-style` opacity 0→1（0.18s）；**只做单侧淡入**——两组都在文档流，旧组延迟消失（allow-discrete）会布局跳动；不支持的浏览器降级瞬时显隐；`prefers-reduced-motion` 关闭（顺带补 `.main-nav__mega-card-img` hover 缩放入列表，此前遗漏）
+- [x] tag balance 29 文件 ✓；**theme check 待刘工代跑**
+
+**第十轮（2026-10-13 刘工）：accessories 图标 + 左列分类切换 · 0.5 人日，总额 11.0 → 11.5，已完成 10.0，剩余 1.5**
+
+- [x] **图标**：icon select 加 `accessories` 选项（`assets/icon-accessories.svg` 已入库）
+- [x] **左列分类切换中区**（第八轮"有意不做"项，刘工拍板要做）：
+  - cat 项加 `data-mega-tab="{{ forloop.index }}"`（含 tabindex="0"，键盘可聚焦切换）；panel 加 `data-mega-panel="{{ forloop.index }}"`（两个循环都是二级项全循环，索引天然对齐；无内容的二级项不输出 panel，索引跳号不影响配对）
+  - `nav-pill.js` 扩展 `_switchTabs`：升级即切默认组（第一个 panel）；hover / focusin 左列项切换；**鼠标重新压上一级 trigger 时重置默认组，面板内部移动不重置**（判定：event.target 是否在 `.main-nav__link` 内——面板内元素不在该类，避免中区移动被弹回第一组）；`mega-inner mouseleave` 回默认
+  - **渐进增强**：无 JS 时全部组可见（`hidden` 只由 JS 加，CSS 只在 `nav-mega-tabs--ready` 下生效）——T-1.3 无 JS 底线不破
+  - 激活态 `--active`（深色加粗）与页面态 `--current`（品牌色）分离，同元素并存时 current 胜（声明顺序）
+  - 切换无动画（display 瞬时），reduced-motion 无涉
+- [x] node 语法 ✓、locale keys 33 文件 ✓、tag balance 29 文件 ✓、JSON 合法；**theme check 待刘工代跑**
+
+#### T-1.7 第九轮（2026-10-13 刘工）：BUG-034 修复 + popular 产品阵列 + View all · 0.75 人日
+
+**BUG-034（当日引入当日修）：hover 穿过面板死亡区自动收起**
+
+- [x] **根因**：第六轮把行 padding 加在 `.main-nav__inner` 上，而 `li` 只包住 44px 的 trigger——trigger 与 mega 面板之间出现 16px 既不在 `li` 内、也不在面板内的"死亡区"，鼠标穿过时 `:hover` 链断掉、面板收起
+- [x] **修复**：`padding-block: 1rem` 从 inner 移到 `.main-nav__item` 自身，li 高度覆盖整行，hover 链从 trigger 无缝延续到面板；药丸测量基于 trigger rect 不受影响（视觉不变）
+- [x] **预防**：hover 链类组件加 padding 时必须画"命中区链路图"——padding 加在祖先还是目标上，决定了链路是否连续
+
+**popular 产品阵列（刘工店侧建 mower-popular / chainsaw-popular / trimmer-popular 集合）**
+
+- [x] `mega_category_icon` block 扩展 `popular_collection`（collection picker）——图标与产品数据源同 block 配置
+- [x] 中区组渲染优先级：popular 集合有产品 → 产品卡阵列（前 3 个：图 + vendor 小标 + 名称 + `product.price | money`）+ 组头 "All {集合名} (n) →"（View All 型箭头链接）+ 组底三级小链接行（导航入口不丢）；未配/集合空 → 回退第八轮三级集合卡；leaf 二级不产出组
+- [x] 前台 locale 新增 `navigation.view_all_products`；schema locale 新增 `labels.mega_popular_collection(+_info)`
+
+**View all products 出口**
+
+- [x] 左列底部 "View all products →"（`routes.all_products_collection_url`，官方内置 /collections/all；箭头合规，同屏箭头数 ≤5：左列 1 + 组头 2）
+
+- [x] locale keys 33 文件命中、tag balance 29 文件、JSON 剥注释头后合法；**theme check 待刘工代跑**
+
+**第八轮（2026-10-13 刘工，参考 demo 截图三段式重构 + shopify-frontend-design 技能流程）· 1.0 人日，总额 9.25 → 10.25，已完成 8.75，剩余 1.5**
+
+- [x] **三段式面板**：左列分类导航（12rem，图标 + 标题，hover 变深色 / current 品牌色加粗）+ 中区集合卡组（flex 剩余）+ promo 卡（15rem 已有）
+- [x] **图标机制**：新 block `mega_category_icon`（`menu_item` 与**二级项**标题精确匹配 + icon select: none/mower/chainsaw/trimmer，limit 10，`max_blocks` 3→13）。图标 = `assets/icon-{kind}.svg` inline（680 viewBox 线框、currentColor，CSS 控尺寸 1.375rem）。菜单是商家数据无图标字段，约定映射（按标题关键词）是死路，block 配置是可删可配的正路
+- [x] **三级菜单**：展示为**集合卡**（图 + 标题 + 真实产品数）——数据走 `link.object`（仅 `collection_link` 类型），图源 `collection.featured_image` → 缺图回退 `collection.products.first.image` → 再缺渲染占位色块（三层防御不留空壳）；产品数走 `all_products_count` + locale 复数键（真实数据非伪造）；`grandchild.type != collection_link` 时降级纯文字卡
+- [x] **产品图 hover 动画**：卡图 `scale(1.06)` 0.3s + 标题品牌色；`focus-visible` 同样触发（键盘等价）
+- [x] **有意不做（代价明说）**：①中区**产品卡阵列**（截图 MOST POPULAR 式）——菜单 DOM 全站每页渲染，多集合×多产品 = 每页几十个额外图片请求，撞 SDD §8.1 性能线，且演示店 Chainsaws/Trimmers 集合为空必出空壳；②左列 hover 切换中区——需 JS，破"无 JS 可用"底线，中区全平铺（面板稍高）；③左列"View All →"出口——一级分组无 URL（BUG-023），商家数据造不了
+- [x] locale：前台 `navigation.products_count`（one/other 复数插值）；schema `general.mega_category_icon`、`labels.mega_category_menu_item(+_info)`、`labels.category_icon`、`options.category_icon.*`
+- [x] 自检（技能三重过）：真实数据无伪造 ✓ 无硬编码文案 ✓ 对比度沿用实测灰阶 ✓ 键盘/触控目标 44px ✓ 无 Sass/压缩资源 ✓；JSON 合法（注释头剥离后）、check-locale-keys 33 文件命中、check-tag-balance 29 文件平衡；**theme check 待刘工代跑**
+
 **第七轮（同日刘工）：页面背景模糊遮罩（apple.com 风格）· 并入第二轮 0.5 人日，不另计**
 
 - [x] mega 展开时行下方整屏暗化（黑 25%）+ `backdrop-filter: blur(8px)`（含 `-webkit-` 前缀，Safari 兼容）
@@ -381,8 +455,12 @@ T-0.1 0.5 ✅ + T-0.2 0.5 = 1.0        （T-0.1 已完成 2026-10-09）
 + T-2.1 0.5 + T-2.2 0.5 = 1.0   （累计 6.75）
 + T-3.1 1.0   （累计 7.75）
 + T-1.7 1.0 ✅ + 第二轮滑动药丸 0.5 ✅ （累计 9.25，v2.1 追加 2026-10-12）
++ T-1.7 第八轮三段式面板 1.0 ✅ （累计 10.25，v2.2 追加 2026-10-13）
++ T-1.7 第九轮 0.75 ✅ （累计 11.0，v2.3 追加 2026-10-13）
++ T-1.7 第十轮 0.5 ✅ （累计 11.5，v2.4 追加 2026-10-13）
++ T-1.7 第十一轮 0.25 ✅ （累计 11.75，v2.5 追加 2026-10-13）
 ────────────────────────────
-合计 9.25 人日（含已完成的 T-0.1 0.5；**剩余待做 1.5** = T-0.2 0.5 + T-3.1 1.0）
+合计 11.75 人日（含已完成的 T-0.1 0.5；**剩余待做 1.5** = T-0.2 0.5 + T-3.1 1.0）
 
 T-3.2 文档回填 0 人日 ✅ 已完成 2026-10-09
 ```
