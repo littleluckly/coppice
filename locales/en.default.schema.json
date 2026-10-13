@@ -203,6 +203,12 @@
       "center": "Center",
       "right": "Right"
     },
+    "category_icon": {
+      "none": "None",
+      "mower": "Mower",
+      "chainsaw": "Chainsaw",
+      "trimmer": "Trimmer"
+    },
     "direction": {
       "horizontal": "Horizontal",
       "vertical": "Vertical"
