@@ -45,6 +45,8 @@ class NavPill extends HTMLElement {
     this._activePanelIndex = null;
     if (this._panels.length && this._tabs.length) {
       this.classList.add('nav-mega-tabs--ready');
+      /* 升级即切默认组：无 JS 时所有面板可见，接管后只留第一个 */
+      this._switchTabs(this._defaultPanelIndex);
     }
 
     const pill = document.createElement('span');
@@ -180,6 +182,27 @@ class NavPill extends HTMLElement {
     if (!this._pill) return;
     this._pill.classList.remove('main-nav__pill--on');
     this._current = null;
+  }
+
+  /* 切换中区面板：index = 二级项在菜单里的序号（data-mega-tab/-panel 成对）。
+     无对应 panel 的 tab（商家只配了图标没配内容）保持当前组不动。 */
+  _switchTabs(index) {
+    if (!index || index === this._activePanelIndex) return;
+    if (!this._panels.length) return;
+    this._activePanelIndex = index;
+    for (const panel of this._panels) {
+      if (panel.dataset.megaPanel === index) {
+        panel.removeAttribute('hidden');
+      } else {
+        panel.setAttribute('hidden', '');
+      }
+    }
+    for (const tab of this._tabs) {
+      tab.classList.toggle(
+        'main-nav__mega-cat-link--active',
+        tab.dataset.megaTab === index
+      );
+    }
   }
 }
 
