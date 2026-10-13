@@ -988,8 +988,9 @@
   }
 
   .main-nav__mega-cat-icon svg {
-    inline-size: 1.375rem;
-    block-size: 1.375rem;
+    /* 图标比文字大一点（2026-10-13 刘工）：文字 0.9375rem，图标 1.75rem */
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
   }
 
   /* 中区：二级分组的集合卡组，纵向堆叠（无切换依赖，无 JS 可用） */
@@ -1014,7 +1015,8 @@
     padding: 0;
     list-style: none;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    /* 11rem 下限（2026-10-13 刘工：卡片大一点，长产品名换行后不挤） */
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
     gap: 1.25rem;
   }
 
