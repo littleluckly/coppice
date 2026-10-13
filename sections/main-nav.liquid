@@ -1018,13 +1018,13 @@
     flex: 1 1 auto;
     min-inline-size: 0;
     display: grid;
-    gap: 1.5rem;
+    gap: 2.25rem;
     align-content: start;
   }
 
   .main-nav__mega-group-title {
     display: block;
-    padding-block: 0 0.75rem;
+    padding-block: 0 1rem;
     font-size: 1.125rem;
     font-weight: 700;
     color: var(--color-foreground);
@@ -1035,13 +1035,22 @@
     padding: 0;
     list-style: none;
     display: grid;
-    /* 11rem 下限（2026-10-13 刘工：卡片大一点，长产品名换行后不挤） */
-    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-    gap: 1.25rem;
+    /* 12rem 下限（2026-10-13 刘工：仍紧凑压抑——卡更宽、间距更大），
+       每行少一张卡换呼吸感 */
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* 等高卡：li 是 grid item（默认 stretch 等行高），link 拉满列向，
+     价格/计数用 auto margin 沉底——内容差异不影响卡底色高度 */
+  .main-nav__mega-card {
+    display: flex;
   }
 
   .main-nav__mega-card-link {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
     text-decoration: none;
     /* 浅色卡底 + 圆角（2026-10-13 刘工）：前景 4% 叠加，深浅主题都成立；
        hover 微加深提示可点 */
