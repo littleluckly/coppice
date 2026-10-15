@@ -228,7 +228,7 @@
   .collection > * {
     grid-column: 2;
   }
-  .collection > .collection__banner {
+  .collection > .collection__hero {
     grid-column: 1 / -1;
   }
 
@@ -272,6 +272,14 @@
       padding: 2.5rem var(--page-margin) 2rem max(var(--page-margin), 2.5rem);
       align-self: start;
     }
+  }
+
+  /* 白底内容区：从 hero 下自然延续（页面背景即白），内容列对齐下方网格 */
+  .collection__sheet {
+    padding-block-end: 2rem;
+  }
+  .collection--no-banner .collection__intro {
+    padding-block-start: 2rem;
   }
 
   /* 面包屑 */
