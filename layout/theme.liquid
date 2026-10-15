@@ -34,8 +34,15 @@
     {% endcomment %}
     {% render 'skip-link' %}
 
-    {% # Header group: announcement-bar → utility-bar → main-nav (the sticky row) %}
-    {% sections 'header-group' %}
+    {% comment %}
+      外层 <site-header> Custom Element 是集合页"透明页头 / 横幅沉浸叠图"的挂点
+      （2026-10-15 拍板）——非集合页该元素零行为（site-header.js 按 body class 短路）。
+    {% endcomment %}
+    <site-header class="site-header">
+      {% sections 'header-group' %}
+    </site-header>
+
+    <script src="{{ 'site-header.js' | asset_url }}" defer></script>
 
     {% comment %}
       Main landmark — the skip link target. The id here and the href in
