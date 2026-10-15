@@ -225,6 +225,12 @@
 </div>
 
 {% stylesheet %}
+  /* 包裹层退回 block：section 顶部的 script/link 标签不能成为 .shopify-section
+     grid 的 item（否则会在横幅上方挤出空行，破坏"沉浸贴页头"）；通栏由根 div
+     的 full-width + 内部 grid 自行管理。 */
+  .shopify-section.collection-section {
+    display: block;
+  }
   .collection {
     display: grid;
     grid-template-columns: var(--content-grid);
