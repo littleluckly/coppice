@@ -61,7 +61,7 @@
         "id": "immersive_header",
         "label": "t:labels.immersive_header",
         "info": "t:labels.immersive_header_info",
-        "default": false
+        "default": true
       }
     ]
   },
