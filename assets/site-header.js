@@ -37,6 +37,8 @@ class SiteHeader extends HTMLElement {
     window.removeEventListener('scroll', this._onScroll);
     window.removeEventListener('resize', this._onResize);
     document.documentElement.style.removeProperty('--site-header-h');
+    const main = document.querySelector('.main-content');
+    if (main) main.style.marginTop = '';
   }
 
   /** 页头高度写入 CSS 变量 + 直接内联兜底：
