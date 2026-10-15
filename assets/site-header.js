@@ -39,10 +39,14 @@ class SiteHeader extends HTMLElement {
     document.documentElement.style.removeProperty('--site-header-h');
   }
 
-  /** 页头高度写入 CSS 变量：.main-content 据此负上移，横幅钻到页头背后 */
+  /** 页头高度写入 CSS 变量 + 直接内联兜底：
+      CSS 变量供 .template-collection .main-content 的规则消费；
+      内联 margin 是双保险——critical.css 被浏览器缓存旧版时，横幅照样上移。 */
   _measure() {
     const height = this.getBoundingClientRect().height;
     document.documentElement.style.setProperty('--site-header-h', `${height}px`);
+    const main = document.querySelector('.main-content');
+    if (main) main.style.marginTop = `${-height}px`;
   }
 
   /** 透明态判定：横幅底缘还在视口内（页头仍压在横幅上）→ 透明白字；否则恢复 */
