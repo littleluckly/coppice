@@ -40,6 +40,10 @@
       break
     endif
   endfor
+  assign has_banner = false
+  if collection.image and section.settings.show_banner
+    assign has_banner = true
+  endif
 -%}
 
 <script src="{{ 'compare-toggle.js' | asset_url }}" defer></script>
