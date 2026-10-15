@@ -627,23 +627,23 @@
     cursor: pointer;
   }
 
-  /* JS 增强态：data-facets-ready 后桌面侧栏两栏 + 隐藏应用按钮（change 即提交），
-     移动端显示 Filters 按钮（打开 dialog 承载同一份筛选 DOM）。 */
+  /* 桌面两栏：纯 CSS 媒体查询，不依赖 JS（无 JS 也能筛选——应用按钮整页 GET 提交）。
+     data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
+  @media (min-width: 990px) {
+    .collection__layout {
+      grid-template-columns: 230px 1fr;
+      gap: 2rem;
+    }
+    .facets__mobile-head {
+      display: none;
+    }
+  }
   .collection__facets[data-facets-ready] .facets__apply {
     display: none;
   }
   @media (max-width: 989.98px) {
     .collection__facets[data-facets-ready] .facets__open {
       display: inline-flex;
-    }
-  }
-  @media (min-width: 990px) {
-    .collection__facets[data-facets-ready] .collection__layout {
-      grid-template-columns: 230px 1fr;
-      gap: 2rem;
-    }
-    .collection__facets[data-facets-ready] .facets__mobile-head {
-      display: none;
     }
   }
 
