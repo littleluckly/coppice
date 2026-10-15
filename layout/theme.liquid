@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="{{ request.locale.iso_code }}">
   <head>
+    {% # JS 就绪标记：CSS 渐进增强的门控（禁 JS → .js 不出现 → 沉浸页头等增强整段不命中） %}
+    <script>document.documentElement.classList.add('js')</script>
+
     {% # Inlined CSS Variables %}
     {% render 'css-variables' %}
 
