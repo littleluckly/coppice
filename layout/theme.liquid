@@ -26,7 +26,7 @@
     {{ content_for_header }}
   </head>
 
-  <body>
+  <body class="template-{{ template.name }}">
     {% comment %}
       Skip link first, before any landmark. It is the first thing keyboard focus
       reaches, letting people bypass the header. Rendered from layout rather than
