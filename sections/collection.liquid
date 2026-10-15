@@ -55,7 +55,6 @@
 {{ 'product-card.css' | asset_url | stylesheet_tag }}
 
 <div class="collection{% unless has_banner %} collection--no-banner{% endunless %} full-width" data-collection-root>
-  2222
   {%- capture intro_content -%}
     <nav class="collection__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
       <ol class="collection__breadcrumb-list" role="list">
@@ -96,123 +95,125 @@
 
   <div class="collection__sheet">
     <collection-facets class="collection__facets" data-section-id="{{ section.id }}">
-      <form
-        class="facets__form"
-        action="{{ collection.url }}"
-        method="get"
-        data-facets-form
-      >
-        <div class="collection__layout">
+      <div class="collection__layout">
+        <form
+          class="facets__form"
+          action="{{ collection.url }}"
+          method="get"
+          data-facets-form
+        >
+          {%- comment -%} 排序 select 随筛选表单一起提交（保留已有 filter 参数）。
+              位置：筛选面板顶部（Dawn 同款——form 是左列 grid item，results 在右列，避免嵌套 form）。 {%- endcomment -%}
+          {%- if section.settings.show_sort -%}
+            <label class="facets__sort">
+              <span class="facets__sort-label">{{ 'collections.sort.label' | t }}</span>
+              <select name="sort_by" data-facets-sort>
+                {%- for option in collection.sort_options -%}
+                  <option
+                    value="{{ option.value }}"
+                    {% if option.value == collection.sort_by %}
+                      selected
+                    {% endif %}
+                  >
+                    {{ option.name | escape }}
+                  </option>
+                {%- endfor -%}
+              </select>
+            </label>
+          {%- endif -%}
+
           {%- if collection.filters.size > 0 -%}
             {% render 'faceted-filters', filters: collection.filters %}
           {%- endif -%}
+        </form>
 
-          <div class="collection__content">
-            <div class="collection__toolbar">
-              {%- if collection.filters.size > 0 -%}
-                <button
-                  type="button"
-                  class="facets__open"
-                  data-facets-open
-                  aria-controls="FacetsDialog-{{ section.id }}"
-                >
-                  {{ 'collections.filters.open' | t }}
-                </button>
+        <div class="collection__content">
+          <div class="collection__toolbar">
+            {%- if collection.filters.size > 0 -%}
+              <button
+                type="button"
+                class="facets__open"
+                data-facets-open
+                aria-controls="FacetsDialog-{{ section.id }}"
+              >
+                {{ 'collections.filters.open' | t }}
+              </button>
+            {%- endif -%}
+
+            {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
+
+            <p class="collection__count" aria-live="polite" data-facets-count>
+              {{ 'navigation.products_count' | t: count: collection.products_count }}
+            </p>
+          </div>
+
+          <div class="collection__results" data-facets-results tabindex="-1">
+            {%- paginate collection.products by per_page -%}
+              {%- if collection.products_count > 0 -%}
+                <ul class="collection__grid" role="list">
+                  {%- for product in collection.products -%}
+                    <li class="collection__item">
+                      {%- liquid
+                        assign card_lazy = true
+                        assign card_width = false
+                        assign card_cc = false
+                        assign card_power = false
+                        assign card_weight = false
+                        if forloop.index <= 4
+                          assign card_lazy = false
+                        endif
+                        if section.settings.show_spec_width
+                          assign card_width = true
+                        endif
+                        if section.settings.show_spec_cc
+                          assign card_cc = true
+                        endif
+                        if section.settings.show_spec_power
+                          assign card_power = true
+                        endif
+                        if section.settings.show_spec_weight
+                          assign card_weight = true
+                        endif
+                      -%}
+                      {% render 'product-card',
+                        product: product,
+                        lazy: card_lazy,
+                        quick_add: section.settings.show_quick_add,
+                        show_width: card_width,
+                        show_cc: card_cc,
+                        show_power: card_power,
+                        show_weight: card_weight
+                      %}
+                    </li>
+                  {%- endfor -%}
+                </ul>
+
+                {%- if paginate.pages > 1 -%}
+                  <nav class="collection__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
+                    {{ paginate | default_pagination }}
+                  </nav>
+                {%- endif -%}
+              {%- elsif has_active_filters -%}
+                {%- comment -%} 筛选后无结果：有筛选器已激活但当前组合无商品 {%- endcomment -%}
+                <div class="collection__empty">
+                  <p class="collection__empty-title">{{ 'collections.no_matches' | t }}</p>
+                  <a class="collection__empty-link" href="{{ collection.url }}">
+                    {{ 'collections.clear_filters' | t }}
+                  </a>
+                </div>
+              {%- else -%}
+                {%- comment -%} 真空集合：空态 + 全部商品入口（pages-ui §4 状态要点） {%- endcomment -%}
+                <div class="collection__empty">
+                  <p class="collection__empty-title">{{ 'collections.empty.title' | t }}</p>
+                  <p class="collection__empty-body">{{ 'collections.empty.body' | t }}</p>
+                  <a class="collection__empty-link" href="{{ routes.all_products_collection_url }}">
+                    {{ 'collections.empty.link' | t }}
+                  </a>
+                </div>
               {%- endif -%}
-
-              {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
-
-              {%- if section.settings.show_sort -%}
-                <label class="facets__sort">
-                  <span class="facets__sort-label">{{ 'collections.sort.label' | t }}</span>
-                  <select name="sort_by" data-facets-sort>
-                    {%- for option in collection.sort_options -%}
-                      <option
-                        value="{{ option.value }}"
-                        {% if option.value == collection.sort_by %}
-                          selected
-                        {% endif %}
-                      >
-                        {{ option.name | escape }}
-                      </option>
-                    {%- endfor -%}
-                  </select>
-                </label>
-              {%- endif -%}
-
-              <p class="collection__count" aria-live="polite" data-facets-count>
-                {{ 'navigation.products_count' | t: count: collection.products_count }}
-              </p>
-            </div>
+            {%- endpaginate -%}
           </div>
         </div>
-      </form>
-
-      <div class="collection__results" data-facets-results tabindex="-1">
-        {%- paginate collection.products by per_page -%}
-          {%- if collection.products_count > 0 -%}
-            <ul class="collection__grid" role="list">
-              {%- for product in collection.products -%}
-                <li class="collection__item">
-                  {%- liquid
-                    assign card_lazy = true
-                    assign card_width = false
-                    assign card_cc = false
-                    assign card_power = false
-                    assign card_weight = false
-                    if forloop.index <= 4
-                      assign card_lazy = false
-                    endif
-                    if section.settings.show_spec_width
-                      assign card_width = true
-                    endif
-                    if section.settings.show_spec_cc
-                      assign card_cc = true
-                    endif
-                    if section.settings.show_spec_power
-                      assign card_power = true
-                    endif
-                    if section.settings.show_spec_weight
-                      assign card_weight = true
-                    endif
-                  -%}
-                  {% render 'product-card',
-                    product: product,
-                    lazy: card_lazy,
-                    quick_add: section.settings.show_quick_add,
-                    show_width: card_width,
-                    show_cc: card_cc,
-                    show_power: card_power,
-                    show_weight: card_weight
-                  %}
-                </li>
-              {%- endfor -%}
-            </ul>
-
-            {%- if paginate.pages > 1 -%}
-              <nav class="collection__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
-                {{ paginate | default_pagination }}
-              </nav>
-            {%- endif -%}
-          {%- elsif has_active_filters -%}
-            {%- comment -%} 筛选后无结果：有筛选器已激活但当前组合无商品 {%- endcomment -%}
-            <div class="collection__empty">
-              <p class="collection__empty-title">{{ 'collections.no_matches' | t }}</p>
-              <a class="collection__empty-link" href="{{ collection.url }}">
-                {{ 'collections.clear_filters' | t }}
-              </a>
-            </div>
-          {%- else -%}
-            {%- comment -%} 真空集合：空态 + 全部商品入口（pages-ui §4 状态要点） {%- endcomment -%}
-            <div class="collection__empty">
-              <p class="collection__empty-title">{{ 'collections.empty.title' | t }}</p>
-              <p class="collection__empty-body">{{ 'collections.empty.body' | t }}</p>
-              <a class="collection__empty-link" href="{{ routes.all_products_collection_url }}">
-                {{ 'collections.empty.link' | t }}
-              </a>
-            </div>
-          {%- endif -%}
-        {%- endpaginate -%}
       </div>
     </collection-facets>
   </div>
