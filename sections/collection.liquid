@@ -384,15 +384,17 @@
     font: inherit;
     cursor: pointer;
   }
+  /* 排序：筛选面板顶部（form 内，随筛选表单提交） */
   .facets__sort {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 0.4rem;
-    margin-inline-start: auto;
+    margin-block-end: 1rem;
   }
   .facets__sort-label {
     font-size: 0.85rem;
     color: rgb(0 0 0 / 60%);
+    white-space: nowrap;
   }
   .facets__sort select {
     min-height: 44px;
@@ -404,6 +406,7 @@
     font-size: 0.85rem;
     color: rgb(0 0 0 / 60%);
     white-space: nowrap;
+    margin-inline-start: auto;
   }
 
   /* 已选标签 */
