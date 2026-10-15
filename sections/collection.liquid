@@ -232,14 +232,19 @@
     grid-column: 1 / -1;
   }
 
-  /* 横幅：矩形图原样输出（LCP eager），曲线交给上层白卡。
-     --banner-h 由 .collection 统一持有：横幅用全值，白卡负 margin 按比例咬合。 */
+  /* 横幅沉浸通栏（贴页头），左上介绍面板叠占左列，交界处用图片左上大弧过渡。
+     移动端（<990px）拍板 A：图片在上、介绍面板贴其下方堆叠。 */
   .collection {
-    --banner-h: clamp(320px, 52vh, 600px);
-    --collection-radius: clamp(28px, 3vw, 48px);
+    --banner-h: clamp(320px, 50vh, 600px);
+    --collection-radius: clamp(48px, 9vw, 150px);
+  }
+  .collection__hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
   .collection__banner {
-    height: var(--banner-h);
+    height: clamp(180px, 32vh, 280px);
     overflow: hidden;
   }
   .collection__banner img {
@@ -247,49 +252,26 @@
     height: 100%;
     object-fit: cover;
   }
-  /* 移动端白卡贴底不侵入：横幅全高可见，单独压矮 */
-  @media (max-width: 989.98px) {
-    .collection__banner {
-      height: clamp(180px, 32vh, 280px);
-    }
-  }
-
-  /* 白卡：上移侵入横幅（咬掉约一半，露出上部产品主体）；顶部圆角 +
-     两侧反向弧（伪元素 radial-gradient，弧尺寸随 --collection-radius 走）。
-     移动端（<990px）拍板 A：不侵入贴底。 */
-  .collection__sheet {
-    position: relative;
-    z-index: 1;
-    margin-top: 0;
-    padding: 1.25rem 0 2rem;
-    border-radius: var(--collection-radius) var(--collection-radius) 0 0;
-    background-color: var(--color-background);
-  }
-  .collection__sheet::before,
-  .collection__sheet::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    width: var(--collection-radius);
-    height: var(--collection-radius);
-    display: none;
+  .collection__intro {
+    padding: 1.5rem max(var(--page-margin), 1.5rem) 1rem;
   }
   @media (min-width: 990px) {
-    .collection:not(.collection--no-banner) .collection__sheet {
-      margin-top: calc(var(--banner-h) * -0.52);
+    .collection:not(.collection--no-banner) .collection__hero {
+      grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
     }
-    .collection:not(.collection--no-banner) .collection__sheet::before,
-    .collection:not(.collection--no-banner) .collection__sheet::after {
-      display: block;
+    .collection:not(.collection--no-banner) .collection__banner {
+      grid-column: 2;
+      grid-row: 1;
+      height: var(--banner-h);
+      /* 左上大弧：图片与介绍面板的交界曲线（CSS 裁切，图片矩形原样） */
+      border-radius: var(--collection-radius) 0 0 0;
     }
-  }
-  .collection__sheet::before {
-    inset-inline-end: 100%;
-    background: radial-gradient(circle at 100% 0, transparent 0 var(--collection-radius), var(--color-background) var(--collection-radius));
-  }
-  .collection__sheet::after {
-    inset-inline-start: 100%;
-    background: radial-gradient(circle at 0 0, transparent 0 var(--collection-radius), var(--color-background) var(--collection-radius));
+    .collection:not(.collection--no-banner) .collection__intro {
+      grid-column: 1;
+      grid-row: 1;
+      padding: 2.5rem var(--page-margin) 2rem max(var(--page-margin), 2.5rem);
+      align-self: start;
+    }
   }
 
   /* 面包屑 */
