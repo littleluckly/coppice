@@ -228,9 +228,14 @@
     grid-column: 1 / -1;
   }
 
-  /* 横幅：矩形图原样输出（LCP eager），曲线交给上层白卡 */
+  /* 横幅：矩形图原样输出（LCP eager），曲线交给上层白卡。
+     --banner-h 由 .collection 统一持有：横幅用全值，白卡负 margin 按比例咬合。 */
+  .collection {
+    --banner-h: clamp(320px, 52vh, 600px);
+    --collection-radius: clamp(28px, 3vw, 48px);
+  }
   .collection__banner {
-    height: clamp(200px, 30vw, 420px);
+    height: var(--banner-h);
     overflow: hidden;
   }
   .collection__banner img {
@@ -238,11 +243,17 @@
     height: 100%;
     object-fit: cover;
   }
+  /* 移动端白卡贴底不侵入：横幅全高可见，单独压矮 */
+  @media (max-width: 989.98px) {
+    .collection__banner {
+      height: clamp(180px, 32vh, 280px);
+    }
+  }
 
-  /* 白卡：上移侵入横幅；顶部圆角 + 两侧反向弧（伪元素 radial-gradient）。
+  /* 白卡：上移侵入横幅（咬掉约一半，露出上部产品主体）；顶部圆角 +
+     两侧反向弧（伪元素 radial-gradient，弧尺寸随 --collection-radius 走）。
      移动端（<990px）拍板 A：不侵入贴底。 */
   .collection__sheet {
-    --collection-radius: 20px;
     position: relative;
     z-index: 1;
     margin-top: 0;
@@ -261,7 +272,7 @@
   }
   @media (min-width: 990px) {
     .collection:not(.collection--no-banner) .collection__sheet {
-      margin-top: calc(-1 * var(--collection-radius) * 2 - 8px);
+      margin-top: calc(var(--banner-h) * -0.52);
     }
     .collection:not(.collection--no-banner) .collection__sheet::before,
     .collection:not(.collection--no-banner) .collection__sheet::after {
