@@ -24,6 +24,13 @@ class SiteHeader extends HTMLElement {
     this._update();
     window.addEventListener('scroll', this._onScroll, { passive: true });
     window.addEventListener('resize', this._onResize, { passive: true });
+    /* 字体加载后行高变化 → 重测（FOUC 偏差防护；fonts.ready 不可用时静默跳过） */
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        this._measure();
+        this._update();
+      });
+    }
   }
 
   disconnectedCallback() {
