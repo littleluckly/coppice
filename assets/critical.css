@@ -267,6 +267,9 @@ site-header {
 .js.template-collection .site-header--solid .main-nav-section {
   background-color: var(--color-background);
 }
+.js.template-collection .site-header--solid .main-nav__desktop {
+  background-color: var(--color-background);
+}
 .js.template-collection .site-header--solid .announcement-bar {
   background-color: var(--color-brand);
 }
