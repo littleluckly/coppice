@@ -50,41 +50,45 @@
 {%- endif -%}
 {{ 'product-card.css' | asset_url | stylesheet_tag }}
 
-<div class="collection{% unless collection.image and section.settings.show_banner %} collection--no-banner{% endunless %}" data-collection-root>
-  {%- if collection.image and section.settings.show_banner -%}
-    <div class="collection__banner">
-      {{
-        collection.image
-        | image_url: width: 2400
-        | image_tag:
-          widths: '750, 1100, 1500, 2000, 2400',
-          sizes: '100vw',
-          width: collection.image.width,
-          height: collection.image.height,
-          loading: 'eager',
-          fetchpriority: 'high',
-          alt: collection.image.alt
-      }}
+<div class="collection{% unless collection.image and section.settings.show_banner %} collection--no-banner{% endunless %} full-width" data-collection-root>
+  <div class="collection__hero">
+    {%- if collection.image and section.settings.show_banner -%}
+      <div class="collection__banner">
+        {{
+          collection.image
+          | image_url: width: 2400
+          | image_tag:
+            widths: '750, 1100, 1500, 2000, 2400',
+            sizes: '(min-width: 990px) 58vw, 100vw',
+            width: collection.image.width,
+            height: collection.image.height,
+            loading: 'eager',
+            fetchpriority: 'high',
+            alt: collection.image.alt
+        }}
+      </div>
+    {%- endif -%}
+
+    <div class="collection__intro">
+      <nav class="collection__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
+        <ol class="collection__breadcrumb-list" role="list">
+          <li class="collection__breadcrumb-item">
+            <a href="{{ routes.root_url }}">{{ 'collections.breadcrumb_home' | t }}</a>
+          </li>
+          <li class="collection__breadcrumb-item" aria-current="page">{{ collection.title | escape }}</li>
+        </ol>
+      </nav>
+
+      <header class="collection__head">
+        <h1 class="collection__title">{{ collection.title | escape }}</h1>
+        {%- if collection.description != blank -%}
+          <div class="collection__description rte">{{ collection.description }}</div>
+        {%- endif -%}
+      </header>
     </div>
-  {%- endif -%}
+  </div>
 
   <div class="collection__sheet">
-    <nav class="collection__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
-      <ol class="collection__breadcrumb-list" role="list">
-        <li class="collection__breadcrumb-item">
-          <a href="{{ routes.root_url }}">{{ 'collections.breadcrumb_home' | t }}</a>
-        </li>
-        <li class="collection__breadcrumb-item" aria-current="page">{{ collection.title | escape }}</li>
-      </ol>
-    </nav>
-
-    <header class="collection__head">
-      <h1 class="collection__title">{{ collection.title | escape }}</h1>
-      {%- if collection.description != blank -%}
-        <div class="collection__description rte">{{ collection.description }}</div>
-      {%- endif -%}
-    </header>
-
     <collection-facets class="collection__facets" data-section-id="{{ section.id }}">
       <form
         class="facets__form"
