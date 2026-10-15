@@ -1,0 +1,88 @@
+{% doc %}
+  faceted-filters — 筛选组通用件（task-collection T-2.2，集合页与搜索页共用）。
+
+  只输出「筛选组本体」（aside + fieldsets + 应用按钮）；
+  GET form 元素由消费方 section 负责（form 需同时包住 toolbar 的 sort_by，
+  筛选 + 排序 + q 一起提交——平台按 URL 参数服务端重算，SDD §6.1）。
+
+  纪律（SDD §6.1 / 拍板 7）：
+  - 数据一律来自 filter / filter_value 对象（param_name / value / count / active / url_to_remove），
+    主题零筛选逻辑、不发明参数名。
+  - 0 值防御：count == 0 且未激活的值不渲染（平台 Empty values=Hide 之外的双保险）。
+  - 无 JS：原生 GET 表单 + 应用按钮整页提交，URL 可分享、刷新保留。
+
+  @param {object} filters - filter 对象数组：collection.filters 或 search.filters（必填）
+{% enddoc %}
+<aside class="facets__aside" data-facets-aside>
+  <div class="facets__panel">
+    <div class="facets__mobile-head">
+      <h2 class="facets__panel-title">{{ 'collections.filters.label' | t }}</h2>
+      <button type="button" class="facets__close" data-facets-close>
+        {{ 'collections.filters.close' | t }}
+        <span class="visually-hidden">{{ 'navigation.close' | t }}</span>
+      </button>
+    </div>
+
+    {%- for filter in filters -%}
+      {%- if filter.type == 'price_range' -%}
+        <fieldset class="facets__group facets__group--price">
+          <legend class="facets__group-label">{{ filter.label | escape }}</legend>
+          <div class="facets__price">
+            {%- assign min_value = filter.min_value.value -%}
+            {%- assign max_value = filter.max_value.value -%}
+            <label class="facets__price-field">
+              <span class="visually-hidden">{{ 'collections.filters.price_min' | t }}</span>
+              <input
+                type="number"
+                inputmode="numeric"
+                name="{{ filter.min_value.param_name }}"
+                value="{{ min_value | money_without_currency | replace: ',', '' }}"
+                min="0"
+                max="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                placeholder="{{ filter.range_min | money_without_currency | replace: ',', '' }}"
+              >
+            </label>
+            <span class="facets__price-sep" aria-hidden="true">–</span>
+            <label class="facets__price-field">
+              <span class="visually-hidden">{{ 'collections.filters.price_max' | t }}</span>
+              <input
+                type="number"
+                inputmode="numeric"
+                name="{{ filter.max_value.param_name }}"
+                value="{{ max_value | money_without_currency | replace: ',', '' }}"
+                min="0"
+                max="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                placeholder="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+              >
+            </label>
+          </div>
+        </fieldset>
+      {%- else -%}
+        <fieldset class="facets__group">
+          <legend class="facets__group-label">{{ filter.label | escape }}</legend>
+          <ul class="facets__values" role="list">
+            {%- for value in filter.values -%}
+              {%- if value.count == 0 and value.active == false -%}{%- continue -%}{%- endif -%}
+              <li class="facets__value">
+                <label class="facets__value-label">
+                  <input
+                    type="checkbox"
+                    name="{{ value.param_name }}"
+                    value="{{ value.value | escape }}"
+                    {% if value.active %}checked{% endif %}
+                  >
+                  <span class="facets__value-text">{{ value.label | escape }}</span>
+                  <span class="facets__value-count">{{ value.count }}</span>
+                </label>
+              </li>
+            {%- endfor -%}
+          </ul>
+        </fieldset>
+      {%- endif -%}
+    {%- endfor -%}
+
+    <button type="submit" class="facets__apply" data-facets-apply>
+      {{ 'collections.filters.apply' | t }}
+    </button>
+  </div>
+</aside>

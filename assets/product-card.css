@@ -1,0 +1,181 @@
+/** Product card — shared component styles (首页 featured-collection / 集合页 / 搜索页共用)。
+ *  独立 CSS 的依据：AGENTS §6「跨 section 全局功能才拆独立 .css」——卡片被 3 个页面消费，
+ *  样式留在单个 section 内会让其他页面裸奔或制造多份拷贝。
+ *  加载方式：消费方 section 内 `{{ 'product-card.css' | asset_url | stylesheet_tag }}`。 */
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  height: 100%;
+  padding: 0.75rem;
+  background-color: var(--color-background);
+  border: 1px solid rgb(0 0 0 / 10%);
+  border-radius: 12px;
+}
+.product-card__media-wrap {
+  position: relative;
+}
+.product-card__media {
+  display: block;
+}
+.product-card__media img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background-color: #f6f6f4;
+}
+.product-card__placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+}
+.product-card__wishlist {
+  position: absolute;
+  inset-block-start: 0.4rem;
+  inset-inline-end: 0.4rem;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background-color: rgb(255 255 255 / 85%);
+  border-radius: 50%;
+  color: #444;
+  cursor: pointer;
+}
+.product-card__wishlist[aria-pressed='true'] {
+  color: #c0392b;
+}
+.product-card__wishlist[aria-pressed='true'] .product-card__heart path {
+  fill: currentcolor;
+}
+.product-card__title {
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.product-card__title a {
+  color: inherit;
+  text-decoration: none;
+}
+.product-card__specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgb(0 0 0 / 60%);
+}
+.product-card__spec + .product-card__spec::before {
+  content: '·';
+  margin-inline-end: 0.3rem;
+}
+.spec-value--card {
+  font-size: inherit;
+}
+.product-card__price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+.product-card__price-compare {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: rgb(0 0 0 / 50%);
+}
+.product-card__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  color: inherit;
+  text-decoration: none;
+}
+.product-card__star {
+  color: #e8a33d;
+}
+.product-card__rating-count {
+  color: rgb(0 0 0 / 55%);
+}
+
+/* 快速加购（T-1.1：仅单变体且 available 渲染；多变体无 CTA；售罄置灰） */
+.product-card__quick-add {
+  display: block;
+}
+.product-card__quick-add form {
+  display: block;
+}
+.product-card__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 1rem;
+  border: 1px solid var(--color-foreground);
+  border-radius: var(--style-border-radius-inputs);
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.product-card__add:hover:not(:disabled) {
+  background-color: var(--color-brand);
+  border-color: var(--color-brand);
+}
+.product-card__add:disabled {
+  border-color: rgb(0 0 0 / 25%);
+  background-color: transparent;
+  color: rgb(0 0 0 / 45%);
+  cursor: not-allowed;
+}
+.product-card__add[data-state='added'] {
+  background-color: var(--color-brand-accent);
+  border-color: var(--color-brand-accent);
+}
+.product-card__add[data-state='pending'] {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* 对比勾选（原 featured-collection 内样式随组件迁移） */
+.product-card__compare {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-block-start: auto;
+  padding: 10px 0;
+  min-height: 44px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  color: inherit;
+  cursor: pointer;
+}
+.product-card__compare::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid rgb(0 0 0 / 40%);
+  border-radius: 3px;
+  background-color: var(--color-background);
+}
+.product-card__compare[aria-pressed='true']::before {
+  background-color: var(--color-foreground);
+  box-shadow: inset 0 0 0 2.5px var(--color-background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-card__add {
+    transition: none;
+  }
+}

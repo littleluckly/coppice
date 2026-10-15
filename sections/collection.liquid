@@ -1,47 +1,693 @@
 {% comment %}
-  This section is used in the collection template to render collection page
-  listing all products within a collection.
+  Collection — 集合页主体（task-collection T-2.1/T-2.2/T-2.3/T-2.4/T-3.1，pages-ui §4）。
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
+  结构（2026-10-14 效果图 v2）：
+  横幅矩形图（全幅，LCP eager）→ 白色圆角卡上移侵入（面包屑 + h1 + 描述
+  + 筛选/内容两栏 + 网格 + 分页）。曲线全部 CSS：border-radius + 伪元素
+  radial-gradient 反向弧；图片不烤形状；移动端（<990px）白卡不侵入贴底。
+
+  复用（搜索页将复用同组积木，task-collection §0）：
+  - snippets/faceted-filters.liquid（筛选组）/ active-facets.liquid（已选标签）
+  - snippets/product-card.liquid + assets/product-card.css（商品卡）
+  - assets/faceted-filters.js（`<collection-facets>`：拦截 GET 表单 → Section Rendering API
+    局部更新 + replaceState；移动端 <dialog> 抽屉承载同一份筛选 DOM）
+
+  红线对齐：数据与计数全部来自服务端重算（collection.filters / filter_value.count），
+  前端零筛选逻辑；无 JS 全功能可退化（整页 GET 提交）。
+
+  空态分支：products_count > 0 → 网格；有筛选器且已激活但 0 结果 → no-matches
+  （清筛选入口）；否则 → 真空集合空态（全部商品入口，pages-ui §4）。
 {% endcomment %}
 
-<h1>{{ collection.title }}</h1>
+{%- liquid
+  assign per_page = section.settings.products_per_page | default: 12
+  assign has_active_filters = false
+  for filter in collection.filters
+    if filter.type == 'price_range'
+      if filter.min_value.value != blank or filter.max_value.value != blank
+        assign has_active_filters = true
+        break
+      endif
+    else
+      for value in filter.values
+        if value.active
+          assign has_active_filters = true
+          break
+        endif
+      endfor
+    endif
+    if has_active_filters
+      break
+    endif
+  endfor
+-%}
 
-<div class="collection-products">
-  {% paginate collection.products by 20 %}
-    {% for product in collection.products %}
-      <div class="collection-product">
-        {% if product.featured_image %}
-          {% render 'image',
-            class: 'collection-product__image',
-            image: product.featured_image,
-            url: product.url,
-            width: 400,
-            height: 400,
-            crop: 'center'
-          %}
-        {% endif %}
-        <div class="collection-product__content">
-          <p>{{ product.title | escape | link_to: product.url }}</p>
-          <p>{{ product.price | money }}</p>
+<script src="{{ 'compare-toggle.js' | asset_url }}" defer></script>
+<script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
+<script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+{%- if collection.filters.size > 0 -%}
+  <script src="{{ 'faceted-filters.js' | asset_url }}" defer></script>
+{%- endif -%}
+{{ 'product-card.css' | asset_url | stylesheet_tag }}
+
+<div class="collection{% unless collection.image and section.settings.show_banner %} collection--no-banner{% endunless %}" data-collection-root>
+  {%- if collection.image and section.settings.show_banner -%}
+    <div class="collection__banner">
+      {{
+        collection.image
+        | image_url: width: 2400
+        | image_tag:
+          widths: '750, 1100, 1500, 2000, 2400',
+          sizes: '100vw',
+          width: collection.image.width,
+          height: collection.image.height,
+          loading: 'eager',
+          fetchpriority: 'high',
+          alt: collection.image.alt
+      }}
+    </div>
+  {%- endif -%}
+
+  <div class="collection__sheet">
+    <nav class="collection__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
+      <ol class="collection__breadcrumb-list" role="list">
+        <li class="collection__breadcrumb-item">
+          <a href="{{ routes.root_url }}">{{ 'collections.breadcrumb_home' | t }}</a>
+        </li>
+        <li class="collection__breadcrumb-item" aria-current="page">{{ collection.title | escape }}</li>
+      </ol>
+    </nav>
+
+    <header class="collection__head">
+      <h1 class="collection__title">{{ collection.title | escape }}</h1>
+      {%- if collection.description != blank -%}
+        <div class="collection__description rte">{{ collection.description }}</div>
+      {%- endif -%}
+    </header>
+
+    <collection-facets class="collection__facets" data-section-id="{{ section.id }}">
+      <form
+        class="facets__form"
+        action="{{ collection.url }}"
+        method="get"
+        data-facets-form
+      >
+        <div class="collection__layout">
+          {%- if collection.filters.size > 0 -%}
+            {% render 'faceted-filters', filters: collection.filters %}
+          {%- endif -%}
+
+          <div class="collection__content">
+            <div class="collection__toolbar">
+              {%- if collection.filters.size > 0 -%}
+                <button
+                  type="button"
+                  class="facets__open"
+                  data-facets-open
+                  aria-controls="FacetsDialog-{{ section.id }}"
+                >
+                  {{ 'collections.filters.open' | t }}
+                </button>
+              {%- endif -%}
+
+              {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
+
+              {%- if section.settings.show_sort -%}
+                <label class="facets__sort">
+                  <span class="facets__sort-label">{{ 'collections.sort.label' | t }}</span>
+                  <select name="sort_by" data-facets-sort>
+                    {%- for option in collection.sort_options -%}
+                      <option
+                        value="{{ option.value }}"
+                        {% if option.value == collection.sort_by %}selected{% endif %}
+                      >
+                        {{ option.name | escape }}
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                </label>
+              {%- endif -%}
+
+              <p class="collection__count" aria-live="polite" data-facets-count>
+                {{ 'navigation.products_count' | t: count: collection.products_count }}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
-    {% endfor %}
+      </form>
 
-    {{ paginate | default_pagination }}
-  {% endpaginate %}
+      <div class="collection__results" data-facets-results tabindex="-1">
+        {%- paginate collection.products by per_page -%}
+          {%- if collection.products_count > 0 -%}
+            <ul class="collection__grid" role="list">
+              {%- for product in collection.products -%}
+                <li class="collection__item">
+                  {%- liquid
+                    assign card_lazy = true
+                    assign card_width = false
+                    assign card_cc = false
+                    assign card_power = false
+                    assign card_weight = false
+                    if forloop.index <= 4
+                      assign card_lazy = false
+                    endif
+                    if section.settings.show_spec_width
+                      assign card_width = true
+                    endif
+                    if section.settings.show_spec_cc
+                      assign card_cc = true
+                    endif
+                    if section.settings.show_spec_power
+                      assign card_power = true
+                    endif
+                    if section.settings.show_spec_weight
+                      assign card_weight = true
+                    endif
+                  -%}
+                  {% render 'product-card',
+                    product: product,
+                    lazy: card_lazy,
+                    quick_add: section.settings.show_quick_add,
+                    show_width: card_width,
+                    show_cc: card_cc,
+                    show_power: card_power,
+                    show_weight: card_weight
+                  %}
+                </li>
+              {%- endfor -%}
+            </ul>
+
+            {%- if paginate.pages > 1 -%}
+              <nav class="collection__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
+                {{ paginate | default_pagination }}
+              </nav>
+            {%- endif -%}
+          {%- elsif has_active_filters -%}
+            {%- comment -%} 筛选后无结果：有筛选器已激活但当前组合无商品 {%- endcomment -%}
+            <div class="collection__empty">
+              <p class="collection__empty-title">{{ 'collections.no_matches' | t }}</p>
+              <a class="collection__empty-link" href="{{ collection.url }}">
+                {{ 'collections.clear_filters' | t }}
+              </a>
+            </div>
+          {%- else -%}
+            {%- comment -%} 真空集合：空态 + 全部商品入口（pages-ui §4 状态要点） {%- endcomment -%}
+            <div class="collection__empty">
+              <p class="collection__empty-title">{{ 'collections.empty.title' | t }}</p>
+              <p class="collection__empty-body">{{ 'collections.empty.body' | t }}</p>
+              <a class="collection__empty-link" href="{{ routes.all_products_collection_url }}">
+                {{ 'collections.empty.link' | t }}
+              </a>
+            </div>
+          {%- endif -%}
+        {%- endpaginate -%}
+      </div>
+    </collection-facets>
+  </div>
+
+  {%- if collection.filters.size > 0 -%}
+    <dialog
+      id="FacetsDialog-{{ section.id }}"
+      class="facets__dialog"
+      scroll-lock
+      aria-label="{{ 'collections.filters.label' | t }}"
+    ></dialog>
+  {%- endif -%}
 </div>
 
 {% stylesheet %}
-  .collection-products {
+  .collection {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    grid-template-columns: var(--content-grid);
+    width: 100%;
+  }
+  .collection > * {
+    grid-column: 2;
+  }
+  .collection > .collection__banner {
+    grid-column: 1 / -1;
+  }
+
+  /* 横幅：矩形图原样输出（LCP eager），曲线交给上层白卡 */
+  .collection__banner {
+    height: clamp(200px, 30vw, 420px);
+    overflow: hidden;
+  }
+  .collection__banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* 白卡：上移侵入横幅；顶部圆角 + 两侧反向弧（伪元素 radial-gradient）。
+     移动端（<990px）拍板 A：不侵入贴底。 */
+  .collection__sheet {
+    --collection-radius: 20px;
+    position: relative;
+    z-index: 1;
+    margin-top: 0;
+    padding: 1.25rem 0 2rem;
+    border-radius: var(--collection-radius) var(--collection-radius) 0 0;
+    background-color: var(--color-background);
+  }
+  .collection__sheet::before,
+  .collection__sheet::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: var(--collection-radius);
+    height: var(--collection-radius);
+    display: none;
+  }
+  @media (min-width: 990px) {
+    .collection:not(.collection--no-banner) .collection__sheet {
+      margin-top: calc(-1 * var(--collection-radius) * 2 - 8px);
+    }
+    .collection:not(.collection--no-banner) .collection__sheet::before,
+    .collection:not(.collection--no-banner) .collection__sheet::after {
+      display: block;
+    }
+  }
+  .collection__sheet::before {
+    inset-inline-end: 100%;
+    background: radial-gradient(circle at 100% 0, transparent 0 var(--collection-radius), var(--color-background) var(--collection-radius));
+  }
+  .collection__sheet::after {
+    inset-inline-start: 100%;
+    background: radial-gradient(circle at 0 0, transparent 0 var(--collection-radius), var(--color-background) var(--collection-radius));
+  }
+
+  /* 面包屑 */
+  .collection__breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+    font-size: 0.82rem;
+    color: rgb(0 0 0 / 55%);
+  }
+  .collection__breadcrumb-item + .collection__breadcrumb-item::before {
+    content: '/';
+    margin-inline-end: 0.35rem;
+  }
+  .collection__breadcrumb-item a {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .collection__breadcrumb-item a:hover {
+    text-decoration: underline;
+  }
+
+  .collection__title {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 600;
+    line-height: 1.15;
+  }
+  .collection__description {
+    margin-block-start: 0.5rem;
+    max-width: 60ch;
+    font-size: 0.95rem;
+    color: rgb(0 0 0 / 65%);
+  }
+
+  /* 两栏：筛选 + 内容。默认单列（无 JS 降级 = 筛选堆叠在网格上方）；
+     JS 标记 data-facets-ready 后桌面侧栏生效。 */
+  .collection__layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-block-start: 1.5rem;
+  }
+
+  /* 工具条 */
+  .collection__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 44px;
+  }
+  .facets__open {
+    display: none;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 1rem;
+    border: 1px solid rgb(0 0 0 / 25%);
+    border-radius: var(--style-border-radius-inputs);
+    background: none;
+    font: inherit;
+    cursor: pointer;
+  }
+  .facets__sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-inline-start: auto;
+  }
+  .facets__sort-label {
+    font-size: 0.85rem;
+    color: rgb(0 0 0 / 60%);
+  }
+  .facets__sort select {
+    min-height: 44px;
+    padding: 6px 0.6rem;
+    border: 1px solid rgb(0 0 0 / 25%);
+    background-color: var(--color-background);
+  }
+  .collection__count {
+    font-size: 0.85rem;
+    color: rgb(0 0 0 / 60%);
+    white-space: nowrap;
+  }
+
+  /* 已选标签 */
+  .facets__active {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    flex-basis: 100%;
+  }
+  .facets__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .facets__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 32px;
+    padding: 4px 0.6rem;
+    border: 1px solid rgb(0 0 0 / 20%);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    font-size: 0.82rem;
+    color: inherit;
+    text-decoration: none;
+  }
+  .facets__chip:hover {
+    border-color: rgb(0 0 0 / 45%);
+  }
+  .facets__chip-x {
+    font-size: 0.75rem;
+    color: rgb(0 0 0 / 50%);
+  }
+  .facets__clear {
+    font-size: 0.82rem;
+    color: var(--color-brand-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* 筛选组 */
+  .facets__group {
+    border: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+  }
+  .facets__group-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 0;
+    margin-block-end: 0.5rem;
+  }
+  .facets__values {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.15rem;
+  }
+  .facets__value-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .facets__value-label input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-foreground);
+  }
+  .facets__value-text {
+    flex: 1;
+  }
+  .facets__value-count {
+    font-size: 0.78rem;
+    color: rgb(0 0 0 / 45%);
+  }
+  .facets__price {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .facets__price-field input {
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 0.6rem;
+    border: 1px solid rgb(0 0 0 / 25%);
+    background-color: var(--color-background);
+  }
+  .facets__apply {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    margin-block-start: 0.75rem;
+    padding: 10px 1rem;
+    border: 1px solid var(--color-foreground);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* 网格 */
+  .collection__results {
+    margin-block-start: 0.5rem;
+  }
+  .collection__results:focus {
+    outline: none;
+  }
+  .collection__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  @media (min-width: 750px) {
+    .collection__grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  @media (min-width: 1100px) {
+    .collection__grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  /* 分页 */
+  .collection__pagination {
+    margin-block-start: 1.5rem;
+  }
+  .collection__pagination a,
+  .collection__pagination [aria-current] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 0.6rem;
+    border-radius: var(--style-border-radius-inputs);
+    color: inherit;
+    text-decoration: none;
+  }
+  .collection__pagination a:hover {
+    background-color: rgb(0 0 0 / 6%);
+  }
+  .collection__pagination [aria-current='page'] {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+  }
+
+  /* 空态 */
+  .collection__empty {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding: 3rem 1rem;
+    text-align: center;
+    border: 1px dashed rgb(0 0 0 / 20%);
+    border-radius: 12px;
+  }
+  .collection__empty-title {
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .collection__empty-body {
+    font-size: 0.9rem;
+    color: rgb(0 0 0 / 60%);
+  }
+  .collection__empty-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 1.25rem;
+    margin-block-start: 0.5rem;
+    border: 1px solid var(--color-foreground);
+    border-radius: var(--style-border-radius-inputs);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* 移动抽屉（dialog 承载同一份筛选 DOM，JS 把 aside 移入） */
+  .facets__dialog {
+    border: none;
+    border-radius: 16px 16px 0 0;
+    padding: 0;
+    width: min(420px, 92vw);
+    max-height: 85vh;
+    margin: auto auto 0;
+  }
+  .facets__dialog::backdrop {
+    background: rgb(0 0 0 / 40%);
+  }
+  .facets__dialog .facets__panel {
+    padding: 1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    max-height: 85vh;
+  }
+  .facets__mobile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-end: 1rem;
+  }
+  .facets__panel-title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .facets__close {
+    min-height: 44px;
+    padding: 8px 0.75rem;
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--color-brand-accent);
+    cursor: pointer;
+  }
+
+  /* JS 增强态：data-facets-ready 后桌面侧栏两栏 + 隐藏应用按钮（change 即提交），
+     移动端显示 Filters 按钮（打开 dialog 承载同一份筛选 DOM）。 */
+  .collection__facets[data-facets-ready] .facets__apply {
+    display: none;
+  }
+  @media (max-width: 989.98px) {
+    .collection__facets[data-facets-ready] .facets__open {
+      display: inline-flex;
+    }
+  }
+  @media (min-width: 990px) {
+    .collection__facets[data-facets-ready] .collection__layout {
+      grid-template-columns: 230px 1fr;
+      gap: 2rem;
+    }
+    .collection__facets[data-facets-ready] .facets__mobile-head {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .facets__dialog {
+      transition: none;
+    }
   }
 {% endstylesheet %}
 
 {% schema %}
 {
-  "name": "t:general.collection",
-  "settings": []
+  "name": "t:sections.collection.name",
+  "tag": "section",
+  "class": "collection-section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_banner",
+      "label": "t:sections.collection.labels.show_banner",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 8,
+      "max": 24,
+      "step": 4,
+      "label": "t:labels.products_to_show",
+      "default": 12
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sort",
+      "label": "t:sections.collection.labels.show_sort",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_quick_add",
+      "label": "t:sections.collection.labels.show_quick_add",
+      "info": "t:sections.collection.labels.quick_add_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:sections.collection.headers.card_specs"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_spec_width",
+      "label": "t:sections.collection.labels.show_spec_width",
+      "info": "t:sections.collection.labels.spec_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_spec_cc",
+      "label": "t:sections.collection.labels.show_spec_cc",
+      "info": "t:sections.collection.labels.spec_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_spec_power",
+      "label": "t:sections.collection.labels.show_spec_power",
+      "info": "t:sections.collection.labels.spec_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_spec_weight",
+      "label": "t:sections.collection.labels.show_spec_weight",
+      "info": "t:sections.collection.labels.spec_info",
+      "default": false
+    }
+  ]
 }
 {% endschema %}

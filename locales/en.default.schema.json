@@ -147,6 +147,23 @@
         "heading": "Buying guides"
       },
       "read_more": "Read guide"
+    },
+    "collection": {
+      "name": "Collection page",
+      "labels": {
+        "show_banner": "Show banner image",
+        "show_sort": "Show sort",
+        "show_quick_add": "Show quick add on product cards",
+        "quick_add_info": "Only single-variant products get an Add to cart button; sold out shows disabled.",
+        "show_spec_width": "Show cutting width",
+        "show_spec_cc": "Show displacement",
+        "show_spec_power": "Show power source",
+        "show_spec_weight": "Show weight",
+        "spec_info": "Hidden automatically when a product has no value for it."
+      },
+      "headers": {
+        "card_specs": "Product card specs"
+      }
     }
   },
   "labels": {
