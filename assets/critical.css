@@ -218,6 +218,17 @@ body {
 }
 
 /**
+ * site-header 包裹层不生成盒（display: contents）：
+ * header-group 的各 section 直接成为 body 的子项——sticky 的包含盒保持
+ * body（BUG-032 口径，裹一层普通 div 会把 sticky 锁死在矮包含盒里），
+ * 而 DOM 结构上它仍是父级，.js.template-collection 的沉浸选择器照常命中。
+ * 自定义元素默认 inline，不显式设置会高度塌陷（曾致 sticky 丢失 + 沉浸失效）。
+ */
+site-header {
+  display: contents;
+}
+
+/**
  * 集合页沉浸页头（2026-10-15 干净版，曾名"透明页头"）。
  *
  * 机制：透明是【CSS 默认态】——.js 门控（禁 JS 不命中）+ 集合页 body class；
