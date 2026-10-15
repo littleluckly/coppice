@@ -251,6 +251,9 @@ site-header {
 .js.template-collection .site-header .announcement-bar {
   background-color: transparent;
 }
+.js.template-collection .site-header .main-nav__desktop {
+  background-color: transparent;
+}
 .js.template-collection .site-header .main-nav__brand,
 .js.template-collection .site-header .main-nav__link,
 .js.template-collection .site-header .main-nav__logo,
