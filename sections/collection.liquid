@@ -302,9 +302,13 @@
   .collection__banner .collection__title {
     margin-block-start: 0.35rem;
   }
-  /* 无横幅：介绍区黑字常规排版 */
+  /* 无横幅：介绍区黑字常规排版（同样走内容列） */
   .collection--no-banner .collection__intro--plain {
-    padding: 2rem max(var(--page-margin), 1.5rem) 0;
+    color: var(--color-foreground);
+    padding-block: 2rem 0;
+  }
+  .collection--no-banner .collection__intro--plain .collection__breadcrumb-list {
+    color: rgb(0 0 0 / 55%);
   }
   @media (max-width: 989.98px) {
     .collection__banner {
