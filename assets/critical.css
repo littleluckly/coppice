@@ -121,6 +121,16 @@ body {
 }
 
 /**
+ * Section 直属的 script / link（defer 脚本、stylesheet_tag）不得参与布局。
+ * 部分 UA 不隐藏 body 内的 <link>，它会在沉浸式 section（如集合页横幅）的
+ * 根 div 上方生成行盒，把内容顶下去——横幅贴不住页头。强制隐藏，位置任意。
+ */
+.shopify-section > script,
+.shopify-section > link {
+  display: none !important;
+}
+
+/**
  * Vertical rhythm for content sections (效果图节奏：区块间 ≈ 3.5rem，标题贴齐上一区块底)。
  * 新增内容 section 时，把它的 schema "class" 加进下面的 :is() 列表。
  * hero 之后的区块间距来自前一块的 padding-block-end，首块（hero）自身不参与。
@@ -207,7 +217,36 @@ body {
   white-space: normal;
 }
 
-/** 焦点可见的统一口径（SDD §8.2） */
+/**
+ * 集合页透明页头（2026-10-15 拍板，"横幅沉浸叠图"）。
+ * - main 负上移（--site-header-h 由 site-header.js 量出）：横幅钻到页头背后；
+ * - .site-header--transparent（JS 滚动判定）：公告/utility 透明、文字白、logo 反白；
+ * - 滚过横幅后类移除 → 恢复不透明。非集合页（无 .template-collection）完全无影响。
+ */
+.template-collection .main-content {
+  margin-block-start: calc(-1 * var(--site-header-h, 0px));
+}
+.site-header--transparent .announcement-bar,
+.site-header--transparent .utility-bar {
+  background-color: transparent;
+  border-block-end-color: transparent;
+}
+.site-header--transparent .announcement-bar,
+.site-header--transparent .utility-bar,
+.site-header--transparent .main-nav__inner {
+  color: #ffffff;
+}
+.site-header--transparent .main-nav__brand,
+.site-header--transparent .main-nav__link,
+.site-header--transparent .main-nav__logo {
+  color: #ffffff;
+}
+.site-header--transparent .main-nav__logo-img {
+  filter: brightness(0) invert(1);
+}
+
+/**
+ * 焦点可见的统一口径（SDD §8.2） */
 :focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
