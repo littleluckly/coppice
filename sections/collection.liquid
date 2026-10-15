@@ -55,6 +55,7 @@
 {{ 'product-card.css' | asset_url | stylesheet_tag }}
 
 <div class="collection{% unless has_banner %} collection--no-banner{% endunless %} full-width" data-collection-root>
+  2222
   {%- capture intro_content -%}
     <nav class="collection__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
       <ol class="collection__breadcrumb-list" role="list">
@@ -128,7 +129,9 @@
                     {%- for option in collection.sort_options -%}
                       <option
                         value="{{ option.value }}"
-                        {% if option.value == collection.sort_by %}selected{% endif %}
+                        {% if option.value == collection.sort_by %}
+                          selected
+                        {% endif %}
                       >
                         {{ option.name | escape }}
                       </option>
@@ -267,12 +270,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      to right,
-      rgb(0 0 0 / 40%),
-      rgb(0 0 0 / 14%) 55%,
-      rgb(0 0 0 / 0%) 85%
-    );
+    background: linear-gradient(to right, rgb(0 0 0 / 40%), rgb(0 0 0 / 14%) 55%, rgb(0 0 0 / 0%) 85%);
   }
   .collection__intro {
     position: relative;
