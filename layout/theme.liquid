@@ -38,10 +38,13 @@
     {% render 'skip-link' %}
 
     {% comment %}
-      外层 <site-header> Custom Element 是集合页"透明页头 / 横幅沉浸叠图"的挂点
-      （2026-10-15 拍板）——非集合页该元素零行为（site-header.js 按 body class 短路）。
+      外层 <site-header> 是集合页"沉浸页头"的挂点（2026-10-15）。
+      display: contents（内联兜底，CSS 同规则双保险）——包裹层不生成盒：
+      section 们直接成为 body 的子项，sticky 包含盒保持 body（BUG-032 口径），
+      同时 DOM 上仍是 header-group 的父级，选择器与 JS 挂点不受影响。
+      禁 JS 时 .js class 不出现 → 沉浸规则整段不命中，此包裹零作用。
     {% endcomment %}
-    <site-header class="site-header">
+    <site-header class="site-header" style="display: contents">
       {% sections 'header-group' %}
     </site-header>
 
