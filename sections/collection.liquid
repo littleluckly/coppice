@@ -278,8 +278,14 @@
     position: relative;
     z-index: 1;
     width: 100%;
-    padding: 1.5rem max(var(--page-margin), 1.5rem);
+    /* 与下方主体同一条内容列：intro 自己跑 content-grid，文字落第 2 列 */
+    display: grid;
+    grid-template-columns: var(--content-grid);
+    padding-block: 1.5rem;
     color: #ffffff;
+  }
+  .collection__intro > * {
+    grid-column: 2;
   }
   .collection__banner .collection__breadcrumb-list,
   .collection__banner .collection__breadcrumb-item a {
@@ -347,8 +353,8 @@
     color: rgb(0 0 0 / 65%);
   }
 
-  /* 两栏：筛选 + 内容。默认单列（无 JS 降级 = 筛选堆叠在网格上方）；
-     JS 标记 data-facets-ready 后桌面侧栏生效。 */
+  /* 两栏：筛选 + 内容。桌面 ≥990px 恒两栏（纯 CSS，不依赖 JS）；
+     无 JS 降级：应用按钮整页提交。移动端单列，JS 就绪后 Filters 按钮开抽屉。 */
   .collection__layout {
     display: grid;
     grid-template-columns: 1fr;
