@@ -46,19 +46,24 @@ class SiteHeader extends HTMLElement {
     if (main) main.style.marginTop = '';
   }
 
-  /** 页头高度：CSS 变量 + 内联 margin 双写（内联兜底文件缓存） */
+  /** 页头总高：累加可见子 section 高度（display:contents 下本元素无盒；
+      display:none 的子级 offsetParent 为 null，自动跳过——如集合页隐藏的 utility） */
   _measure() {
-    const height = this.getBoundingClientRect().height;
+    let height = 0;
+    for (const child of this.children) {
+      if (child.offsetParent !== null) height += child.getBoundingClientRect().height;
+    }
     document.documentElement.style.setProperty('--site-header-h', `${height}px`);
     const main = document.querySelector('.main-content');
     if (main) main.style.marginTop = `${-height}px`;
   }
 
-  /** solid 判定：scrollY vs 静态阈值（横幅高 − 页头高），一次测量不做逐帧几何比较 */
+  /** solid 判定：scrollY vs 静态阈值（横幅高 − sticky nav 行高），一次测量不做逐帧几何比较 */
   _update() {
     const banner = document.querySelector('.collection__banner');
-    const headerHeight = this.getBoundingClientRect().height;
-    const threshold = banner ? Math.max(0, banner.offsetHeight - headerHeight) : 0;
+    const nav = this.querySelector('.main-nav-section');
+    const navHeight = nav ? nav.getBoundingClientRect().height : 0;
+    const threshold = banner ? Math.max(0, banner.offsetHeight - navHeight) : 0;
     this.classList.toggle('site-header--solid', window.scrollY >= threshold);
   }
 }
