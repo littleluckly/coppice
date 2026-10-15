@@ -218,31 +218,54 @@ body {
 }
 
 /**
- * 集合页透明页头（2026-10-15 拍板，"横幅沉浸叠图"）。
- * - main 负上移（--site-header-h 由 site-header.js 量出）：横幅钻到页头背后；
- * - .site-header--transparent（JS 滚动判定）：公告/utility 透明、文字白、logo 反白；
- * - 滚过横幅后类移除 → 恢复不透明。非集合页（无 .template-collection）完全无影响。
+ * 集合页沉浸页头（2026-10-15 干净版，曾名"透明页头"）。
+ *
+ * 机制：透明是【CSS 默认态】——.js 门控（禁 JS 不命中）+ 集合页 body class；
+ * JS 只做两件事：量真实页头高（内联 margin 兜底 CSS 缓存）、
+ * 滚过横幅后加 .site-header--solid 恢复不透明。初始 scrollY=0 不加 solid，
+ * 与 CSS 默认态同向 → 无"闪现后翻转"。
+ *
+ * - main 负上移（默认 72px 近似值，JS 精确化）→ 横幅钻到页头背后；
+ * - utility 栏隐藏（内容与 footer 重复，pages-ui §1.1）；
+ * - 公告栏透明、顶行白字、logo 反白；
+ * - solid：公告绿底/nav 白底/文字原色。两态高度一致，margin 不跳。
+ * - 无 collection.image 的集合：JS threshold=0 → 恒 solid → 不沉浸（正确降级）。
  */
-.template-collection .main-content {
-  margin-block-start: calc(-1 * var(--site-header-h, 0px));
+.js.template-collection .main-content {
+  margin-block-start: calc(-1 * var(--site-header-h, 72px));
 }
-.site-header--transparent .announcement-bar,
-.site-header--transparent .utility-bar {
+.js.template-collection .site-header .utility-bar {
+  display: none;
+}
+.js.template-collection .site-header .announcement-bar {
   background-color: transparent;
-  border-block-end-color: transparent;
 }
-.site-header--transparent .announcement-bar,
-.site-header--transparent .utility-bar,
-.site-header--transparent .main-nav__inner {
+.js.template-collection .site-header .main-nav__brand,
+.js.template-collection .site-header .main-nav__link,
+.js.template-collection .site-header .main-nav__logo,
+.js.template-collection .site-header .main-nav__tools {
   color: #ffffff;
 }
-.site-header--transparent .main-nav__brand,
-.site-header--transparent .main-nav__link,
-.site-header--transparent .main-nav__logo {
-  color: #ffffff;
-}
-.site-header--transparent .main-nav__logo-img {
+.js.template-collection .site-header .main-nav__logo-img {
   filter: brightness(0) invert(1);
+}
+/* 滚动恢复态 */
+.js.template-collection .site-header--solid .main-nav-section {
+  background-color: var(--color-background);
+}
+.js.template-collection .site-header--solid .announcement-bar {
+  background-color: var(--color-brand);
+}
+.js.template-collection .site-header--solid .main-nav__brand {
+  color: var(--color-brand);
+}
+.js.template-collection .site-header--solid .main-nav__link,
+.js.template-collection .site-header--solid .main-nav__logo,
+.js.template-collection .site-header--solid .main-nav__tools {
+  color: var(--color-foreground);
+}
+.js.template-collection .site-header--solid .main-nav__logo-img {
+  filter: none;
 }
 
 /**
