@@ -9,19 +9,6 @@
  */
 {
   "current": {
-    "type_primary_font": "work_sans_n4",
-    "max_page_width": "90rem",
-    "min_page_margin": 20,
-    "immersive_header": true,
-    "spec_unit_system": "imperial",
-    "background_color": "#ffffff",
-    "foreground_color": "#333333",
-    "brand_color": "#1e4b3c",
-    "brand_accent": "#2e6b4e",
-    "skeleton_background_color": "#0f1012",
-    "skeleton_foreground_color": "#e9e9ec",
-    "skeleton_accent_color": "#a3e635",
-    "input_corner_radius": 4,
     "content_for_index": [],
     "blocks": {
       "14060646107696862457": {
