@@ -104,6 +104,31 @@
             method="get"
             data-facets-form
           >
+            {%- comment -%}
+              左列两张卡（2026-10-16 刘工定）：排序卡在上，筛选卡在下。
+              排序在 form 内 → sort_by 随表单原生提交，不再需要 form 属性关联。
+              移动端整个 form 移入抽屉（faceted-filters.js），排序卡随之进入抽屉。
+            {%- endcomment -%}
+            {%- if section.settings.show_sort -%}
+              <div class="facets__sort-card">
+                <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
+                  {{ 'collections.sort.label' | t }}
+                </label>
+                <select id="SortBy-{{ section.id }}" name="sort_by" data-facets-sort>
+                  {%- for option in collection.sort_options -%}
+                    <option
+                      value="{{ option.value }}"
+                      {% if option.value == collection.sort_by %}
+                        selected
+                      {% endif %}
+                    >
+                      {{ option.name | escape }}
+                    </option>
+                  {%- endfor -%}
+                </select>
+              </div>
+            {%- endif -%}
+
             {% render 'faceted-filters', filters: collection.filters %}
           </form>
         {%- endif -%}
@@ -121,16 +146,19 @@
               </button>
             {%- endif -%}
 
+            {%- comment -%} 计数：桌面在已选标签右侧（CSS order 控制），移动端第一行行尾 {%- endcomment -%}
+            <p class="collection__count" aria-live="polite" data-facets-count>
+              {{ 'navigation.products_count' | t: count: collection.products_count }}
+            </p>
+
             {%- comment -%}
-              排序 select 放商品列表右上方（2026-10-16 效果图-集合-1）。
-              通过 form 属性关联筛选表单——DOM 在右列工具条，逻辑上仍随表单提交：
-              FormData 会包含 form 属性关联的控件，无 JS 时点「应用」同样带上 sort_by。
-              不能把 form 扩大到工具条：网格里有 quick-add 的嵌套 form，HTML 不允许表单嵌套。
+              无筛选集合没有左列，排序退回工具条。此处无 form（filters 为 0），
+              故不带 form 属性；JS 走 _onChange 的「无表单」独立局部更新分支。
             {%- endcomment -%}
-            {%- if section.settings.show_sort -%}
+            {%- if collection.filters.size == 0 and section.settings.show_sort -%}
               <label class="facets__sort">
                 <span class="facets__sort-label">{{ 'collections.sort.label' | t }}</span>
-                <select name="sort_by" data-facets-sort form="FacetsForm-{{ section.id }}">
+                <select name="sort_by" data-facets-sort>
                   {%- for option in collection.sort_options -%}
                     <option
                       value="{{ option.value }}"
@@ -144,11 +172,6 @@
                 </select>
               </label>
             {%- endif -%}
-
-            {%- comment -%} 计数在排序右侧（2026-10-16 效果图反馈，pages-ui §4「排序 ▾  共 11 款」） {%- endcomment -%}
-            <p class="collection__count" aria-live="polite" data-facets-count>
-              {{ 'navigation.products_count' | t: count: collection.products_count }}
-            </p>
 
             {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
           </div>
@@ -529,10 +552,80 @@
 
   /* 网格 */
   .collection__results {
+    position: relative;
     margin-block-start: 0.5rem;
   }
   .collection__results:focus {
     outline: none;
+  }
+  .collection__facets[aria-busy='true'] .collection__results {
+    pointer-events: none;
+  }
+
+  /* 加载骨架（faceted-filters.js 的 _showSkeleton）：fetch 期间盖住结果区。
+     列数复刻 .collection__grid 的三档断点；底色走全局变量，Noir 下自动适配；
+     动画按 prefers-reduced-motion 关停（无障碍红线）。 */
+  .collection__skeleton {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    align-content: start;
+    background: var(--color-background);
+  }
+  .collection__skeleton-card {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+    padding: 0.75rem;
+    border: 0.5px solid rgb(0 0 0 / 8%);
+    border-radius: 12px;
+  }
+  .collection__skeleton-card .sk-img {
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    background: rgb(0 0 0 / 7%);
+  }
+  .collection__skeleton-card .sk-line {
+    width: 70%;
+    height: 10px;
+    border-radius: 5px;
+    background: rgb(0 0 0 / 7%);
+  }
+  .collection__skeleton-card .sk-line--short {
+    width: 40%;
+  }
+  .collection__skeleton-card .sk-line--price {
+    width: 30%;
+  }
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+  .collection__skeleton-card > * {
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  @media (min-width: 750px) {
+    .collection__skeleton {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  @media (min-width: 1100px) {
+    .collection__skeleton {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .collection__skeleton-card > * {
+      animation: none;
+    }
   }
   .collection__grid {
     display: grid;
