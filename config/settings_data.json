@@ -29,6 +29,9 @@
       "foreground_color": "#333333",
       "brand_color": "#1E4B3C",
       "brand_accent": "#2E6B4E",
+      "skeleton_background_color": "",
+      "skeleton_foreground_color": "",
+      "skeleton_accent_color": "",
       "input_corner_radius": 4
     },
     "Coppice Noir": {
