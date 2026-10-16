@@ -11,6 +11,11 @@
  * 3. 无 JS 退化：单列布局 + 应用按钮整页 GET 提交，全功能可用。
  * 4. 加载反馈：fetch 期间在结果区叠骨架层（_showSkeleton，复用 aria-busy 时段），
  *    完成/失败/中止一律在 finally 摘除；prefers-reduced-motion 时静止灰块。
+ * 5. 排序卡落点随断点切换（_placeSort）：移动端移进工具条——pages-ui §4 的
+ *    [筛选☰] [排序▾]，同一 DOM 节点不做副本；桌面回归左列第一张卡。
+ *    select 恒带 form 属性，离开 form 子树后仍是表单成员，FormData 照常含
+ *    sort_by（无 JS 时原生 GET 提交也带上）。无筛选集合没有 form，卡片本就在
+ *    工具条，_placeSort 自然空操作。
  *
  * 实现纪律（AGENTS §6）：
  * - 监听全部委托到本元素（submit/change/click 冒泡），内部 form/网格被局部替换后无需重绑；
@@ -47,6 +52,11 @@ class CollectionFacets extends HTMLElement {
       this._dialog.addEventListener('click', this._onClick, { signal });
       this._dialog.addEventListener('close', this._onDialogClose, { signal });
     }
+
+    /* 排序卡落点：移动端工具条（pages-ui §4），桌面左列第一张卡 */
+    this._mobileQuery = window.matchMedia('(max-width: 989.98px)');
+    this._mobileQuery.addEventListener('change', this._onMediaChange, { signal });
+    this._placeSort();
   }
 
   disconnectedCallback() {

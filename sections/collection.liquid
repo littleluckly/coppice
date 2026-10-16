@@ -821,11 +821,44 @@
     .collection__facets[data-facets-ready] .facets__form {
       display: none;
     }
-    /* 抽屉/无 JS 流内：排序卡与筛选块之间用分隔线（面板自带留白，不做卡面） */
+    /* 工具条行序（pages-ui §4 移动端）：[筛选☰] [排序▾] …… [N 款]；
+       已选标签另行横滑（.facets__active 的 flex-basis: 100% 保证换行）。 */
+    .collection__toolbar .facets__open {
+      order: 1;
+    }
+    .collection__toolbar .facets__sort-card {
+      order: 2;
+      /* 不右推：紧邻 Filters，自由空间全给计数，行尾对齐 */
+      margin-inline-start: 0;
+    }
+    .collection__toolbar .collection__count {
+      order: 3;
+      margin-inline-start: auto;
+    }
+    .collection__toolbar .facets__active {
+      order: 4;
+    }
+    /* 行宽紧张（375px 内容列约 335px）：排序标签转视觉隐藏——label[for] 仍在
+       无障碍树里提供可访问名（口径同 critical.css 的 .visually-hidden），
+       select 限宽，避免长排序名把计数挤下整行。 */
+    .collection__toolbar .facets__sort-card-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .collection__toolbar .facets__sort-card select {
+      min-height: 40px;
+      max-width: 40vw;
+    }
+    /* 抽屉 / 无 JS 流内（排序卡还在 form 里）：与筛选块之间用分隔线，不做卡面 */
     .facets__form {
       display: block;
     }
-    .facets__sort-card {
+    .facets__form .facets__sort-card {
       padding-block-end: 0.9rem;
       margin-block-end: 0.9rem;
       border-block-end: 1px solid rgb(0 0 0 / 10%);
