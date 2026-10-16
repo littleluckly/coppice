@@ -428,6 +428,18 @@
     border: 1px solid rgb(0 0 0 / 25%);
     background-color: var(--color-background);
   }
+  /* 排序卡在工具条里的形态（无筛选集合常驻；有筛选集合仅移动端，由 JS 移入）：
+     竖向卡面变横排，靠行尾。桌面无筛选集合靠 auto 外边距右贴，计数跟在它右侧。 */
+  .collection__toolbar .facets__sort-card {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    margin-inline-start: auto;
+  }
+  .collection__toolbar .facets__sort-card select {
+    width: auto;
+  }
 
   /* 工具条 */
   .collection__toolbar {
@@ -447,25 +459,6 @@
     background: none;
     font: inherit;
     cursor: pointer;
-  }
-  /* 排序：仅无筛选集合退回工具条时的形态（有筛选时排序在左列卡片里，
-     见 .facets__sort-card）；靠 auto 外边距与计数一起靠在行尾。 */
-  .facets__sort {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-inline-start: auto;
-  }
-  .facets__sort-label {
-    font-size: 0.85rem;
-    color: rgb(0 0 0 / 60%);
-    white-space: nowrap;
-  }
-  .facets__sort select {
-    min-height: 44px;
-    padding: 6px 0.6rem;
-    border: 1px solid rgb(0 0 0 / 25%);
-    background-color: var(--color-background);
   }
   .collection__count {
     font-size: 0.85rem;
@@ -797,14 +790,19 @@
     .facets__aside .facets__group:last-of-type {
       margin-block-end: 0;
     }
-    /* 工具条：已选标签在左（可换行），计数靠行尾 */
-    .facets__active {
+    /* 工具条行序：已选标签在左（可换行），计数靠行尾。有筛选集合的排序卡在
+       左列（不在此处）；无筛选集合的排序卡常驻工具条，排在计数左侧
+       ——「计数在 Sort by 右侧」（2026-10-16 刘工）在两种形态下都成立。 */
+    .collection__toolbar .facets__active {
       order: 1;
       flex: 1 1 auto;
       min-width: 0;
     }
-    .collection__count {
+    .collection__toolbar .facets__sort-card {
       order: 2;
+    }
+    .collection__toolbar .collection__count {
+      order: 3;
     }
     .facets__mobile-head {
       display: none;
