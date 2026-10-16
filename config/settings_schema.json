@@ -122,19 +122,22 @@
         "type": "color",
         "id": "skeleton_background_color",
         "label": "t:labels.skeleton_background",
-        "info": "t:labels.skeleton_background_info"
+        "info": "t:labels.skeleton_background_info",
+        "placeholder": "Inherited"
       },
       {
         "type": "color",
         "id": "skeleton_foreground_color",
         "label": "t:labels.skeleton_foreground",
-        "info": "t:labels.skeleton_foreground_info"
+        "info": "t:labels.skeleton_foreground_info",
+        "placeholder": "Inherited"
       },
       {
         "type": "color",
         "id": "skeleton_accent_color",
         "label": "t:labels.skeleton_accent",
-        "info": "t:labels.skeleton_accent_info"
+        "info": "t:labels.skeleton_accent_info",
+        "placeholder": "Inherited"
       },
       {
         "type": "range",
