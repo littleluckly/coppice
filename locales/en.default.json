@@ -38,7 +38,30 @@
     "update": "Update"
   },
   "collections": {
-    "title": "Collections"
+    "title": "Collections",
+    "breadcrumb_label": "Breadcrumb",
+    "breadcrumb_home": "Home",
+    "pagination_label": "Pagination",
+    "no_matches": "No products match your filters.",
+    "clear_filters": "Clear all filters",
+    "sort": {
+      "label": "Sort by"
+    },
+    "filters": {
+      "label": "Filters",
+      "open": "Filters",
+      "close": "Done",
+      "apply": "Apply",
+      "clear_all": "Clear all",
+      "remove": "Remove filter",
+      "price_min": "From",
+      "price_max": "To"
+    },
+    "empty": {
+      "title": "This collection is empty",
+      "body": "Check back later, or browse everything we carry.",
+      "link": "Browse all products"
+    }
   },
   "customers": {
     "login": {
@@ -64,6 +87,7 @@
   "navigation": {
     "menu": "Menu",
     "close": "Close",
+    "back": "Back",
     "view_all_products": "View all products",
     "products_count": {
       "one": "{{ count }} product",
@@ -82,6 +106,11 @@
     "product_card": {
       "add_to_compare": "Compare",
       "add_to_wishlist": "Add to wishlist",
+      "add_to_cart": "Add to cart",
+      "added": "Added",
+      "added_message": "{{ title }} added to cart",
+      "add_error": "Sorry, something went wrong. Try again.",
+      "sold_out": "Sold out",
       "rating_label": "Rated {{ rating }} out of 5",
       "spec_cutting_width": "Cutting width",
       "spec_power_source": "Power source",

@@ -160,6 +160,7 @@
 - [ ] `<dialog>` 加 `scroll-lock` 属性锁背景滚动（沿用 `critical.css:16` 既有约定）
 - [ ] `showModal()` 打开；**禁用 `autofocus`**，改为打开后手动 `focus()` 关闭按钮
 - [ ] 抽屉内菜单用 `details/summary` 纵向折叠——天然无 JS 可用、键盘可达
+  - **⚠️ 已被 2026-10-13 决策取代（刘工，参考效果图）**：改为**钻入式面板**——抽屉本体从底部上滑入（全屏 bottom sheet），点击分组行子面板从右侧滑入（iOS 栈式，被覆盖面板左滑出）。面板全部服务端渲染（三层封顶、平铺输出），`nav-drawer.js` 维护显式 `{panel, trigger}` 栈切换并管理焦点（进面板→返回键，退面板→触发按钮）。放弃 details/summary 的理由：抽屉打开本身依赖 JS，折叠层的"无 JS 可用"没有受益场景；钻入式层级感知更强。触碰目标 ≥ 44×44、`link.current` 标示等上述条目继续有效。
 - [ ] `Esc` 关闭走 `<dialog>` 原生 `cancel` 事件；**不手写焦点陷阱**（`showModal()` 已让外部 `inert`）
 - [ ] 抽屉内容存 `<template>`，**首次打开才实例化**（AGENTS §6）
 - [ ] 抽屉内底部固定放 account（#22 移动端可见要求）与 cart 入口（本期 cart 入口是**跳转链接**，非按钮——见 T-1.6）
@@ -254,6 +255,20 @@
 - [x] **无 JS 降级**：custom element 未升级时（`:not(.nav-pill--ready)`），hover/focus 项自身显深色药丸（无滑动），mega 展开不受影响；药丸 span 由 JS 创建，无 JS 时 DOM 无无效元素
 - [x] **当前页指示改文字色**：`--current` / in-branch 从药丸底色降为品牌色文字——"你在哪"的静态指示不能随悬浮态消失（SDD §8.2），深色药丸专职交互反馈。**代价**：当前页高亮弱于第一轮的实心药丸；若要"滑块默认停在当前页、离开导航区滑回"模式，另改
 - [x] `nav-pill.js` 通过 node 语法检查；`check-tag-balance.py` 29 文件平衡；**theme check 待刘工代跑**
+
+**第十八轮（2026-10-13 刘工）：图标 viewBox 680 → 24 规范化 · 并入第十一轮 0.25 人日，不另计**
+
+- [x] 四个类目图标（mower/chainsaw/trimmer/accessories）全部转为 24 网格 + stroke-width 1.5（与 header 图标同规格），坐标 ×24/680 等比缩放
+- [x] **转换脚本三轮才对**：①首版正则把 viewBox 缩成 0.85、`d`/`transform`（值含字母）没匹配到；②二版属性粘连（替换吞前导空格）且 `x1`/`y1` 属性名含数字没匹配到 `[a-z-]+`；③终版 `[a-z0-9-]+` + 保留前导空白。**教训：A 命令的 arc flags（large-arc/sweep）绝不能缩放**（accessories 有 `1 1` flags），批量改 SVG 必须按命令类型解析
+- [x] CSS non-scaling-stroke 保留（锁精确 1.5px），注释更新
+- [x] tag balance 29 文件 ✓；**theme check 待刘工代跑**
+
+**第十七轮（2026-10-13 刘工）：左列图标线宽修正 · 并入第十一轮 0.25 人日，不另计**
+
+- [x] **根因**：图标非颜色 bug——680 viewBox 缩到 1.75rem 后 stroke 12~14 等比压到 ~0.5px，亚像素线抗锯齿后必然灰蒙，与 currentColor 无关
+- [x] **修**：`vector-effect: non-scaling-stroke`（线宽按屏幕像素）+ 统一 1.5px；代价 = 放弃原粗细层次、虚线 dasharray 仍按 viewBox（密集点线观感可接受）
+- [x] **教训**：大 viewBox 图标缩到小尺寸必须配 non-scaling-stroke，否则多粗的 stroke 都会灰掉——设计侧画大图标时该约定前置
+- [x] tag balance 29 文件 ✓；**theme check 待刘工代跑**
 
 **第十六轮（2026-10-13 刘工）：顶部对齐二次校准 · 并入第十一轮 0.25 人日，不另计**
 

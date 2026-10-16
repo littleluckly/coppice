@@ -21,9 +21,19 @@
   {%- capture cart_label -%}{{- 'cart.cart_empty' | t -}}{%- endcapture -%}
 {%- endif -%}
 
+{%- comment -%}
+  Parameters:
+    (none)     — icon-only link (desktop header tools)
+    show_label — also render the visible "Cart" text (mobile nav drawer row style)
+{%- endcomment -%}
+
 <div class="cart-entry{% if class != blank %} {{ class }}{% endif %}" data-cart-entry>
   <a class="cart-entry__link" href="{{ routes.cart_url }}" aria-label="{{ cart_label }}">
     {{ 'icon-cart.svg' | inline_asset_content }}
+
+    {%- if show_label -%}
+      <span class="cart-entry__label">{{ 'cart.title' | t }}</span>
+    {%- endif -%}
 
     {%- comment -%}
       Count badge is absolutely positioned so it never occupies layout space — the

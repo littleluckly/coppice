@@ -18,6 +18,9 @@
   @param {boolean} show_cc - true → 规格行显示排量（cc，不换算）
   @param {boolean} show_power - true → 规格行显示动力源（枚举原样）
   @param {boolean} show_weight - true → 规格行显示整机重量（经 spec-value 换算）
+  @param {boolean} quick_add - true → 单变体款渲染快速加购（2026-10-13 拍板：
+    仅单变体且 available 渲染；多变体卡不渲染任何 CTA；售罄置灰 disabled；
+    无 JS 降级为表单 POST /cart/add；交互由 assets/quick-add.js 的 quick-add 自定义元素接管）
 {% enddoc %}
 
 {%- if product != blank -%}
@@ -119,8 +122,33 @@
       {%- endif -%}
     </p>
 
-    {%- comment -%} 星级：官方 Product Reviews app metafield；无数据整行不渲染 {%- endcomment -%}
-    {%- liquid
+    {%- comment -%} 快速加购（T-1.1）：仅调用方传 quick_add 且单变体时渲染；多变体无 CTA；售罄置灰。
+        无 JS 时整表单 POST /cart/add（默认跳转购物车页），JS 由 quick-add 自定义元素拦截为 fetch。 {%- endcomment -%}
+    {%- if quick_add and product.variants.size == 1 -%}
+      <quick-add class="product-card__quick-add">
+        <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">
+          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+          <input type="hidden" name="quantity" value="1">
+          <button
+            type="submit"
+            class="product-card__add"
+            {% unless product.available %}disabled{% endunless %}
+            data-added-label="{{ 'products.product_card.added' | t }}"
+            data-added-message="{{ 'products.product_card.added_message' | t: title: product.title }}"
+            data-error-message="{{ 'products.product_card.add_error' | t }}"
+          >
+            {%- if product.available -%}
+              {{ 'products.product_card.add_to_cart' | t }}
+            {%- else -%}
+              {{ 'products.product_card.sold_out' | t }}
+            {%- endif -%}
+          </button>
+        </form>
+        <p class="visually-hidden" role="status" data-quick-add-status></p>
+      </quick-add>
+    {%- endif -%}
+
+    {%- comment -%} 星级：官方 Product Reviews app metafield；无数据整行不渲染 {%- endcomment -%}    {%- liquid
       assign rating_value = product.metafields.reviews.rating.value.rating
       assign rating_count = product.metafields.reviews.rating_count.value
     -%}

@@ -235,6 +235,14 @@
 
 **状态要点**：筛选后 URL 可分享、刷新保留（原生 URL，§6.1）；空集合 → 空态 + 推荐集合入口；移动抽屉焦点锁定 Esc 回焦；计数变化 aria-live 播报；**不自研 AJAX 筛选**（红线 §11 风险 7）；单集合 ≤ 25,000 对象。
 
+**2026-10-13/14 拍板补记（SDD v4.4 同步）**：
+
+- **横幅布局**（效果图 v2 = `ref-mockup-collection-northbark-v2.jpg`）：面包屑 + 标题 + 描述置于**白色圆角卡**，上移**侵入横幅**；曲线全部 CSS（border-radius + 伪元素 radial-gradient 反向弧），**横幅图保持矩形**不烤形状；移动端（<990px）白卡不侵入贴底堆叠。
+- **面包屑**：白卡内 `<nav aria-label="Breadcrumb">`，Home（`routes.root_url`）/ 集合名；页内唯一 `h1` = 集合标题（白卡内）。
+- **筛选器 UI**：HTML/样式/交互壳完全自主重写（不照搬 Dawn DOM）；数据与更新仍走原生 `collection.filters` + Section Rendering API（红线保留）。实现形态：`snippets/faceted-filters.liquid` 通用件（集合页与搜索页共用）+ 单表单（筛选组 + sort_by + q 全在一个 GET form 内），`Custom Element` 拦截提交做局部更新。
+- **商品卡快加**：单变体且 available → 快加按钮（`/cart/add.js` + aria-live + 无 JS 表单降级）；多变体不渲染 CTA；售罄置灰。进 `product-card` snippet 全局生效（首页同步获得）。
+- **价格筛选**：原生 min/max 形态（效果图 v1 的固定区间勾选为自研禁区，已放弃该形态）。
+
 ---
 
 ## 5. `list-collections.json` — 集合列表页

@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------
- * IMPORTANT: The contents of this file are auto-generated.
+ * IMPORTANT: The contents of this file is auto-generated.
  *
  * This file may be updated by the Shopify admin language editor
  * or related systems. Please exercise caution as any changes
@@ -147,6 +147,23 @@
         "heading": "Buying guides"
       },
       "read_more": "Read guide"
+    },
+    "collection": {
+      "name": "Collection page",
+      "labels": {
+        "show_banner": "Show banner image",
+        "show_sort": "Show sort",
+        "show_quick_add": "Show quick add on product cards",
+        "quick_add_info": "Only single-variant products get an Add to cart button; sold out shows disabled.",
+        "show_spec_width": "Show cutting width",
+        "show_spec_cc": "Show displacement",
+        "show_spec_power": "Show power source",
+        "show_spec_weight": "Show weight",
+        "spec_info": "Hidden automatically when a product has no value for it."
+      },
+      "headers": {
+        "card_specs": "Product card specs"
+      }
     }
   },
   "labels": {
@@ -197,7 +214,9 @@
     "title_override": "Title override",
     "utility_item": "Item",
     "view_all_label": "'View all' link label",
-    "view_all_link": "'View all' link target"
+    "view_all_link": "'View all' link target",
+    "immersive_header": "Immersive header on collection pages",
+    "immersive_header_info": "The header floats transparently over the collection banner image (white text). Turn off to keep the standard solid header on all pages."
   },
   "options": {
     "alignment": {

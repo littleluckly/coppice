@@ -1,0 +1,53 @@
+{% doc %}
+  active-facets — 已选筛选标签（task-collection T-2.3，集合页与搜索页共用）。
+
+  标签 = 当前激活的 filter_value（或价格区间）的移除链接（url_to_remove 由平台生成）；
+  Clear all 指向集合/搜索的干净 URL。移除后：
+  - 无 JS → 整页跳转（原生 URL，可分享刷新保留）
+  - 有 JS → collection-facets 元素拦截点击内跳转，Section Rendering 局部更新
+
+  @param {object} filters - filter 对象数组：collection.filters 或 search.filters（必填）
+  @param {string} clear_url - 全部清除的目标 URL（collection.url / 带裸 q 的搜索 URL）
+{% enddoc %}
+
+{%- liquid
+  assign has_active = false
+  assign chips = ''
+-%}
+{%- capture chips_capture -%}
+  {%- for filter in filters -%}
+    {%- if filter.type == 'price_range' -%}
+      {%- if filter.min_value.value != blank or filter.max_value.value != blank -%}
+        {%- assign has_active = true -%}
+        <li class="facets__chip-item">
+          <a class="facets__chip" href="{{ filter.url_to_remove }}">
+            {{ filter.label | escape }}
+            <span class="facets__chip-x" aria-hidden="true">✕</span>
+            <span class="visually-hidden">{{ 'collections.filters.remove' | t }}</span>
+          </a>
+        </li>
+      {%- endif -%}
+    {%- else -%}
+      {%- for value in filter.values -%}
+        {%- if value.active -%}
+          {%- assign has_active = true -%}
+          <li class="facets__chip-item">
+            <a class="facets__chip" href="{{ value.url_to_remove }}">
+              {{ value.label | escape }}
+              <span class="facets__chip-x" aria-hidden="true">✕</span>
+              <span class="visually-hidden">{{ 'collections.filters.remove' | t }}</span>
+            </a>
+          </li>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endcapture -%}
+{%- assign chips = chips_capture -%}
+
+{%- if has_active -%}
+  <div class="facets__active" data-facets-active>
+    <ul class="facets__chips" role="list">{{ chips }}</ul>
+    <a class="facets__clear" href="{{ clear_url }}">{{ 'collections.filters.clear_all' | t }}</a>
+  </div>
+{%- endif -%}

@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="{{ request.locale.iso_code }}">
   <head>
+    {% # JS 就绪标记：CSS 渐进增强的门控（禁 JS → .js 不出现 → 沉浸页头等增强整段不命中） %}
+    <script>document.documentElement.classList.add('js')</script>
+
     {% # Inlined CSS Variables %}
     {% render 'css-variables' %}
 
@@ -26,7 +29,8 @@
     {{ content_for_header }}
   </head>
 
-  <body>
+  {%- comment -%} body class：模板名（CSS 门控）+ 沉浸页头开关（settings.immersive_header，默认开） {%- endcomment -%}
+  <body class="template-{{ template.name }}{% if settings.immersive_header %} immersive-header{% endif %}">
     {% comment %}
       Skip link first, before any landmark. It is the first thing keyboard focus
       reaches, letting people bypass the header. Rendered from layout rather than
@@ -34,8 +38,18 @@
     {% endcomment %}
     {% render 'skip-link' %}
 
-    {% # Header group: announcement-bar → utility-bar → main-nav (the sticky row) %}
-    {% sections 'header-group' %}
+    {% comment %}
+      外层 <site-header> 是集合页"沉浸页头"的挂点（2026-10-15）。
+      display: contents（内联兜底，CSS 同规则双保险）——包裹层不生成盒：
+      section 们直接成为 body 的子项，sticky 包含盒保持 body（BUG-032 口径），
+      同时 DOM 上仍是 header-group 的父级，选择器与 JS 挂点不受影响。
+      禁 JS 时 .js class 不出现 → 沉浸规则整段不命中，此包裹零作用。
+    {% endcomment %}
+    <site-header class="site-header" style="display: contents">
+      {% sections 'header-group' %}
+    </site-header>
+
+    <script src="{{ 'site-header.js' | asset_url }}" defer></script>
 
     {% comment %}
       Main landmark — the skip link target. The id here and the href in

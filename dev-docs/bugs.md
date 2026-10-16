@@ -230,6 +230,20 @@
 - **修复**：① schema 加 `"class": "main-nav-section"`，sticky 挪到包裹层（body 的 flex 子项、纵贯整页，才有黏的空间）；`.main-nav` 根加 `full-width` 通栏，内容行改为 `max-inline-size: var(--content-width)` 居中（--content-width 从包裹层继承），与下方 section 文案同一列线。② `.main-content` 的限宽/内边距整体移除（critical.css 留注释说明），页宽与边距统一由区块网格管理——hero 根节点本就带 `full-width`、文案本就在内容网格第 2 列，无需改动。
 - **预防**：**sticky 的父盒必须有比 sticky 元素更高的滚动空间**——Shopify 主题里吸顶一律挂在 section 包裹层（schema `"class"` + 包裹层选择器），不挂在 section 根元素上。**`.full-width` 机制要求其所有祖先不限宽**——main/容器层只做 landmark，不做限宽；限宽是区块网格（第 2 列）的职责。
 
+### BUG-033 · nav-drawer 漏 bind _onOpen：移动端汉堡点击静默无反应
+- **日期**：2026-10-13 ｜ **状态**：Fixed
+- **现象**：移动端（<990px）点击顶部导航 menu 图标，抽屉不出现，控制台也无任何报错——点击"看似绑了，永远不执行"。
+- **根因**：`assets/nav-drawer.js` 构造器只 bind 了 `_onClose`，**`_onOpen` 与 `_onDialogClick` 作为原型方法直接传给 `addEventListener`，调用时 `this` 是被监听元素（burger 按钮 / dialog）而非组件实例**，方法内 `this._dialog` 为 `undefined`，守卫 `if (!this._dialog || this._dialog.open) return` 静默短路。讽刺的是 BUG-030（search-drawer 复制本文件时漏 bind `_onClose`/`_onDialogClick`）修掉的正是"复制品的病"，**原件的 `_onOpen` 从第一天起就没 bind 过**——search-drawer 因 opener 用箭头函数包了一层躲过，nav-drawer 直接传方法引用，当场暴露。同时 `_onDialogClick` 未 bind 还是潜伏缺陷：抽屉一旦能开，点遮罩也关不掉。
+- **修复**：构造器补 bind 三连（`_onOpen` / `_onClose` / `_onDialogClick`）。
+- **预防**：**bind 这类"复制时漏一行"的错在两个文件间已经双向各犯一次，靠人工核对不再可靠**——两个抽屉组件应整体迁移到类字段箭头函数写法（`_onOpen = () => {...}`，predictive-search.js 风格），从语言层面消灭 this 漂移；下次改到这两个文件时顺手完成。`node --check` 只查语法不查 this 指向，抽屉类组件的"点开 / 点关 / 点遮罩 / Esc"四个动作必须在开发店浏览器实测一轮才算验收。
+
+### BUG-035 · 导入 CSV 第三次变成 XLSX（磁盘副本损坏）
+- **日期**：2026-10-13 ｜ **状态**：Fixed
+- **现象**：排查集合页外部依赖时发现 `dev-docs/mower-import/mower-products-import.csv` 文件头为 `PK` zip 魔数——又是 XLSX 伪装（BUG-003 首次、BUG-012 第二次，本次三犯）。直接拿去后台导入会再次报格式错误。
+- **根因**：9/30 曾重生成过纯文本，但磁盘上现存的这份副本又被表格软件以 XLSX 格式覆盖保存（具体操作人/时间不可考）。**同一坑三犯说明"提醒别用表格软件存"无效，问题在"磁盘上常驻一份导入副本"本身**——副本必然被打开、被另存、被污染。
+- **修复**：`python3 build_mower_csv.py` 重新生成（脚本自校验 0 错误 / 0 警告；22 行 = 11 主行 + 11 第二图行，vendor 全 Northbark，22 个图片 URL 全回填）。
+- **预防**：**导入副本改为用时即弃**——`mower-products-import.csv` 不再作为常驻文件维护，每次导入前从 `build_mower_csv.py` 现生成、导入完即删；单一事实源只有脚本。发现 CSV 再损时第一反应是重跑脚本，不是修文件。
+
 ## 记录模板（追加新 bug 用）
 
 ```

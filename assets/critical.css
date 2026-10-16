@@ -121,6 +121,16 @@ body {
 }
 
 /**
+ * Section 直属的 script / link（defer 脚本、stylesheet_tag）不得参与布局。
+ * 部分 UA 不隐藏 body 内的 <link>，它会在沉浸式 section（如集合页横幅）的
+ * 根 div 上方生成行盒，把内容顶下去——横幅贴不住页头。强制隐藏，位置任意。
+ */
+.shopify-section > script,
+.shopify-section > link {
+  display: none !important;
+}
+
+/**
  * Vertical rhythm for content sections (效果图节奏：区块间 ≈ 3.5rem，标题贴齐上一区块底)。
  * 新增内容 section 时，把它的 schema "class" 加进下面的 :is() 列表。
  * hero 之后的区块间距来自前一块的 padding-block-end，首块（hero）自身不参与。
@@ -207,7 +217,76 @@ body {
   white-space: normal;
 }
 
-/** 焦点可见的统一口径（SDD §8.2） */
+/**
+ * site-header 包裹层不生成盒（display: contents）：
+ * header-group 的各 section 直接成为 body 的子项——sticky 的包含盒保持
+ * body（BUG-032 口径，裹一层普通 div 会把 sticky 锁死在矮包含盒里），
+ * 而 DOM 结构上它仍是父级，.js .template-collection.immersive-header 的沉浸选择器照常命中。
+ * 自定义元素默认 inline，不显式设置会高度塌陷（曾致 sticky 丢失 + 沉浸失效）。
+ */
+site-header {
+  display: contents;
+}
+
+/**
+ * 集合页沉浸页头（2026-10-15 干净版，曾名"透明页头"）。
+ *
+ * 机制：透明是【CSS 默认态】——.js 门控（禁 JS 不命中）+ 集合页 body class；
+ * JS 只做两件事：量真实页头高（内联 margin 兜底 CSS 缓存）、
+ * 滚过横幅后加 .site-header--solid 恢复不透明。初始 scrollY=0 不加 solid，
+ * 与 CSS 默认态同向 → 无"闪现后翻转"。
+ *
+ * - main 负上移（默认 72px 近似值，JS 精确化）→ 横幅钻到页头背后；
+ * - utility 栏隐藏（内容与 footer 重复，pages-ui §1.1）；
+ * - 公告栏透明、顶行白字、logo 反白；
+ * - solid：公告绿底/nav 白底/文字原色。两态高度一致，margin 不跳。
+ * - 无 collection.image 的集合：JS threshold=0 → 恒 solid → 不沉浸（正确降级）。
+ */
+.js .template-collection.immersive-header .main-content {
+  margin-block-start: calc(-1 * var(--site-header-h, 72px));
+}
+.js .template-collection.immersive-header .site-header .utility-bar {
+  display: none;
+}
+.js .template-collection.immersive-header .site-header .announcement-bar {
+  background-color: transparent;
+}
+.js .template-collection.immersive-header .site-header .main-nav__desktop {
+  background-color: transparent;
+}
+.js .template-collection.immersive-header .site-header .main-nav__brand,
+.js .template-collection.immersive-header .site-header .main-nav__link,
+.js .template-collection.immersive-header .site-header .main-nav__logo,
+.js .template-collection.immersive-header .site-header .main-nav__tools {
+  color: #ffffff;
+}
+.js .template-collection.immersive-header .site-header .main-nav__logo-img {
+  filter: brightness(0) invert(1);
+}
+/* 滚动恢复态 */
+.js .template-collection.immersive-header .site-header--solid .main-nav-section {
+  background-color: var(--color-background);
+}
+.js .template-collection.immersive-header .site-header--solid .main-nav__desktop {
+  background-color: var(--color-background);
+}
+.js .template-collection.immersive-header .site-header--solid .announcement-bar {
+  background-color: var(--color-brand);
+}
+.js .template-collection.immersive-header .site-header--solid .main-nav__brand {
+  color: var(--color-brand);
+}
+.js .template-collection.immersive-header .site-header--solid .main-nav__link,
+.js .template-collection.immersive-header .site-header--solid .main-nav__logo,
+.js .template-collection.immersive-header .site-header--solid .main-nav__tools {
+  color: var(--color-foreground);
+}
+.js .template-collection.immersive-header .site-header--solid .main-nav__logo-img {
+  filter: none;
+}
+
+/**
+ * 焦点可见的统一口径（SDD §8.2） */
 :focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;

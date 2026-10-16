@@ -49,7 +49,7 @@ class SearchDrawer extends HTMLElement {
 
     const openers = this.closest('nav')?.querySelectorAll('[data-search-drawer-open]');
     openers?.forEach((opener) => {
-      opener.addEventListener('click', () => this._onOpen(opener), { signal });
+      opener.addEventListener('click', () => this.open(opener), { signal });
     });
 
     this._closeButton = this._dialog.querySelector('[data-search-drawer-close]');
@@ -82,7 +82,12 @@ class SearchDrawer extends HTMLElement {
     this._dialog.setAttribute('scroll-lock', '');
   }
 
-  _onOpen(opener) {
+  /**
+   * 打开抽屉。公开方法——除图标 opener 外，nav-drawer 抽屉内的搜索行
+   * （模板惰性实例化，connectedCallback 时还不存在）也经由它打开。
+   * @param {Element|null} opener 触发打开的按钮；关闭后焦点回给它
+   */
+  open = (opener = null) => {
     if (!this._dialog || this._dialog.open) return;
 
     this._lastOpener = opener;
@@ -90,7 +95,7 @@ class SearchDrawer extends HTMLElement {
 
     // 禁用 autofocus（AGENTS §8），显式移焦到输入框——搜索的第一动作是打字
     this._dialog.querySelector('.predictive-search__input')?.focus();
-  }
+  };
 
   /** 点击遮罩：目标为 dialog 自身即说明点在内容之外 */
   _onDialogClick(event) {
