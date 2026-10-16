@@ -17,5 +17,34 @@
         "settings": {}
       }
     }
+  },
+  "presets": {
+    "Coppice": {
+      "type_primary_font": "work_sans_n4",
+      "max_page_width": "90rem",
+      "min_page_margin": 20,
+      "immersive_header": true,
+      "spec_unit_system": "imperial",
+      "background_color": "#FFFFFF",
+      "foreground_color": "#333333",
+      "brand_color": "#1E4B3C",
+      "brand_accent": "#2E6B4E",
+      "input_corner_radius": 4
+    },
+    "Coppice Noir": {
+      "type_primary_font": "work_sans_n4",
+      "max_page_width": "90rem",
+      "min_page_margin": 20,
+      "immersive_header": true,
+      "spec_unit_system": "imperial",
+      "background_color": "#FFFFFF",
+      "foreground_color": "#333333",
+      "brand_color": "#1E4B3C",
+      "brand_accent": "#2E6B4E",
+      "input_corner_radius": 4,
+      "skeleton_background_color": "#0F1012",
+      "skeleton_foreground_color": "#E9E9EC",
+      "skeleton_accent_color": "#A3E635"
+    }
   }
 }
