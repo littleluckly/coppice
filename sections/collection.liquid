@@ -106,15 +106,22 @@
           >
             {%- comment -%}
               左列两张卡（2026-10-16 刘工定）：排序卡在上，筛选卡在下。
-              排序在 form 内 → sort_by 随表单原生提交，不再需要 form 属性关联。
-              移动端整个 form 移入抽屉（faceted-filters.js），排序卡随之进入抽屉。
+              桌面：排序卡留在 form 内。移动端：faceted-filters.js 把这一张卡
+              移进工具条（pages-ui §4 移动端工具条 = [筛选☰] [排序▾]）——同一
+              DOM 节点，不做副本。故 select 恒带 form 属性：离开 form 子树后仍是
+              表单成员，FormData / requestSubmit / 无 JS 原生提交都照常带上 sort_by。
             {%- endcomment -%}
             {%- if section.settings.show_sort -%}
               <div class="facets__sort-card">
                 <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
                   {{ 'collections.sort.label' | t }}
                 </label>
-                <select id="SortBy-{{ section.id }}" name="sort_by" data-facets-sort>
+                <select
+                  id="SortBy-{{ section.id }}"
+                  name="sort_by"
+                  data-facets-sort
+                  form="FacetsForm-{{ section.id }}"
+                >
                   {%- for option in collection.sort_options -%}
                     <option
                       value="{{ option.value }}"
@@ -146,19 +153,18 @@
               </button>
             {%- endif -%}
 
-            {%- comment -%} 计数：桌面在已选标签右侧（CSS order 控制），移动端第一行行尾 {%- endcomment -%}
-            <p class="collection__count" aria-live="polite" data-facets-count>
-              {{ 'navigation.products_count' | t: count: collection.products_count }}
-            </p>
-
             {%- comment -%}
-              无筛选集合没有左列，排序退回工具条。此处无 form（filters 为 0），
-              故不带 form 属性；JS 走 _onChange 的「无表单」独立局部更新分支。
+              无筛选集合：没有左列，也就没有 form —— 排序常驻工具条行尾
+              （桌面与移动端同一处）。无 form 可提交 → 不带 form 属性；
+              JS 走 _onChange 的「无表单」独立局部更新分支。
+              与有筛选集合的排序卡复用同一套类名：工具条里有它自己的横排形态。
             {%- endcomment -%}
             {%- if collection.filters.size == 0 and section.settings.show_sort -%}
-              <label class="facets__sort">
-                <span class="facets__sort-label">{{ 'collections.sort.label' | t }}</span>
-                <select name="sort_by" data-facets-sort>
+              <div class="facets__sort-card">
+                <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
+                  {{ 'collections.sort.label' | t }}
+                </label>
+                <select id="SortBy-{{ section.id }}" name="sort_by" data-facets-sort>
                   {%- for option in collection.sort_options -%}
                     <option
                       value="{{ option.value }}"
@@ -170,8 +176,13 @@
                     </option>
                   {%- endfor -%}
                 </select>
-              </label>
+              </div>
             {%- endif -%}
+
+            {%- comment -%} 计数：桌面在已选标签右侧（CSS order 控制），移动端行尾 {%- endcomment -%}
+            <p class="collection__count" aria-live="polite" data-facets-count>
+              {{ 'navigation.products_count' | t: count: collection.products_count }}
+            </p>
 
             {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
           </div>
