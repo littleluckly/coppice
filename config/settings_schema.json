@@ -61,7 +61,7 @@
         "id": "immersive_header",
         "label": "t:labels.immersive_header",
         "info": "t:labels.immersive_header_info",
-        "default": true
+        "default": false
       }
     ]
   },
@@ -113,6 +113,31 @@
         "id": "brand_accent",
         "default": "#2E6B4E",
         "label": "t:labels.brand_accent"
+      },
+      {
+        "type": "header",
+        "content": "t:general.header_skeleton"
+      },
+      {
+        "type": "color",
+        "id": "skeleton_background_color",
+        "label": "t:labels.skeleton_background",
+        "info": "t:labels.skeleton_background_info",
+        "placeholder": "Inherited"
+      },
+      {
+        "type": "color",
+        "id": "skeleton_foreground_color",
+        "label": "t:labels.skeleton_foreground",
+        "info": "t:labels.skeleton_foreground_info",
+        "placeholder": "Inherited"
+      },
+      {
+        "type": "color",
+        "id": "skeleton_accent_color",
+        "label": "t:labels.skeleton_accent",
+        "info": "t:labels.skeleton_accent_info",
+        "placeholder": "Inherited"
       },
       {
         "type": "range",

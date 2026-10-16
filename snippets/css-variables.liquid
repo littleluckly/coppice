@@ -15,6 +15,16 @@
     --color-foreground: {{ settings.foreground_color }};
     --color-brand: {{ settings.brand_color }};
     --color-brand-accent: {{ settings.brand_accent }};
+
+    /* 骨架（页头组 + 页脚）配色。留空 = 回落到上方全局色，即浅色骨架，
+       渲染结果与既有实现逐像素一致；填入深色值即得到深色骨架——
+       只有页头/页脚翻转，内容区不动（映射规则见 assets/critical.css）。
+       三个变量不写 defaults 是有意的：color 设置清空后返回 blank，
+       这里靠 default 过滤器回落，商家才能表达"跟随全局"。 */
+    --color-skeleton-background: {{ settings.skeleton_background_color | default: settings.background_color }};
+    --color-skeleton-foreground: {{ settings.skeleton_foreground_color | default: settings.foreground_color }};
+    --color-skeleton-accent: {{ settings.skeleton_accent_color | default: settings.brand_color }};
+
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
   }
 {% endstyle %}

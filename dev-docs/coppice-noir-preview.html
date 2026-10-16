@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coppice Noir — 深色骨架预设对比</title>
+<style>
+  :root{
+    --ink:#1a1a1a; --ink-2:#5c5c5c; --ink-3:#8a8a8a;
+    --line:#e3e3e0; --paper:#ffffff; --wash:#f7f7f5;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{font-family:var(--sans);color:var(--ink);background:var(--wash);line-height:1.6;
+       -webkit-font-smoothing:antialiased;padding:40px 24px 64px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:24px;font-weight:600;letter-spacing:-.01em}
+  h2{font-size:15px;font-weight:600;margin-bottom:14px}
+  .sub{color:var(--ink-2);font-size:14px;margin-top:6px}
+  .warn{margin-top:18px;padding:12px 14px;border-radius:10px;background:#fff8e6;
+        border:1px solid #f0dfae;color:#6b5620;font-size:13px}
+  .warn b{font-weight:600}
+  section{margin-top:40px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .card > header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;
+                 align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .card h3{font-size:14px;font-weight:600}
+  .card header .tag{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+  .mock{font-size:12px}
+  .mock .bar{padding:7px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .mock .nav{display:flex;align-items:center;gap:14px;padding:12px 14px}
+  .mock .nav .brand{font-weight:700;letter-spacing:.02em;font-size:13px;margin-right:auto}
+  .mock .nav .item{opacity:.85}
+  .mock .body{padding:22px 18px 26px;min-height:132px}
+  .mock .body h4{font-size:15px;font-weight:600;margin-bottom:6px}
+  .mock .body p{font-size:12px;line-height:1.55;opacity:.75;max-width:34ch}
+  .mock .btn{display:inline-block;margin-top:14px;padding:7px 14px;border-radius:5px;
+             font-size:12px;font-weight:500}
+  .mock .foot{padding:14px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+              font-size:11px;opacity:.85}
+  .skeleton-mark{position:relative}
+  .skeleton-mark::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#c9a227;opacity:.85}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--paper);
+        border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-weight:600;font-size:12px;color:var(--ink-2);background:var(--wash)}
+  tr:last-child td{border-bottom:0}
+  code{font-family:var(--mono);font-size:12px;background:var(--wash);padding:1px 5px;border-radius:4px}
+  .sw{display:inline-block;width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.16);
+      vertical-align:-2px;margin-right:6px}
+  .ok{color:#1a7f45;font-weight:600}
+  .bad{color:#b3261e;font-weight:600}
+  ul{margin:0;padding-left:20px;font-size:13.5px;color:var(--ink-2)}
+  li{margin-bottom:7px}
+  li b{color:var(--ink);font-weight:600}
+  .files{font-family:var(--mono);font-size:12px;background:var(--paper);border:1px solid var(--line);
+         border-radius:12px;padding:14px 16px;color:var(--ink-2);white-space:pre;overflow-x:auto;line-height:1.75}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Coppice Noir — 深色骨架预设</h1>
+  <p class="sub">左侧是当前生效的 <b>Coppice</b>（浅色骨架，绿色强调）；右侧是新增的 <b>Coppice Noir</b>（深色骨架，酸绿强调）。内容区两者完全一致。</p>
+
+  <div class="warn">
+    <b>这是色值示意图，不是主题真实渲染。</b>
+    区块结构做了简化（真实导航含 mega 菜单、公告栏支持多条轮播、页脚按 task-footer 待重做）。
+    <b>看色值与骨架/内容区的分界就好</b>——真实效果请在开发店切到 <code>Coppice Noir</code> 确认。
+  </div>
+
+  <section>
+    <div class="grid2">
+
+      <div class="card">
+        <header><h3>Coppice（当前）</h3><span class="tag">浅色骨架 · 绿</span></header>
+        <div class="mock">
+          <div class="bar skeleton-mark" style="background:#1E4B3C;color:#FFFFFF">
+            <span>Free freight on orders over $99</span><span style="opacity:.8">×</span>
+          </div>
+          <div class="bar skeleton-mark" style="background:#FFFFFF;color:#333333;border-bottom:1px solid rgba(0,0,0,.12)">
+            <span style="margin-left:auto">Sales 555-0100 · Pickup available</span>
+          </div>
+          <div class="nav skeleton-mark" style="background:#FFFFFF;color:#333333">
+            <span class="brand" style="color:#1E4B3C">NORTHBARK</span>
+            <span class="item">Mowers</span><span class="item">Chainsaws</span>
+            <span class="item">Accessories</span><span class="item">⌕</span><span class="item">⛁</span>
+          </div>
+          <div class="body" style="background:#FFFFFF;color:#333333">
+            <h4>内容区不受影响</h4>
+            <p>产品网格、集合页、图文区块全部保持现在的浅色配色。</p>
+            <span class="btn" style="background:#2E6B4E;color:#FFFFFF">Shop mowers</span>
+          </div>
+          <div class="foot skeleton-mark" style="background:#FFFFFF;color:#333333;border-top:1px solid rgba(0,0,0,.12)">
+            <span>© 2026 NORTHBARK</span><span>Shipping · Warranty</span><span>VISA · MC</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <header><h3>Coppice Noir（新增）</h3><span class="tag">深色骨架 · 酸绿</span></header>
+        <div class="mock">
+          <div class="bar skeleton-mark" style="background:#A3E635;color:#0F1012">
+            <span>Free freight on orders over $99</span><span style="opacity:.8">×</span>
+          </div>
+          <div class="bar skeleton-mark" style="background:#0F1012;color:#E9E9EC;border-bottom:1px solid rgba(255,255,255,.12)">
+            <span style="margin-left:auto">Sales 555-0100 · Pickup available</span>
+          </div>
+          <div class="nav skeleton-mark" style="background:#0F1012;color:#E9E9EC">
+            <span class="brand" style="color:#A3E635">NORTHBARK</span>
+            <span class="item">Mowers</span><span class="item">Chainsaws</span>
+            <span class="item">Accessories</span><span class="item">⌕</span><span class="item">⛁</span>
+          </div>
+          <div class="body" style="background:#FFFFFF;color:#333333">
+            <h4>内容区不受影响</h4>
+            <p>产品网格、集合页、图文区块全部保持现在的浅色配色。</p>
+            <span class="btn" style="background:#2E6B4E;color:#FFFFFF">Shop mowers</span>
+          </div>
+          <div class="foot skeleton-mark" style="background:#0F1012;color:#E9E9EC;border-top:1px solid rgba(255,255,255,.12)">
+            <span>© 2026 NORTHBARK</span><span>Shipping · Warranty</span><span>VISA · MC</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <p class="sub" style="margin-top:12px">金色左边条标记的是<b>骨架区</b>——切换预设时只有这些区块变，内容区一行不动。</p>
+  </section>
+
+  <section>
+    <h2>色值与实测对比度</h2>
+    <table>
+      <thead>
+        <tr><th>角色</th><th>Coppice</th><th>Coppice Noir</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>骨架背景</td>
+          <td><span class="sw" style="background:#FFFFFF"></span><code>#FFFFFF</code><br><span style="color:#8a8a8a;font-size:12px">留空 → 跟随全局</span></td>
+          <td><span class="sw" style="background:#0F1012"></span><code>#0F1012</code></td>
+          <td>不用纯黑 <code>#000</code>：OLED 上卡片边界会"融化"，滚动时还会闪</td>
+        </tr>
+        <tr>
+          <td>骨架文字</td>
+          <td><span class="sw" style="background:#333333"></span><code>#333333</code><br><span style="color:#8a8a8a;font-size:12px">留空 → 跟随全局</span></td>
+          <td><span class="sw" style="background:#E9E9EC"></span><code>#E9E9EC</code></td>
+          <td>不用纯白：白字在近黑上会光晕（halation），久读刺眼</td>
+        </tr>
+        <tr>
+          <td>骨架强调色</td>
+          <td><span class="sw" style="background:#1E4B3C"></span><code>#1E4B3C</code><br><span style="color:#8a8a8a;font-size:12px">留空 → 跟随全局</span></td>
+          <td><span class="sw" style="background:#A3E635"></span><code>#A3E635</code></td>
+          <td>原品牌绿在 <code>#0F1012</code> 上只有 <span class="bad">1.93:1</span>，必须提亮</td>
+        </tr>
+        <tr>
+          <td>正文对比度</td>
+          <td colspan="2"><span class="ok">15.7 : 1</span>（<code>#E9E9EC</code> on <code>#0F1012</code>）</td>
+          <td>WCAG AA 要求 4.5:1，余量充足</td>
+        </tr>
+        <tr>
+          <td>品牌字 / 强调</td>
+          <td colspan="2"><span class="ok">12.6 : 1</span>（<code>#A3E635</code> on <code>#0F1012</code>）</td>
+          <td>公告栏是「强调色底 + 骨架背景色字」，同组值反过来也成立</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>改了什么</h2>
+    <div class="files">M  config/settings_data.json          + 两个 preset：Coppice / Coppice Noir
+M  config/settings_schema.json       + Colors 组内 3 个可清空的骨架色设置
+M  snippets/css-variables.liquid     + --color-skeleton-*（留空回落全局色）
+M  assets/critical.css               + 一条变量重映射规则（site-header / .site-footer）
+M  sections/footer.liquid            + full-width + 骨架背景 + 内容列对齐 + flex-wrap
+M  locales/en.default.schema.json    + 7 个 schema 翻译键
+M  dev-docs/bugs.md                  + BUG-036 / BUG-037
+M  tools/check-locale-keys.py        修 BUG-036/037（脚本此前根本跑不起来）</div>
+  </section>
+
+  <section>
+    <h2>还要你定 / 还要做的事</h2>
+    <ul>
+      <li><b>主题风格按钮：</b>这次改动之后，主题编辑器「主题设置 → 主题风格」里才会出现切换入口（此前主题没有 <code>presets</code>，编辑器里根本没这个按钮）。</li>
+      <li><b>提审范围变了：</b>官方规定<b>一个 preset = 一个独立 listing + 一个独立演示店</b>。所以要建 <code>/listings/coppice-noir/</code> 和第二个演示店——SDD §12 原本把第二 preset 排在 v1.1，就是这个原因。</li>
+      <li><b>需要你实测的一件事：</b>切换预设会不会重置主题设置里的 app embed 区块（judge.me）。两个 preset 里我都没带 <code>blocks</code>（跟随 Dawn 写法），但<b>我无法在沙箱里验证</b>。</li>
+      <li><b>顺手修的：</b><code>check-locale-keys.py</code> 在我改动前就跑不起来（双注释头解析失败），所以 AGENTS §2 那条"新增 locale 键后跑脚本"此前其实一直没生效过。已修，并补上了它漏扫 <code>config/</code> 的盲区。</li>
+      <li><b>仍待你代跑：</b><code>shopify theme check</code>（沙箱内 CLI 不可见）。</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>

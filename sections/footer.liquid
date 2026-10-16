@@ -1,4 +1,4 @@
-<footer>
+<footer class="site-footer full-width">
   <div class="footer__copyright">
     &copy;
     {{ 'now' | date: '%Y' }}
@@ -21,17 +21,29 @@
 </footer>
 
 {% stylesheet %}
-  footer {
+  .site-footer {
     display: flex;
     justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
     margin-top: 2rem;
+    /* 通栏（critical.css 的 .full-width）后自行补回内容列边距，
+       使文字与上方 section 的内容列对齐——不能用 --page-margin，
+       宽屏时内容列被 --page-width 收窄，直接补页边距会失准。 */
+    padding-inline: calc((100% - var(--content-width)) / 2);
+    padding-block: 1.5rem;
+    /* 骨架色：留空时等于全局背景/前景色（critical.css 已把 .site-footer
+       纳入骨架映射），因此浅色预设下与加此规则前渲染一致。 */
+    background-color: var(--color-skeleton-background);
+    color: var(--color-skeleton-foreground);
   }
-  footer a {
+  .site-footer a {
     text-decoration: none;
-    color: var(--color-foreground);
+    /* 继承页脚文字色：深色骨架上不能沿用全局前景色 */
+    color: inherit;
   }
-  footer .footer__links,
-  footer .footer__payment {
+  .site-footer .footer__links,
+  .site-footer .footer__payment {
     display: flex;
     gap: 1rem;
   }

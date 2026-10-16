@@ -36,6 +36,7 @@
     "footer": "Footer",
     "group": "Group",
     "header": "Header",
+    "header_skeleton": "Header & footer colors",
     "layout": "Layout",
     "main": "Main",
     "main_nav": "Main menu",
@@ -225,7 +226,13 @@
     "view_all_label": "'View all' link label",
     "view_all_link": "'View all' link target",
     "immersive_header": "Immersive header on collection pages",
-    "immersive_header_info": "The header floats transparently over the collection banner image (white text). Turn off to keep the standard solid header on all pages."
+    "immersive_header_info": "The header floats transparently over the collection banner image (white text). Turn off to keep the standard solid header on all pages.",
+    "skeleton_background": "Header & footer background",
+    "skeleton_background_info": "Leave empty to follow the global Background color above. Set a value to give the header and footer their own background, over both the header group and the footer.",
+    "skeleton_foreground": "Header & footer text",
+    "skeleton_foreground_info": "Leave empty to follow the global Foreground color above. Must stay readable on the header/footer background chosen above.",
+    "skeleton_accent": "Header & footer accent",
+    "skeleton_accent_info": "Leave empty to follow the global Brand color above. Drives the announcement bar fill and the brand name in the header."
   },
   "options": {
     "alignment": {

@@ -82,6 +82,31 @@ body {
   color: var(--color-foreground);
 }
 
+/**
+ * 骨架配色映射（2026-10-16，深色骨架 / Noir 预设）。
+ *
+ * 这里【重新映射变量】而不是逐个改选择器：site-header 与页脚内部所有
+ * var(--color-background / foreground / brand) 自动读到骨架值——包括
+ * .main-nav 下的 mega 面板，以及两个由 showModal() 打开的 <dialog> 抽屉
+ * （top layer 只改层叠顺序，不改 DOM 继承链，仍从 .main-nav 继承）。
+ *
+ * 之所以能这么省：导航与 mega 的"浅色叠加"本就写成
+ * color-mix(in srgb, var(--color-foreground) N%, transparent)，
+ * 前景色一翻转，叠加方向自动跟着翻，无需逐条改写那 50 余处引用。
+ *
+ * 值出自 snippets/css-variables.liquid：三个骨架色留空时等于全局色，
+ * 因此本条规则在浅色预设下不产生任何视觉变化——加它在前后渲染一致。
+ *
+ * 注意 --color-brand-accent 故意不映射：它在骨架内无消费点（公告栏与
+ * 品牌名走 --color-brand），映射它反而会让内容区的按钮色被牵连。
+ */
+site-header,
+.site-footer {
+  --color-background: var(--color-skeleton-background);
+  --color-foreground: var(--color-skeleton-foreground);
+  --color-brand: var(--color-skeleton-accent);
+}
+
 /** Section layout utilities */
 
 /**

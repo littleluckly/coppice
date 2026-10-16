@@ -244,6 +244,27 @@
 - **修复**：`python3 build_mower_csv.py` 重新生成（脚本自校验 0 错误 / 0 警告；22 行 = 11 主行 + 11 第二图行，vendor 全 Northbark，22 个图片 URL 全回填）。
 - **预防**：**导入副本改为用时即弃**——`mower-products-import.csv` 不再作为常驻文件维护，每次导入前从 `build_mower_csv.py` 现生成、导入完即删；单一事实源只有脚本。发现 CSV 再损时第一反应是重跑脚本，不是修文件。
 
+### BUG-036 · check-locale-keys.py 因双注释头解析失败，locale 校验长期静默失效
+- **日期**：2026-10-16 ｜ **状态**：Fixed
+- **现象**：`python3 tools/check-locale-keys.py` 启动即崩，`json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)`，回溯指向 `load(LOCALES / "en.default.schema.json")`。脚本从未输出过"缺失清单"或"全部命中"——AGENTS §2 要求的"新增 locale 键后跑一次"实际上没有可用工具。
+- **根因**：`COMMENT_HEAD = re.compile(r"^\s*/\*.*?\*/\s*", re.S)` 带 `^` 但**没有 `re.M`**，一次只能吃掉开头那一个注释头；而 `locales/en.default.schema.json` 磁盘上存在**连续两个** `/* ... */` 注释头（Shopify dev 反复同步叠加，非人工写入）。`load()` 里单次 `COMMENT_HEAD.sub("", raw)` 留下第二个，`json.loads` 在首字符即失败。**已在改动前的 HEAD 版本上复现同一错误，属既有缺陷，非本次引入。**
+- **修复**：抽出 `strip_comment_heads()`，循环 `sub(count=1)` 直到内容不再变化，再交给 `json.loads`。
+- **预防**：① **"脚本存在"不等于"脚本在跑"**——AGENTS §2 列的验收命令，每次用到都必须真的执行并核对退出码，不能凭"清单里有"就当作已校验；② 注释头剥离一律写成循环，Shopify dev 叠加注释头不是一次性事件；③ 待办：脚本的失败信息要能区分"文件解析失败"与"键缺失"，否则前者会被误读成后者（本次未改输出格式）。
+
+### BUG-037 · check-locale-keys.py 不扫 config/，全局设置的翻译键全在盲区
+- **日期**：2026-10-16 ｜ **状态**：Fixed
+- **现象**：`config/settings_schema.json` 是 schema 命名空间翻译键最密集的文件（Colors / Layout / Header 等分组标题与所有 label / info 都在此），但脚本 `TARGET_DIRS = ["sections", "snippets", "blocks", "layout"]` 只 glob 这四个目录的 `*.liquid`，config 下的 `t:` 键一个都查不到——新增全局设置后脚本报"全部命中"，其实什么都没验。
+- **根因**：脚本按"section 是 schema 键的主要来源"写死了扫描目录，忽略了 `settings_schema.json` 同样是 `en.default.schema.json` 的消费者。本次给 Colors 组加骨架配色设置时才发现：新键的校验结果根本不可能来自脚本。
+- **修复**：新增 `collect_config_schema_keys()`，把 `config/settings_schema.json` 全文的 `"t:..."` 纳入 schema 命名空间校验，缺失时来源标注为 `config/settings_schema.json`。
+- **预防**：**按"命名空间的消费者"而不是"文件类型"来定扫描范围**——新增任何消费 `t:` 键的文件时必须同步把它加进脚本目录清单。theme check 的 `ValidSchemaTranslations` 是这条的最终兜底。**[2026-10-16 更正]** 本条目原先写的"沙箱里跑不了 theme check"**不成立**：`shopify theme check` 是纯本地静态检查，不联网、不需登录，随时可跑（实测 53 文件 0 offenses）。"待刘工代跑 theme check"这类待办今后由 Agent 自行清理。
+
+### BUG-038 · 浅色 preset 缺骨架三色，从深色切回时会残留深色骨架
+- **日期**：2026-10-16 ｜ **状态**：Fixed
+- **现象**：`config/settings_data.json` 的 `Coppice`（浅色）preset 只写了 10 个 theme setting，缺 `skeleton_background_color` / `skeleton_foreground_color` / `skeleton_accent_color`；而 `Coppice Noir` 覆盖全部 13 个。后果：在编辑器里从 Noir 切回 Coppice 后，页头页脚仍是黑的（深色值残留）。
+- **根因**：官方对 preset 切换的定义是**"把 preset 的值更新进 `current`"**（settings_data.json 文档：*Selecting a theme preset updates the current object to use the associated theme preset values*），**不是用 preset 整体替换 current**。因此 preset 里缺席的键不会被清除，而是沿用 `current` 中的旧值——Noir 写进去的 `#0F1012` 就这样活到了浅色预设里。
+- **修复**：给 `Coppice` preset 显式写入三个空字符串（官方语义：color 清空后存 `""`，Liquid 侧返回 blank，被 `snippets/css-variables.liquid` 的 `| default:` 回落成全局色）。修完两个 preset 的键集合一致（各 13 个），双向切换都干净。
+- **预防**：**一个主题内的所有 preset 必须覆盖完全相同的 setting id 集合**——preset 之间的"键差集"就是"切换残留"的入口。新增 `tools/use-preset.py`，其 `--list` 会对覆盖不全的 preset 打 `[!] 仅覆盖 N/M 个键` 标记；改 preset 后跑一次即可暴露。**判据不是我猜的，是官方原文**：改 preset 相关逻辑前先回读 settings-data-json 文档那一节。
+
 ## 记录模板（追加新 bug 用）
 
 ```
