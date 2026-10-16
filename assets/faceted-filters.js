@@ -9,6 +9,8 @@
  *    脱离 form 归属，抽屉内提交/Apply/关闭按钮全部失效，BUG-041；无副本，
  *    输入状态不分裂）。
  * 3. 无 JS 退化：单列布局 + 应用按钮整页 GET 提交，全功能可用。
+ * 4. 加载反馈：fetch 期间在结果区叠骨架层（_showSkeleton，复用 aria-busy 时段），
+ *    完成/失败/中止一律在 finally 摘除；prefers-reduced-motion 时静止灰块。
  *
  * 实现纪律（AGENTS §6）：
  * - 监听全部委托到本元素（submit/change/click 冒泡），内部 form/网格被局部替换后无需重绑；
@@ -130,6 +132,8 @@ class CollectionFacets extends HTMLElement {
     if (this._fetchAbort) this._fetchAbort.abort();
     this._fetchAbort = new AbortController();
     this.setAttribute('aria-busy', 'true');
+    /* 骨架层：fetch 期间盖住结果区，完成/失败/中止都在 finally 摘除 */
+    const skeleton = this._showSkeleton();
 
     try {
       const response = await fetch(requestUrl, {
@@ -166,7 +170,32 @@ class CollectionFacets extends HTMLElement {
       window.location.href = fallbackUrl.toString();
     } finally {
       this.removeAttribute('aria-busy');
+      skeleton?.remove();
     }
+  }
+
+  _showSkeleton() {
+    const results = this.querySelector('[data-facets-results]');
+    if (!results) return null;
+    /* 骨架卡数对齐当前页（夹在 4–12），高度不与完成后差太多 */
+    const count = Math.min(
+      Math.max(results.querySelectorAll('.collection__item').length, 4),
+      12
+    );
+    const layer = document.createElement('div');
+    layer.className = 'collection__skeleton';
+    layer.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < count; i++) {
+      const card = document.createElement('div');
+      card.className = 'collection__skeleton-card';
+      card.innerHTML =
+        '<div class="sk-img"></div><div class="sk-line"></div>' +
+        '<div class="sk-line sk-line--short"></div>' +
+        '<div class="sk-line sk-line--price"></div>';
+      layer.appendChild(card);
+    }
+    results.appendChild(layer);
+    return layer;
   }
 
   _openDialog() {
