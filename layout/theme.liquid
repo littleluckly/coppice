@@ -2,7 +2,9 @@
 <html lang="{{ request.locale.iso_code }}">
   <head>
     {% # JS 就绪标记：CSS 渐进增强的门控（禁 JS → .js 不出现 → 沉浸页头等增强整段不命中） %}
-    <script>document.documentElement.classList.add('js')</script>
+    <script>
+      document.documentElement.classList.add('js');
+    </script>
 
     {% # Inlined CSS Variables %}
     {% render 'css-variables' %}
@@ -29,12 +31,8 @@
     {{ content_for_header }}
   </head>
 
-<<<<<<< HEAD
   {%- comment -%} body class：模板名（CSS 门控）+ 沉浸页头开关（settings.immersive_header，默认开） {%- endcomment -%}
   <body class="template-{{ template.name }}{% if settings.immersive_header %} immersive-header{% endif %}">
-=======
-  <body class="template-{{ template.name }}">
->>>>>>> dc395783add748f2b67817ac3f828ff08bd81e29
     {% comment %}
       Skip link first, before any landmark. It is the first thing keyboard focus
       reaches, letting people bypass the header. Rendered from layout rather than
