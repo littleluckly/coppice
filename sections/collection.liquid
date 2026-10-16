@@ -394,6 +394,30 @@
     margin-block-start: 1.5rem;
   }
 
+  /* 左列 = 两张卡堆叠（2026-10-16 刘工定：排序卡在上、筛选卡在下）。
+     桌面由 ≥990px 规则给卡面；移动端 form 整体进抽屉，改 block + 分隔线。 */
+  .facets__form {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+  }
+  .facets__sort-card {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+  }
+  .facets__sort-card-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .facets__sort-card select {
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 0.6rem;
+    border: 1px solid rgb(0 0 0 / 25%);
+    background-color: var(--color-background);
+  }
+
   /* 工具条 */
   .collection__toolbar {
     display: flex;
@@ -413,8 +437,8 @@
     font: inherit;
     cursor: pointer;
   }
-  /* 排序：工具条右侧（商品列表右上方，2026-10-16 效果图-集合-1）。
-     select 靠 form 属性关联筛选表单，值仍随表单一起提交。 */
+  /* 排序：仅无筛选集合退回工具条时的形态（有筛选时排序在左列卡片里，
+     见 .facets__sort-card）；靠 auto 外边距与计数一起靠在行尾。 */
   .facets__sort {
     display: flex;
     align-items: center;
@@ -438,7 +462,7 @@
     white-space: nowrap;
   }
 
-  /* 已选标签 */
+  /* 已选标签：移动端独占一行（规格「已选标签横滑」）；桌面与计数同行（order 见 ≥990px） */
   .facets__active {
     display: flex;
     flex-wrap: wrap;
@@ -742,12 +766,34 @@
      data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
   @media (min-width: 990px) {
     .collection__layout {
-      grid-template-columns: 230px 1fr;
+      /* 230 → 260px：卡面内边距占用 2.5rem，留足筛选标签宽度 */
+      grid-template-columns: 260px 1fr;
       gap: 2rem;
     }
     /* 无筛选集合不渲染表单：内容区独占整行，不空一列 */
     .collection__layout--no-facets {
       grid-template-columns: 1fr;
+    }
+    /* 左列两张卡：排序卡在上、筛选卡在下（描边 + 圆角 + 内边距） */
+    .facets__sort-card,
+    .facets__aside {
+      padding: 1rem 1.25rem;
+      border: 1px solid rgb(0 0 0 / 10%);
+      border-radius: 12px;
+      background-color: var(--color-background);
+    }
+    /* 最后一组筛选不再留底边距——卡片内边距已提供呼吸感 */
+    .facets__aside .facets__group:last-of-type {
+      margin-block-end: 0;
+    }
+    /* 工具条：已选标签在左（可换行），计数靠行尾 */
+    .facets__active {
+      order: 1;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .collection__count {
+      order: 2;
     }
     .facets__mobile-head {
       display: none;
@@ -765,6 +811,15 @@
        data-facets-ready 缺席，筛选面板照常流内展示。 */
     .collection__facets[data-facets-ready] .facets__form {
       display: none;
+    }
+    /* 抽屉/无 JS 流内：排序卡与筛选块之间用分隔线（面板自带留白，不做卡面） */
+    .facets__form {
+      display: block;
+    }
+    .facets__sort-card {
+      padding-block-end: 0.9rem;
+      margin-block-end: 0.9rem;
+      border-block-end: 1px solid rgb(0 0 0 / 10%);
     }
   }
 
