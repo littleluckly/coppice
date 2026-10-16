@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>集合页左列两张卡 · 布局预览（2026-10-16）</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #333333;
+    --brand: #1e4b3c;
+    --brand-accent: #2e6b4e;
+    --muted: rgba(0, 0, 0, 0.6);
+    --line: rgba(0, 0, 0, 0.1);
+    --input-line: rgba(0, 0, 0, 0.25);
+    --placeholder: rgba(0, 0, 0, 0.07);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2.5rem 2rem 4rem;
+    background: #f4f3f0;
+    color: var(--fg);
+    font: 400 14px/1.6 -apple-system, "Helvetica Neue", "PingFang SC", sans-serif;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 0.35rem; }
+  .lede { color: var(--muted); font-size: 13px; margin: 0 0 2rem; max-width: 70ch; }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 0.75rem;
+  }
+  .stack { display: grid; gap: 2.5rem; }
+  .canvas {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+  .frame-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 0.75rem;
+  }
+
+  /* ---- 骨架 ---- */
+  .band { height: 8px; border-radius: 4px; background: var(--placeholder); margin-bottom: 1.25rem; }
+  .crumb { font-size: 12px; color: var(--muted); }
+  .page-title { font-size: 22px; font-weight: 600; margin: 0.15rem 0 1.25rem; }
+
+  .layout { display: grid; grid-template-columns: 260px 1fr; gap: 2rem; align-items: start; }
+  .card {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg);
+  }
+  .sidebar { display: grid; gap: 1rem; align-content: start; }
+  .facet-group { margin-bottom: 1.25rem; }
+  .facet-group:last-of-type { margin-bottom: 0; }
+  .facet-legend { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .facet-row { display: flex; align-items: center; gap: 0.5rem; min-height: 34px; font-size: 0.88rem; }
+  .box { width: 16px; height: 16px; border: 1px solid var(--input-line); border-radius: 3px; flex: none; }
+  .box.on { background: var(--fg); border-color: var(--fg); position: relative; }
+  .box.on::after {
+    content: ""; position: absolute; inset: 4px; background: var(--bg); border-radius: 1px;
+  }
+  .count-sm { margin-left: auto; font-size: 0.78rem; color: rgba(0, 0, 0, 0.45); }
+  .price-fields { display: flex; align-items: center; gap: 0.5rem; }
+  .field {
+    flex: 1;
+    min-height: 40px;
+    border: 1px solid var(--input-line);
+    border-radius: 4px;
+    display: flex; align-items: center; padding: 0 0.6rem;
+    font-size: 0.85rem; color: var(--muted);
+  }
+  .sort-card { display: grid; gap: 0.5rem; }
+  .sort-card label { font-size: 0.88rem; font-weight: 600; }
+  .select {
+    min-height: 44px;
+    border: 1px solid var(--input-line);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 0.6rem;
+    font-size: 0.9rem; color: var(--fg);
+    background: var(--bg);
+  }
+  .select::after { content: "▾"; color: var(--muted); }
+  .sort-card .select::after { margin-left: auto; padding-left: 0.5rem; }
+
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; min-height: 44px; }
+  .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; order: 1; flex: 1 1 auto; min-width: 0; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    min-height: 32px; padding: 4px 0.6rem;
+    border: 1px solid rgba(0, 0, 0, 0.2); border-radius: 999px;
+    background: var(--bg); font-size: 0.82rem;
+  }
+  .chip .x { color: rgba(0, 0, 0, 0.5); font-size: 0.75rem; }
+  .clear { font-size: 0.82rem; color: var(--brand-accent); text-decoration: underline; }
+  .result-count { order: 2; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 0.5rem; }
+  .prod { border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem; }
+  .prod .thumb { aspect-ratio: 1 / 1; border-radius: 6px; background: var(--placeholder); }
+  .prod .name { font-size: 12px; margin-top: 0.5rem; }
+  .prod .price { font-size: 12px; color: var(--muted); margin-top: 0.15rem; }
+
+  /* ---- 移动端 ---- */
+  .phones { display: flex; gap: 2rem; flex-wrap: wrap; }
+  .phone {
+    width: 320px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 0.85rem;
+    position: relative;
+  }
+  .phone .toolbar { min-height: 40px; }
+  .btn {
+    min-height: 36px; padding: 6px 0.75rem;
+    border: 1px solid var(--input-line); border-radius: 4px;
+    background: var(--bg); font-size: 0.85rem;
+  }
+  .mobile-toolbar { display: flex; align-items: center; gap: 0.6rem; }
+  .mobile-sort {
+    min-height: 40px; max-width: 40vw;
+    padding: 6px 0.6rem; border: 1px solid var(--input-line); border-radius: 4px;
+    background: var(--bg); font-size: 0.85rem;
+  }
+  .mobile-count { margin-left: auto; font-size: 0.85rem; color: var(--muted); }
+  .mobile-chips { display: flex; gap: 0.4rem; margin-top: 0.6rem; overflow: hidden; }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); margin-top: 0.75rem; }
+  .drawer {
+    margin-top: 0.85rem;
+    border-radius: 14px 14px 0 0;
+    border: 1px solid var(--line);
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+    background: var(--bg);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.06);
+  }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .drawer-head b { font-size: 1rem; }
+  .drawer-head span { color: var(--brand-accent); font-size: 0.85rem; }
+  .apply {
+    display: block; width: 100%; min-height: 44px; margin-top: 0.75rem;
+    border: 1px solid var(--fg); border-radius: 4px;
+    background: var(--fg); color: var(--bg);
+    font-size: 0.9rem; font-weight: 500;
+  }
+  .scrim { font-size: 12px; color: var(--muted); margin-top: 0.5rem; }
+  .note { font-size: 12px; color: var(--muted); margin: 0.75rem 0 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>集合页：左列两张卡（排序在上、筛选在下）</h1>
+<p class="lede">
+  只做布局示意，非像素稿。色值取自当前主题预设（背景 <code>#FFFFFF</code>、正文 <code>#333333</code>、品牌 <code>#1E4B3C</code> / <code>#2E6B4E</code>）。
+  左列由 <code>.facets__form</code> 承载：排序卡 + 筛选卡；右列工具条只剩「已选标签 + 计数」。
+  移动端（&lt;990px）排序卡移进工具条，抽屉里只剩筛选组。
+</p>
+
+<div class="stack">
+  <section>
+    <h2>桌面 ≥990px</h2>
+    <div class="canvas">
+      <p class="frame-label">左列 260px（原 230px，卡面内边距占 2.5rem）· 两卡间距 1rem</p>
+      <div class="band"></div>
+      <div class="crumb">首页 / All Lawn Mowers</div>
+      <h3 class="page-title">All Lawn Mowers</h3>
+
+      <div class="layout">
+        <div class="sidebar">
+          <div class="card sort-card">
+            <label>Sort by</label>
+            <div class="select">Featured</div>
+          </div>
+
+          <div class="card">
+            <div class="facet-group">
+              <div class="facet-legend">Availability</div>
+              <div class="facet-row"><span class="box"></span> In stock <span class="count-sm">2</span></div>
+            </div>
+            <div class="facet-group">
+              <div class="facet-legend">Price</div>
+              <div class="price-fields">
+                <div class="field">0.00</div>
+                <span>–</span>
+                <div class="field">2399.00</div>
+              </div>
+            </div>
+            <div class="facet-group">
+              <div class="facet-legend">Power source</div>
+              <div class="facet-row"><span class="box on"></span> Gasoline <span class="count-sm">2</span></div>
+              <div class="facet-row"><span class="box"></span> Battery <span class="count-sm">1</span></div>
+            </div>
+            <div class="facet-group">
+              <div class="facet-legend">Operation type</div>
+              <div class="facet-row"><span class="box on"></span> Riding <span class="count-sm">2</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="toolbar">
+            <div class="chips">
+              <span class="chip">Price <span class="x">✕</span></span>
+              <span class="chip">Gasoline <span class="x">✕</span></span>
+              <span class="chip">Riding <span class="x">✕</span></span>
+              <span class="clear">Clear all</span>
+            </div>
+            <p class="result-count">2 products</p>
+          </div>
+
+          <div class="grid">
+            <div class="prod"><div class="thumb"></div><div class="name">Northbark NB-42T 42 in.</div><div class="price">$2,399.00</div></div>
+            <div class="prod"><div class="thumb"></div><div class="name">Northbark NB-42TH 42 in.</div><div class="price">$2,599.00</div></div>
+            <div class="prod"><div class="thumb"></div><div class="name">Ridgeway RZ-46 46 in.</div><div class="price">$2,749.00</div></div>
+            <div class="prod"><div class="thumb"></div><div class="name">Ridgeway RZ-52 52 in.</div><div class="price">$2,999.00</div></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">工具栏顺序：已选标签在左（可换行）、计数在行尾。无已选标签时这行只剩计数，与效果图一致。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>移动端 &lt;990px</h2>
+    <div class="phones">
+      <div>
+        <p class="frame-label">页面本体：产品列表紧跟工具条</p>
+        <div class="phone">
+          <div class="band"></div>
+          <div class="mobile-toolbar">
+            <button class="btn">Filters</button>
+            <span class="mobile-sort">Featured ▾</span>
+            <p class="mobile-count">2 products</p>
+          </div>
+          <div class="mobile-chips">
+            <span class="chip">Price <span class="x">✕</span></span>
+            <span class="chip">Gasoline <span class="x">✕</span></span>
+          </div>
+          <div class="grid grid-2">
+            <div class="prod"><div class="thumb"></div><div class="name">Northbark NB-42T</div><div class="price">$2,399.00</div></div>
+            <div class="prod"><div class="thumb"></div><div class="name">Northbark NB-42TH</div><div class="price">$2,599.00</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="frame-label">点 Filters 打开的抽屉：只有筛选组（排序在工具条，不进抽屉）</p>
+        <div class="phone" style="padding-bottom:0">
+          <p class="scrim">（父窗口内容变暗）</p>
+          <div class="drawer">
+            <div class="drawer-head"><b>Filters</b><span>Close</span></div>
+            <div class="facet-group">
+              <div class="facet-legend">Availability</div>
+              <div class="facet-row"><span class="box"></span> In stock <span class="count-sm">2</span></div>
+            </div>
+            <div class="facet-group">
+              <div class="facet-legend">Power source</div>
+              <div class="facet-row"><span class="box on"></span> Gasoline <span class="count-sm">2</span></div>
+            </div>
+            <button class="apply">Apply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">
+      移动端工具条 = <code>[筛选☰] [排序▾]</code> + 计数靠行尾 —— pages-ui §4 原文口径。
+      排序卡由 <code>faceted-filters.js</code> 的 <code>_placeSort()</code> 按断点在两个容器间搬移（同一 DOM 节点，不做副本），
+      故 select 恒带 <code>form</code> 属性：脱离 form 子树后仍是表单成员，提交照常带上 <code>sort_by</code>。
+      工具条里排序标签转视觉隐藏（<code>label[for]</code> 仍在无障碍树里提供可访问名）。
+    </p>
+  </section>
+</div>
+</body>
+</html>

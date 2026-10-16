@@ -13,6 +13,22 @@
   若新元素挂在 `<body>` 直系（如页脚），必须给它加 `.site-footer` 这类标记，并把它补进 critical.css 的映射选择器。
 - 深色取值由 preset 提供（`config/settings_data.json` 的 `presets["Coppice Noir"]`），不是硬编码在 Liquid 里。
 
+## 集合页布局约定（2026-10-16 刘工定）
+
+- **左列 = 两张卡堆叠**：排序卡（`.facets__sort-card`）在上、筛选卡（`.facets__aside`，桌面加卡面）在下，
+  同属 `.facets__form`。
+- **排序 select 必须恒带 `form="FacetsForm-{{ section.id }}"`**（即使它就写在 form 里）：
+  移动端 `_placeSort()` 会把这张卡搬进工具条（pages-ui §4 的 `[筛选☰] [排序▾]`），
+  离开 form 子树后靠这个属性保持表单成员资格，`FormData` 才含 `sort_by`。**不要删**。
+- **排序卡落点随断点切换**，同一 DOM 节点不做副本：移动端工具条（计数之前）、桌面左列第一张卡。
+  由 `faceted-filters.js` 的 `_placeSort()` 驱动，`_load` 替换 DOM 后、抽屉关闭后都要重跑。
+- 工具条行序由 `order` 控制，且**只在对应断点内生效**：桌面 = 标签(1) → 排序卡(2) → 计数(3)；
+  移动端 = Filters(1) → 排序卡(2) → 计数(3，`margin-inline-start:auto` 靠行尾) → 标签(4)。
+  order 若全局生效会把计数挤到第三行。
+- 无筛选集合（`filters.size == 0`）没有左列也没有 form，排序常驻工具条，**不带** `form` 属性。
+- 工具条内的排序卡是紧凑控件（横排 + 标签视觉隐藏），**不套卡面**——卡面规则限定 `.facets__form .facets__sort-card`。
+- 桌面列宽 260px（卡面内边距占 2.5rem）。预览文件：`dev-docs/collection-sidebar-preview.html`。
+
 ## 平台事实（已核实官方原文，勿凭印象改写）
 
 - **theme preset ≠ color_scheme**：

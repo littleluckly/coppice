@@ -10,7 +10,8 @@
   - snippets/faceted-filters.liquid（筛选组）/ active-facets.liquid（已选标签）
   - snippets/product-card.liquid + assets/product-card.css（商品卡）
   - assets/faceted-filters.js（`<collection-facets>`：拦截 GET 表单 → Section Rendering API
-    局部更新 + replaceState；移动端 <dialog> 抽屉承载同一份筛选 DOM）
+    局部更新 + replaceState；移动端 <dialog> 抽屉承载同一份筛选 DOM；排序卡按断点
+    在「左列第一张卡 ↔ 工具条」之间搬移，pages-ui §4 的移动端 [筛选☰] [排序▾]）
 
   红线对齐：数据与计数全部来自服务端重算（collection.filters / filter_value.count），
   前端零筛选逻辑；无 JS 全功能可退化（整页 GET 提交）。
@@ -104,6 +105,38 @@
             method="get"
             data-facets-form
           >
+            {%- comment -%}
+              左列两张卡（2026-10-16 刘工定）：排序卡在上，筛选卡在下。
+              桌面：排序卡留在 form 内。移动端：faceted-filters.js 把这一张卡
+              移进工具条（pages-ui §4 移动端工具条 = [筛选☰] [排序▾]）——同一
+              DOM 节点，不做副本。故 select 恒带 form 属性：离开 form 子树后仍是
+              表单成员，FormData / requestSubmit / 无 JS 原生提交都照常带上 sort_by。
+            {%- endcomment -%}
+            {%- if section.settings.show_sort -%}
+              <div class="facets__sort-card">
+                <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
+                  {{ 'collections.sort.label' | t }}
+                </label>
+                <select
+                  id="SortBy-{{ section.id }}"
+                  name="sort_by"
+                  data-facets-sort
+                  form="FacetsForm-{{ section.id }}"
+                >
+                  {%- for option in collection.sort_options -%}
+                    <option
+                      value="{{ option.value }}"
+                      {% if option.value == collection.sort_by %}
+                        selected
+                      {% endif %}
+                    >
+                      {{ option.name | escape }}
+                    </option>
+                  {%- endfor -%}
+                </select>
+              </div>
+            {%- endif -%}
+
             {% render 'faceted-filters', filters: collection.filters %}
           </form>
         {%- endif -%}
@@ -122,15 +155,17 @@
             {%- endif -%}
 
             {%- comment -%}
-              排序 select 放商品列表右上方（2026-10-16 效果图-集合-1）。
-              通过 form 属性关联筛选表单——DOM 在右列工具条，逻辑上仍随表单提交：
-              FormData 会包含 form 属性关联的控件，无 JS 时点「应用」同样带上 sort_by。
-              不能把 form 扩大到工具条：网格里有 quick-add 的嵌套 form，HTML 不允许表单嵌套。
+              无筛选集合：没有左列，也就没有 form —— 排序常驻工具条行尾
+              （桌面与移动端同一处）。无 form 可提交 → 不带 form 属性；
+              JS 走 _onChange 的「无表单」独立局部更新分支。
+              与有筛选集合的排序卡复用同一套类名：工具条里有它自己的横排形态。
             {%- endcomment -%}
-            {%- if section.settings.show_sort -%}
-              <label class="facets__sort">
-                <span class="facets__sort-label">{{ 'collections.sort.label' | t }}</span>
-                <select name="sort_by" data-facets-sort form="FacetsForm-{{ section.id }}">
+            {%- if collection.filters.size == 0 and section.settings.show_sort -%}
+              <div class="facets__sort-card">
+                <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
+                  {{ 'collections.sort.label' | t }}
+                </label>
+                <select id="SortBy-{{ section.id }}" name="sort_by" data-facets-sort>
                   {%- for option in collection.sort_options -%}
                     <option
                       value="{{ option.value }}"
@@ -142,10 +177,10 @@
                     </option>
                   {%- endfor -%}
                 </select>
-              </label>
+              </div>
             {%- endif -%}
 
-            {%- comment -%} 计数在排序右侧（2026-10-16 效果图反馈，pages-ui §4「排序 ▾  共 11 款」） {%- endcomment -%}
+            {%- comment -%} 计数：桌面在已选标签右侧（CSS order 控制），移动端行尾 {%- endcomment -%}
             <p class="collection__count" aria-live="polite" data-facets-count>
               {{ 'navigation.products_count' | t: count: collection.products_count }}
             </p>
@@ -371,6 +406,43 @@
     margin-block-start: 1.5rem;
   }
 
+  /* 左列 = 两张卡堆叠（2026-10-16 刘工定：排序卡在上、筛选卡在下）。
+     桌面由 ≥990px 规则给卡面；移动端排序卡被 JS 移进工具条，余下的 form 整体
+     进抽屉，改 block + 分隔线。 */
+  .facets__form {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+  }
+  .facets__sort-card {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+  }
+  .facets__sort-card-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .facets__sort-card select {
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 0.6rem;
+    border: 1px solid rgb(0 0 0 / 25%);
+    background-color: var(--color-background);
+  }
+  /* 排序卡在工具条里的形态（无筛选集合常驻；有筛选集合仅移动端，由 JS 移入）：
+     竖向卡面变横排，靠行尾。桌面无筛选集合靠 auto 外边距右贴，计数跟在它右侧。 */
+  .collection__toolbar .facets__sort-card {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    margin-inline-start: auto;
+  }
+  .collection__toolbar .facets__sort-card select {
+    width: auto;
+  }
+
   /* 工具条 */
   .collection__toolbar {
     display: flex;
@@ -390,32 +462,13 @@
     font: inherit;
     cursor: pointer;
   }
-  /* 排序：工具条右侧（商品列表右上方，2026-10-16 效果图-集合-1）。
-     select 靠 form 属性关联筛选表单，值仍随表单一起提交。 */
-  .facets__sort {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-inline-start: auto;
-  }
-  .facets__sort-label {
-    font-size: 0.85rem;
-    color: rgb(0 0 0 / 60%);
-    white-space: nowrap;
-  }
-  .facets__sort select {
-    min-height: 44px;
-    padding: 6px 0.6rem;
-    border: 1px solid rgb(0 0 0 / 25%);
-    background-color: var(--color-background);
-  }
   .collection__count {
     font-size: 0.85rem;
     color: rgb(0 0 0 / 60%);
     white-space: nowrap;
   }
 
-  /* 已选标签 */
+  /* 已选标签：移动端独占一行（规格「已选标签横滑」）；桌面与计数同行（order 见 ≥990px） */
   .facets__active {
     display: flex;
     flex-wrap: wrap;
@@ -529,10 +582,80 @@
 
   /* 网格 */
   .collection__results {
+    position: relative;
     margin-block-start: 0.5rem;
   }
   .collection__results:focus {
     outline: none;
+  }
+  .collection__facets[aria-busy='true'] .collection__results {
+    pointer-events: none;
+  }
+
+  /* 加载骨架（faceted-filters.js 的 _showSkeleton）：fetch 期间盖住结果区。
+     列数复刻 .collection__grid 的三档断点；底色走全局变量，Noir 下自动适配；
+     动画按 prefers-reduced-motion 关停（无障碍红线）。 */
+  .collection__skeleton {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    align-content: start;
+    background: var(--color-background);
+  }
+  .collection__skeleton-card {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+    padding: 0.75rem;
+    border: 0.5px solid rgb(0 0 0 / 8%);
+    border-radius: 12px;
+  }
+  .collection__skeleton-card .sk-img {
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    background: rgb(0 0 0 / 7%);
+  }
+  .collection__skeleton-card .sk-line {
+    width: 70%;
+    height: 10px;
+    border-radius: 5px;
+    background: rgb(0 0 0 / 7%);
+  }
+  .collection__skeleton-card .sk-line--short {
+    width: 40%;
+  }
+  .collection__skeleton-card .sk-line--price {
+    width: 30%;
+  }
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+  .collection__skeleton-card > * {
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  @media (min-width: 750px) {
+    .collection__skeleton {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  @media (min-width: 1100px) {
+    .collection__skeleton {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .collection__skeleton-card > * {
+      animation: none;
+    }
   }
   .collection__grid {
     display: grid;
@@ -649,12 +772,41 @@
      data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
   @media (min-width: 990px) {
     .collection__layout {
-      grid-template-columns: 230px 1fr;
+      /* 230 → 260px：卡面内边距占用 2.5rem，留足筛选标签宽度 */
+      grid-template-columns: 260px 1fr;
       gap: 2rem;
     }
     /* 无筛选集合不渲染表单：内容区独占整行，不空一列 */
     .collection__layout--no-facets {
       grid-template-columns: 1fr;
+    }
+    /* 左列两张卡：排序卡在上、筛选卡在下（描边 + 圆角 + 内边距）。
+       卡面只给 form 内的那一份——工具条里的排序卡（无筛选集合）是紧凑控件，
+       不该套卡面（选择器限定作用域，见 .collection__toolbar 的横排形态）。 */
+    .facets__form .facets__sort-card,
+    .facets__aside {
+      padding: 1rem 1.25rem;
+      border: 1px solid rgb(0 0 0 / 10%);
+      border-radius: 12px;
+      background-color: var(--color-background);
+    }
+    /* 最后一组筛选不再留底边距——卡片内边距已提供呼吸感 */
+    .facets__aside .facets__group:last-of-type {
+      margin-block-end: 0;
+    }
+    /* 工具条行序：已选标签在左（可换行），计数靠行尾。有筛选集合的排序卡在
+       左列（不在此处）；无筛选集合的排序卡常驻工具条，排在计数左侧
+       ——「计数在 Sort by 右侧」（2026-10-16 刘工）在两种形态下都成立。 */
+    .collection__toolbar .facets__active {
+      order: 1;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .collection__toolbar .facets__sort-card {
+      order: 2;
+    }
+    .collection__toolbar .collection__count {
+      order: 3;
     }
     .facets__mobile-head {
       display: none;
@@ -672,6 +824,48 @@
        data-facets-ready 缺席，筛选面板照常流内展示。 */
     .collection__facets[data-facets-ready] .facets__form {
       display: none;
+    }
+    /* 工具条行序（pages-ui §4 移动端）：[筛选☰] [排序▾] …… [N 款]；
+       已选标签另行横滑（.facets__active 的 flex-basis: 100% 保证换行）。 */
+    .collection__toolbar .facets__open {
+      order: 1;
+    }
+    .collection__toolbar .facets__sort-card {
+      order: 2;
+      /* 不右推：紧邻 Filters，自由空间全给计数，行尾对齐 */
+      margin-inline-start: 0;
+    }
+    .collection__toolbar .collection__count {
+      order: 3;
+      margin-inline-start: auto;
+    }
+    .collection__toolbar .facets__active {
+      order: 4;
+    }
+    /* 行宽紧张（375px 内容列约 335px）：排序标签转视觉隐藏——label[for] 仍在
+       无障碍树里提供可访问名（口径同 critical.css 的 .visually-hidden），
+       select 限宽，避免长排序名把计数挤下整行。 */
+    .collection__toolbar .facets__sort-card-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .collection__toolbar .facets__sort-card select {
+      min-height: 40px;
+      max-width: 40vw;
+    }
+    /* 抽屉 / 无 JS 流内（排序卡还在 form 里）：与筛选块之间用分隔线，不做卡面 */
+    .facets__form {
+      display: block;
+    }
+    .facets__form .facets__sort-card {
+      padding-block-end: 0.9rem;
+      margin-block-end: 0.9rem;
+      border-block-end: 1px solid rgb(0 0 0 / 10%);
     }
   }
 

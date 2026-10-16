@@ -9,6 +9,13 @@
  *    脱离 form 归属，抽屉内提交/Apply/关闭按钮全部失效，BUG-041；无副本，
  *    输入状态不分裂）。
  * 3. 无 JS 退化：单列布局 + 应用按钮整页 GET 提交，全功能可用。
+ * 4. 加载反馈：fetch 期间在结果区叠骨架层（_showSkeleton，复用 aria-busy 时段），
+ *    完成/失败/中止一律在 finally 摘除；prefers-reduced-motion 时静止灰块。
+ * 5. 排序卡落点随断点切换（_placeSort）：移动端移进工具条——pages-ui §4 的
+ *    [筛选☰] [排序▾]，同一 DOM 节点不做副本；桌面回归左列第一张卡。
+ *    select 恒带 form 属性，离开 form 子树后仍是表单成员，FormData 照常含
+ *    sort_by（无 JS 时原生 GET 提交也带上）。无筛选集合没有 form，卡片本就在
+ *    工具条，_placeSort 自然空操作。
  *
  * 实现纪律（AGENTS §6）：
  * - 监听全部委托到本元素（submit/change/click 冒泡），内部 form/网格被局部替换后无需重绑；
@@ -45,6 +52,11 @@ class CollectionFacets extends HTMLElement {
       this._dialog.addEventListener('click', this._onClick, { signal });
       this._dialog.addEventListener('close', this._onDialogClose, { signal });
     }
+
+    /* 排序卡落点：移动端工具条（pages-ui §4），桌面左列第一张卡 */
+    this._mobileQuery = window.matchMedia('(max-width: 989.98px)');
+    this._mobileQuery.addEventListener('change', this._onMediaChange, { signal });
+    this._placeSort();
   }
 
   disconnectedCallback() {
@@ -126,10 +138,43 @@ class CollectionFacets extends HTMLElement {
     return url;
   }
 
+  /**
+   * 排序卡落点：同一 DOM 节点在两个容器间搬移，不做副本（状态不分裂）。
+   * 移动端 → 工具条计数之前；桌面 → form 内首位（左列第一张卡）。
+   * 卡片靠 form 属性与表单关联，所以脱离 form 子树后提交照常。
+   */
+  _placeSort() {
+    if (!this._mobileQuery) return;
+    const toolbar = this.querySelector('.collection__toolbar');
+    const card = this.querySelector('.facets__sort-card');
+    if (!toolbar || !card) return;
+
+    if (this._mobileQuery.matches) {
+      if (card.parentElement !== toolbar) {
+        toolbar.insertBefore(card, toolbar.querySelector('.collection__count'));
+      }
+      return;
+    }
+    const form = this.querySelector('[data-facets-form]');
+    if (form && card.parentElement !== form) form.prepend(card);
+  }
+
+  /**
+   * 跨断点：抽屉开着先关闭。否则 form 会留在 dialog 里，桌面左列空掉
+   * （dialog 在本元素之外，桌面两栏 CSS 找不到它）。dialog.close() 的 close
+   * 事件是异步任务，form 归位与随后的排序卡重排由 _onDialogClose 收尾。
+   */
+  _onMediaChange = () => {
+    if (this._dialog?.open) this._dialog.close();
+    this._placeSort();
+  };
+
   async _load(requestUrl) {
     if (this._fetchAbort) this._fetchAbort.abort();
     this._fetchAbort = new AbortController();
     this.setAttribute('aria-busy', 'true');
+    /* 骨架层：fetch 期间盖住结果区，完成/失败/中止都在 finally 摘除 */
+    const skeleton = this._showSkeleton();
 
     try {
       const response = await fetch(requestUrl, {
@@ -149,6 +194,10 @@ class CollectionFacets extends HTMLElement {
       historyUrl.searchParams.delete('section_id');
       history.replaceState({}, '', historyUrl);
 
+      /* 换入的是新 DOM：排序卡在新 form 里，先按断点归位——顺序不能反，
+         卡片一旦随 form 进了 dialog（本元素之外）就查不到了 */
+      this._placeSort();
+
       /* 抽屉若开着，把新 form 重新移入（顺带清掉 dialog 里被换下的旧 form） */
       if (this._dialog && this._dialog.open) this._moveFormIntoDialog();
 
@@ -166,7 +215,32 @@ class CollectionFacets extends HTMLElement {
       window.location.href = fallbackUrl.toString();
     } finally {
       this.removeAttribute('aria-busy');
+      skeleton?.remove();
     }
+  }
+
+  _showSkeleton() {
+    const results = this.querySelector('[data-facets-results]');
+    if (!results) return null;
+    /* 骨架卡数对齐当前页（夹在 4–12），高度不与完成后差太多 */
+    const count = Math.min(
+      Math.max(results.querySelectorAll('.collection__item').length, 4),
+      12
+    );
+    const layer = document.createElement('div');
+    layer.className = 'collection__skeleton';
+    layer.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < count; i++) {
+      const card = document.createElement('div');
+      card.className = 'collection__skeleton-card';
+      card.innerHTML =
+        '<div class="sk-img"></div><div class="sk-line"></div>' +
+        '<div class="sk-line sk-line--short"></div>' +
+        '<div class="sk-line sk-line--price"></div>';
+      layer.appendChild(card);
+    }
+    results.appendChild(layer);
+    return layer;
   }
 
   _openDialog() {
@@ -197,6 +271,9 @@ class CollectionFacets extends HTMLElement {
     const form = this._dialog.querySelector('[data-facets-form]');
     const layout = this.querySelector('[data-facets-layout]');
     if (form && layout) layout.prepend(form);
+    /* 归位后按当前断点重排排序卡：跨越断点时（resize / 旋转）form 刚回到布局，
+       _onMediaChange 那次 _placeSort 还查不到 form，由这里补上 */
+    this._placeSort();
   };
 }
 
