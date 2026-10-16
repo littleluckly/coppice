@@ -19,9 +19,14 @@ class CollectionFacets extends HTMLElement {
 
   connectedCallback() {
     this._sectionId = this.dataset.sectionId;
-    this._form = this.querySelector('[data-facets-form]');
     this._dialog = document.getElementById(`FacetsDialog-${this._sectionId}`);
-    if (!this._form) return;
+    /* 无筛选集合没有筛选表单，但排序 select 仍在工具条——控制器照常激活 */
+    if (
+      !this.querySelector('[data-facets-form]') &&
+      !this.querySelector('[data-facets-sort]')
+    ) {
+      return;
+    }
 
     /* JS 就绪标记：CSS 由此启用桌面两栏 / 移动抽屉（无 JS 时保持单列降级） */
     this.setAttribute('data-facets-ready', '');
@@ -41,9 +46,27 @@ class CollectionFacets extends HTMLElement {
   }
 
   _onChange = (event) => {
-    if (!event.target.closest('[data-facets-form]')) return;
-    /* 筛选勾选 / 价格输入 / 排序——任何变更即按原生 URL 重算 */
-    this._form.requestSubmit();
+    const inForm = event.target.closest('[data-facets-form]');
+    const isSort = event.target.matches('[data-facets-sort]');
+    /* 排序 select 在右列工具条，靠 form 属性关联表单（不在表单的 DOM 子树内） */
+    if (!inForm && !isSort) return;
+    /* 现场重查表单：_load 的 replaceChildren 会替换整个容器，缓存的 form
+       引用随即脱离 DOM，requestSubmit 不再生效——不能依赖 connectedCallback 缓存 */
+    const form = inForm || this.querySelector('[data-facets-form]');
+    if (form) {
+      /* 筛选勾选 / 价格输入 / 排序——任何变更即按原生 URL 重算 */
+      form.requestSubmit();
+      return;
+    }
+    /* 无筛选集合没有表单可提交：排序单独局部更新（并回到第一页） */
+    if (isSort) {
+      const url = new URL(window.location.href);
+      if (event.target.value) url.searchParams.set('sort_by', event.target.value);
+      else url.searchParams.delete('sort_by');
+      url.searchParams.delete('page');
+      url.searchParams.set('section_id', this._sectionId);
+      this._load(url);
+    }
   };
 
   _onSubmit = (event) => {
