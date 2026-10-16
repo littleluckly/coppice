@@ -95,7 +95,7 @@
 
   <div class="collection__sheet">
     <collection-facets class="collection__facets" data-section-id="{{ section.id }}">
-      <div class="collection__layout{% if collection.filters.size == 0 %} collection__layout--no-facets{% endif %}">
+      <div class="collection__layout{% if collection.filters.size == 0 %} collection__layout--no-facets{% endif %}" data-facets-layout>
         {%- if collection.filters.size > 0 -%}
           <form
             class="facets__form"
@@ -121,12 +121,8 @@
               </button>
             {%- endif -%}
 
-            <p class="collection__count" aria-live="polite" data-facets-count>
-              {{ 'navigation.products_count' | t: count: collection.products_count }}
-            </p>
-
             {%- comment -%}
-              排序 select 放商品列表右上方（2026-10-16 效果图-集合-1：与商品数同行、靠右）。
+              排序 select 放商品列表右上方（2026-10-16 效果图-集合-1）。
               通过 form 属性关联筛选表单——DOM 在右列工具条，逻辑上仍随表单提交：
               FormData 会包含 form 属性关联的控件，无 JS 时点「应用」同样带上 sort_by。
               不能把 form 扩大到工具条：网格里有 quick-add 的嵌套 form，HTML 不允许表单嵌套。
@@ -148,6 +144,11 @@
                 </select>
               </label>
             {%- endif -%}
+
+            {%- comment -%} 计数在排序右侧（2026-10-16 效果图反馈，pages-ui §4「排序 ▾  共 11 款」） {%- endcomment -%}
+            <p class="collection__count" aria-live="polite" data-facets-count>
+              {{ 'navigation.products_count' | t: count: collection.products_count }}
+            </p>
 
             {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
           </div>
@@ -665,6 +666,12 @@
   @media (max-width: 989.98px) {
     .collection__facets[data-facets-ready] .facets__open {
       display: inline-flex;
+    }
+    /* 抽屉承载筛选 DOM：form 整体移入 dialog（见 faceted-filters.js），
+       流内不再渲染，产品列表回到工具条正下方（BUG-042）。无 JS 时
+       data-facets-ready 缺席，筛选面板照常流内展示。 */
+    .collection__facets[data-facets-ready] .facets__form {
+      display: none;
     }
   }
 
