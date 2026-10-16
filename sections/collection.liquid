@@ -10,7 +10,8 @@
   - snippets/faceted-filters.liquid（筛选组）/ active-facets.liquid（已选标签）
   - snippets/product-card.liquid + assets/product-card.css（商品卡）
   - assets/faceted-filters.js（`<collection-facets>`：拦截 GET 表单 → Section Rendering API
-    局部更新 + replaceState；移动端 <dialog> 抽屉承载同一份筛选 DOM）
+    局部更新 + replaceState；移动端 <dialog> 抽屉承载同一份筛选 DOM；排序卡按断点
+    在「左列第一张卡 ↔ 工具条」之间搬移，pages-ui §4 的移动端 [筛选☰] [排序▾]）
 
   红线对齐：数据与计数全部来自服务端重算（collection.filters / filter_value.count），
   前端零筛选逻辑；无 JS 全功能可退化（整页 GET 提交）。
@@ -406,7 +407,8 @@
   }
 
   /* 左列 = 两张卡堆叠（2026-10-16 刘工定：排序卡在上、筛选卡在下）。
-     桌面由 ≥990px 规则给卡面；移动端 form 整体进抽屉，改 block + 分隔线。 */
+     桌面由 ≥990px 规则给卡面；移动端排序卡被 JS 移进工具条，余下的 form 整体
+     进抽屉，改 block + 分隔线。 */
   .facets__form {
     display: grid;
     gap: 1rem;
@@ -778,8 +780,10 @@
     .collection__layout--no-facets {
       grid-template-columns: 1fr;
     }
-    /* 左列两张卡：排序卡在上、筛选卡在下（描边 + 圆角 + 内边距） */
-    .facets__sort-card,
+    /* 左列两张卡：排序卡在上、筛选卡在下（描边 + 圆角 + 内边距）。
+       卡面只给 form 内的那一份——工具条里的排序卡（无筛选集合）是紧凑控件，
+       不该套卡面（选择器限定作用域，见 .collection__toolbar 的横排形态）。 */
+    .facets__form .facets__sort-card,
     .facets__aside {
       padding: 1rem 1.25rem;
       border: 1px solid rgb(0 0 0 / 10%);
