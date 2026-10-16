@@ -139,10 +139,11 @@ class CollectionFacets extends HTMLElement {
   }
 
   _onDialogClose = () => {
-    /* 面板归位到 form 内（桌面侧栏原位），保持单一 DOM 副本 */
-    const layout = this.querySelector('.collection__layout');
+    /* 面板归位到筛选 form 内（aside 的常住位置，桌面侧栏原位），
+       保持单一 DOM 副本 + 表单成员资格不移出 */
+    const form = this.querySelector('[data-facets-form]');
     const aside = this._dialog.querySelector('[data-facets-aside]');
-    if (layout && aside) layout.prepend(aside);
+    if (form && aside) form.prepend(aside);
   };
 }
 
