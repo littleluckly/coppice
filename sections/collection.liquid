@@ -95,37 +95,18 @@
 
   <div class="collection__sheet">
     <collection-facets class="collection__facets" data-section-id="{{ section.id }}">
-      <div class="collection__layout">
-        <form
-          class="facets__form"
-          action="{{ collection.url }}"
-          method="get"
-          data-facets-form
-        >
-          {%- comment -%} 排序 select 随筛选表单一起提交（保留已有 filter 参数）。
-              位置：筛选面板顶部（Dawn 同款——form 是左列 grid item，results 在右列，避免嵌套 form）。 {%- endcomment -%}
-          {%- if section.settings.show_sort -%}
-            <label class="facets__sort">
-              <span class="facets__sort-label">{{ 'collections.sort.label' | t }}</span>
-              <select name="sort_by" data-facets-sort>
-                {%- for option in collection.sort_options -%}
-                  <option
-                    value="{{ option.value }}"
-                    {% if option.value == collection.sort_by %}
-                      selected
-                    {% endif %}
-                  >
-                    {{ option.name | escape }}
-                  </option>
-                {%- endfor -%}
-              </select>
-            </label>
-          {%- endif -%}
-
-          {%- if collection.filters.size > 0 -%}
+      <div class="collection__layout{% if collection.filters.size == 0 %} collection__layout--no-facets{% endif %}" data-facets-layout>
+        {%- if collection.filters.size > 0 -%}
+          <form
+            class="facets__form"
+            id="FacetsForm-{{ section.id }}"
+            action="{{ collection.url }}"
+            method="get"
+            data-facets-form
+          >
             {% render 'faceted-filters', filters: collection.filters %}
-          {%- endif -%}
-        </form>
+          </form>
+        {%- endif -%}
 
         <div class="collection__content">
           <div class="collection__toolbar">
@@ -140,11 +121,36 @@
               </button>
             {%- endif -%}
 
-            {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
+            {%- comment -%}
+              排序 select 放商品列表右上方（2026-10-16 效果图-集合-1）。
+              通过 form 属性关联筛选表单——DOM 在右列工具条，逻辑上仍随表单提交：
+              FormData 会包含 form 属性关联的控件，无 JS 时点「应用」同样带上 sort_by。
+              不能把 form 扩大到工具条：网格里有 quick-add 的嵌套 form，HTML 不允许表单嵌套。
+            {%- endcomment -%}
+            {%- if section.settings.show_sort -%}
+              <label class="facets__sort">
+                <span class="facets__sort-label">{{ 'collections.sort.label' | t }}</span>
+                <select name="sort_by" data-facets-sort form="FacetsForm-{{ section.id }}">
+                  {%- for option in collection.sort_options -%}
+                    <option
+                      value="{{ option.value }}"
+                      {% if option.value == collection.sort_by %}
+                        selected
+                      {% endif %}
+                    >
+                      {{ option.name | escape }}
+                    </option>
+                  {%- endfor -%}
+                </select>
+              </label>
+            {%- endif -%}
 
+            {%- comment -%} 计数在排序右侧（2026-10-16 效果图反馈，pages-ui §4「排序 ▾  共 11 款」） {%- endcomment -%}
             <p class="collection__count" aria-live="polite" data-facets-count>
               {{ 'navigation.products_count' | t: count: collection.products_count }}
             </p>
+
+            {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
           </div>
 
           <div class="collection__results" data-facets-results tabindex="-1">
@@ -384,12 +390,13 @@
     font: inherit;
     cursor: pointer;
   }
-  /* 排序：筛选面板顶部（form 内，随筛选表单提交） */
+  /* 排序：工具条右侧（商品列表右上方，2026-10-16 效果图-集合-1）。
+     select 靠 form 属性关联筛选表单，值仍随表单一起提交。 */
   .facets__sort {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    margin-block-end: 1rem;
+    margin-inline-start: auto;
   }
   .facets__sort-label {
     font-size: 0.85rem;
@@ -406,7 +413,6 @@
     font-size: 0.85rem;
     color: rgb(0 0 0 / 60%);
     white-space: nowrap;
-    margin-inline-start: auto;
   }
 
   /* 已选标签 */
@@ -646,6 +652,10 @@
       grid-template-columns: 230px 1fr;
       gap: 2rem;
     }
+    /* 无筛选集合不渲染表单：内容区独占整行，不空一列 */
+    .collection__layout--no-facets {
+      grid-template-columns: 1fr;
+    }
     .facets__mobile-head {
       display: none;
     }
@@ -656,6 +666,12 @@
   @media (max-width: 989.98px) {
     .collection__facets[data-facets-ready] .facets__open {
       display: inline-flex;
+    }
+    /* 抽屉承载筛选 DOM：form 整体移入 dialog（见 faceted-filters.js），
+       流内不再渲染，产品列表回到工具条正下方（BUG-042）。无 JS 时
+       data-facets-ready 缺席，筛选面板照常流内展示。 */
+    .collection__facets[data-facets-ready] .facets__form {
+      display: none;
     }
   }
 

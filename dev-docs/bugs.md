@@ -265,6 +265,35 @@
 - **修复**：给 `Coppice` preset 显式写入三个空字符串（官方语义：color 清空后存 `""`，Liquid 侧返回 blank，被 `snippets/css-variables.liquid` 的 `| default:` 回落成全局色）。修完两个 preset 的键集合一致（各 13 个），双向切换都干净。
 - **预防**：**一个主题内的所有 preset 必须覆盖完全相同的 setting id 集合**——preset 之间的"键差集"就是"切换残留"的入口。新增 `tools/use-preset.py`，其 `--list` 会对覆盖不全的 preset 打 `[!] 仅覆盖 N/M 个键` 标记；改 preset 后跑一次即可暴露。**判据不是我猜的，是官方原文**：改 preset 相关逻辑前先回读 settings-data-json 文档那一节。
 
+### BUG-039 · 局部更新后缓存的表单引用脱离 DOM，第二次变更筛选静默失效
+- **日期**：2026-10-16 ｜ **状态**：Fixed（代码审查发现，浏览器表现待实测确认——requestSubmit 对 detached form 是抛 InvalidStateError 还是静默无效，未验证，不影响结论：两条都不是"正常提交"）
+- **现象**：`faceted-filters.js` 的 `_onChange` 调用 `connectedCallback` 时缓存的 `this._form.requestSubmit()`；而 `_load` 用 `replaceChildren` 替换整个 `<collection-facets>` 容器。首次筛选/排序后，缓存的 form 引用指向已脱离 DOM 的旧节点——**第二次变更筛选时请求不会发出**，页面像"卡死"（`_onSubmit` 路径因每次从 `event.target` 现场取 form 而幸免，但 JS 就绪后 Apply 按钮是隐藏的，change 路径是唯一入口）。
+- **根因**：把"一次性查询"的结果存成实例字段，但容器内容会被整段替换——**缓存的生命周期与 DOM 不一致**。本次把排序 select 移出表单（改用 form 属性关联）重构 `_onChange` 时才暴露。
+- **修复**：`_onChange` 现场重查（`event.target.closest('[data-facets-form]') || this.querySelector('[data-facets-form]')`）；`connectedCallback` 不再缓存 `_form` 字段。
+- **预防**：**委托监听的组件里，实例字段缓存的 DOM 引用不能跨 `replaceChildren` / `innerHTML` 存活**——要么每次现场查询，要么在替换逻辑末尾统一刷新引用。审查带局部更新的组件时，先列出所有实例字段里的 DOM 引用，逐个问一句"容器被替换后它还活着吗"。
+
+### BUG-040 · `_buildUrl` 调用了不存在的 `url.append()`，左侧筛选从未提交成功过
+- **日期**：2026-10-16 ｜ **状态**：Fixed（刘工实测报错 `Uncaught TypeError: url.append is not a function` 定位）
+- **现象**：集合页勾选筛选后商品不刷新，控制台报 `TypeError: url.append is not a function`（`_buildUrl` 第 100 行）。
+- **根因**：`_buildUrl` 写的是 `url.append(key, value)`——`URL` 对象没有 `append` 方法，参数必须挂 `url.searchParams`。**HEAD 版本即如此（`git show HEAD` 核实），自 T-2.2 文件创建起筛选提交路径从未走通过**；此前局部更新只有"点击已选标签"（`_onClick` 直接传 `link.href`，不经过 `_buildUrl`）一条路是活的。
+- **修复**：`url.append` → `url.searchParams.append`（保留 `value !== ''` 跳过空价格输入）。
+- **预防**：**URL 操作只能走 `searchParams`**——`URL` 实例上不存在裸 `append/set/delete`，这类错误 `node --check` 查不出（是运行时 TypeError 不是语法错）。新写 URL 拼接时先想一遍对象 API，或直接复制 `_onChange` 里已验证的写法。
+- **关联**：本 bug 是 BUG-039 真正的"第一现场"——BUG-039（缓存表单失效）只有先经标签点击成功局部更新后才触达；修复 040 后两条路径都活了，039 的修复仍有必要。
+
+### BUG-041 · 移动抽屉裸移 aside 进 dialog，控件脱离 form：抽屉内筛选/Apply/关闭按钮全部失效
+- **日期**：2026-10-16 ｜ **状态**：Fixed（代码审查发现，未实测）
+- **现象**：打开移动端筛选抽屉后：勾选筛选无反应；Apply 点击无反应；**关闭按钮点击无反应（只有 Esc 能关）**。
+- **根因**：三重叠加，根子是同一个——`<dialog>` 挂在 `<collection-facets>` **兄弟位置**，`_movePanelIntoDialog` 只把裸 `<aside>` 移进去：① aside 内控件的最近 form 祖先消失 → **form 归属为 null** → `FormData(form)` 不含它们、Apply（type=submit）没有归属表单可提交；② change/submit 事件不再冒泡到 `<collection-facets>` → `_onChange`/`_onSubmit` 委托监听收不到；③ 关闭按钮 `[data-facets-close]` 的点击同样收不到。
+- **修复**：改为**筛选 form 整体移入 dialog**（`_moveFormIntoDialog`，控件随 DOM 子树保留 form 归属）；同一组委托监听同时挂到 dialog 上（submit/change/click/close 五个）；局部更新时清掉 dialog 里被换下的旧 form 再移入新 form；关闭时 form 归位为 `data-facets-layout` 的第一个 grid item。顺带补上点遮罩关闭（`event.target === dialog`，对齐 nav-drawer）。
+- **预防**：**物理移动 DOM 的组件，移动前先问"控件的身份绑定（form 归属 / label 关联 / aria 引用）是否跟着子树走"**——`<form>` 整体移动身份不丢，散件移动必丢。dialog 挂载点若在本元素之外，本元素的委托监听对 dialog 内容全部失效，需把监听同步挂到 dialog。
+
+### BUG-042 · 移动端筛选面板留在文档流内，产品列表被顶到最下方
+- **日期**：2026-10-16 ｜ **状态**：Fixed（刘工实测反馈定位）
+- **现象**：视口 <990px 时整个筛选面板渲染在产品列表上方，产品列表被推到很靠下的位置；与设计（pages-ui §4 移动端 = `[筛选☰] [排序▾]` + 抽屉筛选）不符。
+- **根因**：`.facets__aside` 从未有过任何"流内隐藏"规则——设计意图是 JS 就绪后面板只存在于抽屉里，但那条 CSS 一直没写。HEAD 版本即缺失，非本次引入。
+- **修复**：`@media (max-width: 989.98px) { .collection__facets[data-facets-ready] .facets__form { display: none; } }`——隐藏 form 整体（而非 aside），顺带消掉空 form 在 grid 里占出的整行 + gap。无 JS 时 `data-facets-ready` 缺席，面板照常流内展示（降级路径不变）。
+- **预防**：**"隐藏组件（抽屉/面板）首次打开才可见"必须同时落两条：DOM 移动逻辑 + 流内隐藏 CSS**，二者缺一就是"功能在、观感崩"。审查抽屉类 UI 时对照 pages-ui 的移动端布局 ASCII 图逐块核对。
+
 ## 记录模板（追加新 bug 用）
 
 ```

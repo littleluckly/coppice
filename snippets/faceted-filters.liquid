@@ -2,8 +2,8 @@
   faceted-filters — 筛选组通用件（task-collection T-2.2，集合页与搜索页共用）。
 
   只输出「筛选组本体」（aside + fieldsets + 应用按钮）；
-  GET form 元素由消费方 section 负责（form 需同时包住 toolbar 的 sort_by，
-  筛选 + 排序 + q 一起提交——平台按 URL 参数服务端重算，SDD §6.1）。
+  GET form 元素由消费方 section 负责（排序 select 靠 form 属性关联该表单，
+  不在本 snippet 内——筛选 + 排序一起提交，平台按 URL 参数服务端重算，SDD §6.1）。
 
   纪律（SDD §6.1 / 拍板 7）：
   - 数据一律来自 filter / filter_value 对象（param_name / value / count / active / url_to_remove），
