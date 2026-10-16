@@ -115,6 +115,28 @@
         "label": "t:labels.brand_accent"
       },
       {
+        "type": "header",
+        "content": "t:general.header_skeleton"
+      },
+      {
+        "type": "color",
+        "id": "skeleton_background_color",
+        "label": "t:labels.skeleton_background",
+        "info": "t:labels.skeleton_background_info"
+      },
+      {
+        "type": "color",
+        "id": "skeleton_foreground_color",
+        "label": "t:labels.skeleton_foreground",
+        "info": "t:labels.skeleton_foreground_info"
+      },
+      {
+        "type": "color",
+        "id": "skeleton_accent_color",
+        "label": "t:labels.skeleton_accent",
+        "info": "t:labels.skeleton_accent_info"
+      },
+      {
         "type": "range",
         "id": "input_corner_radius",
         "min": 0,
