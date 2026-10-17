@@ -14,7 +14,16 @@
   @param {object} filters - filter 对象数组：collection.filters 或 search.filters（必填）
 {% enddoc %}
 <aside class="facets__aside" data-facets-aside>
+  {%- comment -%}
+    .facets__scroll 是移动抽屉的滚动层（2026-10-16 刘工）：标题头部与 Apply 按钮
+    固定在抽屉两端、只有筛选组列表滚动。集合页 dialog 外的流内/桌面视图里
+    这层无样式，纯 block 透传，零影响。
+  {%- endcomment -%}
   <div class="facets__panel">
+    {%- comment -%} 抓手横线（2026-10-16 刘工，iPhone 底部抽屉同款）：仅移动抽屉内
+      可见（样式限定 .facets__dialog 作用域）；touch-action:none 的拖拽把手，
+      按住下拉收回弹窗（faceted-filters.js）。 {%- endcomment -%}
+    <div class="facets__grabber" aria-hidden="true"></div>
     <div class="facets__mobile-head">
       <h2 class="facets__panel-title">{{ 'collections.filters.label' | t }}</h2>
       <button type="button" class="facets__close" data-facets-close>
@@ -23,7 +32,8 @@
       </button>
     </div>
 
-    {%- for filter in filters -%}
+    <div class="facets__scroll">
+      {%- for filter in filters -%}
       {%- if filter.type == 'price_range' -%}
         <fieldset class="facets__group facets__group--price">
           <legend class="facets__group-label">{{ filter.label | escape }}</legend>
@@ -80,6 +90,7 @@
         </fieldset>
       {%- endif -%}
     {%- endfor -%}
+    </div>
 
     <button type="submit" class="facets__apply" data-facets-apply>
       {{ 'collections.filters.apply' | t }}

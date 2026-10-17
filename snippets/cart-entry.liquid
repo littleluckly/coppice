@@ -25,10 +25,22 @@
   Parameters:
     (none)     — icon-only link (desktop header tools)
     show_label — also render the visible "Cart" text (mobile nav drawer row style)
+
+  cart-badge.js（2026-10-16）监听 cart:updated 后就地更新角标与 aria-label。
+  标签模板由 Liquid 在此渲染成 data 属性（复数形式由服务端定，JS 只替换
+  '[count]' 占位符）——前端不硬编码文案，未来加 locale 不用改脚本。
 {%- endcomment -%}
 
 <div class="cart-entry{% if class != blank %} {{ class }}{% endif %}" data-cart-entry>
-  <a class="cart-entry__link" href="{{ routes.cart_url }}" aria-label="{{ cart_label }}">
+  <a
+    class="cart-entry__link"
+    href="{{ routes.cart_url }}"
+    aria-label="{{ cart_label }}"
+    data-cart-link
+    data-label-empty="{{ 'cart.cart_empty' | t }}"
+    data-label-template-one="{{ 'cart.cart_with_items' | t: count: '[count]' }}"
+    data-label-template-other="{{ 'cart.cart_with_items' | t: count: '[count]' }}"
+  >
     {{ 'icon-cart.svg' | inline_asset_content }}
 
     {%- if show_label -%}

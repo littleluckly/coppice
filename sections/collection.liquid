@@ -223,7 +223,8 @@
                         show_width: card_width,
                         show_cc: card_cc,
                         show_power: card_power,
-                        show_weight: card_weight
+                        show_weight: card_weight,
+                        sizes: '(min-width: 1280px) 19vw, (min-width: 1100px) 25vw, (min-width: 750px) 32vw, 45vw'
                       %}
                     </li>
                   {%- endfor -%}
@@ -571,13 +572,19 @@
     min-height: 44px;
     margin-block-start: 0.75rem;
     padding: 10px 1rem;
-    border: 1px solid var(--color-foreground);
+    /* 2026-10-16 刘工：与产品卡加购按钮同款配色（静态品牌绿 + hover 提亮） */
+    border: 1px solid var(--color-brand);
     border-radius: var(--style-border-radius-inputs);
-    background-color: var(--color-foreground);
+    background-color: var(--color-brand);
     color: var(--color-background);
     font: inherit;
     font-weight: 500;
     cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .facets__apply:hover {
+    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
   }
 
   /* 网格 */
@@ -647,7 +654,7 @@
       grid-template-columns: repeat(3, 1fr);
     }
   }
-  @media (min-width: 1100px) {
+  @media (min-width: 1280px) {
     .collection__skeleton {
       grid-template-columns: repeat(4, 1fr);
     }
@@ -670,7 +677,9 @@
       grid-template-columns: repeat(3, 1fr);
     }
   }
-  @media (min-width: 1100px) {
+  /* 4 列只在 ≥1280px 出现（2026-10-16 刘工：4 列保留，但断点 1100 → 1280，
+     1100–1279px 走 3 列，卡片不至于太窄） */
+  @media (min-width: 1280px) {
     .collection__grid {
       grid-template-columns: repeat(4, 1fr);
     }
@@ -730,22 +739,89 @@
     text-decoration: none;
   }
 
-  /* 移动抽屉（dialog 承载同一份筛选 DOM，JS 把 aside 移入） */
+  /* 移动抽屉（dialog 承载同一份筛选 DOM，JS 把 aside 移入）。
+     2026-10-16 刘工：① 打开从屏幕底部滑入（不再闪现）；② 标题头部与 Apply
+     按钮钉死在抽屉两端，只有中间筛选组列表滚动——flex 纵链
+     dialog → form → aside → panel → .facets__scroll，滚动只发生在最后一层。
+     注意 display:flex 必须限定 [open]：UA 对未打开 dialog 的 display:none
+     会被作者样式的 display:flex 压过，关着的抽屉会裸露在页面上。 */
   .facets__dialog {
     border: none;
     border-radius: 16px 16px 0 0;
     padding: 0;
-    width: min(420px, 92vw);
+    /* 通栏底部抽屉（2026-10-16 刘工）：宽度与屏幕一致。
+       max-width 必须显式覆盖——UA 对 dialog:modal 默认
+       max-width: calc((100% - 6px) - 2em)，不覆盖时 width:100vw 会被钳到屏宽减 ~38px。 */
+    width: 100vw;
+    max-width: 100vw;
     max-height: 85vh;
     margin: auto auto 0;
+  }
+  .facets__dialog[open] {
+    display: flex;
+    flex-direction: column;
+    animation: facets-slide-up 0.28s ease-out;
+  }
+  .facets__dialog[open]::backdrop {
+    animation: facets-backdrop-in 0.28s ease-out;
+  }
+  @keyframes facets-slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes facets-backdrop-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
   .facets__dialog::backdrop {
     background: rgb(0 0 0 / 40%);
   }
+  .facets__dialog .facets__form,
+  .facets__dialog .facets__aside,
   .facets__dialog .facets__panel {
-    padding: 1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .facets__dialog .facets__panel {
+    padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+    overflow: hidden; /* 滚动下沉到 .facets__scroll，头/按钮不随内容滚走 */
+  }
+  .facets__dialog .facets__scroll {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    max-height: 85vh;
+  }
+  /* 抓手横线（2026-10-16 刘工，iPhone 底部抽屉同款）：拖拽把手，
+     按住下拉收回弹窗（JS 见 faceted-filters.js 的 _onDragStart）。
+     touch-action:none 让浏览器不把手势抢给滚动（初触目标决定手势归属）；
+     user-select:none 防鼠标拖拽时选中标题文字。 */
+  .facets__dialog .facets__grabber {
+    flex-shrink: 0;
+    width: 40px;
+    height: 5px;
+    margin: 0 auto 0.9rem;
+    border-radius: 999px;
+    background-color: rgb(0 0 0 / 15%);
+    touch-action: none;
+    user-select: none;
+  }
+  .facets__dialog .facets__mobile-head {
+    touch-action: none; /* 头部行也是拖拽热区 */
+    user-select: none;
+  }
+  .facets__dialog .facets__mobile-head,
+  .facets__dialog .facets__apply {
+    flex-shrink: 0;
   }
   .facets__mobile-head {
     display: flex;
@@ -870,8 +946,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .facets__dialog {
-      transition: none;
+    .facets__dialog[open],
+    .facets__dialog[open]::backdrop {
+      animation: none;
     }
   }
 {% endstylesheet %}

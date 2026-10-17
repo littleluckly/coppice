@@ -1,8 +1,9 @@
 {% doc %}
   product-card — 商品卡（首页 featured-collection 与集合页共用，task-index T-1.2）。
 
-  输出（视觉基准：效果图-首页 Featured Products 区）：
-  图 + 收藏心 + 标题 + 规格横排行（宽·排量·动力源）+ 价格（含划线对比价）+ 星级 + Compare。
+  输出（视觉基准：效果图-首页 Featured Products 区；标签行基准 2026-10-16 刘工参考图）：
+  图 + 收藏心 + 标题 + 规格横排行（宽·排量·动力源）+ 价格（含划线对比价）+ 星级
+  + 规格标签行（胶囊：电池电压·切割宽·操作方式·动力源）+ Compare。
 
   纪律：
   - 参数行逐项判空：缺值跳项，分隔符自动正确（li+li::before），不留空位（SDD §5.7）
@@ -18,6 +19,8 @@
   @param {boolean} show_cc - true → 规格行显示排量（cc，不换算）
   @param {boolean} show_power - true → 规格行显示动力源（枚举原样）
   @param {boolean} show_weight - true → 规格行显示整机重量（经 spec-value 换算）
+  @param {string} sizes - 图片 sizes 提示，**必传**（theme check 规则：@param 全部必传）。
+    调用方按自己的列数估：首页 6 列 '15vw/30vw/45vw'，集合页桌面 3 列 '25vw/32vw/45vw'。
   @param {boolean} quick_add - true → 单变体款渲染快速加购（2026-10-13 拍板：
     仅单变体且 available 渲染；多变体卡不渲染任何 CTA；售罄置灰 disabled；
     无 JS 降级为表单 POST /cart/add；交互由 assets/quick-add.js 的 quick-add 自定义元素接管）
@@ -33,7 +36,7 @@
             | image_url: width: 800
             | image_tag:
               widths: '400, 600, 800',
-              sizes: '(min-width: 1100px) 15vw, (min-width: 750px) 30vw, 45vw',
+              sizes: sizes,
               width: product.featured_image.width,
               height: product.featured_image.height,
               loading: lazy,
@@ -122,8 +125,80 @@
       {%- endif -%}
     </p>
 
+    {%- comment -%} 星级：官方 Product Reviews app metafield；无数据整行不渲染 {%- endcomment -%}    {%- liquid
+      assign rating_value = product.metafields.reviews.rating.value.rating
+      assign rating_count = product.metafields.reviews.rating_count.value
+    -%}
+    {%- if rating_value != blank -%}
+      <a class="product-card__rating" href="{{ product.url }}#reviews">
+        <svg class="product-card__star" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+          <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9L12 2.5Z" fill="currentColor"/>
+        </svg>
+        <span class="product-card__rating-value">{{ rating_value | round: 1 }}</span>
+        {%- if rating_count != blank -%}
+          <span class="product-card__rating-count">({{ rating_count }})</span>
+        {%- endif -%}
+        <span class="visually-hidden">{{ 'products.product_card.rating_label' | t: rating: rating_value }}</span>
+      </a>
+    {%- endif -%}
+
+    {%- comment -%} 规格标签行（2026-10-16 刘工参考图）：胶囊标签，纯展示不可点。
+        电池 = platform.battery_platform（'N/A' 跳过）；尺寸 = cutting width（跟
+        show_width 开关、经 spec-value 换算）；操作方式 = spec.drive_type（'N/A' 跳过）；
+        动力源 = spec.power_source（跟 show_power 开关）。缺值跳项，整行可空。 {%- endcomment -%}
+    {%- liquid
+      assign battery_platform = product.metafields.platform.battery_platform.value
+      assign drive_type = product.metafields.spec.drive_type.value
+      assign has_tags = false
+      if battery_platform != blank and battery_platform != 'N/A'
+        assign has_tags = true
+      endif
+      if show_width and product.metafields.spec.cutting_width_mm.value != blank
+        assign has_tags = true
+      endif
+      if drive_type != blank and drive_type != 'N/A'
+        assign has_tags = true
+      endif
+      if show_power and product.metafields.spec.power_source.value != blank
+        assign has_tags = true
+      endif
+    -%}
+    {%- if has_tags -%}
+      <ul class="product-card__tags" role="list">
+        {%- if battery_platform != blank and battery_platform != 'N/A' -%}
+          <li class="product-card__tag">{{ battery_platform }}</li>
+        {%- endif -%}
+        {%- if show_width and product.metafields.spec.cutting_width_mm.value != blank -%}
+          <li class="product-card__tag">
+            {%- render 'spec-value', value: product.metafields.spec.cutting_width_mm.value, unit_type: 'length_mm', spec_class: 'card' -%}
+          </li>
+        {%- endif -%}
+        {%- if drive_type != blank and drive_type != 'N/A' -%}
+          <li class="product-card__tag">{{ drive_type }}</li>
+        {%- endif -%}
+        {%- if show_power and product.metafields.spec.power_source.value != blank -%}
+          <li class="product-card__tag">{{ product.metafields.spec.power_source.value }}</li>
+        {%- endif -%}
+      </ul>
+    {%- endif -%}
+
+    {%- if product.metafields.spec.compare_group.value != blank
+      and product.metafields.spec.compare_hidden.value != 'TRUE' -%}
+      <button
+        type="button"
+        class="product-card__compare"
+        aria-pressed="false"
+        data-compare-group="{{ product.metafields.spec.compare_group.value }}"
+        data-compare-handle="{{ product.handle }}"
+        data-compare-title="{{ product.title | escape }}"
+      >
+        {{ 'products.product_card.add_to_compare' | t }}
+      </button>
+    {%- endif -%}
+
     {%- comment -%} 快速加购（T-1.1）：仅调用方传 quick_add 且单变体时渲染；多变体无 CTA；售罄置灰。
-        无 JS 时整表单 POST /cart/add（默认跳转购物车页），JS 由 quick-add 自定义元素拦截为 fetch。 {%- endcomment -%}
+        无 JS 时整表单 POST /cart/add（默认跳转购物车页），JS 由 quick-add 自定义元素拦截为 fetch。
+        2026-10-16 刘工：挪到卡内最末 + margin-top:auto，各卡文字行数不一时按钮仍统一贴卡底。 {%- endcomment -%}
     {%- if quick_add and product.variants.size == 1 -%}
       <quick-add class="product-card__quick-add">
         <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">
@@ -146,37 +221,6 @@
         </form>
         <p class="visually-hidden" role="status" data-quick-add-status></p>
       </quick-add>
-    {%- endif -%}
-
-    {%- comment -%} 星级：官方 Product Reviews app metafield；无数据整行不渲染 {%- endcomment -%}    {%- liquid
-      assign rating_value = product.metafields.reviews.rating.value.rating
-      assign rating_count = product.metafields.reviews.rating_count.value
-    -%}
-    {%- if rating_value != blank -%}
-      <a class="product-card__rating" href="{{ product.url }}#reviews">
-        <svg class="product-card__star" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
-          <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9L12 2.5Z" fill="currentColor"/>
-        </svg>
-        <span class="product-card__rating-value">{{ rating_value | round: 1 }}</span>
-        {%- if rating_count != blank -%}
-          <span class="product-card__rating-count">({{ rating_count }})</span>
-        {%- endif -%}
-        <span class="visually-hidden">{{ 'products.product_card.rating_label' | t: rating: rating_value }}</span>
-      </a>
-    {%- endif -%}
-
-    {%- if product.metafields.spec.compare_group.value != blank
-      and product.metafields.spec.compare_hidden.value != 'TRUE' -%}
-      <button
-        type="button"
-        class="product-card__compare"
-        aria-pressed="false"
-        data-compare-group="{{ product.metafields.spec.compare_group.value }}"
-        data-compare-handle="{{ product.handle }}"
-        data-compare-title="{{ product.title | escape }}"
-      >
-        {{ 'products.product_card.add_to_compare' | t }}
-      </button>
     {%- endif -%}
   </article>
 {%- endif -%}

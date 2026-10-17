@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drawer replica</title>
+<style>
+  :root {
+    --color-background: #ffffff;
+    --color-foreground: #333333;
+    --color-brand: #1E4B3C;
+    --color-brand-accent: #2E6B4E;
+    --style-border-radius-inputs: 4px;
+  }
+  body { margin: 0; font-family: -apple-system, sans-serif; color: var(--color-foreground); }
+  .spacer { height: 300px; background: #f6f6f4; }
+
+  /* ===== 以下逐条照抄 sections/collection.liquid 的抽屉 CSS ===== */
+  .facets__dialog {
+    border: none;
+    border-radius: 16px 16px 0 0;
+    padding: 0;
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 85vh;
+    margin: auto auto 0;
+  }
+  .facets__dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+  .facets__dialog::backdrop { background: rgb(0 0 0 / 40%); }
+  .facets__dialog .facets__form,
+  .facets__dialog .facets__aside,
+  .facets__dialog .facets__panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .facets__dialog .facets__panel {
+    padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+    overflow: hidden;
+  }
+  .facets__dialog .facets__scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .facets__dialog .facets__mobile-head,
+  .facets__dialog .facets__apply { flex-shrink: 0; }
+  .facets__mobile-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; margin-block-end: 1rem;
+  }
+  .facets__panel-title { font-size: 1rem; font-weight: 600; }
+  .facets__close {
+    min-height: 44px; padding: 8px 0.75rem; border: none; background: none;
+    font: inherit; color: var(--color-brand-accent); cursor: pointer;
+  }
+  .facets__group { border: none; padding: 0; margin: 0 0 1.25rem; }
+  .facets__group-label { font-weight: 600; padding: 0; margin-block-end: 0.6rem; }
+  .facets__values { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; }
+  .facets__value-label { display: flex; align-items: center; gap: 0.5rem; }
+  .facets__value-count { color: rgb(0 0 0 / 50%); font-size: 0.8rem; }
+  .facets__apply {
+    display: block; width: 100%; min-height: 44px; margin-block-start: 0.75rem;
+    padding: 10px 1rem; border: 1px solid var(--color-foreground);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-foreground); color: var(--color-background);
+    font: inherit; font-weight: 500; cursor: pointer;
+  }
+  /* 调试辅助：给各层描边看边界 */
+  .debug .facets__form { outline: 2px solid red; }
+  .debug .facets__aside { outline: 2px solid orange; }
+  .debug .facets__panel { outline: 2px solid blue; }
+  .debug .facets__scroll { outline: 2px solid green; }
+</style>
+</head>
+<body>
+<div class="spacer"></div>
+
+<dialog id="d" class="facets__dialog" open>
+  <form class="facets__form">
+    <aside class="facets__aside">
+      <div class="facets__panel">
+        <div class="facets__mobile-head">
+          <h2 class="facets__panel-title">Filters</h2>
+          <button type="button" class="facets__close">Close</button>
+        </div>
+        <div class="facets__scroll">
+          <fieldset class="facets__group">
+            <legend class="facets__group-label">Power source</legend>
+            <ul class="facets__values">
+              <li class="facets__value"><label class="facets__value-label"><input type="checkbox"> Gasoline <span class="facets__value-count">8</span></label></li>
+              <li class="facets__value"><label class="facets__value-label"><input type="checkbox"> Battery <span class="facets__value-count">6</span></label></li>
+              <li class="facets__value"><label class="facets__value-label"><input type="checkbox"> Corded electric <span class="facets__value-count">3</span></label></li>
+            </ul>
+          </fieldset>
+          <fieldset class="facets__group">
+            <legend class="facets__group-label">Cutting width</legend>
+            <ul class="facets__values">
+              <li class="facets__value"><label class="facets__value-label"><input type="checkbox"> 21 in <span class="facets__value-count">4</span></label></li>
+              <li class="facets__value"><label class="facets__value-label"><input type="checkbox"> 30 in <span class="facets__value-count">2</span></label></li>
+            </ul>
+          </fieldset>
+          <fieldset class="facets__group">
+            <legend class="facets__group-label">Drive type</legend>
+            <ul class="facets__values">
+              <li class="facets__value"><label class="facets__value-label"><input type="checkbox"> Push <span class="facets__value-count">5</span></label></li>
+              <li class="facets__value"><label class="facets__value-label"><input type="checkbox"> Self-propelled <span class="facets__value-count">7</span></label></li>
+            </ul>
+          </fieldset>
+          <fieldset class="facets__group">
+            <legend class="facets__group-label">Price</legend>
+            <ul class="facets__values">
+              <li class="facets__value"><label class="facets__value-label"><input type="checkbox"> Under $300 <span class="facets__value-count">3</span></label></li>
+            </ul>
+          </fieldset>
+        </div>
+        <button type="submit" class="facets__apply">Apply</button>
+      </div>
+    </aside>
+  </form>
+</dialog>
+</body>
+</html>

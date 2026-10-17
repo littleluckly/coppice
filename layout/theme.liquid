@@ -54,6 +54,13 @@
     <script src="{{ 'site-header.js' | asset_url }}" defer></script>
 
     {% comment %}
+      购物车角标同步 + 加购飞入动画（2026-10-16）。页头购物车入口全站共享，
+      故挂 layout 而非单个 section；defer = HTML 解析完成后执行，不阻塞首屏渲染。
+    {% endcomment %}
+    <script src="{{ 'cart-badge.js' | asset_url }}" defer></script>
+    <script src="{{ 'fly-to-cart.js' | asset_url }}" defer></script>
+
+    {% comment %}
       Main landmark — the skip link target. The id here and the href in
       snippets/skip-link.liquid must stay in sync.
 

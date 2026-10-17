@@ -294,6 +294,13 @@
 - **修复**：`@media (max-width: 989.98px) { .collection__facets[data-facets-ready] .facets__form { display: none; } }`——隐藏 form 整体（而非 aside），顺带消掉空 form 在 grid 里占出的整行 + gap。无 JS 时 `data-facets-ready` 缺席，面板照常流内展示（降级路径不变）。
 - **预防**：**"隐藏组件（抽屉/面板）首次打开才可见"必须同时落两条：DOM 移动逻辑 + 流内隐藏 CSS**，二者缺一就是"功能在、观感崩"。审查抽屉类 UI 时对照 pages-ui 的移动端布局 ASCII 图逐块核对。
 
+### BUG-043 · 点已选标签（删除胶囊）没有骨架 loading，实际是整页跳转
+- **日期**：2026-10-16 ｜ **状态**：Fixed（刘工实测反馈定位）
+- **现象**：点击工具条里的已选筛选胶囊（含 Clear all）删除筛选条件时，没有骨架 loading，页面整体闪白——实际走了整页导航而非 Section Rendering 局部更新。
+- **根因**：`_onClick` 的链接拦截条件是 `link.closest('[data-facets-form]')`，而已选标签渲染在**工具条**（`active-facets` 由 section 第 188 行渲染在 `.collection__toolbar` 内），不在 form 子树里——拦截条件永远不命中，`<a>` 原生跳转。"左列两张卡"改版把标签留在了 form 外，此分支自此变成死条件。
+- **修复**：拦截条件扩为 `closest('[data-facets-active]') || closest('[data-facets-form]')`——标签与 Clear all（同在 `data-facets-active` 容器）走 `_load` 局部更新（含骨架）；分页链接**故意不拦**：`_load` 用 `history.replaceState` 不留历史，分页的前进/后退语义需要整页导航。
+- **预防**：**委托拦截的"范围条件"要与点击目标的实际挂载位置对账**——凡"X 应该局部更新"的需求，先在 DOM 里确认 X 在不在拦截选择器的子树内（grep 渲染行号即可），再谈事件逻辑。改版挪过挂载位置的功能（标签从 form 挪到工具条），挪完必须回归一遍相关交互路径。
+
 ## 记录模板（追加新 bug 用）
 
 ```

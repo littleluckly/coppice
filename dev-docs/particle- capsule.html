@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Particle Capsule</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: #0b1210;
+    font-family: system-ui, sans-serif;
+  }
+  #fx {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+  }
+</style>
+</head>
+<body>
+
+<!-- distance 控制飘散距离：1 = 默认，0.6 = 近，1.6 = 远 -->
+<particle-capsule text="新消息 · 3 条"></particle-capsule>
+<particle-capsule text="待办事项 · 2 条" distance="0.6"
+                  color-start="#3ddc97" color-end="#2bb673"></particle-capsule>
+<particle-capsule text="系统通知" distance="1.6"
+                  color-start="#7dff8a" color-end="#2ee86a"></particle-capsule>
+
+<canvas id="fx"></canvas>
+
+<script>
+/* =====================================================================
+ *  1. 全局粒子引擎（单例，所有自定义元素共用一张画布）
+ * ===================================================================== */
+const ParticleFX = (() => {
+  const canvas = document.getElementById('fx');
+  const ctx = canvas.getContext('2d');
+  const particles = [];
+  let dpr = 1;
+  let rafId = null;
+
+  /* ---- 风场基准配置：统一向右上吹 ---- */
+  const BASE_WIND = {
+    ax: 0.11,      // 水平加速度（向右为正）
+    ay: -0.075,    // 垂直加速度（向上为负）
+    drag: 0.99,    // 每帧阻尼
+    maxSpeed: 11   // 速度上限
+  };
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = innerWidth * dpr;
+    canvas.height = innerHeight * dpr;
+    canvas.style.width = innerWidth + 'px';
+    canvas.style.height = innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  addEventListener('resize', resize);
+
+  function tick(now) {
+    const dt = Math.min((now - (tick.last || now)) / 16.67, 3);
+    tick.last = now;
+
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+
+      /* ---- 风力 + 阻尼（使用每颗粒子自己的风场） ---- */
+      p.vx += p.wind.ax * dt;
+      p.vy += p.wind.ay * dt;
+      p.vx *= p.wind.drag;
+      p.vy *= p.wind.drag;
+
+      /* ---- 限速 ---- */
+      const sp = Math.hypot(p.vx, p.vy);
+      if (sp > p.wind.maxSpeed) {
+        p.vx = (p.vx / sp) * p.wind.maxSpeed;
+        p.vy = (p.vy / sp) * p.wind.maxSpeed;
+      }
+
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      p.life -= p.decay * dt;
+
+      /* ---- 寿命耗尽或飞出屏幕 -> 移除 ---- */
+      if (p.life <= 0 || p.x > innerWidth + 40 || p.y < -40) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      /* ---- 绘制：透明度与尺寸随寿命衰减 ---- */
+      const a = p.life;
+      const s = p.size * (0.35 + p.life * 0.65);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+
+      if (p.square) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillRect(-s, -s, s * 2, s * 2);
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    if (particles.length) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      rafId = null;
+      tick.last = 0;
+    }
+  }
+
+  /**
+   * 在矩形区域内生成粒子，统一向右上飘散
+   * @param {DOMRect} rect
+   * @param {string[]} colors
+   * @param {number} distance 飘散距离系数：1 = 默认，<1 更近，>1 更远
+   */
+  function burstFromRect(rect, colors, distance = 1) {
+    const area = rect.width * rect.height;
+    const count = Math.min(420, Math.max(120, Math.floor(area / 22)));
+
+    /* ---- 按距离缩放风场 ---- */
+    const wind = {
+      ax: BASE_WIND.ax * distance,
+      ay: BASE_WIND.ay * distance,
+      drag: BASE_WIND.drag,
+      maxSpeed: BASE_WIND.maxSpeed * distance
+    };
+
+    /* ---- 距离越短，寿命越短，避免原地悬停 ---- */
+    const decayScale = 1 / Math.max(0.35, distance);
+
+    for (let i = 0; i < count; i++) {
+      const px = rect.left + Math.random() * rect.width;
+      const py = rect.top + Math.random() * rect.height;
+
+      /* ---- 初始速度：以右上方向为基准 + 随机扰动 ---- */
+      const baseAngle = -Math.PI * 0.3;
+      const ang = baseAngle + (Math.random() - 0.5) * 0.9;
+      const speed = (Math.random() * 2.2 + 0.8) * distance;
+
+      /* ---- 从胶囊中心剥离的位移分量 ---- */
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const ox = px - cx;
+      const oy = py - cy;
+
+      particles.push({
+        x: px,
+        y: py,
+        vx: Math.cos(ang) * speed + ox * 0.012,
+        vy: Math.sin(ang) * speed + oy * 0.012,
+        size: Math.random() * 2.4 + 0.7,
+        life: 1,
+        decay: (Math.random() * 0.01 + 0.009) * decayScale,
+        color: colors[(Math.random() * colors.length) | 0],
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.3,
+        square: Math.random() < 0.35,
+        wind
+      });
+    }
+
+    if (!rafId) {
+      tick.last = 0;
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  /** 从两个颜色之间的线性渐变采样一组颜色 */
+  function sampleGradient(c1, c2, w = 80, h = 40) {
+    const tmp = document.createElement('canvas');
+    tmp.width = w;
+    tmp.height = h;
+    const tctx = tmp.getContext('2d');
+    const grad = tctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, c1);
+    grad.addColorStop(1, c2);
+    tctx.fillStyle = grad;
+    tctx.fillRect(0, 0, w, h);
+
+    const data = tctx.getImageData(0, 0, w, h).data;
+    const colors = [];
+    const step = Math.max(1, Math.floor((w * h) / 60));
+    for (let i = 0; i < data.length; i += step * 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+      if (a > 0) colors.push(`rgba(${r},${g},${b},1)`);
+    }
+    return colors.length ? colors : [c1, c2];
+  }
+
+  return { burstFromRect, sampleGradient };
+})();
+
+/* =====================================================================
+ *  2. 自定义元素 <particle-capsule>
+ * ===================================================================== */
+class ParticleCapsule extends HTMLElement {
+  static get observedAttributes() {
+    return ['text', 'color-start', 'color-end', 'distance'];
+  }
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this._dissolving = false;
+  }
+
+  connectedCallback() { this._render(); }
+
+  attributeChangedCallback() {
+    if (this.isConnected) this._render();
+  }
+
+  get _text()       { return this.getAttribute('text') || '新消息 · 3 条'; }
+  get _colorStart() { return this.getAttribute('color-start') || '#16c784'; }
+  get _colorEnd()   { return this.getAttribute('color-end') || '#0ea86b'; }
+
+  get _distance() {
+    const v = parseFloat(this.getAttribute('distance'));
+    return Number.isFinite(v) && v > 0 ? v : 1;
+  }
+
+  _render() {
+    const c1 = this._colorStart;
+    const c2 = this._colorEnd;
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: inline-block;
+          --c1: ${c1};
+          --c2: ${c2};
+        }
+        .capsule {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px 10px 18px;
+          border-radius: 999px;
+          background: linear-gradient(135deg, var(--c1), var(--c2));
+          color: #fff;
+          font: 14px/1.2 system-ui, sans-serif;
+          letter-spacing: .5px;
+          box-shadow: 0 6px 24px color-mix(in srgb, var(--c1) 40%, transparent);
+          user-select: none;
+          transition: transform .15s ease;
+        }
+        .capsule:active { transform: scale(.97); }
+
+        .close {
+          position: relative;
+          display: grid;
+          place-items: center;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, .22);
+          cursor: pointer;
+          transition: background .15s ease, transform .15s ease;
+        }
+        .close:hover { background: rgba(255, 255, 255, .4); }
+        .close:active { transform: scale(.85); }
+        .close::before,
+        .close::after {
+          content: "";
+          position: absolute;
+          width: 10px;
+          height: 2px;
+          border-radius: 1px;
+          background: #fff;
+        }
+        .close::before { transform: rotate(45deg); }
+        .close::after  { transform: rotate(-45deg); }
+      </style>
+      <div class="capsule" part="capsule">
+        <span part="label">${this._text}</span>
+        <span class="close" part="close" title="关闭" role="button" aria-label="关闭"></span>
+      </div>
+    `;
+
+    this._capsuleEl = this.shadowRoot.querySelector('.capsule');
+    this._closeEl = this.shadowRoot.querySelector('.close');
+    this._closeEl.addEventListener('click', this._onClose);
+  }
+
+  _onClose = () => {
+    if (this._dissolving) return;
+    this._dissolving = true;
+
+    const rect = this._capsuleEl.getBoundingClientRect();
+    const colors = ParticleFX.sampleGradient(this._colorStart, this._colorEnd);
+
+    /* ---- 立刻隐藏胶囊，粒子接棒 ---- */
+    this._capsuleEl.style.transition = 'none';
+    this._capsuleEl.style.opacity = '0';
+    this._capsuleEl.style.transform = 'scale(.92)';
+    this._capsuleEl.style.pointerEvents = 'none';
+
+    /* ---- 生成粒子，传入距离系数 ---- */
+    ParticleFX.burstFromRect(rect, colors, this._distance);
+
+    this.dispatchEvent(new CustomEvent('capsule-dissolve', {
+      bubbles: true,
+      composed: true
+    }));
+
+    /* ---- 近的散得快，移除延时随距离缩短 ---- */
+    setTimeout(() => this.remove(), Math.round(1600 * Math.min(1, this._distance)));
+  };
+
+  disconnectedCallback() {
+    this._closeEl?.removeEventListener('click', this._onClose);
+  }
+}
+
+customElements.define('particle-capsule', ParticleCapsule);
+</script>
+</body>
+</html>
