@@ -795,6 +795,24 @@
     min-height: 0;
     overflow-y: auto;
   }
+  /* 抓手横线（2026-10-16 刘工，iPhone 底部抽屉同款）：拖拽把手，
+     按住下拉收回弹窗（JS 见 faceted-filters.js 的 _onDragStart）。
+     touch-action:none 让浏览器不把手势抢给滚动（初触目标决定手势归属）；
+     user-select:none 防鼠标拖拽时选中标题文字。 */
+  .facets__dialog .facets__grabber {
+    flex-shrink: 0;
+    width: 40px;
+    height: 5px;
+    margin: 0 auto 0.9rem;
+    border-radius: 999px;
+    background-color: rgb(0 0 0 / 15%);
+    touch-action: none;
+    user-select: none;
+  }
+  .facets__dialog .facets__mobile-head {
+    touch-action: none; /* 头部行也是拖拽热区 */
+    user-select: none;
+  }
   .facets__dialog .facets__mobile-head,
   .facets__dialog .facets__apply {
     flex-shrink: 0;

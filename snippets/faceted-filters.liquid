@@ -20,6 +20,10 @@
     这层无样式，纯 block 透传，零影响。
   {%- endcomment -%}
   <div class="facets__panel">
+    {%- comment -%} 抓手横线（2026-10-16 刘工，iPhone 底部抽屉同款）：仅移动抽屉内
+      可见（样式限定 .facets__dialog 作用域）；touch-action:none 的拖拽把手，
+      按住下拉收回弹窗（faceted-filters.js）。 {%- endcomment -%}
+    <div class="facets__grabber" aria-hidden="true"></div>
     <div class="facets__mobile-head">
       <h2 class="facets__panel-title">{{ 'collections.filters.label' | t }}</h2>
       <button type="button" class="facets__close" data-facets-close>
