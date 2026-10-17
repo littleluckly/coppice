@@ -311,6 +311,33 @@ class CollectionFacets extends HTMLElement {
     );
   }
 
+  /**
+   * 已选胶囊的粒子消散（参考 dev-docs/deepseek_html_20261017_cf4434.html）。
+   * 颜色全部来自设计令牌的运行时取值，不硬编码：主色板 = 胶囊文字色
+   * （getComputedStyle，preset 换色自动跟随）→ 品牌强调色（--color-brand-accent）
+   * 的渐变采样，另掺两份主品牌色（--color-brand）加层次。令牌缺失或值非法时
+   * 回落文字色，粒子永远不会用错色。胶囊本体立即隐藏（粒子顶替其视觉，
+   * 工具条不跳动），随后 _load 换入的新 DOM 自然移除它。reduced-motion 直接
+   * 跳过——消散是纯装饰，动画降级不挡功能（与骨架层同一纪律）。
+   */
+  _dissolveChip(chip) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const style = getComputedStyle(chip);
+    const textColor = style.color;
+    const accent = style.getPropertyValue('--color-brand-accent').trim();
+    const brand = style.getPropertyValue('--color-brand').trim();
+    const accentColor = CSS.supports('color', accent) ? accent : textColor;
+    const colors = ChipDissolveFX.sampleGradient(textColor, accentColor);
+    if (CSS.supports('color', brand)) colors.push(brand, brand);
+
+    const rect = chip.getBoundingClientRect();
+    chip.style.transition = 'none';
+    chip.style.opacity = '0';
+    chip.style.transform = 'scale(.92)';
+    chip.style.pointerEvents = 'none';
+    ChipDissolveFX.burstFromRect(rect, colors);
+  }
+
   _buildUrl(base, formData) {
     const url = new URL(base, window.location.origin);
     for (const [key, value] of formData.entries()) {
