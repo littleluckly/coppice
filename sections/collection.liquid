@@ -231,8 +231,45 @@
                 </ul>
 
                 {%- if paginate.pages > 1 -%}
+                  {%- comment -%}
+                    分页（视觉参考刘工 2026-10-16 截图：白圆按钮 + 箭头，当前页主题绿实心）。
+                    - 走 paginate.parts 自定义结构，不用 default_pagination（输出无法控形）；
+                      截断部分（非链接、非当前页）渲染为 … 间隔。
+                    - prev/next 不可用时渲染禁用占位——两端箭头恒在，行宽不跳。
+                    - 页码链接不带 aria-label 之外的 JS 行为：分页故意不做局部更新
+                      （faceted-filters.js 有意放行）——replaceState 不留历史，
+                      分页的前进后退语义需要整页导航。
+                  {%- endcomment -%}
                   <nav class="collection__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
-                    {{ paginate | default_pagination }}
+                    {%- if paginate.previous -%}
+                      <a class="collection__pagination-nav" href="{{ paginate.previous.url }}" aria-label="{{ 'collections.pagination_previous' | t }}">
+                        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                      </a>
+                    {%- else -%}
+                      <span class="collection__pagination-nav" aria-disabled="true">
+                        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                      </span>
+                    {%- endif -%}
+
+                    {%- for part in paginate.parts -%}
+                      {%- if part.is_link -%}
+                        <a class="collection__pagination-page" href="{{ part.url }}" aria-label="{{ 'collections.page_number' | t: number: part.title }}">{{ part.title }}</a>
+                      {%- elsif part.title == paginate.current_page -%}
+                        <span class="collection__pagination-page" aria-current="page">{{ part.title }}</span>
+                      {%- else -%}
+                        <span class="collection__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+                      {%- endif -%}
+                    {%- endfor -%}
+
+                    {%- if paginate.next -%}
+                      <a class="collection__pagination-nav" href="{{ paginate.next.url }}" aria-label="{{ 'collections.pagination_next' | t }}">
+                        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                      </a>
+                    {%- else -%}
+                      <span class="collection__pagination-nav" aria-disabled="true">
+                        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                      </span>
+                    {%- endif -%}
                   </nav>
                 {%- endif -%}
               {%- elsif has_active_filters -%}
