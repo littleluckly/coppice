@@ -27,7 +27,10 @@
 {% enddoc %}
 
 {%- if product != blank -%}
-  <article class="product-card">
+  {%- comment -%} 根节点是 product-card-3d 自定义元素（2026-10-17）：hover 3D 倾斜由
+     assets/product-card-3d.js 驱动，配色走 CSS 变量（参考 dev-docs/local-assets/product-3d.html）。
+     无 JS 时仅失去倾斜，卡片照常显示；role="article" 补回原生 article 语义。 {%- endcomment -%}
+  <product-card-3d class="product-card" role="article">
     <div class="product-card__media-wrap">
       <a class="product-card__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
         {%- if product.featured_image -%}
@@ -222,5 +225,5 @@
         <p class="visually-hidden" role="status" data-quick-add-status></p>
       </quick-add>
     {%- endif -%}
-  </article>
+  </product-card-3d>
 {%- endif -%}

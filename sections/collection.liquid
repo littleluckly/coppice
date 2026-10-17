@@ -50,6 +50,7 @@
 <script src="{{ 'compare-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+<script src="{{ 'product-card-3d.js' | asset_url }}" defer></script>
 {%- if collection.filters.size > 0 -%}
   <script src="{{ 'faceted-filters.js' | asset_url }}" defer></script>
 {%- endif -%}
@@ -231,8 +232,45 @@
                 </ul>
 
                 {%- if paginate.pages > 1 -%}
+                  {%- comment -%}
+                    分页（视觉参考刘工 2026-10-16 截图：白圆按钮 + 箭头，当前页主题绿实心）。
+                    - 走 paginate.parts 自定义结构，不用 default_pagination（输出无法控形）；
+                      截断部分（非链接、非当前页）渲染为 … 间隔。
+                    - prev/next 不可用时渲染禁用占位——两端箭头恒在，行宽不跳。
+                    - 页码链接不带 aria-label 之外的 JS 行为：分页故意不做局部更新
+                      （faceted-filters.js 有意放行）——replaceState 不留历史，
+                      分页的前进后退语义需要整页导航。
+                  {%- endcomment -%}
                   <nav class="collection__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
-                    {{ paginate | default_pagination }}
+                    {%- if paginate.previous -%}
+                      <a class="collection__pagination-nav" href="{{ paginate.previous.url }}" aria-label="{{ 'collections.pagination_previous' | t }}">
+                        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                      </a>
+                    {%- else -%}
+                      <span class="collection__pagination-nav" aria-disabled="true">
+                        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                      </span>
+                    {%- endif -%}
+
+                    {%- for part in paginate.parts -%}
+                      {%- if part.is_link -%}
+                        <a class="collection__pagination-page" href="{{ part.url }}" aria-label="{{ 'collections.page_number' | t: number: part.title }}">{{ part.title }}</a>
+                      {%- elsif part.title == paginate.current_page -%}
+                        <span class="collection__pagination-page" aria-current="page">{{ part.title }}</span>
+                      {%- else -%}
+                        <span class="collection__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+                      {%- endif -%}
+                    {%- endfor -%}
+
+                    {%- if paginate.next -%}
+                      <a class="collection__pagination-nav" href="{{ paginate.next.url }}" aria-label="{{ 'collections.pagination_next' | t }}">
+                        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                      </a>
+                    {%- else -%}
+                      <span class="collection__pagination-nav" aria-disabled="true">
+                        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                      </span>
+                    {%- endif -%}
                   </nav>
                 {%- endif -%}
               {%- elsif has_active_filters -%}
@@ -414,11 +452,20 @@
     display: grid;
     gap: 1rem;
     align-content: start;
+    /* 左列轨道定宽 260px，但 grid item 默认 min-width:auto——排序 select 的
+       最长选项文本会撑破轨道、叠到右侧产品列。逐级放开收缩（BUG 链：
+       form → sort-card → select），长选项由 select 内部截断。 */
+    min-width: 0;
+  }
+  /* 筛选卡同风险：长筛选标签 / 计数也可能撑破 260px 轨道 */
+  .facets__aside {
+    min-width: 0;
   }
   .facets__sort-card {
     display: grid;
     gap: 0.5rem;
     align-content: start;
+    min-width: 0;
   }
   .facets__sort-card-label {
     font-size: 0.88rem;
@@ -426,10 +473,15 @@
   }
   .facets__sort-card select {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: 44px;
     padding: 6px 0.6rem;
-    border: 1px solid rgb(0 0 0 / 25%);
+    /* select 同 input 不继承 color；边框从 foreground 派生（配色纪律） */
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
     background-color: var(--color-background);
+    color: var(--color-foreground);
+    text-overflow: ellipsis;
   }
   /* 排序卡在工具条里的形态（无筛选集合常驻；有筛选集合仅移动端，由 JS 移入）：
      竖向卡面变横排，靠行尾。桌面无筛选集合靠 auto 外边距右贴，计数跟在它右侧。 */
@@ -491,7 +543,7 @@
     gap: 0.35rem;
     min-height: 32px;
     padding: 4px 0.6rem;
-    border: 1px solid rgb(0 0 0 / 20%);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
     border-radius: 999px;
     background-color: var(--color-background);
     font-size: 0.82rem;
@@ -499,11 +551,11 @@
     text-decoration: none;
   }
   .facets__chip:hover {
-    border-color: rgb(0 0 0 / 45%);
+    border-color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
   .facets__chip-x {
     font-size: 0.75rem;
-    color: rgb(0 0 0 / 50%);
+    color: color-mix(in srgb, var(--color-foreground) 50%, transparent);
   }
   .facets__clear {
     font-size: 0.82rem;
@@ -520,6 +572,9 @@
     border: none;
     padding: 0;
     margin: 0 0 1.25rem;
+    /* fieldset 的 UA 默认 min-inline-size:min-content 不许收缩——长内容（价格
+       双输入框、长标签）会撑破 260px 左列叠到产品列表。放开收缩，内容随轨道截。 */
+    min-width: 0;
   }
   .facets__group-label {
     font-size: 0.88rem;
@@ -560,12 +615,56 @@
     align-items: center;
     gap: 0.5rem;
   }
-  .facets__price-field input {
-    width: 100%;
+  /* 2026-10-17 刘工参考图：药丸形输入框（无边框浅灰填充、$ 居左、数值右对齐）。
+     填充色从 foreground 派生（配色纪律：不硬编码 rgb），preset 换色自动跟随 */
+  .facets__price-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
     min-height: 44px;
-    padding: 6px 0.6rem;
-    border: 1px solid rgb(0 0 0 / 25%);
-    background-color: var(--color-background);
+    padding: 6px 1rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 5%, transparent);
+  }
+  .facets__price-currency {
+    font-size: 0.9rem;
+    color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
+  }
+  .facets__price-field input {
+    flex: 1;
+    min-width: 0;
+    min-height: 32px;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    /* input 不继承 color（UA 默认黑），必须显式给令牌——Noir 下否则黑字贴黑底 */
+    color: var(--color-foreground);
+    caret-color: var(--color-foreground);
+    text-align: right;
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  .facets__price-field input::placeholder {
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+  .facets__price-field input::-webkit-outer-spin-button,
+  .facets__price-field input::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  .facets__price-sep {
+    flex: none;
+    font-size: 0.9rem;
+  }
+  .facets__price-field input:focus {
+    outline: none;
+  }
+  .facets__price-field:focus-within {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 1px;
   }
   .facets__apply {
     display: block;
@@ -686,28 +785,47 @@
     }
   }
 
-  /* 分页 */
+  /* 分页：圆形按钮（参考截图 2026-10-16）——白圆 + 浅边框居中一排，
+     当前页主题绿实心（--color-brand，与截图深绿一致；换 --color-brand-accent
+     即改亮绿）。箭头恒在：不可用方向渲染禁用占位（opacity 降）不塌行宽。 */
   .collection__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
     margin-block-start: 1.5rem;
   }
-  .collection__pagination a,
-  .collection__pagination [aria-current] {
+  .collection__pagination-nav,
+  .collection__pagination-page {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 8px 0.6rem;
-    border-radius: var(--style-border-radius-inputs);
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid rgb(0 0 0 / 12%);
+    border-radius: 999px;
+    background-color: var(--color-background);
     color: inherit;
+    font-size: 0.9rem;
     text-decoration: none;
   }
   .collection__pagination a:hover {
-    background-color: rgb(0 0 0 / 6%);
+    border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+  .collection__pagination [aria-disabled='true'] {
+    opacity: 0.35;
   }
   .collection__pagination [aria-current='page'] {
-    background-color: var(--color-foreground);
+    border-color: transparent;
+    background-color: var(--color-brand);
     color: var(--color-background);
+  }
+  .collection__pagination-gap {
+    min-width: 24px;
+    text-align: center;
+    color: rgb(0 0 0 / 45%);
   }
 
   /* 空态 */
@@ -849,8 +967,9 @@
      data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
   @media (min-width: 990px) {
     .collection__layout {
-      /* 230 → 260px：卡面内边距占用 2.5rem，留足筛选标签宽度 */
-      grid-template-columns: 260px 1fr;
+      /* 260 → 290px（2026-10-17 刘工两轮微调：280 仍挤，最终定 290）；
+         卡面内边距占用 2.5rem，min-width 收缩链已放开（见 .facets__form） */
+      grid-template-columns: 290px 1fr;
       gap: 2rem;
     }
     /* 无筛选集合不渲染表单：内容区独占整行，不空一列 */

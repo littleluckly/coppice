@@ -1,7 +1,11 @@
 /** Product card — shared component styles (首页 featured-collection / 集合页 / 搜索页共用)。
  *  独立 CSS 的依据：AGENTS §6「跨 section 全局功能才拆独立 .css」——卡片被 3 个页面消费，
  *  样式留在单个 section 内会让其他页面裸奔或制造多份拷贝。
- *  加载方式：消费方 section 内 `{{ 'product-card.css' | asset_url | stylesheet_tag }}`。 */
+ *  加载方式：消费方 section 内 `{{ 'product-card.css' | asset_url | stylesheet_tag }}`。
+ *  配色纪律（2026-10-17 Noir 整页深色）：凡落在卡面/页面上的色一律从
+ *  --color-background / --color-foreground / --color-brand* 派生（color-mix 调 alpha），
+ *  禁止 rgb(0 0 0 / x) / rgb(255 255 255 / x) 硬编码——例外只有两种：
+ *  压在商品图上的元素（收藏白圆钮，跟图片走不跟主题走）和投影（永远用黑）。 */
 
 .product-card {
   display: flex;
@@ -10,7 +14,7 @@
   height: 100%;
   padding: 0.75rem;
   background-color: var(--color-background);
-  border: 1px solid rgb(0 0 0 / 10%);
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
   border-radius: 12px;
 }
 .product-card__media-wrap {
@@ -24,7 +28,8 @@
   aspect-ratio: 1;
   object-fit: cover;
   border-radius: 8px;
-  background-color: #f6f6f4;
+  /* 图片未加载时的占位底：从前景派生（深色主题下自动变浅灰） */
+  background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
 }
 .product-card__placeholder {
   width: 100%;
@@ -42,9 +47,12 @@
   border: none;
   background-color: rgb(255 255 255 / 85%);
   border-radius: 50%;
-  color: #444;
+  /* 压在产品图上的白色圆钮：图标色用 alpha 黑跟随前景（原 #444 硬编码） */
+  color: rgb(0 0 0 / 73%);
   cursor: pointer;
 }
+/* 收藏白圆钮是压在商品图上的（跟图片走，不跟页面主题走）：
+   白底 + 深图标在浅/深主题下都成立，是配置纪律注释里的合法例外。 */
 .product-card__wishlist[aria-pressed='true'] {
   color: #c0392b;
 }
@@ -68,7 +76,7 @@
   padding: 0;
   margin: 0;
   font-size: 0.78rem;
-  color: rgb(0 0 0 / 60%);
+  color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
 }
 .product-card__spec + .product-card__spec::before {
   content: '·';
@@ -86,7 +94,7 @@
 .product-card__price-compare {
   font-weight: 400;
   font-size: 0.85rem;
-  color: rgb(0 0 0 / 50%);
+  color: color-mix(in srgb, var(--color-foreground) 50%, transparent);
 }
 .product-card__rating {
   display: inline-flex;
@@ -100,7 +108,7 @@
   color: #e8a33d;
 }
 .product-card__rating-count {
-  color: rgb(0 0 0 / 55%);
+  color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
 }
 
 /* 规格标签行（2026-10-16 刘工参考图）：胶囊标签，纯展示不可点（信息用 span 语义，
@@ -118,11 +126,11 @@
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
-  border: 1px solid rgb(0 0 0 / 15%);
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 15%, transparent);
   border-radius: 999px;
-  background-color: rgb(0 0 0 / 3%);
+  background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
   font-size: 0.75rem;
-  color: rgb(0 0 0 / 70%);
+  color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
   white-space: nowrap;
 }
 
@@ -158,9 +166,9 @@
   border-color: var(--color-brand-accent);
 }
 .product-card__add:disabled {
-  border-color: rgb(0 0 0 / 25%);
+  border-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
   background-color: transparent;
-  color: rgb(0 0 0 / 45%);
+  color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   cursor: not-allowed;
 }
 .product-card__add[data-state='added'] {
@@ -196,7 +204,7 @@
   content: '';
   width: 16px;
   height: 16px;
-  border: 1.5px solid rgb(0 0 0 / 40%);
+  border: 1.5px solid color-mix(in srgb, var(--color-foreground) 40%, transparent);
   border-radius: 3px;
   background-color: var(--color-background);
 }
@@ -205,8 +213,71 @@
   box-shadow: inset 0 0 0 2.5px var(--color-background);
 }
 
+/* ===== 3D hover（2026-10-17，参考 dev-docs/local-assets/product-3d.html）=====
+   几何（倾斜/位移）由 assets/product-card-3d.js 驱动；这里只管静态态与 hover 反馈。
+   配色全部走主题令牌（不硬编码色值），换 preset 自动跟随。
+   与参考 demo 的三处有意差异：
+   1. demo 的图片是 contain 浮在底色上，落地椭圆阴影看得见；我们图片 cover 满幅，
+      阴影会被图片盖住 → 不做落地阴影，用卡片投影加深替代。
+   2. 光晕垫在图片下面（::before），只从图片透明区域透出（koutu alpha webp），
+      产品像素零接触；不透明照片下自动隐没。
+   3. 媒体盒 overflow:hidden + 底图 scale(1.08) 补边——倾斜/位移时图片不出框，
+      网格密排下不与邻卡重叠。
+   Noir 下的表现：品牌变 lime（#A3E635），--color-brand-light 随其色相变成亮 lime，
+   卡面深底上光晕/投影同样成立。仅 hover:hover + pointer:fine 生效。 */
+@media (hover: hover) and (pointer: fine) {
+  .product-card {
+    transition: box-shadow 0.8s ease;
+  }
+  .product-card:hover {
+    /* demo 的深黑投影在我们的浅底上会显脏 → 改品牌绿低透明投影 */
+    box-shadow:
+      0 24px 40px -18px color-mix(in srgb, var(--color-brand) 32%, transparent),
+      0 10px 18px -10px rgb(0 0 0 / 12%);
+  }
+  .product-card__media {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px; /* 与图片圆角一致，overflow 裁切需要圆角落在盒上 */
+  }
+  /* 光晕垫在图片下面（::before + img 提为定位元素压在其上）：
+     浅绿只从图片的透明区域透出（演示店商品图为 koutu alpha webp），
+     产品像素零接触；商家传不透明照片时被完全盖住，无副作用——即
+     demo 里"产品浮在光晕上"的结构，遮罩死路（2026-10-17 一二轮实测）。 */
+  .product-card__media::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    /* --color-brand-light：css-variables.liquid 从品牌色算出的高亮度浅绿 */
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-brand-light) 65%, transparent) 0%,
+      color-mix(in srgb, var(--color-brand-light) 32%, transparent) 55%,
+      color-mix(in srgb, var(--color-brand-light) 5%, transparent) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    pointer-events: none;
+  }
+  .product-card__media img {
+    position: relative; /* 压到 ::before 之上，光晕只在其透明区域可见 */
+  }
+  .product-card:hover .product-card__media::before {
+    opacity: 1;
+  }
+  .product-card__media img {
+    transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1); /* demo 同款极缓曲线 */
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .product-card__add {
+    transition: none;
+  }
+  .product-card,
+  .product-card__media,
+  .product-card__media img,
+  .product-card__media::before {
     transition: none;
   }
 }

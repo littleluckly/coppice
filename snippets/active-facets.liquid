@@ -19,9 +19,20 @@
     {%- if filter.type == 'price_range' -%}
       {%- if filter.min_value.value != blank or filter.max_value.value != blank -%}
         {%- assign has_active = true -%}
+        {%- liquid
+          assign money_min = filter.min_value.value | money
+          assign money_max = filter.max_value.value | money
+          if filter.min_value.value != blank and filter.max_value.value != blank
+            assign chip_value = money_min | append: '–' | append: money_max
+          elsif filter.min_value.value != blank
+            assign chip_value = 'collections.filters.price_from' | t | append: ' ' | append: money_min
+          else
+            assign chip_value = 'collections.filters.price_up_to' | t | append: ' ' | append: money_max
+          endif
+        -%}
         <li class="facets__chip-item">
           <a class="facets__chip" href="{{ filter.url_to_remove }}">
-            {{ filter.label | escape }}
+            {{ filter.label | escape }}: {{ chip_value }}
             <span class="facets__chip-x" aria-hidden="true">✕</span>
             <span class="visually-hidden">{{ 'collections.filters.remove' | t }}</span>
           </a>

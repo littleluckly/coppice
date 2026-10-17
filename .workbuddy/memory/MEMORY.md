@@ -2,7 +2,24 @@
 
 > 项目事实与架构约定的沉淀。日常进展见同目录 `YYYY-MM-DD.md`。
 
-## 架构约定：骨架配色（2026-10-16 确立）
+## 架构约定：preset 配色（2026-10-17 更新，覆盖 10-16 的"内容区不动"）
+
+- **Coppice Noir 是整页深色**（2026-10-17 刘工拍板，推翻 10-16"只有骨架翻转"）：
+  内容区 bg #0F1012 / fg #E9E9EC / brand lime #A3E635 / accent #BEF264（hover 亮档，待定稿）；
+  骨架三色同值。Coppice 保持白底深绿。
+- **配色纪律**：落在卡面/页面上的颜色一律从 `--color-background / -foreground / -brand*`
+  派生（`color-mix(... N%, transparent)` 调 alpha），**禁止 rgb(0 0 0 / x) / rgb(255 255 255 / x) 硬编码**。
+  仅两类合法例外：压在商品图上的元素（跟图不跟主题）、投影（永远黑）。
+- **表单控件必须显式给 color**（2026-10-17 踩坑）：input/select/textarea 默认不继承
+  color（UA 固定黑），Noir 下会黑字贴黑底——写控件样式时 `font: inherit` 之外必须
+  补 `color: var(--color-foreground)`，placeholder 另用派生色。
+- 遗留：55 处硬编码 alpha 分布 9 文件（collection/blog-posts/platform-cards/
+  use-case-grid/utility-bar/predictive-search×2/main-nav/hero-slideshow），逐步清；
+  压图类（hero 白字、banner 渐变）合法保留。
+- `--color-brand-light`（css-variables.liquid，oklch from 品牌色相，亮度定值 0.76）：
+  Noir 下品牌变 lime，它自动跟随成亮 lime，无需另设。
+
+## 架构约定：骨架配色机制（2026-10-16 确立）
 
 - **页头组**（`<site-header>` 内的所有 section）与**页脚**共用一套可切换的骨架配色；内容区不受影响。
 - 唯一出口是 `snippets/css-variables.liquid` 的 `--color-skeleton-background / -foreground / -accent`。
@@ -12,6 +29,17 @@
 - **新增骨架类 section 时不要自己加颜色设置**：只要它是 `<site-header>` 的后代就自动继承。
   若新元素挂在 `<body>` 直系（如页脚），必须给它加 `.site-footer` 这类标记，并把它补进 critical.css 的映射选择器。
 - 深色取值由 preset 提供（`config/settings_data.json` 的 `presets["Coppice Noir"]`），不是硬编码在 Liquid 里。
+
+## 设计令牌：浅品牌绿（2026-10-17）
+
+- `--color-brand-light` 在 `snippets/css-variables.liquid`：`oklch(from {{ settings.brand_color }} 0.76 0.09 h)`
+  ——取品牌色相、亮度独立定值（换任何品牌绿都得到同色相浅绿，当前 ≈ #74C4A7）；
+  上一行静态 fallback `#74C4A7` 承接不支持相对颜色语法的浏览器。
+- **教训（2026-10-17 三/五轮）**：满幅 cover 照片上叠任何光晕遮罩都会把产品罩灰——
+  demo 的"产品浮在光晕里"只在图片带 alpha 时成立。光晕只能垫底（::before 在 img 之下），
+  靠图片透明区域透出；遮罩层（::after 盖图上）是死路。演示店商品图 = koutu alpha webp
+  （`dev-docs/local-assets/product-koutu/product-alpha-webp/`，已验证 VP8X alpha flag，
+  1536×1536 方图）；白底版（product-whitebg/、常规 _webp.webp）无 alpha，光晕自动隐没。
 
 ## 集合页布局约定（2026-10-16 刘工定）
 
@@ -27,7 +55,9 @@
   order 若全局生效会把计数挤到第三行。
 - 无筛选集合（`filters.size == 0`）没有左列也没有 form，排序常驻工具条，**不带** `form` 属性。
 - 工具条内的排序卡是紧凑控件（横排 + 标签视觉隐藏），**不套卡面**——卡面规则限定 `.facets__form .facets__sort-card`。
-- 桌面列宽 260px（卡面内边距占 2.5rem）。预览文件：`dev-docs/collection-sidebar-preview.html`。
+- 桌面列宽 290px（2026-10-17 刘工定，260 → 280 → 290 两轮微调；卡面内边距占 2.5rem）。
+  定宽轨道里的每一级（form/fieldset/flex item）都要 `min-width: 0`，否则
+  select/fieldset 的 min-content 撑破轨道叠到产品列。预览文件：`dev-docs/collection-sidebar-preview.html`。
 
 ## 平台事实（已核实官方原文，勿凭印象改写）
 

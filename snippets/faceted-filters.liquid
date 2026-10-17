@@ -42,6 +42,7 @@
             {%- assign max_value = filter.max_value.value -%}
             <label class="facets__price-field">
               <span class="visually-hidden">{{ 'collections.filters.price_min' | t }}</span>
+              <span class="facets__price-currency" aria-hidden="true">{{ cart.currency.symbol }}</span>
               <input
                 type="number"
                 inputmode="numeric"
@@ -52,9 +53,10 @@
                 placeholder="{{ filter.range_min | money_without_currency | replace: ',', '' }}"
               >
             </label>
-            <span class="facets__price-sep" aria-hidden="true">–</span>
+            <span class="facets__price-sep" aria-hidden="true">{{ 'collections.filters.price_separator' | t }}</span>
             <label class="facets__price-field">
               <span class="visually-hidden">{{ 'collections.filters.price_max' | t }}</span>
+              <span class="facets__price-currency" aria-hidden="true">{{ cart.currency.symbol }}</span>
               <input
                 type="number"
                 inputmode="numeric"

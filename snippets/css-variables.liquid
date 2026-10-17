@@ -16,6 +16,14 @@
     --color-brand: {{ settings.brand_color }};
     --color-brand-accent: {{ settings.brand_accent }};
 
+    /* 浅品牌绿（2026-10-17）：hover 光晕等场合用。oklch from 只取品牌色相，
+       亮度/饱和度独立定值——商家换任何深浅的品牌绿，算出来的浅绿都够亮
+       （当前 Coppice 品牌色下 ≈ #74C4A7；Noir 同色）。
+       两行同写是有意的：后一行是相对颜色语法（oklch from），不支持的旧浏览器
+       整行解析作废、落到前一行静态 fallback。调明暗改 0.76（0.68 深 → 0.80 浅）。 */
+    --color-brand-light: #74C4A7;
+    --color-brand-light: oklch(from {{ settings.brand_color | default: '#1E4B3C' }} 0.76 0.09 h);
+
     /* 骨架（页头组 + 页脚）配色。留空 = 回落到上方全局色，即浅色骨架，
        渲染结果与既有实现逐像素一致；填入深色值即得到深色骨架——
        只有页头/页脚翻转，内容区不动（映射规则见 assets/critical.css）。
