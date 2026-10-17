@@ -130,6 +130,7 @@ class CollectionFacets extends HTMLElement {
        最后请求。关抽屉会触发 _onDialogClose 的 form 归位与 reset（FormData
        必须在 reset 前取证）；骨架层落在抽屉后面的结果区，反馈不中断。 */
     if (event.target.closest('[data-facets-apply]')) {
+      event.preventDefault(); /* 阻断原生表单提交，否则 _onSubmit 与这里双请求 */
       const form = this._findForm();
       if (form) {
         const requestUrl = this._buildUrl(form.action, new FormData(form));
