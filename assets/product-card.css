@@ -103,9 +103,12 @@
   color: rgb(0 0 0 / 55%);
 }
 
-/* 快速加购（T-1.1：仅单变体且 available 渲染；多变体无 CTA；售罄置灰） */
+/* 快速加购（T-1.1：仅单变体且 available 渲染；多变体无 CTA；售罄置灰）
+   静态态即品牌绿（2026-10-16 刘工）：绿色主题下按钮应为绿色，不再等 hover。
+   取 var(--color-brand) 而非硬编码色值，未来换 preset 自动跟随。 */
 .product-card__quick-add {
   display: block;
+  margin-block-start: auto; /* 文字行数不一也把按钮统一压到卡底（卡本身 height:100% + 纵向 flex） */
 }
 .product-card__quick-add form {
   display: block;
@@ -117,9 +120,9 @@
   width: 100%;
   min-height: 44px;
   padding: 10px 1rem;
-  border: 1px solid var(--color-foreground);
+  border: 1px solid var(--color-brand);
   border-radius: var(--style-border-radius-inputs);
-  background-color: var(--color-foreground);
+  background-color: var(--color-brand);
   color: var(--color-background);
   font: inherit;
   font-size: 0.88rem;
@@ -128,8 +131,8 @@
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 .product-card__add:hover:not(:disabled) {
-  background-color: var(--color-brand);
-  border-color: var(--color-brand);
+  background-color: var(--color-brand-accent);
+  border-color: var(--color-brand-accent);
 }
 .product-card__add:disabled {
   border-color: rgb(0 0 0 / 25%);
@@ -146,12 +149,14 @@
   cursor: wait;
 }
 
-/* 对比勾选（原 featured-collection 内样式随组件迁移） */
+/* 对比勾选（原 featured-collection 内样式随组件迁移）
+   margin-top:auto 仅在自己是卡内最后一个元素时生效（多变体卡没有加购区，
+   由它垫底）；与加购区同现时让位给加购区的 auto，避免平分剩余空间。 */
 .product-card__compare {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  margin-block-start: auto;
+  margin-block-start: 0;
   padding: 10px 0;
   min-height: 44px;
   border: none;
@@ -160,6 +165,9 @@
   font-size: 0.85rem;
   color: inherit;
   cursor: pointer;
+}
+.product-card__compare:last-child {
+  margin-block-start: auto;
 }
 .product-card__compare::before {
   content: '';
