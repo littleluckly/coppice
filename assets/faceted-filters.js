@@ -271,9 +271,60 @@ class CollectionFacets extends HTMLElement {
     if (form.parentElement !== this._dialog) this._dialog.append(form);
   }
 
+  /**
+   * 下拉收回弹窗（2026-10-16 刘工，iPhone 底部抽屉同款）。
+   * 热区 = 抓手横线 + 头部行（含 touch-action:none）；滚动区不参与——
+   * 筛选列表自身的滚动不被抢（手势归属由初始触点元素的 touch-action 决定）。
+   * 越过阈值（弹窗高 30%，至少 120px）→ close()，transform 清理由
+   * _onDialogClose 统一收口；未过阈值 → 弹回（reduced-motion 直接归位）。
+   */
+  _onDragStart = (event) => {
+    if (event.button > 0) return;
+    const handle = event.target.closest('.facets__grabber, .facets__mobile-head');
+    if (!handle || event.target.closest('[data-facets-close]')) return;
+
+    const dialog = this._dialog;
+    const startY = event.clientY;
+    let moved = false;
+
+    const onMove = (moveEvent) => {
+      const dy = moveEvent.clientY - startY;
+      if (dy <= 0) return; /* 只响应下拉 */
+      moved = moved || dy > 8;
+      dialog.style.transition = 'none';
+      dialog.style.transform = `translateY(${dy}px)`;
+    };
+
+    const onEnd = (endEvent) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+      const dy = endEvent.clientY - startY;
+      const dismissAt = Math.max(120, dialog.offsetHeight * 0.3);
+      if (moved && dy > dismissAt) {
+        dialog.close();
+        return;
+      }
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduce) dialog.style.transition = 'transform 0.22s ease-out';
+      dialog.style.transform = '';
+      setTimeout(() => {
+        dialog.style.transition = '';
+      }, reduce ? 0 : 240);
+      if (moved) this._dragClickGuard = performance.now() + 350;
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
+  };
+
   _onDialogClose = () => {
     /* form 归位为布局的第一个 grid item（桌面侧栏原位；单一 DOM 副本不变） */
     if (!this._dialog) return;
+    /* 拖拽残留的内联位移清零（弹回/收起两条路径的公共收口） */
+    this._dialog.style.transform = '';
+    this._dialog.style.transition = '';
     const form = this._dialog.querySelector('[data-facets-form]');
     const layout = this.querySelector('[data-facets-layout]');
     if (form && layout) layout.prepend(form);
