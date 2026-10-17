@@ -366,16 +366,24 @@ class CollectionFacets extends HTMLElement {
   }
 
   /**
-   * 已选胶囊的粒子消散（参考 dev-docs/deepseek_html_20261017_cf4434.html）。
-   * 颜色全部来自设计令牌的运行时取值，不硬编码：主色板 = 胶囊文字色
-   * （getComputedStyle，preset 换色自动跟随）→ 品牌强调色（--color-brand-accent）
-   * 的渐变采样，另掺两份主品牌色（--color-brand）加层次。令牌缺失或值非法时
-   * 回落文字色，粒子永远不会用错色。胶囊本体立即隐藏（粒子顶替其视觉，
-   * 工具条不跳动），随后 _load 换入的新 DOM 自然移除它。reduced-motion 直接
-   * 跳过——消散是纯装饰，动画降级不挡功能（与骨架层同一纪律）。
+   * 飘散距离系数：`<collection-facets data-chip-distance="...">` 上配置
+   * （1 = 默认，0.6 近而快散，1.6 远而飘久——系数同时缩放风场强度、初速
+   * 与寿命，见 ChipDissolveFX）。刻意做成 data 属性而非 section 设置：
+   * 纯视觉参数、改动频率低，不值得占一个 schema 键 + 两条 locale；
+   * 真要商家可调再升级为设置。
    */
-  _dissolveChip(chip) {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  get _chipDistance() {
+    const v = parseFloat(this.dataset.chipDistance);
+    return Number.isFinite(v) && v > 0 ? v : 1;
+  }
+
+  /**
+   * 胶囊粒子色板：全部来自设计令牌的运行时取值，不硬编码。主色板 =
+   * 胶囊文字色（getComputedStyle，preset 换色自动跟随）→ 品牌强调色
+   * （--color-brand-accent）的渐变采样，另掺两份主品牌色（--color-brand）
+   * 加层次。令牌缺失或值非法时回落文字色，粒子永远不会用错色。
+   */
+  _chipColors(chip) {
     const style = getComputedStyle(chip);
     const textColor = style.color;
     const accent = style.getPropertyValue('--color-brand-accent').trim();
@@ -383,13 +391,46 @@ class CollectionFacets extends HTMLElement {
     const accentColor = CSS.supports('color', accent) ? accent : textColor;
     const colors = ChipDissolveFX.sampleGradient(textColor, accentColor);
     if (CSS.supports('color', brand)) colors.push(brand, brand);
+    return colors;
+  }
 
-    const rect = chip.getBoundingClientRect();
+  /** 胶囊本体立即隐藏（粒子接棒，工具条不跳动），新 DOM 替换后自然移除 */
+  _hideChip(chip) {
     chip.style.transition = 'none';
     chip.style.opacity = '0';
     chip.style.transform = 'scale(.92)';
     chip.style.pointerEvents = 'none';
-    ChipDissolveFX.burstFromRect(rect, colors);
+  }
+
+  /**
+   * 单个胶囊消散（参考 dev-docs/particle- capsule.html）：粒子被"风"吹向
+   * 右上飘散。reduced-motion 直接跳过——消散是纯装饰，动画降级不挡功能
+   * （与骨架层同一纪律）。
+   */
+  _dissolveChip(chip) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const colors = this._chipColors(chip);
+    const rect = chip.getBoundingClientRect();
+    this._hideChip(chip);
+    ChipDissolveFX.burstFromRect(rect, colors, this._chipDistance);
+  }
+
+  /**
+   * Clear all：整排胶囊一起碎。逐颗按各自矩形爆发（换行时位置才准），
+   * 色板只采样一次（同一行胶囊配色一致）；全部同时隐藏、同时爆发，
+   * 无逐颗延迟——"一起碎"是刘工点名的行为。
+   */
+  _dissolveAllChips() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const chips = this.querySelectorAll('[data-facets-active] .facets__chip');
+    if (!chips.length) return;
+    const colors = this._chipColors(chips[0]);
+    const distance = this._chipDistance;
+    for (const chip of chips) {
+      const rect = chip.getBoundingClientRect();
+      this._hideChip(chip);
+      ChipDissolveFX.burstFromRect(rect, colors, distance);
+    }
   }
 
   _buildUrl(base, formData) {
