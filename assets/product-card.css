@@ -24,7 +24,8 @@
   aspect-ratio: 1;
   object-fit: cover;
   border-radius: 8px;
-  background-color: #f6f6f4;
+  /* 图片未加载时的占位底：跟随背景色（原 #f6f6f4 硬编码，深色主题下穿帮） */
+  background-color: rgb(0 0 0 / 4%);
 }
 .product-card__placeholder {
   width: 100%;
@@ -42,7 +43,8 @@
   border: none;
   background-color: rgb(255 255 255 / 85%);
   border-radius: 50%;
-  color: #444;
+  /* 压在产品图上的白色圆钮：图标色用 alpha 黑跟随前景（原 #444 硬编码） */
+  color: rgb(0 0 0 / 73%);
   cursor: pointer;
 }
 .product-card__wishlist[aria-pressed='true'] {
