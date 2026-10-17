@@ -122,32 +122,6 @@
       {%- endif -%}
     </p>
 
-    {%- comment -%} 快速加购（T-1.1）：仅调用方传 quick_add 且单变体时渲染；多变体无 CTA；售罄置灰。
-        无 JS 时整表单 POST /cart/add（默认跳转购物车页），JS 由 quick-add 自定义元素拦截为 fetch。 {%- endcomment -%}
-    {%- if quick_add and product.variants.size == 1 -%}
-      <quick-add class="product-card__quick-add">
-        <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">
-          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
-          <input type="hidden" name="quantity" value="1">
-          <button
-            type="submit"
-            class="product-card__add"
-            {% unless product.available %}disabled{% endunless %}
-            data-added-label="{{ 'products.product_card.added' | t }}"
-            data-added-message="{{ 'products.product_card.added_message' | t: title: product.title }}"
-            data-error-message="{{ 'products.product_card.add_error' | t }}"
-          >
-            {%- if product.available -%}
-              {{ 'products.product_card.add_to_cart' | t }}
-            {%- else -%}
-              {{ 'products.product_card.sold_out' | t }}
-            {%- endif -%}
-          </button>
-        </form>
-        <p class="visually-hidden" role="status" data-quick-add-status></p>
-      </quick-add>
-    {%- endif -%}
-
     {%- comment -%} 星级：官方 Product Reviews app metafield；无数据整行不渲染 {%- endcomment -%}    {%- liquid
       assign rating_value = product.metafields.reviews.rating.value.rating
       assign rating_count = product.metafields.reviews.rating_count.value
@@ -177,6 +151,33 @@
       >
         {{ 'products.product_card.add_to_compare' | t }}
       </button>
+    {%- endif -%}
+
+    {%- comment -%} 快速加购（T-1.1）：仅调用方传 quick_add 且单变体时渲染；多变体无 CTA；售罄置灰。
+        无 JS 时整表单 POST /cart/add（默认跳转购物车页），JS 由 quick-add 自定义元素拦截为 fetch。
+        2026-10-16 刘工：挪到卡内最末 + margin-top:auto，各卡文字行数不一时按钮仍统一贴卡底。 {%- endcomment -%}
+    {%- if quick_add and product.variants.size == 1 -%}
+      <quick-add class="product-card__quick-add">
+        <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">
+          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+          <input type="hidden" name="quantity" value="1">
+          <button
+            type="submit"
+            class="product-card__add"
+            {% unless product.available %}disabled{% endunless %}
+            data-added-label="{{ 'products.product_card.added' | t }}"
+            data-added-message="{{ 'products.product_card.added_message' | t: title: product.title }}"
+            data-error-message="{{ 'products.product_card.add_error' | t }}"
+          >
+            {%- if product.available -%}
+              {{ 'products.product_card.add_to_cart' | t }}
+            {%- else -%}
+              {{ 'products.product_card.sold_out' | t }}
+            {%- endif -%}
+          </button>
+        </form>
+        <p class="visually-hidden" role="status" data-quick-add-status></p>
+      </quick-add>
     {%- endif -%}
   </article>
 {%- endif -%}
