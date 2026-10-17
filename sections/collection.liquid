@@ -733,7 +733,12 @@
     text-decoration: none;
   }
 
-  /* 移动抽屉（dialog 承载同一份筛选 DOM，JS 把 aside 移入） */
+  /* 移动抽屉（dialog 承载同一份筛选 DOM，JS 把 aside 移入）。
+     2026-10-16 刘工：① 打开从屏幕底部滑入（不再闪现）；② 标题头部与 Apply
+     按钮钉死在抽屉两端，只有中间筛选组列表滚动——flex 纵链
+     dialog → form → aside → panel → .facets__scroll，滚动只发生在最后一层。
+     注意 display:flex 必须限定 [open]：UA 对未打开 dialog 的 display:none
+     会被作者样式的 display:flex 压过，关着的抽屉会裸露在页面上。 */
   .facets__dialog {
     border: none;
     border-radius: 16px 16px 0 0;
@@ -742,13 +747,53 @@
     max-height: 85vh;
     margin: auto auto 0;
   }
+  .facets__dialog[open] {
+    display: flex;
+    flex-direction: column;
+    animation: facets-slide-up 0.28s ease-out;
+  }
+  .facets__dialog[open]::backdrop {
+    animation: facets-backdrop-in 0.28s ease-out;
+  }
+  @keyframes facets-slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes facets-backdrop-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
   .facets__dialog::backdrop {
     background: rgb(0 0 0 / 40%);
   }
+  .facets__dialog .facets__form,
+  .facets__dialog .facets__aside,
   .facets__dialog .facets__panel {
-    padding: 1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .facets__dialog .facets__panel {
+    padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+    overflow: hidden; /* 滚动下沉到 .facets__scroll，头/按钮不随内容滚走 */
+  }
+  .facets__dialog .facets__scroll {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    max-height: 85vh;
+  }
+  .facets__dialog .facets__mobile-head,
+  .facets__dialog .facets__apply {
+    flex-shrink: 0;
   }
   .facets__mobile-head {
     display: flex;
@@ -873,8 +918,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .facets__dialog {
-      transition: none;
+    .facets__dialog[open],
+    .facets__dialog[open]::backdrop {
+      animation: none;
     }
   }
 {% endstylesheet %}
