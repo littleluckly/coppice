@@ -743,7 +743,8 @@
     border: none;
     border-radius: 16px 16px 0 0;
     padding: 0;
-    width: min(420px, 92vw);
+    /* 通栏底部抽屉（2026-10-16 刘工）：宽度与屏幕一致，不再是 min(420px, 92vw) 固定卡 */
+    width: 100vw;
     max-height: 85vh;
     margin: auto auto 0;
   }
