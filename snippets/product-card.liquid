@@ -19,8 +19,10 @@
   @param {boolean} show_cc - true → 规格行显示排量（cc，不换算）
   @param {boolean} show_power - true → 规格行显示动力源（枚举原样）
   @param {boolean} show_weight - true → 规格行显示整机重量（经 spec-value 换算）
-  @param {string} sizes - 可选，图片 sizes 提示（调用方按自己的列数估）；
-    缺省走首页 featured-collection 的口径（6 列小卡）。集合页 3 列传 25vw。
+
+  sizes（可选，不占 @param——theme check 会把 @param 视为必传，而首页故意用缺省）：
+    图片 sizes 提示，调用方按自己的列数估。缺省 = 首页 6 列小卡口径；
+    集合页桌面 3 列传 '(min-width: 1100px) 25vw, (min-width: 750px) 32vw, 45vw'。
   @param {boolean} quick_add - true → 单变体款渲染快速加购（2026-10-13 拍板：
     仅单变体且 available 渲染；多变体卡不渲染任何 CTA；售罄置灰 disabled；
     无 JS 降级为表单 POST /cart/add；交互由 assets/quick-add.js 的 quick-add 自定义元素接管）
