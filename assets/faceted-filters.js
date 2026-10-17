@@ -11,9 +11,11 @@
  * 3. 无 JS 退化：单列布局 + 应用按钮整页 GET 提交，全功能可用。
  * 4. 加载反馈：fetch 期间在结果区叠骨架层（_showSkeleton，复用 aria-busy 时段），
  *    完成/失败/中止一律在 finally 摘除；prefers-reduced-motion 时静止灰块。
- * 5. 已选标签消散：点击胶囊移除时，从其矩形区域爆发粒子（ChipDissolveFX
- *    单例画布，参考 dev-docs/deepseek_html_20261017_cf4434.html）；颜色取
- *    胶囊文字色 → 品牌强调色的渐变采样，跟随主题令牌；reduced-motion 跳过。
+ * 5. 已选标签消散：点击胶囊移除时，从其矩形区域爆发粒子、统一被"风"吹向
+ *    右上（ChipDissolveFX 单例画布，参考 dev-docs/particle- capsule.html）；
+ *    Clear all 时整排胶囊同时碎裂。颜色取胶囊文字色 → 品牌强调色的渐变
+ *    采样，跟随主题令牌；飘散距离由 data-chip-distance 配置；reduced-motion
+ *    跳过。
  * 5. 排序卡落点随断点切换（_placeSort）：移动端移进工具条——pages-ui §4 的
  *    [筛选☰] [排序▾]，同一 DOM 节点不做副本；桌面回归左列第一张卡。
  *    select 恒带 form 属性，离开 form 子树后仍是表单成员，FormData 照常含
@@ -329,9 +331,14 @@ class CollectionFacets extends HTMLElement {
       (link.closest('[data-facets-active]') || link.closest('[data-facets-form]'))
     ) {
       event.preventDefault();
-      /* 胶囊消散要在 _load 之前：getBoundingClientRect 必须赶在 DOM
+      /* 粒子消散要在 _load 之前：getBoundingClientRect 必须赶在 DOM
          被局部替换前取证，粒子画布独立于替换过程存活 */
-      if (link.classList.contains('facets__chip')) this._dissolveChip(link);
+      if (link.closest('[data-facets-active]')) {
+        if (link.classList.contains('facets__chip')) this._dissolveChip(link);
+        else if (link.classList.contains('facets__clear')) {
+          this._dissolveAllChips();
+        }
+      }
       this._load(link.href);
       return;
     }
