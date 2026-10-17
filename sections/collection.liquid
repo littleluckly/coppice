@@ -230,7 +230,7 @@
                   {%- endfor -%}
                 </ul>
 
-                {%- if paginate.pages > 1 -%}
+                {%- if paginate.pages > 0 -%}
                   {%- comment -%}
                     分页（视觉参考刘工 2026-10-16 截图：白圆按钮 + 箭头，当前页主题绿实心）。
                     - 走 paginate.parts 自定义结构，不用 default_pagination（输出无法控形）；
@@ -723,28 +723,47 @@
     }
   }
 
-  /* 分页 */
+  /* 分页：圆形按钮（参考截图 2026-10-16）——白圆 + 浅边框居中一排，
+     当前页主题绿实心（--color-brand，与截图深绿一致；换 --color-brand-accent
+     即改亮绿）。箭头恒在：不可用方向渲染禁用占位（opacity 降）不塌行宽。 */
   .collection__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
     margin-block-start: 1.5rem;
   }
-  .collection__pagination a,
-  .collection__pagination [aria-current] {
+  .collection__pagination-nav,
+  .collection__pagination-page {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 8px 0.6rem;
-    border-radius: var(--style-border-radius-inputs);
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid rgb(0 0 0 / 12%);
+    border-radius: 999px;
+    background-color: var(--color-background);
     color: inherit;
+    font-size: 0.9rem;
     text-decoration: none;
   }
   .collection__pagination a:hover {
-    background-color: rgb(0 0 0 / 6%);
+    border-color: rgb(0 0 0 / 40%);
+  }
+  .collection__pagination [aria-disabled='true'] {
+    opacity: 0.35;
   }
   .collection__pagination [aria-current='page'] {
-    background-color: var(--color-foreground);
+    border-color: transparent;
+    background-color: var(--color-brand);
     color: var(--color-background);
+  }
+  .collection__pagination-gap {
+    min-width: 24px;
+    text-align: center;
+    color: rgb(0 0 0 / 45%);
   }
 
   /* 空态 */
