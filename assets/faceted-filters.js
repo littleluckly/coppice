@@ -25,6 +25,155 @@
  * - 类字段箭头函数 + AbortController（BUG-030/033 预防：杜绝 this 漂移与重复绑定）；
  * - 隐藏组件惰性：dialog 常驻但空壳，panel 按需移入/移出。
  */
+/* =====================================================================
+ *  ChipDissolveFX — 已选筛选胶囊的粒子消散引擎（单例画布，按需创建）。
+ *  移植自 dev-docs/deepseek_html_20261017_cf4434.html 的 ParticleFX：
+ *  一张 fixed 定位画布（pointer-events:none，不拦截任何交互）挂 body，
+ *  所有爆发共用；粒子物理（阻尼/重力/旋转/缩衰）与原实现一致，仅按
+ *  胶囊的小尺寸收窄数量与粒径上限。颜色不硬编码：调用方从设计令牌
+ *  采样后传入（见 CollectionFacets#_dissolveChip）。
+ * ===================================================================== */
+const ChipDissolveFX = (() => {
+  let canvas = null;
+  let ctx = null;
+  let dpr = 1;
+  let rafId = null;
+  const particles = [];
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function ensureCanvas() {
+    if (canvas) return;
+    canvas = document.createElement('canvas');
+    canvas.setAttribute('aria-hidden', 'true');
+    Object.assign(canvas.style, {
+      position: 'fixed',
+      inset: '0',
+      pointerEvents: 'none',
+      zIndex: '9999',
+    });
+    document.body.appendChild(canvas);
+    ctx = canvas.getContext('2d');
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
+  }
+
+  function tick(now) {
+    const dt = Math.min((now - (tick.last || now)) / 16.67, 3);
+    tick.last = now;
+
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.985;
+      p.vy = p.vy * 0.985 + 0.06 * dt;
+      p.rot += p.vr * dt;
+      p.life -= p.decay * dt;
+
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      const a = p.life;
+      const s = p.size * (0.4 + p.life * 0.6);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+
+      if (p.square) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillRect(-s, -s, s * 2, s * 2);
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, s, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    if (particles.length) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      rafId = null;
+      tick.last = 0;
+    }
+  }
+
+  /** 在矩形区域内爆发粒子 */
+  function burstFromRect(rect, colors) {
+    ensureCanvas();
+    const area = rect.width * rect.height;
+    /* 胶囊远小于原参考的按钮：数量夹在 70–220，粒径上限 2.9px */
+    const count = Math.min(220, Math.max(70, Math.floor(area / 22)));
+
+    for (let i = 0; i < count; i++) {
+      const px = rect.left + Math.random() * rect.width;
+      const py = rect.top + Math.random() * rect.height;
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const ang = Math.atan2(py - cy, px - cx) + (Math.random() - 0.5) * 0.9;
+      const speed = Math.random() * 3.2 + 0.6;
+
+      particles.push({
+        x: px,
+        y: py,
+        vx: Math.cos(ang) * speed,
+        vy: Math.sin(ang) * speed - Math.random() * 1.2,
+        size: Math.random() * 2.2 + 0.7,
+        life: 1,
+        decay: Math.random() * 0.012 + 0.01,
+        color: colors[(Math.random() * colors.length) | 0],
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.25,
+        square: Math.random() < 0.35,
+      });
+    }
+
+    if (!rafId) {
+      tick.last = 0;
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  /** 从两色线性渐变采样色板（离屏 canvas，约 60 色） */
+  function sampleGradient(c1, c2, w = 80, h = 32) {
+    const tmp = document.createElement('canvas');
+    tmp.width = w;
+    tmp.height = h;
+    const tctx = tmp.getContext('2d');
+    const grad = tctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, c1);
+    grad.addColorStop(1, c2);
+    tctx.fillStyle = grad;
+    tctx.fillRect(0, 0, w, h);
+
+    const data = tctx.getImageData(0, 0, w, h).data;
+    const colors = [];
+    const step = Math.max(1, Math.floor((w * h) / 60));
+    for (let i = 0; i < data.length; i += step * 4) {
+      if (data[i + 3] > 0) {
+        colors.push(`rgba(${data[i]},${data[i + 1]},${data[i + 2]},1)`);
+      }
+    }
+    return colors.length ? colors : [c1, c2];
+  }
+
+  return { burstFromRect, sampleGradient };
+})();
+
 class CollectionFacets extends HTMLElement {
   _abort = new AbortController();
   _fetchAbort = null;
@@ -133,6 +282,9 @@ class CollectionFacets extends HTMLElement {
       (link.closest('[data-facets-active]') || link.closest('[data-facets-form]'))
     ) {
       event.preventDefault();
+      /* 胶囊消散要在 _load 之前：getBoundingClientRect 必须赶在 DOM
+         被局部替换前取证，粒子画布独立于替换过程存活 */
+      if (link.classList.contains('facets__chip')) this._dissolveChip(link);
       this._load(link.href);
       return;
     }
