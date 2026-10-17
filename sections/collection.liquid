@@ -572,13 +572,19 @@
     min-height: 44px;
     margin-block-start: 0.75rem;
     padding: 10px 1rem;
-    border: 1px solid var(--color-foreground);
+    /* 2026-10-16 刘工：与产品卡加购按钮同款配色（静态品牌绿 + hover 提亮） */
+    border: 1px solid var(--color-brand);
     border-radius: var(--style-border-radius-inputs);
-    background-color: var(--color-foreground);
+    background-color: var(--color-brand);
     color: var(--color-background);
     font: inherit;
     font-weight: 500;
     cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .facets__apply:hover {
+    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
   }
 
   /* 网格 */
