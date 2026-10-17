@@ -73,6 +73,9 @@ class CollectionFacets extends HTMLElement {
     const isSort = event.target.matches('[data-facets-sort]');
     /* 排序 select 在右列工具条，靠 form 属性关联表单（不在表单的 DOM 子树内） */
     if (!inForm && !isSort) return;
+    /* 移动抽屉内（2026-10-16 刘工）：勾选只记录不提交，Apply 才提交并收起——
+       逐项自动提交会每勾一项刷一次接口，且换入的新 DOM 把滚动位置顶回顶部 */
+    if (inForm && this._dialog?.open && this._dialog.contains(event.target)) return;
     /* 现场重查表单：_load 的 replaceChildren 会替换整个容器，缓存的 form
        引用随即脱离 DOM，requestSubmit 不再生效——不能依赖 connectedCallback 缓存 */
     const form = inForm || this._findForm();
@@ -121,6 +124,18 @@ class CollectionFacets extends HTMLElement {
     if (link && link.closest('[data-facets-form]')) {
       event.preventDefault();
       this._load(link.href);
+      return;
+    }
+    /* Apply（2026-10-16 刘工）：抽屉内的唯一提交入口——先取 URL，再关抽屉，
+       最后请求。关抽屉会触发 _onDialogClose 的 form 归位与 reset（FormData
+       必须在 reset 前取证）；骨架层落在抽屉后面的结果区，反馈不中断。 */
+    if (event.target.closest('[data-facets-apply]')) {
+      const form = this._findForm();
+      if (form) {
+        const requestUrl = this._buildUrl(form.action, new FormData(form));
+        if (this._dialog?.open) this._dialog.close();
+        this._load(requestUrl);
+      }
     }
   };
 
