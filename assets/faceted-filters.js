@@ -11,6 +11,9 @@
  * 3. 无 JS 退化：单列布局 + 应用按钮整页 GET 提交，全功能可用。
  * 4. 加载反馈：fetch 期间在结果区叠骨架层（_showSkeleton，复用 aria-busy 时段），
  *    完成/失败/中止一律在 finally 摘除；prefers-reduced-motion 时静止灰块。
+ * 5. 已选标签消散：点击胶囊移除时，从其矩形区域爆发粒子（ChipDissolveFX
+ *    单例画布，参考 dev-docs/deepseek_html_20261017_cf4434.html）；颜色取
+ *    胶囊文字色 → 品牌强调色的渐变采样，跟随主题令牌；reduced-motion 跳过。
  * 5. 排序卡落点随断点切换（_placeSort）：移动端移进工具条——pages-ui §4 的
  *    [筛选☰] [排序▾]，同一 DOM 节点不做副本；桌面回归左列第一张卡。
  *    select 恒带 form 属性，离开 form 子树后仍是表单成员，FormData 照常含
