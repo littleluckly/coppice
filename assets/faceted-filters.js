@@ -7,7 +7,7 @@
  * 2. 移动端：<dialog>（原生焦点锁定/Esc/scroll-lock）承载与桌面同一份筛选 DOM
  *    （**筛选 form 整体**物理移入——dialog 在本元素之外，裸移 aside 会让控件
  *    脱离 form 归属，抽屉内提交/Apply/关闭按钮全部失效，BUG-041；无副本，
- *    输入状态不分裂）。
+ *    输入状态不分裂）。2026-10-16：抓手横线 + 按住下拉收回（_onDragStart）。
  * 3. 无 JS 退化：单列布局 + 应用按钮整页 GET 提交，全功能可用。
  * 4. 加载反馈：fetch 期间在结果区叠骨架层（_showSkeleton，复用 aria-busy 时段），
  *    完成/失败/中止一律在 finally 摘除；prefers-reduced-motion 时静止灰块。
