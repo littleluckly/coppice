@@ -47,6 +47,15 @@ class QuickAdd extends HTMLElement {
       this._button.textContent = this._button.dataset.addedLabel || this._defaultLabel;
       this._announce(this._button.dataset.addedMessage || '');
       this._revertTimer = setTimeout(() => this._reset(), QuickAdd.REVERT_DELAY_MS);
+
+      /* 2026-10-16 刘工：加购后页头角标同步 + 飞入动画。
+         cart:added —— 立即冒泡（fly-to-cart.js 监听，拿按钮定位来源卡片）；
+         cart:updated —— /cart.js 查回准确 item_count 后派发（cart-badge.js 监听）。
+         两个监听方都挂在 document，本元素被局部刷新替换也不影响订阅。 */
+      this.dispatchEvent(
+        new CustomEvent('cart:added', { bubbles: true, detail: { button: this._button } })
+      );
+      this._syncCartCount();
     } catch (error) {
       if (error.name === 'AbortError') return;
       this._button.dataset.state = '';
