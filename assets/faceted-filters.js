@@ -119,9 +119,16 @@ class CollectionFacets extends HTMLElement {
       this._dialog.close();
       return;
     }
-    /* 已选标签 / 清除全部：拦截站内跳转改走局部更新 */
+    /* 已选标签 / 清除全部：拦截站内跳转改走局部更新。
+       标签在工具条（data-facets-active），不在 form 子树内——旧条件
+       closest('[data-facets-form]') 永远不命中，点击实际走的是整页跳转、
+       没有骨架（2026-10-16 刘工 BUG）。分页链接故意不拦：replaceState
+       不留历史，分页的前进后退语义要整页导航。 */
     const link = event.target.closest('a[href]');
-    if (link && link.closest('[data-facets-form]')) {
+    if (
+      link &&
+      (link.closest('[data-facets-active]') || link.closest('[data-facets-form]'))
+    ) {
       event.preventDefault();
       this._load(link.href);
       return;
