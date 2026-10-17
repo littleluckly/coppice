@@ -103,6 +103,28 @@
   color: rgb(0 0 0 / 55%);
 }
 
+/* 规格标签行（2026-10-16 刘工参考图）：胶囊标签，纯展示不可点（信息用 span 语义，
+   放 ul/li 里随读屏朗读）。缺值跳项由 Liquid 负责，这里只管形状。 */
+.product-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.product-card__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border: 1px solid rgb(0 0 0 / 15%);
+  border-radius: 999px;
+  background-color: rgb(0 0 0 / 3%);
+  font-size: 0.8rem;
+  color: rgb(0 0 0 / 70%);
+  white-space: nowrap;
+}
+
 /* 快速加购（T-1.1：仅单变体且 available 渲染；多变体无 CTA；售罄置灰）
    静态态即品牌绿（2026-10-16 刘工）：绿色主题下按钮应为绿色，不再等 hover。
    取 var(--color-brand) 而非硬编码色值，未来换 preset 自动跟随。 */
