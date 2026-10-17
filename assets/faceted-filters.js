@@ -25,6 +25,9 @@
 class CollectionFacets extends HTMLElement {
   _abort = new AbortController();
   _fetchAbort = null;
+  /* 拖拽收起弹窗后短暂屏蔽 click：松手位置可能落在勾选框/遮罩上，
+     一次误触 click 会勾选筛选或触发"点遮罩关闭"分支 */
+  _dragClickGuard = 0;
 
   connectedCallback() {
     this._sectionId = this.dataset.sectionId;
@@ -51,6 +54,7 @@ class CollectionFacets extends HTMLElement {
       this._dialog.addEventListener('change', this._onChange, { signal });
       this._dialog.addEventListener('click', this._onClick, { signal });
       this._dialog.addEventListener('close', this._onDialogClose, { signal });
+      this._dialog.addEventListener('pointerdown', this._onDragStart, { signal });
     }
 
     /* 排序卡落点：移动端工具条（pages-ui §4），桌面左列第一张卡 */
@@ -96,6 +100,8 @@ class CollectionFacets extends HTMLElement {
   };
 
   _onClick = (event) => {
+    /* 拖拽收起手势刚结束：屏蔽松手落点产生的 click（见 _dragClickGuard 注释） */
+    if (this._dragClickGuard && performance.now() < this._dragClickGuard) return;
     const opener = event.target.closest('[data-facets-open]');
     if (opener) {
       this._openDialog();
