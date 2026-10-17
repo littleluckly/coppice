@@ -340,7 +340,11 @@ class CollectionFacets extends HTMLElement {
     /* 拖拽残留的内联位移清零（弹回/收起两条路径的公共收口） */
     this._dialog.style.transform = '';
     this._dialog.style.transition = '';
+    /* 没点 Apply 就收起（下拉/Esc/遮罩）：表单回滚到最近一次生效的筛选
+       （checked/value 属性来自上次 section payload，reset 即回到该状态），
+       避免"勾选状态与结果不一致"；Apply 路径的 FormData 已在关窗前取证 */
     const form = this._dialog.querySelector('[data-facets-form]');
+    form?.reset();
     const layout = this.querySelector('[data-facets-layout]');
     if (form && layout) layout.prepend(form);
     /* 归位后按当前断点重排排序卡：跨越断点时（resize / 旋转）form 刚回到布局，
