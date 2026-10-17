@@ -27,11 +27,12 @@
  */
 /* =====================================================================
  *  ChipDissolveFX — 已选筛选胶囊的粒子消散引擎（单例画布，按需创建）。
- *  移植自 dev-docs/deepseek_html_20261017_cf4434.html 的 ParticleFX：
+ *  移植自 dev-docs/particle- capsule.html 的 ParticleFX（风场版）：
  *  一张 fixed 定位画布（pointer-events:none，不拦截任何交互）挂 body，
- *  所有爆发共用；粒子物理（阻尼/重力/旋转/缩衰）与原实现一致，仅按
- *  胶囊的小尺寸收窄数量与粒径上限。颜色不硬编码：调用方从设计令牌
- *  采样后传入（见 CollectionFacets#_dissolveChip）。
+ *  所有爆发共用；粒子统一被"风"吹向右上（加速度 + 阻尼 + 限速），
+ *  飞出屏幕或寿命耗尽即移除。distance 系数（1 = 默认）同时缩放风场
+ *  强度、初速与寿命——飘得更远 = 飘得更久，飘得更近 = 散得更快。
+ *  颜色不硬编码：调用方从设计令牌采样后传入（见 _chipColors）。
  * ===================================================================== */
 const ChipDissolveFX = (() => {
   let canvas = null;
@@ -39,6 +40,14 @@ const ChipDissolveFX = (() => {
   let dpr = 1;
   let rafId = null;
   const particles = [];
+
+  /* ---- 风场基准配置：统一向右上吹 ---- */
+  const BASE_WIND = {
+    ax: 0.11, /* 水平加速度（向右为正） */
+    ay: -0.075, /* 垂直加速度（向上为负） */
+    drag: 0.99, /* 每帧阻尼 */
+    maxSpeed: 11, /* 速度上限 */
+  };
 
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -73,20 +82,34 @@ const ChipDissolveFX = (() => {
 
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
+
+      /* 风力 + 阻尼（每颗粒子自带缩放后的风场） */
+      p.vx += p.wind.ax * dt;
+      p.vy += p.wind.ay * dt;
+      p.vx *= p.wind.drag;
+      p.vy *= p.wind.drag;
+
+      /* 限速 */
+      const sp = Math.hypot(p.vx, p.vy);
+      if (sp > p.wind.maxSpeed) {
+        p.vx = (p.vx / sp) * p.wind.maxSpeed;
+        p.vy = (p.vy / sp) * p.wind.maxSpeed;
+      }
+
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vx *= 0.985;
-      p.vy = p.vy * 0.985 + 0.06 * dt;
       p.rot += p.vr * dt;
       p.life -= p.decay * dt;
 
-      if (p.life <= 0) {
+      /* 寿命耗尽或飞出屏幕（右上方向）→ 移除 */
+      if (p.life <= 0 || p.x > window.innerWidth + 40 || p.y < -40) {
         particles.splice(i, 1);
         continue;
       }
 
+      /* 绘制：透明度与尺寸随寿命衰减 */
       const a = p.life;
-      const s = p.size * (0.4 + p.life * 0.6);
+      const s = p.size * (0.35 + p.life * 0.65);
       ctx.globalAlpha = a;
       ctx.fillStyle = p.color;
 
@@ -112,33 +135,57 @@ const ChipDissolveFX = (() => {
     }
   }
 
-  /** 在矩形区域内爆发粒子 */
-  function burstFromRect(rect, colors) {
+  /**
+   * 在矩形区域内生成粒子，统一向右上飘散
+   * @param {DOMRect} rect
+   * @param {string[]} colors
+   * @param {number} distance 飘散距离系数：1 = 默认，<1 更近更快散，>1 更远飘更久
+   */
+  function burstFromRect(rect, colors, distance = 1) {
     ensureCanvas();
     const area = rect.width * rect.height;
-    /* 胶囊远小于原参考的按钮：数量夹在 70–220，粒径上限 2.9px */
+    /* 胶囊远小于参考文件的按钮：数量夹在 70–220，粒径上限 2.9px */
     const count = Math.min(220, Math.max(70, Math.floor(area / 22)));
+
+    /* 按距离系数缩放风场 */
+    const wind = {
+      ax: BASE_WIND.ax * distance,
+      ay: BASE_WIND.ay * distance,
+      drag: BASE_WIND.drag,
+      maxSpeed: BASE_WIND.maxSpeed * distance,
+    };
+
+    /* 距离越短，寿命越短，避免粒子原地悬停 */
+    const decayScale = 1 / Math.max(0.35, distance);
 
     for (let i = 0; i < count; i++) {
       const px = rect.left + Math.random() * rect.width;
       const py = rect.top + Math.random() * rect.height;
+
+      /* 初始速度：以右上方向为基准 + 随机扰动 */
+      const baseAngle = -Math.PI * 0.3;
+      const ang = baseAngle + (Math.random() - 0.5) * 0.9;
+      const speed = (Math.random() * 2.2 + 0.8) * distance;
+
+      /* 从矩形中心剥离的位移分量：边缘粒子带一点离心的初速 */
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const ang = Math.atan2(py - cy, px - cx) + (Math.random() - 0.5) * 0.9;
-      const speed = Math.random() * 3.2 + 0.6;
+      const ox = px - cx;
+      const oy = py - cy;
 
       particles.push({
         x: px,
         y: py,
-        vx: Math.cos(ang) * speed,
-        vy: Math.sin(ang) * speed - Math.random() * 1.2,
+        vx: Math.cos(ang) * speed + ox * 0.012,
+        vy: Math.sin(ang) * speed + oy * 0.012,
         size: Math.random() * 2.2 + 0.7,
         life: 1,
-        decay: Math.random() * 0.012 + 0.01,
+        decay: (Math.random() * 0.01 + 0.009) * decayScale,
         color: colors[(Math.random() * colors.length) | 0],
         rot: Math.random() * Math.PI,
-        vr: (Math.random() - 0.5) * 0.25,
+        vr: (Math.random() - 0.5) * 0.3,
         square: Math.random() < 0.35,
+        wind,
       });
     }
 
