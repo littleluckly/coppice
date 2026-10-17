@@ -42,6 +42,9 @@
     "breadcrumb_label": "Breadcrumb",
     "breadcrumb_home": "Home",
     "pagination_label": "Pagination",
+    "pagination_previous": "Previous page",
+    "pagination_next": "Next page",
+    "page_number": "Page {{ number }}",
     "no_matches": "No products match your filters.",
     "clear_filters": "Clear all filters",
     "sort": {
