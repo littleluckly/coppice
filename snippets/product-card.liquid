@@ -1,8 +1,9 @@
 {% doc %}
   product-card — 商品卡（首页 featured-collection 与集合页共用，task-index T-1.2）。
 
-  输出（视觉基准：效果图-首页 Featured Products 区）：
-  图 + 收藏心 + 标题 + 规格横排行（宽·排量·动力源）+ 价格（含划线对比价）+ 星级 + Compare。
+  输出（视觉基准：效果图-首页 Featured Products 区；标签行基准 2026-10-16 刘工参考图）：
+  图 + 收藏心 + 标题 + 规格横排行（宽·排量·动力源）+ 价格（含划线对比价）+ 星级
+  + 规格标签行（胶囊：电池电压·切割宽·操作方式·动力源）+ Compare。
 
   纪律：
   - 参数行逐项判空：缺值跳项，分隔符自动正确（li+li::before），不留空位（SDD §5.7）
@@ -137,6 +138,46 @@
         {%- endif -%}
         <span class="visually-hidden">{{ 'products.product_card.rating_label' | t: rating: rating_value }}</span>
       </a>
+    {%- endif -%}
+
+    {%- comment -%} 规格标签行（2026-10-16 刘工参考图）：胶囊标签，纯展示不可点。
+        电池 = platform.battery_platform（'N/A' 跳过）；尺寸 = cutting width（跟
+        show_width 开关、经 spec-value 换算）；操作方式 = spec.drive_type（'N/A' 跳过）；
+        动力源 = spec.power_source（跟 show_power 开关）。缺值跳项，整行可空。 {%- endcomment -%}
+    {%- liquid
+      assign battery_platform = product.metafields.platform.battery_platform.value
+      assign drive_type = product.metafields.spec.drive_type.value
+      assign has_tags = false
+      if battery_platform != blank and battery_platform != 'N/A'
+        assign has_tags = true
+      endif
+      if show_width and product.metafields.spec.cutting_width_mm.value != blank
+        assign has_tags = true
+      endif
+      if drive_type != blank and drive_type != 'N/A'
+        assign has_tags = true
+      endif
+      if show_power and product.metafields.spec.power_source.value != blank
+        assign has_tags = true
+      endif
+    -%}
+    {%- if has_tags -%}
+      <ul class="product-card__tags" role="list">
+        {%- if battery_platform != blank and battery_platform != 'N/A' -%}
+          <li class="product-card__tag">{{ battery_platform }}</li>
+        {%- endif -%}
+        {%- if show_width and product.metafields.spec.cutting_width_mm.value != blank -%}
+          <li class="product-card__tag">
+            {%- render 'spec-value', value: product.metafields.spec.cutting_width_mm.value, unit_type: 'length_mm', spec_class: 'card' -%}
+          </li>
+        {%- endif -%}
+        {%- if drive_type != blank and drive_type != 'N/A' -%}
+          <li class="product-card__tag">{{ drive_type }}</li>
+        {%- endif -%}
+        {%- if show_power and product.metafields.spec.power_source.value != blank -%}
+          <li class="product-card__tag">{{ product.metafields.spec.power_source.value }}</li>
+        {%- endif -%}
+      </ul>
     {%- endif -%}
 
     {%- if product.metafields.spec.compare_group.value != blank
