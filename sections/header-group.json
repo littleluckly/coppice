@@ -64,6 +64,7 @@
         "mega_category_icon_mgPtg6"
       ],
       "settings": {
+        "logo": "shopify://shop_images/logo_webp.webp",
         "brand_name": "Northbark",
         "menu": "main-menu",
         "customer_account_menu": "customer-account-main-menu",
