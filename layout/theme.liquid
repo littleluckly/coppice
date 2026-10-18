@@ -86,7 +86,39 @@
       </div>
     {%- endif -%}
 
-    {% sections 'header-group' %}
+    {%- if request.design_mode -%}
+      {%- comment -%}
+        临时探针（仅设计模式）：把组标签的输出 capture 下来，读出字节数。
+        Liquid 侧字节数 = 0 ⇒ 标签本身没输出；
+        字节数 > 0 但画布上仍看不到 ⇒ 输出存在，被编辑器从 DOM 里拿掉或藏掉。
+        下面的 script 再从浏览器侧数一次节点，给出"最终 DOM 里到底有没有"。
+      {%- endcomment -%}
+      {%- capture header_probe -%}{% sections 'header-group' %}{%- endcapture -%}
+      <div style="background:#000;color:#0f0;font:600 12px/1.8 ui-monospace,monospace;padding:2px 8px">
+        GROUP BYTES = {{ header_probe.size }}
+      </div>
+      <div id="probe-dom-report" style="background:#000;color:#ff0;font:600 12px/1.8 ui-monospace,monospace;padding:2px 8px">
+        DOM 计数 = 等待中…
+      </div>
+      <script>
+        (function () {
+          var report = function () {
+            var el = document.getElementById('probe-dom-report');
+            if (!el) return;
+            var n = document.querySelectorAll('.shopify-section-group-header-group').length;
+            var ids = [];
+            document.querySelectorAll('.shopify-section-group-header-group').forEach(function (x) { ids.push(x.id); });
+            el.textContent = 'DOM 计数 = ' + n + ' ｜ body 子元素 = ' + document.body.children.length +
+              ' ｜ ' + ids.join(', ');
+          };
+          setTimeout(report, 1500);
+          setTimeout(report, 3500);
+        })();
+      </script>
+      {{ header_probe }}
+    {%- else -%}
+      {% sections 'header-group' %}
+    {%- endif -%}
 
     {%- if request.design_mode -%}
       <div style="background:#06c;color:#fff;font:600 11px/1.8 system-ui;padding:2px 8px;text-align:center;letter-spacing:.02em">
