@@ -54,6 +54,9 @@
 {%- if collection.filters.size > 0 -%}
   <script src="{{ 'faceted-filters.js' | asset_url }}" defer></script>
 {%- endif -%}
+{%- if section.settings.show_sort -%}
+  <script src="{{ 'sort-select.js' | asset_url }}" defer></script>
+{%- endif -%}
 {{ 'product-card.css' | asset_url | stylesheet_tag }}
 
 <div class="collection{% unless has_banner %} collection--no-banner{% endunless %} full-width" data-collection-root>
@@ -118,23 +121,25 @@
                 <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
                   {{ 'collections.sort.label' | t }}
                 </label>
-                <select
-                  id="SortBy-{{ section.id }}"
-                  name="sort_by"
-                  data-facets-sort
-                  form="FacetsForm-{{ section.id }}"
-                >
-                  {%- for option in collection.sort_options -%}
-                    <option
-                      value="{{ option.value }}"
-                      {% if option.value == collection.sort_by %}
-                        selected
-                      {% endif %}
-                    >
-                      {{ option.name | escape }}
-                    </option>
-                  {%- endfor -%}
-                </select>
+                <facet-sort class="facets__sort-select">
+                  <select
+                    id="SortBy-{{ section.id }}"
+                    name="sort_by"
+                    data-facets-sort
+                    form="FacetsForm-{{ section.id }}"
+                  >
+                    {%- for option in collection.sort_options -%}
+                      <option
+                        value="{{ option.value }}"
+                        {% if option.value == collection.sort_by %}
+                          selected
+                        {% endif %}
+                      >
+                        {{ option.name | escape }}
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                </facet-sort>
               </div>
             {%- endif -%}
 
@@ -166,18 +171,20 @@
                 <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
                   {{ 'collections.sort.label' | t }}
                 </label>
-                <select id="SortBy-{{ section.id }}" name="sort_by" data-facets-sort>
-                  {%- for option in collection.sort_options -%}
-                    <option
-                      value="{{ option.value }}"
-                      {% if option.value == collection.sort_by %}
-                        selected
-                      {% endif %}
-                    >
-                      {{ option.name | escape }}
-                    </option>
-                  {%- endfor -%}
-                </select>
+                <facet-sort class="facets__sort-select">
+                  <select id="SortBy-{{ section.id }}" name="sort_by" data-facets-sort>
+                    {%- for option in collection.sort_options -%}
+                      <option
+                        value="{{ option.value }}"
+                        {% if option.value == collection.sort_by %}
+                          selected
+                        {% endif %}
+                      >
+                        {{ option.name | escape }}
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                </facet-sort>
               </div>
             {%- endif -%}
 
@@ -479,9 +486,114 @@
     padding: 6px 0.6rem;
     /* select 同 input 不继承 color；边框从 foreground 派生（配色纪律） */
     border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
+    border-radius: 12px;
     background-color: var(--color-background);
     color: var(--color-foreground);
     text-overflow: ellipsis;
+  }
+  /* ---- 排序下拉增强（<facet-sort>，2026-10-17 刘工效果图）----
+     桌面 ≥990px 由 sort-select.js 接管：按钮 + 浮层 listbox；
+     移动端 / 无 JS 保持上面这条原生 select 样式（触屏原生选择器）。 */
+  .facets__sort-select {
+    position: relative;
+    display: block;
+    min-width: 0;
+  }
+  .facets__sort-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: 12px;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font: inherit;
+    font-size: 0.92rem;
+    text-align: start;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .facets__sort-btn:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+  .facets__sort-btn:focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 1px;
+  }
+  .facets__sort-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .facets__sort-chevron {
+    flex: none;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+    transition: transform 0.15s ease;
+  }
+  .facets__sort-btn[aria-expanded='true'] .facets__sort-chevron {
+    transform: rotate(180deg);
+  }
+  .facets__sort-list {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0.4rem;
+    list-style: none;
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 12px;
+    /* 投影：配色纪律的合法例外（永远黑） */
+    box-shadow: 0 12px 32px rgb(0 0 0 / 12%);
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .facets__sort-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 8px 0.75rem;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    color: var(--color-foreground);
+    cursor: pointer;
+  }
+  .facets__sort-option:hover,
+  .facets__sort-option.is-active {
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+  .facets__sort-option[aria-selected='true'] {
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+    color: var(--color-brand);
+    font-weight: 500;
+  }
+  .facets__sort-check {
+    flex: none;
+    visibility: hidden;
+  }
+  .facets__sort-option[aria-selected='true'] .facets__sort-check {
+    visibility: visible;
+  }
+  /* 工具条形态（无筛选集合，桌面）：按钮随内容自适应，浮层右对齐防溢出视口 */
+  .collection__toolbar .facets__sort-btn {
+    width: auto;
+    white-space: nowrap;
+  }
+  .collection__toolbar .facets__sort-list {
+    left: auto;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .facets__sort-chevron {
+      transition: none;
+    }
   }
   /* 排序卡在工具条里的形态（无筛选集合常驻；有筛选集合仅移动端，由 JS 移入）：
      竖向卡面变横排，靠行尾。桌面无筛选集合靠 auto 外边距右贴，计数跟在它右侧。 */
@@ -717,19 +829,21 @@
     gap: 0.5rem;
     align-content: start;
     padding: 0.75rem;
-    border: 0.5px solid rgb(0 0 0 / 8%);
+    /* 块/描边从 foreground 派生——黑 alpha 硬编码在 Noir 深底上不可见
+       （2026-10-17 刘工实测），配色纪律的另一课 */
+    border: 0.5px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
     border-radius: 12px;
   }
   .collection__skeleton-card .sk-img {
     aspect-ratio: 1 / 1;
     border-radius: 8px;
-    background: rgb(0 0 0 / 7%);
+    background: color-mix(in srgb, var(--color-foreground) 7%, transparent);
   }
   .collection__skeleton-card .sk-line {
     width: 70%;
     height: 10px;
     border-radius: 5px;
-    background: rgb(0 0 0 / 7%);
+    background: color-mix(in srgb, var(--color-foreground) 7%, transparent);
   }
   .collection__skeleton-card .sk-line--short {
     width: 40%;

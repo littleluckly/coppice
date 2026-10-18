@@ -50,6 +50,10 @@ const ChipDissolveFX = (() => {
     drag: 0.99, /* 每帧阻尼 */
     maxSpeed: 11, /* 速度上限 */
   };
+  /* 寿命基准：450ms 默认（2026-10-17 刘工实测定稿），可由调用方按粒子覆盖
+     （<collection-facets data-chip-lifetime="450">，毫秒）。60fps ≈ 27 帧
+     → decay ≈ 1/27，带微随机避免整批粒子同步消失的"闪断"感。距离系数
+     （decayScale）在此基准上等比缩放：飘得远 = 活得久，飘得近 = 散得快。 */
 
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -142,8 +146,9 @@ const ChipDissolveFX = (() => {
    * @param {DOMRect} rect
    * @param {string[]} colors
    * @param {number} distance 飘散距离系数：1 = 默认，<1 更近更快散，>1 更远飘更久
+   * @param {number} lifetimeMs 粒子寿命（毫秒），默认 450；调用方按元素属性传入
    */
-  function burstFromRect(rect, colors, distance = 1) {
+  function burstFromRect(rect, colors, distance = 1, lifetimeMs = 450) {
     ensureCanvas();
     const area = rect.width * rect.height;
     /* 胶囊远小于参考文件的按钮：数量夹在 70–220，粒径上限 2.9px */
@@ -157,8 +162,10 @@ const ChipDissolveFX = (() => {
       maxSpeed: BASE_WIND.maxSpeed * distance,
     };
 
-    /* 距离越短，寿命越短，避免粒子原地悬停 */
+    /* 距离越短，寿命越短，避免粒子原地悬停（纯距离系数） */
     const decayScale = 1 / Math.max(0.35, distance);
+    /* 寿命换算每帧衰减（dt 已归一到 60fps 帧单位，高刷屏墙钟时间同样准确） */
+    const baseDecay = 1 / ((lifetimeMs / 1000) * 60);
 
     for (let i = 0; i < count; i++) {
       const px = rect.left + Math.random() * rect.width;
@@ -182,7 +189,8 @@ const ChipDissolveFX = (() => {
         vy: Math.sin(ang) * speed + oy * 0.012,
         size: Math.random() * 2.2 + 0.7,
         life: 1,
-        decay: (Math.random() * 0.01 + 0.009) * decayScale,
+        /* 寿命 = lifetimeMs（默认 450ms）× ±10% 微随机 × 距离系数 */
+        decay: baseDecay * (0.9 + Math.random() * 0.2) * decayScale,
         color: colors[(Math.random() * colors.length) | 0],
         rot: Math.random() * Math.PI,
         vr: (Math.random() - 0.5) * 0.3,
@@ -378,20 +386,30 @@ class CollectionFacets extends HTMLElement {
   }
 
   /**
-   * 胶囊粒子色板：全部来自设计令牌的运行时取值，不硬编码。主色板 =
-   * 胶囊文字色（getComputedStyle，preset 换色自动跟随）→ 品牌强调色
-   * （--color-brand-accent）的渐变采样，另掺两份主品牌色（--color-brand）
-   * 加层次。令牌缺失或值非法时回落文字色，粒子永远不会用错色。
+   * 胶囊粒子寿命（毫秒）：`<collection-facets data-chip-lifetime="450">` 上配置，
+   * 默认 450。与 _chipDistance 同一口径——纯视觉参数走 data 属性，不占 schema 键。
+   */
+  get _chipLifetime() {
+    const v = parseFloat(this.dataset.chipLifetime);
+    return Number.isFinite(v) && v > 0 ? v : 450;
+  }
+
+  /**
+   * 胶囊粒子色板（2026-10-17 刘工：粒子要带主题色）：主色板 =
+   * --color-brand → --color-brand-accent 的渐变采样（Noir 下 lime、
+   * Coppice 下品牌绿，preset 换色自动跟随），令牌缺失或非法时回落
+   * 胶囊文字色——粒子永远不会用错色。
    */
   _chipColors(chip) {
     const style = getComputedStyle(chip);
     const textColor = style.color;
-    const accent = style.getPropertyValue('--color-brand-accent').trim();
     const brand = style.getPropertyValue('--color-brand').trim();
-    const accentColor = CSS.supports('color', accent) ? accent : textColor;
-    const colors = ChipDissolveFX.sampleGradient(textColor, accentColor);
-    if (CSS.supports('color', brand)) colors.push(brand, brand);
-    return colors;
+    const accent = style.getPropertyValue('--color-brand-accent').trim();
+    const c1 = CSS.supports('color', brand) ? brand : textColor;
+    const c2 = CSS.supports('color', accent) ? accent : c1;
+    const colors = ChipDissolveFX.sampleGradient(c1, c2);
+    if (c2 !== c1) colors.push(c2, c2); /* 强调色掺双份，收尾更亮 */
+    return colors.length ? colors : [textColor];
   }
 
   /** 胶囊本体立即隐藏（粒子接棒，工具条不跳动），新 DOM 替换后自然移除 */
@@ -412,7 +430,7 @@ class CollectionFacets extends HTMLElement {
     const colors = this._chipColors(chip);
     const rect = chip.getBoundingClientRect();
     this._hideChip(chip);
-    ChipDissolveFX.burstFromRect(rect, colors, this._chipDistance);
+    ChipDissolveFX.burstFromRect(rect, colors, this._chipDistance, this._chipLifetime);
   }
 
   /**
@@ -426,10 +444,11 @@ class CollectionFacets extends HTMLElement {
     if (!chips.length) return;
     const colors = this._chipColors(chips[0]);
     const distance = this._chipDistance;
+    const lifetime = this._chipLifetime;
     for (const chip of chips) {
       const rect = chip.getBoundingClientRect();
       this._hideChip(chip);
-      ChipDissolveFX.burstFromRect(rect, colors, distance);
+      ChipDissolveFX.burstFromRect(rect, colors, distance, lifetime);
     }
   }
 
