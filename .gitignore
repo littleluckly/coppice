@@ -19,3 +19,6 @@ release
 dev-docs/local-assets
 
 
+
+# 本地工作记忆（Shopify 主题同步会删除非主题文件，故不入库）
+.workbuddy/
