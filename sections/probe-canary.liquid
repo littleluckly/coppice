@@ -1,0 +1,19 @@
+{% comment %}
+  临时探针 section（2026-10-18，定位编辑器不渲染页头组用）。
+  存在的唯一目的：提供一段【无条件的、不依赖任何设置或 block】的输出，
+  用于判断设计模式下 {% section %} / {% sections %} 到底能不能渲染出内容。
+  因为 announcement-bar / utility-bar 在没有 block 时本来就输出空，
+  直接拿它们当探针会产生假阴性。
+  定位完成后删除本文件，并移除 layout/theme.liquid 里对它的调用。
+{% endcomment %}
+
+<div style="background:#6a0dad;color:#fff;margin:6px 0;padding:10px;font:600 12px/1.6 ui-monospace,monospace;text-align:center">
+  SECTION CANARY OK · 静态渲染成功
+</div>
+
+{% schema %}
+{
+  "name": "Probe canary",
+  "settings": []
+}
+{% endschema %}

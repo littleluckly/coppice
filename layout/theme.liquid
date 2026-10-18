@@ -94,20 +94,16 @@
       </div>
 
       {%- comment -%}
-        临时探针（仅设计模式）：用 {% section %} 静态渲染同一批 section 文件。
-        A/B 之间为空说明 {% sections 'header-group' %} 在设计模式下零输出；
-        探针能把"组机制"和"section 文件本身"切开：
-          三个探针都出内容 ⇒ section 文件没问题，问题在组；
-          三个都空         ⇒ section 文件在设计模式下就渲染不出；
-          只有部分出       ⇒ 逐个定位到具体 section。
-        定位完成后整段删除。
+        临时探针（仅设计模式）：
+        1) probe-canary 是一段无条件输出，用来证明 {% section %} 在设计模式能不能出内容
+           （上一版拿 announcement-bar 当探针是错的：它没有 block 时本来就输出空）。
+        2) 同时本轮把三个页头 section 的 enabled_on 临时去掉——这是页头组与页脚组唯一的
+           结构不对称（页头 3 个都写了 groups:["header"]，页脚 footer 一个都没写）。
+        判读：页头出现 ⇒ 根因是 enabled_on 过滤；页头仍空但 canary 在 ⇒ enabled_on 无关，
+        且 section 渲染本身没问题，问题在"组"这一层。
+        定位完成后删除本段、删除 sections/probe-canary.liquid、恢复 enabled_on。
       {%- endcomment -%}
-      <div style="margin:6px 0 0;background:#0a0;color:#fff;font:600 10px/1.7 ui-monospace,monospace;padding:1px 6px">PROBE 1 · announcement-bar</div>
-      <div style="outline:3px solid #0a0;outline-offset:-3px">{% section 'announcement-bar' %}</div>
-      <div style="margin:6px 0 0;background:#08a;color:#fff;font:600 10px/1.7 ui-monospace,monospace;padding:1px 6px">PROBE 2 · utility-bar</div>
-      <div style="outline:3px solid #08a;outline-offset:-3px">{% section 'utility-bar' %}</div>
-      <div style="margin:6px 0 0;background:#a80;color:#fff;font:600 10px/1.7 ui-monospace,monospace;padding:1px 6px">PROBE 3 · main-nav</div>
-      <div style="outline:3px solid #a80;outline-offset:-3px">{% section 'main-nav' %}</div>
+      {% section 'probe-canary' %}
     {%- endif -%}
 
     <script src="{{ 'site-header.js' | asset_url }}" defer></script>
