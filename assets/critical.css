@@ -316,3 +316,22 @@ body {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
+
+/**
+ * 图片组件基础样式（原 snippets/image.liquid 的样式块，2026-10-18 迁入）。
+ * 原因：样式块标签只允许出现在 section/block 顶层。该片段被 collections /
+ * search 等自带样式块的 section render，形成"一个 section 两个样式块"，
+ * 编辑器装载这些 section 时整段渲染失败（另一处同类问题见 main-nav）。
+ */
+  .image {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: auto;
+  }
+
+  .image > img {
+    width: 100%;
+    height: auto;
+  }
