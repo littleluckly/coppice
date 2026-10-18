@@ -11,16 +11,6 @@
   "type": "header",
   "name": "t:general.header",
   "sections": {
-    "announcement-bar": {
-      "type": "announcement-bar",
-      "settings": {
-        "dismissible": true
-      }
-    },
-    "utility-bar": {
-      "type": "utility-bar",
-      "settings": {}
-    },
     "main-nav": {
       "type": "main-nav",
       "blocks": {
@@ -71,57 +61,9 @@
         "show_follow_on_shop": false,
         "results_limit": 10
       }
-    },
-    "announcement_bar_N4zaMz": {
-      "type": "announcement-bar",
-      "blocks": {
-        "announcement_Gbixg3": {
-          "type": "announcement",
-          "settings": {
-            "text": "Free freight on orders over $99",
-            "link": ""
-          }
-        }
-      },
-      "block_order": [
-        "announcement_Gbixg3"
-      ],
-      "name": "t:general.announcement_bar",
-      "settings": {
-        "dismissible": true
-      }
-    },
-    "utility_bar_AmG6M8": {
-      "type": "utility-bar",
-      "blocks": {
-        "utility_item_CBbX3e": {
-          "type": "utility_item",
-          "settings": {
-            "text": "是短发",
-            "link": "shopify://blogs/maintenance-guides"
-          }
-        },
-        "utility_item_Xtbrba": {
-          "type": "utility_item",
-          "settings": {
-            "text": "",
-            "link": ""
-          }
-        }
-      },
-      "block_order": [
-        "utility_item_CBbX3e",
-        "utility_item_Xtbrba"
-      ],
-      "name": "t:general.utility_bar",
-      "settings": {}
     }
   },
   "order": [
-    "announcement-bar",
-    "utility-bar",
-    "main-nav",
-    "announcement_bar_N4zaMz",
-    "utility_bar_AmG6M8"
+    "main-nav"
   ]
 }
