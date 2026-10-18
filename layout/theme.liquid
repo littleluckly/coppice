@@ -55,7 +55,44 @@
       的 data-site-header 属性上（assets/site-header.js 按此取节点）。
       display: contents 那套包裹约定随之作废；sticky 包含盒本来就是 body。
     {% endcomment %}
+    {%- comment -%}
+      临时定位标记（2026-10-18，仅 request.design_mode 为真时输出，店面零影响）：
+      线上编辑器画布默认不渲染页头组，点击某 section 的隐藏/显示后又能渲染，
+      保存后再次消失。需要在"布局层"和"组层"之间切一刀才能定位：
+        A 标记 = 布局在页头组之前有输出；B 标记 = 布局在页头组之后仍在输出。
+      两个标记都出现但中间空白 ⇒ 问题严格发生在 {% sections 'header-group' %} 内部。
+      定位完成后删除这两段。
+    {%- endcomment -%}
+    {%- if request.design_mode -%}
+      <style>
+        /* 临时诊断（仅编辑器）：给页头组每个 section 包裹层画虚框并回显其 id。
+           看到虚框 = 包裹层在、内容为空；看不到虚框 = 连包裹层都没输出。 */
+        .shopify-section-group-header-group {
+          outline: 2px dashed #c00 !important;
+          outline-offset: -2px;
+          min-height: 26px;
+        }
+        .shopify-section-group-header-group::before {
+          content: attr(id);
+          display: block;
+          font: 600 10px/1.6 ui-monospace, monospace;
+          color: #c00;
+          background: #ffecec;
+          padding: 0 6px;
+        }
+      </style>
+      <div style="background:#c00;color:#fff;font:600 11px/1.8 system-ui;padding:2px 8px;text-align:center;letter-spacing:.02em">
+        A · 页头组之前（layout 顶部）
+      </div>
+    {%- endif -%}
+
     {% sections 'header-group' %}
+
+    {%- if request.design_mode -%}
+      <div style="background:#06c;color:#fff;font:600 11px/1.8 system-ui;padding:2px 8px;text-align:center;letter-spacing:.02em">
+        B · 页头组之后（layout 中部）
+      </div>
+    {%- endif -%}
 
     <script src="{{ 'site-header.js' | asset_url }}" defer></script>
 
