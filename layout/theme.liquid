@@ -92,6 +92,22 @@
       <div style="background:#06c;color:#fff;font:600 11px/1.8 system-ui;padding:2px 8px;text-align:center;letter-spacing:.02em">
         B · 页头组之后（layout 中部）
       </div>
+
+      {%- comment -%}
+        临时探针（仅设计模式）：用 {% section %} 静态渲染同一批 section 文件。
+        A/B 之间为空说明 {% sections 'header-group' %} 在设计模式下零输出；
+        探针能把"组机制"和"section 文件本身"切开：
+          三个探针都出内容 ⇒ section 文件没问题，问题在组；
+          三个都空         ⇒ section 文件在设计模式下就渲染不出；
+          只有部分出       ⇒ 逐个定位到具体 section。
+        定位完成后整段删除。
+      {%- endcomment -%}
+      <div style="margin:6px 0 0;background:#0a0;color:#fff;font:600 10px/1.7 ui-monospace,monospace;padding:1px 6px">PROBE 1 · announcement-bar</div>
+      <div style="outline:3px solid #0a0;outline-offset:-3px">{% section 'announcement-bar' %}</div>
+      <div style="margin:6px 0 0;background:#08a;color:#fff;font:600 10px/1.7 ui-monospace,monospace;padding:1px 6px">PROBE 2 · utility-bar</div>
+      <div style="outline:3px solid #08a;outline-offset:-3px">{% section 'utility-bar' %}</div>
+      <div style="margin:6px 0 0;background:#a80;color:#fff;font:600 10px/1.7 ui-monospace,monospace;padding:1px 6px">PROBE 3 · main-nav</div>
+      <div style="outline:3px solid #a80;outline-offset:-3px">{% section 'main-nav' %}</div>
     {%- endif -%}
 
     <script src="{{ 'site-header.js' | asset_url }}" defer></script>
