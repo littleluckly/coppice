@@ -31,8 +31,15 @@
     {{ content_for_header }}
   </head>
 
-  {%- comment -%} body class：模板名（CSS 门控）+ 沉浸页头开关（settings.immersive_header，默认开） {%- endcomment -%}
-  <body class="template-{{ template.name }}{% if settings.immersive_header %} immersive-header{% endif %}">
+  {%- comment -%}
+    body class：模板名（CSS 门控）+ 沉浸页头开关（settings.immersive_header）。
+    data-site-header：沉浸页头脚本的挂点（2026-10-18 从包裹元素移到 body，
+    页头组因此保持 body 直接子级，编辑器画布才能管理它）。
+  {%- endcomment -%}
+  <body
+    class="template-{{ template.name }}{% if settings.immersive_header %} immersive-header{% endif %}"
+    data-site-header
+  >
     {% comment %}
       Skip link first, before any landmark. It is the first thing keyboard focus
       reaches, letting people bypass the header. Rendered from layout rather than
@@ -41,18 +48,14 @@
     {% render 'skip-link' %}
 
     {% comment %}
-      外层包裹层是集合页"沉浸页头"的挂点（2026-10-15）。
-      2026-10-18：由 `<site-header>` 自定义元素降级为普通 <div>——
-      线上编辑器中间画布曾把整组 section 渲染成空（店面与本地预览均正常），
-      唯一的结构异常就是"`{% sections %}` 被自定义元素包裹"。
-      样式与 sticky 依赖的 display: contents 保持不变（包裹层不生成盒），
-      JS 改为按 [data-site-header] 取节点（assets/site-header.js）。
-      display: contents 内联兜底 + CSS 同规则双保险；禁 JS 时 .js class 不出现
-      → 沉浸规则整段不命中，此包裹零作用。
+      页头组必须让各 section 成为 <body> 的直接子级（2026-10-18 定论方向）：
+      2026-10-15 曾用 <site-header> 自定义元素 + display:contents 包裹，2026-10-18
+      先降级为 div 仍不行——线上编辑器中间画布依旧把整组渲染成空，而页脚组
+      （直接子级、无包裹）正常。故彻底去掉包裹层，沉浸页头的挂点改到 <body>
+      的 data-site-header 属性上（assets/site-header.js 按此取节点）。
+      display: contents 那套包裹约定随之作废；sticky 包含盒本来就是 body。
     {% endcomment %}
-    <div class="site-header" data-site-header style="display: contents">
-      {% sections 'header-group' %}
-    </div>
+    {% sections 'header-group' %}
 
     <script src="{{ 'site-header.js' | asset_url }}" defer></script>
 

@@ -12,18 +12,16 @@
  * - 禁 JS → .js class 不存在 → CSS 整段不命中 → 页头原样不沉浸；
  * - 集合无 collection.image → threshold=0 → 恒 solid → 不沉浸（正确行为）。
  *
- * 2026-10-18 改制：原先挂成 <site-header> 自定义元素（class SiteHeader extends
- * HTMLElement）。线上编辑器中间画布把整组 section 渲染成空（店面 + 本地预览都正常），
- * 唯一的结构异常就是"{% sections %} 被自定义元素包裹"，故降级为普通脚本：
- * 包裹层换成 div.site-header[data-site-header]（仍 display: contents，sticky
- * 包含盒不变），本文件在 DOM 解析后按 [data-site-header] 取节点。
- * 行为与旧实现逐条等价，只是不再有元素生命周期回调。
- *
- * 实现纪律（AGENTS §6）：passive 监听、无逐帧几何比较。
+ * 2026-10-18 第二次改制：挂点从元素移到 <body data-site-header>。
+ * 起因：线上编辑器中间画布把整个 header-group 渲染成空，而页脚组（无包裹层、
+ * section 是 body 直接子级）正常。页头组先后用 <site-header> 自定义元素和
+ * div + display:contents 包裹，画布都空 ⇒ 编辑器只认"section 是 body 直接子级"。
+ * 所以包裹层彻底去掉，本脚本改为按已知的页头根节点（.announcement-bar /
+ * .utility-bar / .main-nav）直接量测，solid 状态类切在 <body> 上
+ * （CSS 选择器 .site-header--solid 不变，仍是后代选择器）。
  */
 (() => {
-  const header = document.querySelector('[data-site-header]');
-  if (!header) return;
+  if (!document.body.hasAttribute('data-site-header')) return;
 
   /* 双重门控：集合页 + 商家开启沉浸页头（settings.immersive_header → body.immersive-header） */
   if (
@@ -33,12 +31,17 @@
     return;
   }
 
-  /** 页头总高：累加可见子 section 高度（display:contents 下包裹层无盒；
-      display:none 的子级 offsetParent 为 null，自动跳过——如集合页隐藏的 utility） */
+  /* 页头的三个已知根节点。用最近一级 .shopify-section 包裹层测高——
+     包裹层与 section 根节点的可见高度一致，但隐藏状态下两者都是 0。 */
+  const HEADER_ROOTS = '.announcement-bar, .utility-bar, .main-nav';
+
+  /** 页头总高：累加可见部分的高度（display:none 的部分 offsetParent 为 null，自动跳过，
+      如集合页隐藏的 utility bar） */
   const measure = () => {
     let height = 0;
-    for (const child of header.children) {
-      if (child.offsetParent !== null) height += child.getBoundingClientRect().height;
+    for (const el of document.querySelectorAll(HEADER_ROOTS)) {
+      const box = el.closest('.shopify-section') || el;
+      if (box.offsetParent !== null) height += box.getBoundingClientRect().height;
     }
     document.documentElement.style.setProperty('--site-header-h', `${height}px`);
     const main = document.querySelector('.main-content');
@@ -48,10 +51,10 @@
   /** solid 判定：scrollY vs 静态阈值（横幅高 − sticky nav 行高），一次测量不做逐帧几何比较 */
   const update = () => {
     const banner = document.querySelector('.collection__banner');
-    const nav = header.querySelector('.main-nav-section');
+    const nav = document.querySelector('.main-nav-section');
     const navHeight = nav ? nav.getBoundingClientRect().height : 0;
     const threshold = banner ? Math.max(0, banner.offsetHeight - navHeight) : 0;
-    header.classList.toggle('site-header--solid', window.scrollY >= threshold);
+    document.body.classList.toggle('site-header--solid', window.scrollY >= threshold);
   };
 
   const onScroll = () => update();

@@ -100,7 +100,7 @@ body {
  * 注意 --color-brand-accent 故意不映射：它在骨架内无消费点（公告栏与
  * 品牌名走 --color-brand），映射它反而会让内容区的按钮色被牵连。
  */
-site-header,
+.shopify-section-group-header-group,
 .site-footer {
   --color-background: var(--color-skeleton-background);
   --color-foreground: var(--color-skeleton-foreground);
@@ -243,17 +243,15 @@ site-header,
 }
 
 /**
- * site-header 包裹层不生成盒（display: contents）：
- * header-group 的各 section 直接成为 body 的子项——sticky 的包含盒保持
- * body（BUG-032 口径，裹一层普通 div 会把 sticky 锁死在矮包含盒里），
- * 而 DOM 结构上它仍是父级，.js .template-collection.immersive-header 的沉浸选择器照常命中。
- * 2026-10-18：包裹层从 <site-header> 自定义元素降级为 div.site-header（编辑器画布
- * 曾把整组 section 渲染成空），两个选择器都保留，历史上任何残留标记同样生效。
+ * 页头组不再有包裹层（2026-10-18 定论方向）：
+ * 曾经用 <site-header> / div.site-header + display:contents 包裹 {% sections 'header-group' %}，
+ * 线上编辑器中间画布把整组渲染成空，而页脚组（无包裹、section 是 body 直接子级）正常。
+ * 现在 `{% sections 'header-group' %}` 直接挂在 body 下，各 section 的包裹层
+ * （div.shopify-section.shopify-section-group-header-group）就是 body 的直接子项，
+ * sticky 包含盒本来就是 body，无需再靠 display:contents 拆盒。
+ * ⇒ 因此这里不再有 site-header 规则；辨识页头 section 请用
+ *   .shopify-section-group-header-group（Shopify 自动打在组内每个 section 包裹层上）。
  */
-site-header,
-.site-header {
-  display: contents;
-}
 
 /**
  * 集合页沉浸页头（2026-10-15 干净版，曾名"透明页头"）。
@@ -272,22 +270,22 @@ site-header,
 .js .template-collection.immersive-header .main-content {
   margin-block-start: calc(-1 * var(--site-header-h, 72px));
 }
-.js .template-collection.immersive-header .site-header .utility-bar {
+.js .template-collection.immersive-header .utility-bar {
   display: none;
 }
-.js .template-collection.immersive-header .site-header .announcement-bar {
+.js .template-collection.immersive-header .announcement-bar {
   background-color: transparent;
 }
-.js .template-collection.immersive-header .site-header .main-nav__desktop {
+.js .template-collection.immersive-header .main-nav__desktop {
   background-color: transparent;
 }
-.js .template-collection.immersive-header .site-header .main-nav__brand,
-.js .template-collection.immersive-header .site-header .main-nav__link,
-.js .template-collection.immersive-header .site-header .main-nav__logo,
-.js .template-collection.immersive-header .site-header .main-nav__tools {
+.js .template-collection.immersive-header .main-nav__brand,
+.js .template-collection.immersive-header .main-nav__link,
+.js .template-collection.immersive-header .main-nav__logo,
+.js .template-collection.immersive-header .main-nav__tools {
   color: #ffffff;
 }
-.js .template-collection.immersive-header .site-header .main-nav__logo-img {
+.js .template-collection.immersive-header .main-nav__logo-img {
   filter: brightness(0) invert(1);
 }
 /* 滚动恢复态 */
