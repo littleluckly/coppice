@@ -117,9 +117,13 @@
   </form>
 </predictive-search>
 
-{# 2026-10-18：CSS 已迁到 sections/main-nav.liquid 的样式块（该 section 末尾）。
-   原因：Shopify 的样式块标签只允许出现在 section/block 顶层，一个文件只能有一个。
-   本片段被 main-nav render 时，与 section 自身的样式块形成"一个 section 两个样式块"，
-   编辑器装载 header 组时整组渲染失败（画布页头空白，切显隐才能出现）。
-   改动记录见 .workbuddy/memory/2026-10-17.md 第三十三轮。 #}
+{%- comment -%}
+  2026-10-18：本片段原先自带一个样式块，当日已整体迁入 sections/main-nav.liquid
+  的样式块（该 section 末尾，紧跟其原有样式之后）。
+  原因：Shopify 的样式块标签只允许出现在 section/block 顶层，且一个文件只能有一个。
+  本片段被 main-nav render 时，会与 section 自身的样式块形成"一个 section 两个样式块"，
+  编辑器装载 header 组时整组渲染失败（画布页头空白，切一次显隐才出现）。
+  改动记录见 .workbuddy/memory/2026-10-17.md 第三十三轮。
+  注意：本注释里不要再写样式块标签的字面量，Liquid 注释块内出现未闭合的标签语法有解析风险。
+{%- endcomment -%}
 
