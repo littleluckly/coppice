@@ -41,8 +41,6 @@
   assign brand_name = section.settings.brand_name | default: shop.name
   if section.settings.logo != blank
     assign logo_src = section.settings.logo | image_url: width: 160
-  else
-    assign logo_src = 'logo_webp.webp' | asset_url
   endif
 -%}
 
