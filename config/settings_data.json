@@ -10,7 +10,7 @@
 {
   "current": {
     "max_page_width": "90rem",
-    "immersive_header": true,
+    "immersive_header": false,
     "content_for_index": [],
     "blocks": {
       "14060646107696862457": {
