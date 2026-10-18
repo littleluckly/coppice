@@ -50,12 +50,14 @@
     {%- if request.design_mode -%}
       {%- comment -%}
         临时定位探针（2026-10-18，仅 request.design_mode，店面零影响）。
-        已确认：Liquid 侧 {% sections 'header-group' %} 输出 64KB，但编辑器画布
-        DOM 里查不到任何 shopify-section —— 需要分清是「从未变成节点」还是
-        「先变成节点、随后被编辑器摘掉」。所以：
-          T0 = 紧跟输出之后的同步快照（解析期，早于编辑器任何脚本）
-          T1 = DOMContentLoaded   T2 = 3.5s
-        另外把 capture 的前 260 字符转义打印出来，看这段 HTML 到底长什么样。
+        上一轮读数：capture 到 64KB，但紧跟其后的同步脚本数到 0 个 section 节点
+        （body 子元素 7 = 不含任何 section），T1/T2 也恒为 0 ⇒ 那段 HTML 既没成
+        节点、也没成可见文本。本轮把 capture 去掉，改问三个问题：
+          1) 包在 #hg-wrap（绿框）里的 {% sections %} —— 框还在吗？框里有子元素吗？
+             框在但空 ⇒ 组输出被吃掉；框也没了 ⇒ 整块被吃掉。
+          2) tpl=文档里 <template> 的个数与内容总长 —— 内容被塞进 template 时
+             既不可见、也不进 querySelectorAll，正好能解释"0 节点"。
+          3) T0（解析期）/ T1（DOMContentLoaded）/ T2（3s）三档 + 现存 section id 清单。
         定位完成后整段删除（连同 sections/probe-canary.liquid）。
       {%- endcomment -%}
       <style>
@@ -69,37 +71,38 @@
         A · 页头组之前（layout 顶部）
       </div>
 
-      {%- capture hp -%}{% sections 'header-group' %}{%- endcapture -%}
-
-      <div id="p-meta" style="background:#000;color:#0f0;font:600 11px/1.7 ui-monospace,monospace;padding:2px 8px">
-        BYTES = {{ hp.size }} ｜ 含 shopify-section ×{{ hp | split: 'shopify-section' | size | minus: 1 }} ｜ 含 BEGIN 注释 ×{{ hp | split: 'BEGIN sections' | size | minus: 1 }} ｜ 含 id=&quot; ×{{ hp | split: 'id="' | size | minus: 1 }}
+      <div id="hg-wrap" style="outline:4px solid #0f0;outline-offset:-4px;min-height:22px">
+        {% sections 'header-group' %}
       </div>
-      <pre id="p-head" style="margin:0;background:#111;color:#7cf;font:10px/1.45 ui-monospace,monospace;padding:4px 8px;white-space:pre-wrap;word-break:break-all">HEAD → {{ hp | slice: 0, 260 | escape }}</pre>
 
-      {{ hp }}
-
-      <div id="p-dom" style="background:#000;color:#ff0;font:600 11px/1.7 ui-monospace,monospace;padding:2px 8px">
+      <div id="p-dom" style="background:#000;color:#ff0;font:600 11px/1.65 ui-monospace,monospace;padding:2px 8px">
         DOM 快照 = 等待中…
       </div>
       <script>
         (function () {
           var el = document.getElementById('p-dom');
-          var KEY = 'shopify-section-group-header' + '-group';
-          var BEGIN = 'BEGIN sections: ' + 'header-group';
           function snap(tag) {
-            var all = document.querySelectorAll('[id^="shopify-section"]').length;
+            var w = document.getElementById('hg-wrap');
+            var all = document.querySelectorAll('[id^="shopify-section"]');
             var grp = document.querySelectorAll('.' + 'shopify-section-group-header-group').length;
-            var csv = document.querySelectorAll('.shopify-section').length;
-            var txt = document.body.innerHTML.indexOf(BEGIN) >= 0 ? 'Y' : 'N';
-            return tag + '｜组=' + grp + ' 全部=' + all + ' class=' + csv + ' 文本含BEGIN=' + txt;
+            var tpl = document.querySelectorAll('template');
+            var tl = 0;
+            for (var i = 0; i < tpl.length; i++) { tl += (tpl[i].innerHTML || '').length; }
+            return tag + '｜wrap=' + (w ? '有(' + w.children.length + '子)' : '无') +
+              ' 组=' + grp + ' 全部=' + all.length + ' tpl=' + tpl.length + '/' + tl +
+              ' body=' + document.body.children.length;
           }
-          el.textContent = snap('T0 解析期') + '｜body子=' + document.body.children.length;
+          el.textContent = snap('T0');
           document.addEventListener('DOMContentLoaded', function () {
-            el.textContent += ' ｜ ' + snap('T1 就绪');
+            el.textContent += ' ｜ ' + snap('T1');
           });
           setTimeout(function () {
-            el.textContent += ' ｜ ' + snap('T2 3.5s') + '｜body子=' + document.body.children.length;
-          }, 3500);
+            var ids = [];
+            document.querySelectorAll('[id^="shopify-section"]').forEach(function (x) {
+              ids.push(x.id.replace('shopify-section-', '').replace(/^sections--\d+__/, 'H:').replace(/^template--\d+__/, 'T:'));
+            });
+            el.textContent += ' ｜ ' + snap('T2') + ' ｜ ' + ids.join(' ');
+          }, 3000);
         })();
       </script>
 
