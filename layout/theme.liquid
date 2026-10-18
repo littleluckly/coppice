@@ -47,95 +47,67 @@
     {% endcomment %}
     {% render 'skip-link' %}
 
-    {% comment %}
-      页头组必须让各 section 成为 <body> 的直接子级（2026-10-18 定论方向）：
-      2026-10-15 曾用 <site-header> 自定义元素 + display:contents 包裹，2026-10-18
-      先降级为 div 仍不行——线上编辑器中间画布依旧把整组渲染成空，而页脚组
-      （直接子级、无包裹）正常。故彻底去掉包裹层，沉浸页头的挂点改到 <body>
-      的 data-site-header 属性上（assets/site-header.js 按此取节点）。
-      display: contents 那套包裹约定随之作废；sticky 包含盒本来就是 body。
-    {% endcomment %}
-    {%- comment -%}
-      临时定位标记（2026-10-18，仅 request.design_mode 为真时输出，店面零影响）：
-      线上编辑器画布默认不渲染页头组，点击某 section 的隐藏/显示后又能渲染，
-      保存后再次消失。需要在"布局层"和"组层"之间切一刀才能定位：
-        A 标记 = 布局在页头组之前有输出；B 标记 = 布局在页头组之后仍在输出。
-      两个标记都出现但中间空白 ⇒ 问题严格发生在 {% sections 'header-group' %} 内部。
-      定位完成后删除这两段。
-    {%- endcomment -%}
     {%- if request.design_mode -%}
+      {%- comment -%}
+        临时定位探针（2026-10-18，仅 request.design_mode，店面零影响）。
+        已确认：Liquid 侧 {% sections 'header-group' %} 输出 64KB，但编辑器画布
+        DOM 里查不到任何 shopify-section —— 需要分清是「从未变成节点」还是
+        「先变成节点、随后被编辑器摘掉」。所以：
+          T0 = 紧跟输出之后的同步快照（解析期，早于编辑器任何脚本）
+          T1 = DOMContentLoaded   T2 = 3.5s
+        另外把 capture 的前 260 字符转义打印出来，看这段 HTML 到底长什么样。
+        定位完成后整段删除（连同 sections/probe-canary.liquid）。
+      {%- endcomment -%}
       <style>
-        /* 临时诊断（仅编辑器）：给页头组每个 section 包裹层画虚框并回显其 id。
-           看到虚框 = 包裹层在、内容为空；看不到虚框 = 连包裹层都没输出。 */
         .shopify-section-group-header-group {
           outline: 2px dashed #c00 !important;
           outline-offset: -2px;
           min-height: 26px;
         }
-        .shopify-section-group-header-group::before {
-          content: attr(id);
-          display: block;
-          font: 600 10px/1.6 ui-monospace, monospace;
-          color: #c00;
-          background: #ffecec;
-          padding: 0 6px;
-        }
       </style>
       <div style="background:#c00;color:#fff;font:600 11px/1.8 system-ui;padding:2px 8px;text-align:center;letter-spacing:.02em">
         A · 页头组之前（layout 顶部）
       </div>
-    {%- endif -%}
 
-    {%- if request.design_mode -%}
-      {%- comment -%}
-        临时探针（仅设计模式）：把组标签的输出 capture 下来，读出字节数。
-        Liquid 侧字节数 = 0 ⇒ 标签本身没输出；
-        字节数 > 0 但画布上仍看不到 ⇒ 输出存在，被编辑器从 DOM 里拿掉或藏掉。
-        下面的 script 再从浏览器侧数一次节点，给出"最终 DOM 里到底有没有"。
-      {%- endcomment -%}
-      {%- capture header_probe -%}{% sections 'header-group' %}{%- endcapture -%}
-      <div style="background:#000;color:#0f0;font:600 12px/1.8 ui-monospace,monospace;padding:2px 8px">
-        GROUP BYTES = {{ header_probe.size }}
+      {%- capture hp -%}{% sections 'header-group' %}{%- endcapture -%}
+
+      <div id="p-meta" style="background:#000;color:#0f0;font:600 11px/1.7 ui-monospace,monospace;padding:2px 8px">
+        BYTES = {{ hp.size }} ｜ 含 shopify-section ×{{ hp | split: 'shopify-section' | size | minus: 1 }} ｜ 含 BEGIN 注释 ×{{ hp | split: 'BEGIN sections' | size | minus: 1 }} ｜ 含 id=&quot; ×{{ hp | split: 'id="' | size | minus: 1 }}
       </div>
-      <div id="probe-dom-report" style="background:#000;color:#ff0;font:600 12px/1.8 ui-monospace,monospace;padding:2px 8px">
-        DOM 计数 = 等待中…
+      <pre id="p-head" style="margin:0;background:#111;color:#7cf;font:10px/1.45 ui-monospace,monospace;padding:4px 8px;white-space:pre-wrap;word-break:break-all">HEAD → {{ hp | slice: 0, 260 | escape }}</pre>
+
+      {{ hp }}
+
+      <div id="p-dom" style="background:#000;color:#ff0;font:600 11px/1.7 ui-monospace,monospace;padding:2px 8px">
+        DOM 快照 = 等待中…
       </div>
       <script>
         (function () {
-          var report = function () {
-            var el = document.getElementById('probe-dom-report');
-            if (!el) return;
-            var n = document.querySelectorAll('.shopify-section-group-header-group').length;
-            var ids = [];
-            document.querySelectorAll('.shopify-section-group-header-group').forEach(function (x) { ids.push(x.id); });
-            el.textContent = 'DOM 计数 = ' + n + ' ｜ body 子元素 = ' + document.body.children.length +
-              ' ｜ ' + ids.join(', ');
-          };
-          setTimeout(report, 1500);
-          setTimeout(report, 3500);
+          var el = document.getElementById('p-dom');
+          var KEY = 'shopify-section-group-header' + '-group';
+          var BEGIN = 'BEGIN sections: ' + 'header-group';
+          function snap(tag) {
+            var all = document.querySelectorAll('[id^="shopify-section"]').length;
+            var grp = document.querySelectorAll('.' + 'shopify-section-group-header-group').length;
+            var csv = document.querySelectorAll('.shopify-section').length;
+            var txt = document.body.innerHTML.indexOf(BEGIN) >= 0 ? 'Y' : 'N';
+            return tag + '｜组=' + grp + ' 全部=' + all + ' class=' + csv + ' 文本含BEGIN=' + txt;
+          }
+          el.textContent = snap('T0 解析期') + '｜body子=' + document.body.children.length;
+          document.addEventListener('DOMContentLoaded', function () {
+            el.textContent += ' ｜ ' + snap('T1 就绪');
+          });
+          setTimeout(function () {
+            el.textContent += ' ｜ ' + snap('T2 3.5s') + '｜body子=' + document.body.children.length;
+          }, 3500);
         })();
       </script>
-      {{ header_probe }}
-    {%- else -%}
-      {% sections 'header-group' %}
-    {%- endif -%}
 
-    {%- if request.design_mode -%}
       <div style="background:#06c;color:#fff;font:600 11px/1.8 system-ui;padding:2px 8px;text-align:center;letter-spacing:.02em">
         B · 页头组之后（layout 中部）
       </div>
-
-      {%- comment -%}
-        临时探针（仅设计模式）：
-        1) probe-canary 是一段无条件输出，用来证明 {% section %} 在设计模式能不能出内容
-           （上一版拿 announcement-bar 当探针是错的：它没有 block 时本来就输出空）。
-        2) 同时本轮把三个页头 section 的 enabled_on 临时去掉——这是页头组与页脚组唯一的
-           结构不对称（页头 3 个都写了 groups:["header"]，页脚 footer 一个都没写）。
-        判读：页头出现 ⇒ 根因是 enabled_on 过滤；页头仍空但 canary 在 ⇒ enabled_on 无关，
-        且 section 渲染本身没问题，问题在"组"这一层。
-        定位完成后删除本段、删除 sections/probe-canary.liquid、恢复 enabled_on。
-      {%- endcomment -%}
-      {% section 'probe-canary' %}
+    {%- else -%}
+      {% sections 'header-group' %}
     {%- endif -%}
 
     <script src="{{ 'site-header.js' | asset_url }}" defer></script>
