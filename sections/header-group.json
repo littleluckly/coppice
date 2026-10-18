@@ -11,6 +11,28 @@
   "type": "header",
   "name": "t:general.header",
   "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "blocks": {
+        "announcement_Gbixg3": {
+          "type": "announcement",
+          "settings": {
+            "text": "Free freight on orders over $99",
+            "link": ""
+          }
+        }
+      },
+      "block_order": [
+        "announcement_Gbixg3"
+      ],
+      "settings": {
+        "dismissible": true
+      }
+    },
+    "utility-bar": {
+      "type": "utility-bar",
+      "settings": {}
+    },
     "main-nav": {
       "type": "main-nav",
       "blocks": {
@@ -64,6 +86,8 @@
     }
   },
   "order": [
+    "announcement-bar",
+    "utility-bar",
     "main-nav"
   ]
 }

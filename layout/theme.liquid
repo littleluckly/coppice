@@ -41,15 +41,18 @@
     {% render 'skip-link' %}
 
     {% comment %}
-      外层 <site-header> 是集合页"沉浸页头"的挂点（2026-10-15）。
-      display: contents（内联兜底，CSS 同规则双保险）——包裹层不生成盒：
-      section 们直接成为 body 的子项，sticky 包含盒保持 body（BUG-032 口径），
-      同时 DOM 上仍是 header-group 的父级，选择器与 JS 挂点不受影响。
-      禁 JS 时 .js class 不出现 → 沉浸规则整段不命中，此包裹零作用。
+      外层包裹层是集合页"沉浸页头"的挂点（2026-10-15）。
+      2026-10-18：由 `<site-header>` 自定义元素降级为普通 <div>——
+      线上编辑器中间画布曾把整组 section 渲染成空（店面与本地预览均正常），
+      唯一的结构异常就是"`{% sections %}` 被自定义元素包裹"。
+      样式与 sticky 依赖的 display: contents 保持不变（包裹层不生成盒），
+      JS 改为按 [data-site-header] 取节点（assets/site-header.js）。
+      display: contents 内联兜底 + CSS 同规则双保险；禁 JS 时 .js class 不出现
+      → 沉浸规则整段不命中，此包裹零作用。
     {% endcomment %}
-    <site-header class="site-header" style="display: contents">
+    <div class="site-header" data-site-header style="display: contents">
       {% sections 'header-group' %}
-    </site-header>
+    </div>
 
     <script src="{{ 'site-header.js' | asset_url }}" defer></script>
 

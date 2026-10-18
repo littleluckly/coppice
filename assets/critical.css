@@ -247,9 +247,11 @@ site-header,
  * header-group 的各 section 直接成为 body 的子项——sticky 的包含盒保持
  * body（BUG-032 口径，裹一层普通 div 会把 sticky 锁死在矮包含盒里），
  * 而 DOM 结构上它仍是父级，.js .template-collection.immersive-header 的沉浸选择器照常命中。
- * 自定义元素默认 inline，不显式设置会高度塌陷（曾致 sticky 丢失 + 沉浸失效）。
+ * 2026-10-18：包裹层从 <site-header> 自定义元素降级为 div.site-header（编辑器画布
+ * 曾把整组 section 渲染成空），两个选择器都保留，历史上任何残留标记同样生效。
  */
-site-header {
+site-header,
+.site-header {
   display: contents;
 }
 
