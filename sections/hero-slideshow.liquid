@@ -212,10 +212,10 @@
   }
   .hero-slideshow__captions {
     position: relative;
-    /* 半透明白玻璃卡片（参考效果图）：白底 65% + 毛玻璃 + 圆角 + 柔和阴影 + 边缘高光。
-       压图元素，白底跟图不跟主题，保证任意照片上可读。 */
+    /* 半透明玻璃卡片（参考效果图）：背景从主题背景色派生 65% + 毛玻璃 + 圆角 +
+       柔和阴影 + 白边高光。白底主题 = 白色卡片（参考效果），Noir = 深色卡片自动适配。 */
     width: min(26rem, 100%);
-    background-color: rgb(255 255 255 / 65%);
+    background-color: color-mix(in srgb, var(--color-background) 65%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgb(255 255 255 / 40%);
@@ -245,11 +245,11 @@
     transition: opacity 0.4s ease, transform 0.4s ease;
   }
   .hero-slideshow__subheading {
-    /* 顶部小字（参考效果图「Popular Choice」）：灰绿弱化，跟随品牌色相淡档 */
+    /* 顶部小字（参考效果图「Popular Choice」）：灰绿弱化，从前景色派生 */
     margin: 0 0 0.5rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: color-mix(in srgb, var(--color-brand) 45%, var(--color-foreground));
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
   .hero-slideshow__caption-row {
     display: flex;
