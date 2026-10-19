@@ -189,6 +189,8 @@
     "alignment": "Alignment",
     "announcement": "Announcement",
     "announcement_dismissible": "Allow customers to dismiss",
+    "announcement_autoplay": "Auto-rotate messages",
+    "announcement_autoplay_interval": "Rotation interval",
     "background": "Background",
     "blog": "Blog",
     "brand": "Brand color (headers, banner)",
