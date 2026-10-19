@@ -323,7 +323,7 @@
     outline-offset: 2px;
   }
 
-  /* ---- 卡片底部指示器（在卡片背景内）：圆点（左）+ 装饰（右） ---- */
+  /* ---- 卡片底部控件（在卡片背景内）：圆点（左）+ 箭头（右） ---- */
   .hero-slideshow__indicators {
     display: flex;
     align-items: center;
@@ -331,7 +331,7 @@
     /* 与文字区分：顶部分隔线 + 上间距（已在卡片 padding 内） */
     margin-block-start: 1rem;
     padding-block-start: 0.75rem;
-    /* border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent); */
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
   }
   .hero-slideshow__dots {
     display: flex;
@@ -353,16 +353,9 @@
     background-color: var(--color-brand);
     transform: scale(1.25);
   }
-  .hero-slideshow__cross {
-    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
-    font-size: 1rem;
-    font-weight: bold;
-    line-height: 1;
-  }
-  /* 移动端：隐藏圆点+箭头（触摸横滑已覆盖），文字半透明卡片保留 */
+  /* 移动端：隐藏底部控件（圆点+箭头，触摸横滑已覆盖），文字半透明卡片保留 */
   @media screen and (max-width: 989px) {
-    .hero-slideshow__indicators,
-    .hero-slideshow__arrows {
+    .hero-slideshow__indicators {
       display: none;
     }
   }
