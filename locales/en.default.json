@@ -149,7 +149,10 @@
       "read_more": "Read guide"
     },
     "hero_slideshow": {
-      "aria_label": "Highlights"
+      "aria_label": "Highlights",
+      "previous": "Previous slide",
+      "next": "Next slide",
+      "go_to_slide": "Go to slide {{ index }}"
     },
     "platform_cards": {
       "products_count": {
