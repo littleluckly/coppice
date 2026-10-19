@@ -7,9 +7,9 @@
     visitors forever even after the merchant changes the copy.
   - To avoid an empty bar flashing before the script has read storage, the bar renders
     visible and the script marks it hidden only when dismissal is actually recorded.
-  - No autoplay. Carousels that move on their own are an accessibility cost with no
-    benefit here, and SDD §7.2 forbids fabricated urgency. Multiple messages scroll
-    horizontally instead, with manual controls and arrow-key support.
+  - Multiple messages scroll horizontally. Manual controls (prev/next) always work;
+    autoplay advances every 5s but pauses on hover/focus, stops after the visitor
+    takes over manually, and respects prefers-reduced-motion (WCAG 2.2.2 — see the JS).
   - The close button is rendered by Liquid (not built by JS), so it exists in the HTML.
     If the script never loads it would be a dead control, so keep the pairing honest:
     the script is the only thing that makes it work, and the section is still fully
@@ -230,7 +230,7 @@
   }
 
   /* 已关闭：JS 写入该属性后整条移除 */
-  .announcement-bar[data-announcement--closed='true'] {
+  .announcement-bar[data-announcement-closed='true'] {
     display: none;
   }
 
