@@ -1221,6 +1221,11 @@
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
   }
 
+  .main-nav__mega-card-media--empty {
+    /* 集合无图占位：色块内嵌一圈极淡描边，读作"图位"而不是破图 */
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+
   .main-nav__mega-card-img {
     inline-size: 100%;
     block-size: 100%;
@@ -1233,6 +1238,46 @@
   .main-nav__mega-card-link:hover .main-nav__mega-card-img,
   .main-nav__mega-card-link:focus-visible .main-nav__mega-card-img {
     transform: scale(1.06);
+  }
+
+  /* ===== hover 绿色渐变光晕（视觉对齐集合页 product-card 的 hover 反馈）=====
+     移植 product-card.css 的 ::before 光晕 + 品牌绿投影。光晕垫在图片下面、
+     只从图片透明区域透出（koutu alpha 图可见，不透明图自动隐没），产品像素零接触。
+     仅 hover:hover + pointer:fine 生效。 */
+  @media (hover: hover) and (pointer: fine) {
+    .main-nav__mega-card-link {
+      transition: border-color 0.15s ease, translate 0.15s ease, box-shadow 0.8s ease;
+    }
+    .main-nav__mega-card-link:hover {
+      /* 品牌绿低透明投影（与 product-card 同款，浅底不显脏） */
+      box-shadow:
+        0 24px 40px -18px color-mix(in srgb, var(--color-brand) 32%, transparent),
+        0 10px 18px -10px rgb(0 0 0 / 12%);
+    }
+    .main-nav__mega-card-media {
+      position: relative;
+    }
+    .main-nav__mega-card-media::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      /* --color-brand-light：从品牌色算出的高亮度浅绿，光晕渐变 */
+      background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-brand-light) 65%, transparent) 0%,
+        color-mix(in srgb, var(--color-brand-light) 32%, transparent) 55%,
+        color-mix(in srgb, var(--color-brand-light) 5%, transparent) 100%
+      );
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+    }
+    .main-nav__mega-card-img {
+      position: relative; /* 压到 ::before 之上，光晕只在其透明区域可见 */
+    }
+    .main-nav__mega-card-link:hover .main-nav__mega-card-media::before {
+      opacity: 1;
+    }
   }
 
   .main-nav__mega-card-title {
