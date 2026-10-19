@@ -14,15 +14,23 @@
     "announcement-bar": {
       "type": "announcement-bar",
       "blocks": {
+        "announcement_wTUzJ4": {
+          "type": "announcement",
+          "settings": {
+            "text": "啊啊啊啊啊",
+            "link": "#"
+          }
+        },
         "announcement_Gbixg3": {
           "type": "announcement",
           "settings": {
             "text": "Free freight on orders over $99",
-            "link": ""
+            "link": "shopify://blogs/maintenance-guides/how-to-change-a-mower-blade"
           }
         }
       },
       "block_order": [
+        "announcement_wTUzJ4",
         "announcement_Gbixg3"
       ],
       "settings": {
