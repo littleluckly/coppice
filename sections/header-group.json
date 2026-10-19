@@ -14,6 +14,13 @@
     "announcement-bar": {
       "type": "announcement-bar",
       "blocks": {
+        "announcement_imN8YA": {
+          "type": "announcement",
+          "settings": {
+            "text": "2222Free freight on orders over $99",
+            "link": "shopify://blogs/maintenance-guides/seasonal-maintenance-checklist"
+          }
+        },
         "announcement_Gbixg3": {
           "type": "announcement",
           "settings": {
@@ -23,10 +30,13 @@
         }
       },
       "block_order": [
+        "announcement_imN8YA",
         "announcement_Gbixg3"
       ],
       "settings": {
-        "dismissible": true
+        "dismissible": true,
+        "autoplay": false,
+        "autoplay_interval": 5
       }
     },
     "utility-bar": {
