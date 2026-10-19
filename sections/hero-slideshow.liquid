@@ -1,7 +1,9 @@
 {% comment %}
   Hero slideshow — 首页首屏（task-index T-2.1，pages-ui §2）。
 
-  实现：CSS scroll-snap 横滑（原生滚动，键盘可达，零 JS——性能与无障碍优先）。
+  实现：CSS scroll-snap 横滑（原生滚动，触摸/键盘可达）。PC 端额外提供
+  上一张/下一张圆形按钮 + 圆点指示器（仅多张时渲染）；按钮只是让 track
+  滚动一个视口宽，snap 自动对齐——不接管滚动，原生行为零损失。
   LCP 硬约束（SDD §8.1）：第一张幻灯图 eager + fetchpriority high，其余 lazy。
   首块标题为 h1（每页一个 h1，AGENTS.md §8）；其余块 h2。
 {% endcomment %}
