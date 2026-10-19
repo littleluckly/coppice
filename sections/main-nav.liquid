@@ -62,7 +62,6 @@
 {% endcomment -%}
 
 <nav class="main-nav full-width" aria-label="{{ 'navigation.menu' | t }}">
-  <div style="height:0;overflow:hidden;">欢迎</div>
   <div class="main-nav__desktop" data-nav-pill-anchor>
     <div class="main-nav__inner">
       {%- comment -%}
@@ -188,7 +187,7 @@
                           href="{{ routes.all_products_collection_url }}"
                         >
                           {{ 'navigation.view_all_products' | t }}
-                          <span class="main-nav__mega-viewall-arrow" aria-hidden="true">&rarr;</span>
+                          <span class="main-nav__mega-viewall-arrow" aria-hidden="true">→</span>
                         </a>
                       </div>
 
@@ -221,7 +220,7 @@
                                 >
                                   {{ popular_collection.title }}
                                   ({{ popular_collection.all_products_count }})
-                                  <span class="main-nav__mega-group-all-arrow" aria-hidden="true">&rarr;</span>
+                                  <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
                                 </a>
                               </div>
                               <ul class="main-nav__mega-cards" role="list">
