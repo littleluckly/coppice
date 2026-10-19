@@ -226,23 +226,44 @@
   }
   .hero-slideshow__caption {
     /* 多份 caption 叠加在卡片同一位置：激活的 relative 撑高卡片，
-       其余 absolute 不占位；切换靠 opacity/位移过渡 */
+       其余 absolute 不占位。动画下沉到 subheading/heading 子元素，
+       caption 层只做瞬时可见性切换（不做退出动画）。 */
   }
   .hero-slideshow__caption:not(.is-active) {
     position: absolute;
     inset-block-start: 1.25rem;
     inset-inline-start: 1.5rem;
     inset-inline-end: 1.5rem;
-    opacity: 0;
     visibility: hidden;
-    transform: translateY(0.5rem);
-    transition: opacity 0.4s ease, transform 0.4s ease, visibility 0s linear 0.4s;
+    pointer-events: none;
   }
   .hero-slideshow__caption.is-active {
     position: relative;
-    opacity: 1;
-    transform: none;
+  }
+
+  /* 文字子元素的滑入动画：非激活项停在「屏外+透明」起始态，
+     切到激活时滑入归位。方向由 root 的 data-direction 决定。 */
+  .hero-slideshow__subheading,
+  .hero-slideshow__heading {
     transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  /* 主标题比副标题晚 200ms（错峰滑入） */
+  .hero-slideshow__heading {
+    transition-delay: 0.2s;
+  }
+  .hero-slideshow__caption:not(.is-active) .hero-slideshow__subheading,
+  .hero-slideshow__caption:not(.is-active) .hero-slideshow__heading {
+    opacity: 0;
+    transform: translateX(2.5rem); /* 默认（前进）方向：新文字从右滑入 */
+  }
+  /* 后退方向：新文字从左滑入 */
+  .hero-slideshow[data-direction='prev']
+    .hero-slideshow__caption:not(.is-active)
+    .hero-slideshow__subheading,
+  .hero-slideshow[data-direction='prev']
+    .hero-slideshow__caption:not(.is-active)
+    .hero-slideshow__heading {
+    transform: translateX(-2.5rem);
   }
   .hero-slideshow__subheading {
     /* 顶部小字（参考效果图「Popular Choice」）：灰绿弱化，从前景色派生 */
@@ -317,14 +338,15 @@
     outline-offset: 2px;
   }
 
-  /* ---- 卡片底部指示器：圆点（左）+ 装饰（右） ---- */
+  /* ---- 卡片底部指示器（在卡片背景内）：圆点（左）+ 装饰（右） ---- */
   .hero-slideshow__indicators {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    /* 与卡片等宽，圆点/装饰对齐卡片左右缘 */
-    width: min(26rem, 100%);
-    margin-block-start: 0.75rem;
+    /* 与文字区分：顶部分隔线 + 上间距（已在卡片 padding 内） */
+    margin-block-start: 1rem;
+    padding-block-start: 0.75rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
   }
   .hero-slideshow__dots {
     display: flex;
