@@ -1,0 +1,11 @@
+{
+  "type": "header",
+  "name": "Header",
+  "sections": {
+    "trigger": {
+      "type": "trigger",
+      "settings": {}
+    }
+  },
+  "order": ["trigger"]
+}

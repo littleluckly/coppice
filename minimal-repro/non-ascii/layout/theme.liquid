@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Minimal repro</title>
+    {{ content_for_header }}
+  </head>
+  <body>
+    {% sections 'header-group' %}
+    <main id="MainContent">{{ content_for_layout }}</main>
+    {% sections 'footer-group' %}
+  </body>
+</html>
