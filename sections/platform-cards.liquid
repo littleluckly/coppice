@@ -169,6 +169,71 @@
     margin-inline-start: auto;
     font-size: 1.2rem;
     color: rgb(0 0 0 / 45%);
+    /* transform 动画需要块级/内联块盒，span 默认 inline 不响应位移 */
+    display: inline-block;
+  }
+
+  /* ===== hover 绿色渐变光晕（对齐 product-card 的 hover 反馈）=====
+     光晕垫在图片下面、只从图片透明区域透出（koutu alpha 图可见，
+     不透明图自动隐没），产品像素零接触。仅 hover:hover + pointer:fine 生效。 */
+  @media (hover: hover) and (pointer: fine) {
+    .platform-cards__card {
+      transition: background-color 0.15s ease, box-shadow 0.8s ease;
+    }
+    .platform-cards__card:hover {
+      box-shadow:
+        0 24px 40px -18px color-mix(in srgb, var(--color-brand) 32%, transparent),
+        0 10px 18px -10px rgb(0 0 0 / 12%);
+    }
+    .platform-cards__media {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+    .platform-cards__media::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-brand-light) 65%, transparent) 0%,
+        color-mix(in srgb, var(--color-brand-light) 32%, transparent) 55%,
+        color-mix(in srgb, var(--color-brand-light) 5%, transparent) 100%
+      );
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+    }
+    .platform-cards__media img {
+      position: relative; /* 压到 ::before 之上，光晕只在其透明区域可见 */
+    }
+    .platform-cards__card:hover .platform-cards__media::before {
+      opacity: 1;
+    }
+
+    /* 箭头 hover 动画：向右滑出淡出、跳回左侧再滑入，循环（hover 期间持续，
+       移开即停——WCAG 2.2.2 自动移动内容有 hover 暂停手段）。 */
+    @keyframes platform-arrow-slide {
+      0% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      45% {
+        transform: translateX(0.5rem);
+        opacity: 0;
+      }
+      55% {
+        transform: translateX(-0.25rem);
+        opacity: 0;
+      }
+      100% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    .platform-cards__card:hover .platform-cards__arrow {
+      animation: platform-arrow-slide 1.2s ease-in-out infinite;
+    }
   }
 {% endstylesheet %}
 
