@@ -28,27 +28,41 @@ soon as the first child node of its `<nav>` contains a single non-ASCII byte (e.
 
 ## Reproduction
 
-Two self-contained themes under `minimal-repro/`, byte-identical except for **one line**
-(the first child node of the header section's `<nav>`):
+Two approaches — a from-scratch minimal pair, and (preferred) a pair built directly
+on the official Shopify Skeleton Theme.
 
-| Variant | `sections/trigger.liquid` first child | Result in editor canvas |
+### Preferred: official Skeleton Theme (under `minimal-repro/skeleton/`)
+
+Two copies of the **unmodified official Skeleton Theme** (39 files), byte-identical
+except for **one line** in `sections/header.liquid` — the first child node of the
+`<header>` root element:
+
+| Variant | `sections/header.liquid` first child | Result in editor canvas |
 |---|---|---|
-| `ascii/` | `<div>hello</div>` | header group missing (blank) |
-| `non-ascii/` | `<div>→</div>` (literal U+2192) | header group renders |
+| `skeleton/ascii/` | `<div>hello</div>` | header group missing (blank) |
+| `skeleton/non-ascii/` | `<div>→</div>` (literal U+2192) | header group renders |
+
+The only edit to the skeleton is: insert a probe line plus 250 pure-ASCII filler
+`<div>` rows right after the `<header>` opening tag (to cross the size threshold,
+~30 KB rendered markup). Every other file is byte-identical to the official skeleton.
+
+### Alternative: from-scratch minimal theme (under `minimal-repro/ascii` / `non-ascii/`)
+
+Two self-contained 8-file themes differing by one line in `sections/trigger.liquid`.
 
 Steps:
 
 1. Push each variant as an unpublished theme:
    ```
-   shopify theme push --store coppice-gizo4hzt.myshopify.com --unpublished --theme "repro-ascii"    --path minimal-repro/ascii
-   shopify theme push --store coppice-gizo4hzt.myshopify.com --unpublished --theme "repro-nonascii" --path minimal-repro/non-ascii
+   shopify theme push --store coppice-gizo4hzt.myshopify.com --unpublished --theme "repro-skel-ascii"    --path minimal-repro/skeleton/ascii
+   shopify theme push --store coppice-gizo4hzt.myshopify.com --unpublished --theme "repro-skel-nonascii" --path minimal-repro/skeleton/non-ascii
    ```
 2. Open each theme in the editor (Customize).
-3. `repro-ascii` shows a blank header area; `repro-nonascii` shows the trigger content.
+3. `repro-skel-ascii` shows a blank header area; `repro-skel-nonascii` shows the
+   trigger/filler content.
 
-The trigger section is padded with 250 pure-ASCII `<div>` rows to ~24 KB of rendered
-markup, which is necessary to cross the size threshold (see below). The padding content
-is irrelevant to the bug; it only amplifies the size.
+The filler content is irrelevant to the bug; it only amplifies the size to cross the
+threshold (see below).
 
 ## Key evidence
 
