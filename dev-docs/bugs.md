@@ -301,6 +301,16 @@
 - **修复**：拦截条件扩为 `closest('[data-facets-active]') || closest('[data-facets-form]')`——标签与 Clear all（同在 `data-facets-active` 容器）走 `_load` 局部更新（含骨架）；分页链接**故意不拦**：`_load` 用 `history.replaceState` 不留历史，分页的前进/后退语义需要整页导航。
 - **预防**：**委托拦截的"范围条件"要与点击目标的实际挂载位置对账**——凡"X 应该局部更新"的需求，先在 DOM 里确认 X 在不在拦截选择器的子树内（grep 渲染行号即可），再谈事件逻辑。改版挪过挂载位置的功能（标签从 form 挪到工具条），挪完必须回归一遍相关交互路径。
 
+### BUG-044 · 编辑器画布静默丢弃页头组：大体积 + 纯 ASCII 的 section 渲染输出（平台侧）
+- **日期**：2026-10-19 ｜ **状态**：Fixed（方案①防御修法已验证，2026-10-19 刘工确认页头正常；平台 bug 待报 Shopify）
+- **现象**：店面与预览正常，**仅主题编辑器中间画布**不渲染 header-group：组内 section 包裹层与 `<!-- END sections: header-group -->` 全部消失，但组内 5 个 `<script>` 仍在 ⇒ 服务端渲染完整，是**编辑器客户端摘除节点**。无 Console 报错、无失败 Network 请求、无「HTML error found」横幅（静默失败）。20+ 个对照主题（y/r/v 系列，2026-10-18~19）单变量二分后，现象层判据钉死：
+  - main-nav 渲染输出的 **HTML 源码字节含任意非 ASCII 字节（≥0x80）→ 编辑器正常**（`欢迎`、`é`、`欢` 均活）；
+  - **纯 ASCII → 整组静默丢弃**（无标记、`hello`、`helloo`、`Y21/Y22`、HTML 实体 `&#27426;&#36808;` 均死）；
+  - 实体死 ⇒ 判据在**实体解码之前的字节层**；`é`（2B）就活 ⇒ 与 CJK 专属、字节长度阈值无关（v23 已证 6 个 ASCII 字节不活而 6 字节的"欢迎"活）。
+- **根因**：Shopify 新编辑器（画布 iframe 挂 `online-store-web.shopifyapps.com`，社区称 "Dux"）对 section HTML 的处理存在**无文档的 ASCII 敏感分岔**。注意"纯 ASCII 即死"**不成立**：页脚组（~1KB）、公告条（~3KB）、首页主内容各 section（≤6KB）全是纯 ASCII 却在编辑器里正常；唯一死的是渲染标记 ≈28KB（实际 ~35KB）的 main-nav——页面上其他 section 的 8~10 倍。**统一解释（理论，机制不可见、未证实）**：编辑器对大体积 section 载荷走某条与内容编码相关的处理路径（charset 探测/转码类），该路径在纯 ASCII 输入上静默失败；输出含非 ASCII 字节时被判定为 UTF-8 走正常路径；小载荷根本不进该路径。该理论与全部实验数据吻合，且自动消解 y11 悬案（三个平凡 div 是小载荷，文字是什么都该活）。官方文档（shopify.dev sections 集成、JSON templates、编辑器事件）、开发者社区、changelog 均无此限制的记载；全网无同类报告——推测因绝大多数主题输出天然含非 ASCII 字节（©、→、…、货币符号、非英语内容），纯英文纯 ASCII 店铺才会踩中。
+- **修复**：**方案①（已落码 2026-10-19，经二次修正）**——初版把两处 View All 箭头实体 `&rarr;` 换成字面量 `→`（mega 面板深处）**无效**（刘工实测仍空），因判据要求非 ASCII 落在 **`<nav>` 首子节点文本**而非任意嵌套位置。终版：在 `<nav>` 首子节点放 `<span class="main-nav__bug044-guard" aria-hidden="true">→</span>`（字面量 U+2192），配 `{% stylesheet %}` 内的 `.main-nav__bug044-guard` visually-hidden 裁剪样式（`clip`/`clip-path`，非 `display:none`、非零高度，标准 1px sr-only）。视觉与无障碍树双重隐藏，零可见痕迹。同时删除调试绿条、`sections/header-group.json` 恢复完整态（announcement-bar + utility-bar + main-nav）。**关键判据**（三次成对复现 + 二次修正钉死）：① 非 ASCII 必须在 `<nav>` 首子节点文本（深处、HTML 实体均无效）；② 可见性非变量（y22 死因是 ASCII 文本非 `block-size:0`）；③ 与 CJK 专属、字节长度阈值无关。theme check 移开 dev-docs 后 69 files 0 offense。
+- **预防**：**"仅编辑器画布坏 + 店面正常 + 零报错零横幅"的静默失败，先查本条与「样式块只能在 section 顶层」（BUG 索引）这两类平台级判据，再怀疑自己代码结构**。编辑器二分实验时：① 标志物必须放被测元素内部、判生死以其为准（K 组教训）；② 单变量推进，每步回读远端确认推送成功；③ 先删旧对照主题再建新的（店上限 20 个）。
+
 ## 记录模板（追加新 bug 用）
 
 ```

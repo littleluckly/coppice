@@ -11,3 +11,8 @@
 #
 # Ignore templates and sections with a regular expression:
 #   /(templates|sections)/.*\.json/
+
+# 本地文档与实验副本：不属于主题文件，不要推送到主题
+dev-docs/
+docs/
+minimal-repro/
