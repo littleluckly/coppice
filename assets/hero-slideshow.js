@@ -18,16 +18,19 @@
 
     const captions = Array.from(root.querySelectorAll('[data-hero-caption]'));
     const dots = Array.from(root.querySelectorAll('[data-hero-dot]'));
-    const prev = root.querySelector('[data-hero-prev]');
-    const next = root.querySelector('[data-hero-next]');
     const count = captions.length || dots.length;
     if (count < 2) return;
 
     const slideWidth = () => track.clientWidth;
 
-    // 目标序号 → 滚动位置（带回绕：clamp 到 [0, count-1]）
+    // 目标序号 → 滚动位置（带回绕：clamp 到 [0, count-1]），并记录方向供文字动画用
     function goTo(index) {
+      const from = currentIndex();
       const clamped = ((index % count) + count) % count;
+      // 方向：目标序号在「当前序号 +1」处（含跨末回绕）= 前进，否则后退。
+      // 相邻切换（循环点击时 ±1 或跨边界）走这一步；圆点跳转跨多张时按最近方向判。
+      const delta = ((clamped - from + count) % count);
+      root.dataset.direction = delta <= count / 2 ? 'next' : 'prev';
       track.scrollTo({ left: clamped * slideWidth(), behavior: 'smooth' });
     }
 
@@ -50,9 +53,17 @@
       });
     }
 
-    // 循环：next 到最后回第一张，prev 到第一张回最后一张
-    prev?.addEventListener('click', () => goTo(currentIndex() - 1));
-    next?.addEventListener('click', () => goTo(currentIndex() + 1));
+    // 事件委托：箭头随每份 caption 各渲染一份，委托到 root 绑一次，
+    // 无论点哪一份都只触发一次（closest 定位真实点击源）。
+    root.addEventListener('click', (event) => {
+      const prevBtn = event.target.closest('[data-hero-prev]');
+      const nextBtn = event.target.closest('[data-hero-next]');
+      if (nextBtn) {
+        goTo(currentIndex() + 1);
+      } else if (prevBtn) {
+        goTo(currentIndex() - 1);
+      }
+    });
 
     dots.forEach((dot, i) => {
       dot.addEventListener('click', () => goTo(i));
