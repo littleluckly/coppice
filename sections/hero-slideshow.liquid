@@ -85,10 +85,6 @@
         {%- for block in section.blocks -%}
           {%- liquid
             assign is_first = forloop.first
-            assign has_text = false
-            if block.settings.heading != blank or block.settings.subheading != blank or block.settings.button_label != blank
-              assign has_text = true
-            endif
           -%}
           <div
             class="hero-slideshow__caption{% if is_first %} is-active{% endif %}"
