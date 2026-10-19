@@ -1,9 +1,11 @@
 {% comment %}
   Hero slideshow — 首页首屏（task-index T-2.1，pages-ui §2）。
 
-  实现：CSS scroll-snap 横滑（原生滚动，触摸/键盘可达）。PC 端额外提供
-  上一张/下一张圆形按钮 + 圆点指示器（仅多张时渲染）；按钮只是让 track
-  滚动一个视口宽，snap 自动对齐——不接管滚动，原生行为零损失。
+  实现：CSS scroll-snap 横滑（原生滚动，触摸/键盘可达）。文字内容放在
+  左下角一张**固定的半透明卡片**里（图片随 track 滚动，卡片不滚）：
+  卡片内含标题/副标题/CTA（多张各自渲染成 caption，切换时淡入淡出过渡）
+  + 底部「圆点 + 上一张/下一张」箭头。图片切换循环：到最后一张再点
+  下一张回到第一张（反向同理）。
   LCP 硬约束（SDD §8.1）：第一张幻灯图 eager + fetchpriority high，其余 lazy。
   首块标题为 h1（每页一个 h1，AGENTS.md §8）；其余块 h2。
 {% endcomment %}
@@ -69,68 +71,83 @@
               {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-slideshow__placeholder' }}
             {%- endif -%}
           </div>
-
-          <div class="hero-slideshow__content">
-            <div class="hero-slideshow__body">
-              {%- if block.settings.heading != blank -%}
-                {%- if is_first -%}
-                  <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
-                {%- else -%}
-                  <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
-                {%- endif -%}
-              {%- endif -%}
-
-              {%- if block.settings.subheading != blank -%}
-                <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
-              {%- endif -%}
-
-              {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
-                <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
-                  {{ block.settings.button_label | escape }}
-                </a>
-              {%- endif -%}
-            </div>
-          </div>
         </div>
       {%- endfor -%}
     </div>
 
     {%- comment -%}
-      PC 端切换控件（参考效果图）：圆点指示器 + 圆形箭头按钮，右下角。
-      仅多张时渲染；移动端隐藏（触摸横滑已覆盖）。
-      JS 不接管滚动——按钮只触发一次滚动，snap 负责对齐。
+      固定半透明卡片：文字 caption（每张一份）+ 底部切换控件。
+      文字不再随图滚动——caption 多份并存，第一张可见，JS 淡入淡出切换。
+      卡片固定于左下，图片在背后滚动，是标准 hero 轮播形态（参考效果图）。
     {%- endcomment -%}
-    {%- if section.blocks.size > 1 -%}
-      <div class="hero-slideshow__controls">
-        <div class="hero-slideshow__dots">
-          {%- for block in section.blocks -%}
-            <button
-              type="button"
-              class="hero-slideshow__dot{% if forloop.first %} is-active{% endif %}"
-              aria-label="{{ 'sections.hero_slideshow.go_to_slide' | t: index: forloop.index }}"
-              {% unless forloop.first %}tabindex="-1"{% endunless %}
-              data-hero-dot="{{ forloop.index0 }}"
-            ></button>
-          {%- endfor -%}
-        </div>
-        <button
-          type="button"
-          class="hero-slideshow__arrow"
-          aria-label="{{ 'sections.hero_slideshow.previous' | t }}"
-          data-hero-prev
-        >
-          {{ 'icon-chevron-down.svg' | inline_asset_content }}
-        </button>
-        <button
-          type="button"
-          class="hero-slideshow__arrow hero-slideshow__arrow--next"
-          aria-label="{{ 'sections.hero_slideshow.next' | t }}"
-          data-hero-next
-        >
-          {{ 'icon-chevron-down.svg' | inline_asset_content }}
-        </button>
+    <div class="hero-slideshow__card">
+      <div class="hero-slideshow__captions">
+        {%- for block in section.blocks -%}
+          {%- liquid
+            assign is_first = forloop.first
+            assign has_text = false
+            if block.settings.heading != blank or block.settings.subheading != blank or block.settings.button_label != blank
+              assign has_text = true
+            endif
+          -%}
+          <div
+            class="hero-slideshow__caption{% if is_first %} is-active{% endif %}"
+            {% unless is_first %}aria-hidden="true"{% endunless %}
+            data-hero-caption="{{ forloop.index0 }}"
+          >
+            {%- if block.settings.heading != blank -%}
+              {%- if is_first -%}
+                <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
+              {%- else -%}
+                <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
+              {%- endif -%}
+            {%- endif -%}
+
+            {%- if block.settings.subheading != blank -%}
+              <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
+            {%- endif -%}
+
+            {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
+              <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
+                {{ block.settings.button_label | escape }}
+              </a>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
       </div>
-    {%- endif -%}
+
+      {%- if section.blocks.size > 1 -%}
+        <div class="hero-slideshow__controls">
+          <div class="hero-slideshow__dots">
+            {%- for block in section.blocks -%}
+              <button
+                type="button"
+                class="hero-slideshow__dot{% if forloop.first %} is-active{% endif %}"
+                aria-label="{{ 'sections.hero_slideshow.go_to_slide' | t: index: forloop.index }}"
+                {% unless forloop.first %}tabindex="-1"{% endunless %}
+                data-hero-dot="{{ forloop.index0 }}"
+              ></button>
+            {%- endfor -%}
+          </div>
+          <button
+            type="button"
+            class="hero-slideshow__arrow"
+            aria-label="{{ 'sections.hero_slideshow.previous' | t }}"
+            data-hero-prev
+          >
+            {{ 'icon-chevron-down.svg' | inline_asset_content }}
+          </button>
+          <button
+            type="button"
+            class="hero-slideshow__arrow hero-slideshow__arrow--next"
+            aria-label="{{ 'sections.hero_slideshow.next' | t }}"
+            data-hero-next
+          >
+            {{ 'icon-chevron-down.svg' | inline_asset_content }}
+          </button>
+        </div>
+      {%- endif -%}
+    </div>
   </div>
 {%- endif -%}
 
