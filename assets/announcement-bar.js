@@ -14,10 +14,17 @@
  *   这发生在 HTML 解析完成之后、首屏绘制之前，肉眼基本不可见；
  *   而"先隐藏再显示"会让未关闭状态的用户看到空条——那才是更糟的闪跳。
  *
+ * 关闭持久化（sessionStorage，key 带 section.id）：
+ *   用 sessionStorage 而非 localStorage —— 公告是促销内容，关闭是本次会话的
+ *   临时意愿，localStorage 会让商家更新文案后老访客永远看不到。
+ *   key 里带 section.id：商家改文案或重建 section 后 id 变、关闭态自动重置，
+ *   老访客能看到新公告（Shopify 官方最佳实践，避免"永久隐藏"）。
+ *
  * 自动循环（autoplay）：
- *   多条公告时每隔 AUTOPLAY_INTERVAL 秒自动切到下一条。为满足 WCAG 2.2.2
- *   （自动移动的内容必须可暂停/停止），提供三重防护：
- *   1) hover / focus-within 时暂停；
+ *   由商家开关控制（schema 设置 → Liquid 渲染进 data-announcement-autoplay），
+ *   默认关闭（Shopify 无障碍指南：轮播默认不自动播放）。开启后为满足 WCAG 2.2.2
+ *   （自动移动的内容必须可暂停/停止）提供三重防护：
+ *   1) hover / focus 时暂停；
  *   2) 用户手动切换后停止自动播放（尊重用户接管）；
  *   3) 尊重 prefers-reduced-motion：减少动态效果的用户不自动播放。
  *   手动「上一条 / 下一条」按钮始终可用，不因自动播放被剥夺。

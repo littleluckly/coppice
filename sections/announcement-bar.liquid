@@ -32,6 +32,9 @@
     role="region"
     aria-label="{{ 'sections.announcement_bar.label' | t }}"
     data-announcement
+    data-section-id="{{ section.id }}"
+    data-announcement-autoplay="{{ section.settings.autoplay }}"
+    data-announcement-interval="{{ section.settings.autoplay_interval }}"
   >
     <div class="announcement-bar__track" data-announcement-track>
       <ul
@@ -61,7 +64,7 @@
       </ul>
     </div>
 
-    {%- comment -%} 手动切换：仅多条时出现，不自动播放（见文件头注释） {%- endcomment -%}
+    {%- comment -%} 手动切换：仅多条时出现；自动循环由 JS 控制（见文件头注释） {%- endcomment -%}
     {%- if section.blocks.size > 1 -%}
       <div class="announcement-bar__controls">
         <button
@@ -252,6 +255,24 @@
       "id": "dismissible",
       "label": "t:labels.announcement_dismissible",
       "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:labels.announcement_autoplay",
+      "info": "t:info.announcement_autoplay",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "autoplay_interval",
+      "label": "t:labels.announcement_autoplay_interval",
+      "info": "t:info.announcement_autoplay_interval",
+      "min": 3,
+      "max": 15,
+      "step": 1,
+      "unit": "s",
+      "default": 5
     }
   ],
   "blocks": [
