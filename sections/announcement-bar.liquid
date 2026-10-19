@@ -7,9 +7,10 @@
     visitors forever even after the merchant changes the copy.
   - To avoid an empty bar flashing before the script has read storage, the bar renders
     visible and the script marks it hidden only when dismissal is actually recorded.
-  - Multiple messages scroll horizontally. Manual controls (prev/next) always work;
-    autoplay advances every 5s but pauses on hover/focus, stops after the visitor
-    takes over manually, and respects prefers-reduced-motion (WCAG 2.2.2 — see the JS).
+  - Multiple messages scroll horizontally. Manual controls (prev/next) always work.
+    Auto-rotate is a merchant setting (off by default, per Shopify's accessibility
+    guidance). When on, it pauses on hover/focus, stops after the visitor takes over
+    manually, and respects prefers-reduced-motion (WCAG 2.2.2 — see the JS).
   - The close button is rendered by Liquid (not built by JS), so it exists in the HTML.
     If the script never loads it would be a dead control, so keep the pairing honest:
     the script is the only thing that makes it work, and the section is still fully
@@ -260,14 +261,14 @@
       "type": "checkbox",
       "id": "autoplay",
       "label": "t:labels.announcement_autoplay",
-      "info": "t:info.announcement_autoplay",
+      "info": "t:labels.announcement_autoplay_info",
       "default": false
     },
     {
       "type": "range",
       "id": "autoplay_interval",
       "label": "t:labels.announcement_autoplay_interval",
-      "info": "t:info.announcement_autoplay_interval",
+      "info": "t:labels.announcement_autoplay_interval_info",
       "min": 3,
       "max": 15,
       "step": 1,
