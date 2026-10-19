@@ -91,40 +91,13 @@
             {% unless is_first %}aria-hidden="true"{% endunless %}
             data-hero-caption="{{ forloop.index0 }}"
           >
-            <div class="hero-slideshow__caption-row">
-              {%- if block.settings.heading != blank -%}
-                {%- if is_first -%}
-                  <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
-                {%- else -%}
-                  <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
-                {%- endif -%}
+            {%- if block.settings.heading != blank -%}
+              {%- if is_first -%}
+                <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
+              {%- else -%}
+                <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
               {%- endif -%}
-
-              {%- comment -%}
-                箭头随每份 caption 渲染（仅多张时）：视觉上只有激活份可见可点。
-                JS 用事件委托绑一次，避免多份 DOM 重复触发。
-              {%- endcomment -%}
-              {%- if section.blocks.size > 1 -%}
-                <div class="hero-slideshow__arrows">
-                  <button
-                    type="button"
-                    class="hero-slideshow__arrow"
-                    aria-label="{{ 'sections.hero_slideshow.previous' | t }}"
-                    data-hero-prev
-                  >
-                    {{ 'icon-chevron-down.svg' | inline_asset_content }}
-                  </button>
-                  <button
-                    type="button"
-                    class="hero-slideshow__arrow hero-slideshow__arrow--next"
-                    aria-label="{{ 'sections.hero_slideshow.next' | t }}"
-                    data-hero-next
-                  >
-                    {{ 'icon-chevron-down.svg' | inline_asset_content }}
-                  </button>
-                </div>
-              {%- endif -%}
-            </div>
+            {%- endif -%}
 
             {%- if block.settings.subheading != blank -%}
               <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
@@ -139,7 +112,8 @@
         {%- endfor -%}
 
         {%- comment -%}
-          圆点指示器（仅多张时）：放卡片背景内、caption 之后，圆点 + 装饰共享一份。
+          底部控件（仅多张时）：圆点（左）+ 上一张/下一张箭头（右），同一行、共享一份。
+          放在卡片底部，位置固定，不随标题文字高度变化而跳动。
         {%- endcomment -%}
         {%- if section.blocks.size > 1 -%}
           <div class="hero-slideshow__indicators">
@@ -153,6 +127,24 @@
                   data-hero-dot="{{ forloop.index0 }}"
                 ></button>
               {%- endfor -%}
+            </div>
+            <div class="hero-slideshow__arrows">
+              <button
+                type="button"
+                class="hero-slideshow__arrow"
+                aria-label="{{ 'sections.hero_slideshow.previous' | t }}"
+                data-hero-prev
+              >
+                {{ 'icon-chevron-down.svg' | inline_asset_content }}
+              </button>
+              <button
+                type="button"
+                class="hero-slideshow__arrow hero-slideshow__arrow--next"
+                aria-label="{{ 'sections.hero_slideshow.next' | t }}"
+                data-hero-next
+              >
+                {{ 'icon-chevron-down.svg' | inline_asset_content }}
+              </button>
             </div>
           </div>
         {%- endif -%}
@@ -309,8 +301,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     padding: 0;
     border: 0;
     border-radius: 50%;
@@ -323,8 +315,8 @@
     background-color: var(--color-brand-accent);
   }
   .hero-slideshow__arrow svg {
-    width: 0.875rem;
-    height: 0.875rem;
+    width: 0.75rem;
+    height: 0.75rem;
   }
   .hero-slideshow__arrow--next svg {
     transform: rotate(-90deg);
