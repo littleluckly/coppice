@@ -91,10 +91,6 @@
             {% unless is_first %}aria-hidden="true"{% endunless %}
             data-hero-caption="{{ forloop.index0 }}"
           >
-            {%- if block.settings.subheading != blank -%}
-              <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
-            {%- endif -%}
-
             <div class="hero-slideshow__caption-row">
               {%- if block.settings.heading != blank -%}
                 {%- if is_first -%}
@@ -129,6 +125,10 @@
                 </div>
               {%- endif -%}
             </div>
+
+            {%- if block.settings.subheading != blank -%}
+              <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
+            {%- endif -%}
 
             {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
               <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
@@ -265,8 +265,8 @@
     transform: translateX(-2.5rem);
   }
   .hero-slideshow__subheading {
-    /* 顶部小字（参考效果图「Popular Choice」）：灰绿弱化，从前景色派生 */
-    margin: 0 0 0.5rem;
+    /* 副标题（标题下方）：灰绿弱化，从前景色派生 */
+    margin: 0.5rem 0 0;
     font-size: 0.875rem;
     font-weight: 500;
     color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
@@ -345,7 +345,7 @@
     /* 与文字区分：顶部分隔线 + 上间距（已在卡片 padding 内） */
     margin-block-start: 1rem;
     padding-block-start: 0.75rem;
-    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    /* border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent); */
   }
   .hero-slideshow__dots {
     display: flex;
