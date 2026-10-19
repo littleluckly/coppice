@@ -7,9 +7,10 @@
     visitors forever even after the merchant changes the copy.
   - To avoid an empty bar flashing before the script has read storage, the bar renders
     visible and the script marks it hidden only when dismissal is actually recorded.
-  - No autoplay. Carousels that move on their own are an accessibility cost with no
-    benefit here, and SDD §7.2 forbids fabricated urgency. Multiple messages scroll
-    horizontally instead, with manual controls and arrow-key support.
+  - Multiple messages scroll horizontally. Manual controls (prev/next) always work.
+    Auto-rotate is a merchant setting (off by default, per Shopify's accessibility
+    guidance). When on, it pauses on hover/focus, stops after the visitor takes over
+    manually, and respects prefers-reduced-motion (WCAG 2.2.2 — see the JS).
   - The close button is rendered by Liquid (not built by JS), so it exists in the HTML.
     If the script never loads it would be a dead control, so keep the pairing honest:
     the script is the only thing that makes it work, and the section is still fully
@@ -28,10 +29,13 @@
 
 {%- if has_blocks -%}
   <aside
-    class="announcement-bar"
+    class="announcement-bar full-width"
     role="region"
     aria-label="{{ 'sections.announcement_bar.label' | t }}"
     data-announcement
+    data-section-id="{{ section.id }}"
+    data-announcement-autoplay="{{ section.settings.autoplay }}"
+    data-announcement-interval="{{ section.settings.autoplay_interval }}"
   >
     <div class="announcement-bar__track" data-announcement-track>
       <ul
@@ -61,7 +65,7 @@
       </ul>
     </div>
 
-    {%- comment -%} 手动切换：仅多条时出现，不自动播放（见文件头注释） {%- endcomment -%}
+    {%- comment -%} 手动切换：仅多条时出现；自动循环由 JS 控制（见文件头注释） {%- endcomment -%}
     {%- if section.blocks.size > 1 -%}
       <div class="announcement-bar__controls">
         <button
@@ -139,14 +143,15 @@
   }
 
   .announcement-bar__item {
+    /* 每条占满 track 一整行宽度，所有项并排留在 flex 流里，
+       切换靠 JS 移动整个 list 的 translateX，不能把非当前项
+       position:absolute 抽离 flex 流（否则 translateX 移不动）。 */
     flex: 0 0 100%;
     min-width: 0;
   }
 
-  /* 非当前项对读屏隐藏（多条时才有 aria-hidden，见 Liquid） */
+  /* 非当前项只对读屏/交互隐藏，视觉上仍留在流里由 transform 平移控制 */
   .announcement-bar__item[aria-hidden='true'] {
-    /* 视觉上移出可视区，但保留在 DOM 里以便切换 */
-    position: absolute;
     visibility: hidden;
   }
 
@@ -230,7 +235,7 @@
   }
 
   /* 已关闭：JS 写入该属性后整条移除 */
-  .announcement-bar[data-announcement--closed='true'] {
+  .announcement-bar[data-announcement-closed='true'] {
     display: none;
   }
 
@@ -252,6 +257,24 @@
       "id": "dismissible",
       "label": "t:labels.announcement_dismissible",
       "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:labels.announcement_autoplay",
+      "info": "t:labels.announcement_autoplay_info",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "autoplay_interval",
+      "label": "t:labels.announcement_autoplay_interval",
+      "info": "t:labels.announcement_autoplay_interval_info",
+      "min": 3,
+      "max": 15,
+      "step": 1,
+      "unit": "s",
+      "default": 5
     }
   ],
   "blocks": [
