@@ -322,6 +322,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    /* 与卡片等宽，圆点/装饰对齐卡片左右缘 */
+    width: min(26rem, 100%);
     margin-block-start: 0.75rem;
   }
   .hero-slideshow__dots {
@@ -335,8 +337,8 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    /* 未激活：灰绿（跟随品牌色相淡档） */
-    background-color: color-mix(in srgb, var(--color-brand) 35%, #8da599);
+    /* 未激活：弱化（从前景色派生淡档） */
+    background-color: color-mix(in srgb, var(--color-foreground) 35%, transparent);
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.2s ease;
   }
@@ -345,7 +347,7 @@
     transform: scale(1.25);
   }
   .hero-slideshow__cross {
-    color: color-mix(in srgb, var(--color-brand) 35%, #8da599);
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
     font-size: 1rem;
     font-weight: bold;
     line-height: 1;
