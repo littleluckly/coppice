@@ -219,6 +219,21 @@
     gap: 0.5rem;
     pointer-events: auto;
   }
+  .hero-slideshow__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    /* 压在照片上：白点半透明，激活态实心白（跟图不跟主题，配色纪律例外） */
+    background-color: rgb(255 255 255 / 45%);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+  .hero-slideshow__dot.is-active {
+    background-color: #ffffff;
+    transform: scale(1.15);
+  }
   .hero-slideshow__arrow {
     grid-column: 3;
     grid-row: 1;
@@ -249,10 +264,6 @@
   .hero-slideshow__arrow svg {
     width: 0.875rem;
     height: 0.875rem;
-  }
-  .hero-slideshow__arrow--next {
-    background-color: var(--color-brand-accent);
-    color: #ffffff;
   }
   .hero-slideshow__arrow--next svg {
     transform: rotate(-90deg);
