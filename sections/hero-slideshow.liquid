@@ -308,6 +308,12 @@
     outline: 2px solid #ffffff;
     outline-offset: 2px;
   }
+  /* 移动端：隐藏圆点+箭头（触摸横滑已覆盖），文字半透明卡片保留 */
+  @media screen and (max-width: 989px) {
+    .hero-slideshow__controls {
+      display: none;
+    }
+  }
 {% endstylesheet %}
 
 <script src="{{ 'hero-slideshow.js' | asset_url }}" defer></script>
