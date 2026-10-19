@@ -194,6 +194,86 @@
       text-decoration: none;
       border-radius: var(--style-border-radius-inputs);
     }
+
+  /* ---- PC 端切换控件（右下角：圆点 + 圆形箭头，参考效果图） ---- */
+  .hero-slideshow {
+    position: relative;
+  }
+  .hero-slideshow__controls {
+    position: absolute;
+    inset-inline: var(--page-margin);
+    inset-block-end: var(--page-margin);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    /* 与内容列右缘对齐：网格化留白，控件行贴右 */
+    padding-inline: var(--page-margin);
+    justify-content: flex-end;
+    pointer-events: none; /* 空白区不挡图上的交互，按钮单独恢复 */
+  }
+  .hero-slideshow__dots {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-inline-end: 0.75rem;
+    pointer-events: auto;
+  }
+  .hero-slideshow__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    /* 压在照片上：白点半透明，激活态实心白（跟图不跟主题，配色纪律例外） */
+    background-color: rgb(255 255 255 / 45%);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+  .hero-slideshow__dot.is-active {
+    background-color: #ffffff;
+    transform: scale(1.15);
+  }
+  .hero-slideshow__arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    /* 压图元素：白底 + 品牌绿箭头，次级；主推进键用品牌绿底白箭头 */
+    background-color: #ffffff;
+    color: var(--color-brand-accent);
+    box-shadow: 0 2px 10px rgb(0 0 0 / 18%);
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .hero-slideshow__arrow svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .hero-slideshow__arrow--next {
+    background-color: var(--color-brand-accent);
+    color: #ffffff;
+  }
+  .hero-slideshow__arrow--next svg {
+    transform: rotate(-90deg);
+  }
+  .hero-slideshow__arrow:not(.hero-slideshow__arrow--next) svg {
+    transform: rotate(90deg);
+  }
+  .hero-slideshow__arrow:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+  /* 移动端：隐藏按钮，保留触摸横滑；圆点也无（底部空间让给内容） */
+  @media screen and (max-width: 989px) {
+    .hero-slideshow__controls {
+      display: none;
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
