@@ -25,8 +25,6 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'coppice:announcement:closed';
-  const AUTOPLAY_INTERVAL = 5000; // 5s，间隔可调
   const MOTION_QUERY = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   function init(root) {
@@ -40,13 +38,21 @@
     const prev = root.querySelector('[data-announcement-prev]');
     const next = root.querySelector('[data-announcement-next]');
 
+    // 商家开关：自动循环（Liquid 渲染进 data 属性，JS 不硬编码开关）
+    const autoplay = root.dataset.announcementAutoplay === 'true';
+    const interval = Number(root.dataset.announcementInterval) || 5000;
+
+    // 关闭持久化 key 带 section.id：商家改文案/改 section 后 key 变，
+    // 关闭态自动重置，老访客能看到新公告（官方最佳实践，见文件头注释）。
+    const storageKey = `coppice:announcement:closed:${root.dataset.sectionId || 'default'}`;
+
     let index = 0;
     let timer = null;
 
     // ---- 关闭（读存储）----
     let dismissed = null;
     try {
-      dismissed = sessionStorage.getItem(STORAGE_KEY);
+      dismissed = sessionStorage.getItem(storageKey);
     } catch (error) {
       /* 存储不可用：按未关闭处理 */
     }
@@ -55,7 +61,7 @@
     // ---- 关闭（写存储）----
     dismissButton?.addEventListener('click', () => {
       try {
-        sessionStorage.setItem(STORAGE_KEY, '1');
+        sessionStorage.setItem(storageKey, '1');
       } catch (error) {
         /* 静默降级：本次会话仍然可关闭 */
       }
@@ -105,8 +111,9 @@
     // ---- 自动循环 ----
     function startAutoplay() {
       if (timer !== null) return;
+      if (!autoplay) return; // 商家关闭自动循环
       if (MOTION_QUERY.matches) return; // 减少动态偏好：不自动播
-      timer = window.setInterval(() => go(1), AUTOPLAY_INTERVAL);
+      timer = window.setInterval(() => go(1), interval);
     }
 
     function stopAutoplay() {
@@ -124,9 +131,8 @@
     root.addEventListener('focusin', pause);
     root.addEventListener('focusout', resume);
 
-    // 初始渲染 + 启动自动循环
+    // 初始渲染 + 启动自动循环（autoplay=false 或 reduced-motion 时自然不启动）
     render();
-    if (MOTION_QUERY.matches) return;
     startAutoplay();
   }
 
