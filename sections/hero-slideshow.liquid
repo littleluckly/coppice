@@ -152,11 +152,15 @@
 {%- endif -%}
 
 {% stylesheet %}
+  .hero-slideshow {
+    position: relative;
+  }
   .hero-slideshow__track {
     display: flex;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
+    scroll-behavior: smooth;
   }
   .hero-slideshow__track::-webkit-scrollbar {
     display: none;
@@ -166,8 +170,6 @@
       flex: 0 0 100%;
       scroll-snap-align: start;
       min-height: clamp(22rem, 56vw, 44rem);
-      display: flex;
-      align-items: flex-end;
     }
     .hero-slideshow__media,
     .hero-slideshow__media img {
@@ -179,21 +181,57 @@
     .hero-slideshow__media img {
       object-fit: cover;
     }
-    .hero-slideshow__content {
-      position: relative;
-      z-index: 1;
-      width: 100%;
-      padding-block-end: var(--page-margin);
-      display: grid;
-      grid-template-columns: var(--content-grid);
-    }
-    .hero-slideshow__body {
-      grid-column: 2;
-      max-width: 42rem;
-      color: #ffffff;
-      text-shadow: 0 1px 8px rgb(0 0 0 / 45%);
-    }
+
+  /* ---- 固定半透明卡片（左下角，文字 + 切换控件同卡） ---- */
+  .hero-slideshow__card {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-end: 0;
+    z-index: 2;
+    /* 与内容列同款三列网格：卡片落在内容列（column 2），宽屏不漂边 */
+    display: grid;
+    grid-template-columns: var(--content-grid);
+    width: 100%;
+    padding-block-end: var(--page-margin);
+    pointer-events: none; /* 卡片空白不挡图，文字链接/控件单独恢复 */
+  }
+  .hero-slideshow__card > * {
+    grid-column: 2;
+    pointer-events: auto;
+  }
+  .hero-slideshow__captions {
+    position: relative;
+    /* 半透明深色卡片底 + 毛玻璃，白字（压图配色例外） */
+    background-color: rgb(10 12 12 / 55%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    color: #ffffff;
+    overflow: hidden; /* 裁掉切换时移出卡片的 caption */
+  }
+  .hero-slideshow__caption {
+    /* 多份 caption 叠加在卡片同一格，切换靠 opacity/位移过渡 */
+    grid-area: 1 / 1;
+  }
+  .hero-slideshow__caption:not(.is-active) {
+    position: absolute;
+    inset-block-start: 1.25rem;
+    inset-inline-start: 1.5rem;
+    inset-inline-end: 1.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(0.5rem);
+    transition: opacity 0.4s ease, transform 0.4s ease, visibility 0s linear 0.4s;
+  }
+  .hero-slideshow__caption.is-active {
+    position: relative;
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
   .hero-slideshow__heading {
+    margin: 0;
     font-size: clamp(1.75rem, 4vw, 3rem);
     font-weight: 500;
   }
@@ -201,40 +239,30 @@
     margin-block-start: 0.5rem;
     font-size: 1.05rem;
   }
-    .hero-slideshow__cta {
-      display: inline-block;
-      margin-block-start: 1rem;
-      padding: 0.75rem 1.5rem;
-      min-height: 44px;
-      background-color: var(--color-brand-accent);
-      color: #ffffff;
-      text-decoration: none;
-      border-radius: var(--style-border-radius-inputs);
-    }
-
-  /* ---- PC 端切换控件（右下角：圆点 + 圆形箭头，参考效果图） ---- */
-  .hero-slideshow {
-    position: relative;
+  .hero-slideshow__cta {
+    display: inline-block;
+    margin-block-start: 1rem;
+    padding: 0.75rem 1.5rem;
+    min-height: 44px;
+    background-color: var(--color-brand-accent);
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: var(--style-border-radius-inputs);
   }
+
+  /* ---- 卡片底部：圆点 + 圆形箭头 ---- */
   .hero-slideshow__controls {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    /* 与内容同款三列网格：圆点贴内容列左端，箭头贴右侧留白列的右缘，
-       宽屏下不会漂到屏幕最边上（对齐内容列，参考效果图） */
-    display: grid;
-    grid-template-columns: var(--content-grid);
-    align-items: end;
-    padding-block-end: var(--page-margin);
-    pointer-events: none; /* 空白区不挡图上的交互，控件单独恢复 */
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-block-start: 0.75rem;
   }
   .hero-slideshow__dots {
-    grid-column: 2;
-    grid-row: 1;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    pointer-events: auto;
+    margin-inline-end: auto;
   }
   .hero-slideshow__dot {
     width: 0.5rem;
@@ -252,9 +280,6 @@
     transform: scale(1.15);
   }
   .hero-slideshow__arrow {
-    grid-column: 3;
-    grid-row: 1;
-    justify-self: end;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -268,15 +293,10 @@
     color: var(--color-brand-accent);
     box-shadow: 0 2px 10px rgb(0 0 0 / 18%);
     cursor: pointer;
-    pointer-events: auto;
   }
-  /* 两个箭头同落第 3 列：用负 margin 并排（next 在最右，prev 紧贴其左） */
   .hero-slideshow__arrow--next {
     background-color: var(--color-brand-accent);
     color: #ffffff;
-  }
-  .hero-slideshow__arrow:not(.hero-slideshow__arrow--next) {
-    margin-inline-end: calc(44px + 0.5rem);
   }
   .hero-slideshow__arrow svg {
     width: 0.875rem;
@@ -291,12 +311,6 @@
   .hero-slideshow__arrow:focus-visible {
     outline: 2px solid #ffffff;
     outline-offset: 2px;
-  }
-  /* 移动端：隐藏按钮，保留触摸横滑；圆点也无（底部空间让给内容） */
-  @media screen and (max-width: 989px) {
-    .hero-slideshow__controls {
-      display: none;
-    }
   }
 {% endstylesheet %}
 
