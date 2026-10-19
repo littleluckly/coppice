@@ -211,8 +211,8 @@
     overflow: hidden; /* 裁掉切换时移出卡片的 caption */
   }
   .hero-slideshow__caption {
-    /* 多份 caption 叠加在卡片同一格，切换靠 opacity/位移过渡 */
-    grid-area: 1 / 1;
+    /* 多份 caption 叠加在卡片同一位置：激活的 relative 撑高卡片，
+       其余 absolute 不占位；切换靠 opacity/位移过渡 */
   }
   .hero-slideshow__caption:not(.is-active) {
     position: absolute;
