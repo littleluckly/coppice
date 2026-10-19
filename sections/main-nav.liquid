@@ -449,12 +449,14 @@
   </div>
 
   {%- comment -%}
-    ══════════ 以下是 y7 实验时删掉的代码，原样保留、整段注释 ══════════
-    放开方式：把对应那一段最外层的 comment 开/闭两行删掉即可；
-    三段各自独立、各自标签平衡，可以单独放开、单独验证。
+    ═══════ 下面是 y7 实验时整段删掉的代码，用 HTML 注释包着保留 ═══════
+    放开某一段 = 删掉那一段的 HTML 注释开行（单独一行 <!--）与闭行（单独一行 -->），
+    三段彼此不嵌套、各段内标签自平衡，可以单独放开单独验证。
+    注意：HTML 注释里的 Liquid 仍会被服务端执行（只是输出不可见），无副作用；
+    调试结束后这三段应当删除，不要留在正式主题里。
   {%- endcomment -%}
-  {%- comment -%} 【A】移动块外壳 + 两枚按钮（原 458–478，末行是 697 的收尾 div） {%- endcomment -%}
-  {%- comment -%}
+  {%- comment -%} 【A】移动块外壳 + 两枚按钮（原文件 458–478，末行是 697 的收尾 div） {%- endcomment -%}
+  <!--
   <div class="main-nav__mobile">
     <button
       type="button"
@@ -477,9 +479,9 @@
       {{ 'icon-search.svg' | inline_asset_content }}
     </button>
   </div>
-  {%- endcomment -%}
-  {%- comment -%} 【B】移动抽屉 nav-drawer（原 480–696） {%- endcomment -%}
-  {%- comment -%}
+  -->
+  {%- comment -%} 【B】移动抽屉 nav-drawer（原文件 480–696） {%- endcomment -%}
+  <!--
     <nav-drawer>
       <dialog class="nav-drawer" data-nav-drawer aria-labelledby="nav-drawer-title">
         {%- comment -%} 内容存 <template>，首次打开才实例化（AGENTS §6） {%- endcomment -%}
@@ -697,9 +699,9 @@
         </template>
       </dialog>
     </nav-drawer>
-  {%- endcomment -%}
-  {%- comment -%} 【C】搜索抽屉 search-drawer（原 711–738） {%- endcomment -%}
-  {%- comment -%}
+  -->
+  {%- comment -%} 【C】搜索抽屉 search-drawer（原文件 711–738） {%- endcomment -%}
+  <!--
   <search-drawer>
     <dialog class="search-drawer" data-search-drawer aria-labelledby="search-drawer-title">
       <template data-search-drawer-template>
@@ -728,7 +730,7 @@
       </template>
     </dialog>
   </search-drawer>
-  {%- endcomment -%}
+  -->
 </nav>
 
 <script src="{{ 'nav-pill.js' | asset_url }}" defer></script>
