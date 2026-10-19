@@ -184,21 +184,19 @@
       object-fit: cover;
     }
 
-  /* ---- 固定半透明卡片（左下角，文字 + 切换控件同卡） ---- */
+  /* ---- 固定半透明卡片（右侧垂直居中，文字 + 切换控件同卡） ---- */
   .hero-slideshow__card {
     position: absolute;
-    inset-inline-start: 0;
-    inset-block-end: 0;
+    inset: 0;
     z-index: 2;
-    /* 与内容列同款三列网格：卡片落在内容列（column 2），宽屏不漂边 */
-    display: grid;
-    grid-template-columns: var(--content-grid);
-    width: 100%;
-    padding-block-end: var(--page-margin);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-inline-end: var(--page-margin);
+    padding-block: var(--page-margin);
     pointer-events: none; /* 卡片空白不挡图，文字链接/控件单独恢复 */
   }
   .hero-slideshow__card > * {
-    grid-column: 2;
     pointer-events: auto;
   }
   .hero-slideshow__captions {
