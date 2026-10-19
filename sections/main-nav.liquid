@@ -62,7 +62,14 @@
 {% endcomment -%}
 
 <nav class="main-nav full-width" aria-label="{{ 'navigation.menu' | t }}">
-  <div>换</div>
+  {%- comment -%}
+    BUG-044 防御修法：编辑器对大体积纯 ASCII 的 section 输出会静默丢弃整组。
+    判据落在 <nav> 首子节点的文本字节层（含 ≥1 个非 ASCII 字节才走正常路径，
+    深处或 HTML 实体均无效——2026-10-19 刘工实测）。此 span 是唯一的非 ASCII
+    落点：字面量「→」(U+2192)，视觉与无障碍树均隐藏，不产生任何可见痕迹。
+    平台 bug 修复后此元素应删除（见 dev-docs/bugs.md BUG-044）。
+  {%- endcomment -%}
+  <span class="main-nav__bug044-guard" aria-hidden="true">→</span>
   <div class="main-nav__desktop" data-nav-pill-anchor>
     <div class="main-nav__inner">
       {%- comment -%}
