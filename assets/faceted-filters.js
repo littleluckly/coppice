@@ -465,7 +465,9 @@ class CollectionFacets extends HTMLElement {
 
   /**
    * 排序卡落点：同一 DOM 节点在两个容器间搬移，不做副本（状态不分裂）。
-   * 移动端 → 工具条计数之前；桌面 → form 内首位（左列第一张卡）。
+   * 移动端 → 工具条计数之前；桌面 → 筛选卡顶部的 .facets__sort-slot
+   * （2026-10-20 刘工拍板：排序并进 Filters 卡顶部，参考稿同形态；
+   *  此前是 form.prepend，排序卡单独占一张卡）。
    * 卡片靠 form 属性与表单关联，所以脱离 form 子树后提交照常。
    */
   _placeSort() {
@@ -480,8 +482,8 @@ class CollectionFacets extends HTMLElement {
       }
       return;
     }
-    const form = this.querySelector('[data-facets-form]');
-    if (form && card.parentElement !== form) form.prepend(card);
+    const slot = this.querySelector('[data-facets-sort-slot]');
+    if (slot && card.parentElement !== slot) slot.appendChild(card);
   }
 
   /**
@@ -649,8 +651,11 @@ class CollectionFacets extends HTMLElement {
        避免"勾选状态与结果不一致"；Apply 路径的 FormData 已在关窗前取证 */
     const form = this._dialog.querySelector('[data-facets-form]');
     form?.reset();
-    const layout = this.querySelector('[data-facets-layout]');
-    if (form && layout) layout.prepend(form);
+    /* 归位到左列的固定槽（.facets__form-slot），不是 layout.prepend：
+       2026-10-20 两栏改版后 layout 是整页两栏容器，prepend 会把表单顶到
+       标题卡之前、还会让它变成 grid 的第一列而塌掉布局。 */
+    const slot = this.querySelector('[data-facets-form-slot]');
+    if (form && slot) slot.append(form);
     /* 归位后按当前断点重排排序卡：跨越断点时（resize / 旋转）form 刚回到布局，
        _onMediaChange 那次 _placeSort 还查不到 form，由这里补上 */
     this._placeSort();
