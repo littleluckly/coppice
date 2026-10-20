@@ -110,40 +110,44 @@
             data-facets-form
           >
             {%- comment -%}
-              左列两张卡（2026-10-16 刘工定）：排序卡在上，筛选卡在下。
-              桌面：排序卡留在 form 内。移动端：faceted-filters.js 把这一张卡
+              排序卡（2026-10-20 刘工定：排序并进 Filters 卡顶部）。
+              桌面：排序卡嵌在 Filters 卡（.facets__aside）顶部，与筛选组共享
+              同一张卡面。移动端：faceted-filters.js 的 _placeSort 把这一张卡
               移进工具条（pages-ui §4 移动端工具条 = [筛选☰] [排序▾]）——同一
               DOM 节点，不做副本。故 select 恒带 form 属性：离开 form 子树后仍是
               表单成员，FormData / requestSubmit / 无 JS 原生提交都照常带上 sort_by。
+              排序卡经 sort_card 参数传入 faceted-filters，落在 aside 顶部。
             {%- endcomment -%}
-            {%- if section.settings.show_sort -%}
-              <div class="facets__sort-card">
-                <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
-                  {{ 'collections.sort.label' | t }}
-                </label>
-                <facet-sort class="facets__sort-select">
-                  <select
-                    id="SortBy-{{ section.id }}"
-                    name="sort_by"
-                    data-facets-sort
-                    form="FacetsForm-{{ section.id }}"
-                  >
-                    {%- for option in collection.sort_options -%}
-                      <option
-                        value="{{ option.value }}"
-                        {% if option.value == collection.sort_by %}
-                          selected
-                        {% endif %}
-                      >
-                        {{ option.name | escape }}
-                      </option>
-                    {%- endfor -%}
-                  </select>
-                </facet-sort>
-              </div>
-            {%- endif -%}
+            {%- capture sort_card -%}
+              {%- if section.settings.show_sort -%}
+                <div class="facets__sort-card">
+                  <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
+                    {{ 'collections.sort.label' | t }}
+                  </label>
+                  <facet-sort class="facets__sort-select">
+                    <select
+                      id="SortBy-{{ section.id }}"
+                      name="sort_by"
+                      data-facets-sort
+                      form="FacetsForm-{{ section.id }}"
+                    >
+                      {%- for option in collection.sort_options -%}
+                        <option
+                          value="{{ option.value }}"
+                          {% if option.value == collection.sort_by %}
+                            selected
+                          {% endif %}
+                        >
+                          {{ option.name | escape }}
+                        </option>
+                      {%- endfor -%}
+                    </select>
+                  </facet-sort>
+                </div>
+              {%- endif -%}
+            {%- endcapture -%}
 
-            {% render 'faceted-filters', filters: collection.filters %}
+            {% render 'faceted-filters', filters: collection.filters, sort_card: sort_card %}
           </form>
         {%- endif -%}
 
