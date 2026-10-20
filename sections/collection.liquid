@@ -1284,7 +1284,61 @@
   .collection__facets[data-facets-ready] .facets__apply {
     display: none;
   }
+  /* ===================================================================
+     移动端（<990px）单列退化：标题卡全宽不侵入 → 横幅纵向渐隐 → 工具条 → 网格。
+     横幅的渐隐方向从「向左」改成「向下」：下方就是产品区，两者同底色才能接住。
+     参考稿同规则（650px → 500px，产品岛 90% 居中）。
+     =================================================================== */
   @media (max-width: 989.98px) {
+    .collection {
+      display: block;
+    }
+    .collection__layout {
+      grid-column: auto;
+    }
+    .collection__left {
+      padding: 20px;
+    }
+    .collection__intro {
+      width: 100%;
+      padding-block-start: 0;
+      margin-block-end: 28px;
+    }
+    .collection__title {
+      font-size: clamp(1.75rem, 8vw, 2.25rem);
+      letter-spacing: -0.01em;
+    }
+    .collection__banner {
+      height: 500px;
+    }
+    .collection__banner-bg {
+      object-position: center;
+      -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+      mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+    }
+    .collection__banner-mask {
+      width: 100%;
+      border-radius: 0;
+      background: linear-gradient(to bottom, var(--collection-surface) 0%, transparent 80%);
+    }
+    .collection__banner-island {
+      width: 90%;
+      left: 50%;
+    }
+    /* 横幅小卡下移贴边：390px 视口下 top:45% + right:5% 会顶到岛的投影上 */
+    .collection__banner-badge {
+      top: auto;
+      bottom: 48px;
+      right: 12px;
+      padding: 14px 18px;
+      border-radius: 14px;
+    }
+    .collection__banner-badge-title {
+      font-size: 0.95rem;
+    }
+    .collection__content {
+      padding: 20px;
+    }
     .collection__facets[data-facets-ready] .facets__open {
       display: inline-flex;
     }
@@ -1327,14 +1381,10 @@
       min-height: 40px;
       max-width: 40vw;
     }
-    /* 抽屉 / 无 JS 流内（排序卡还在 form 里）：与筛选块之间用分隔线，不做卡面 */
+    /* 抽屉 / 无 JS 流内：排序卡在筛选卡顶部（.facets__sort-slot 已给分隔线），
+       这里只把 form 退回 block，不再重复画一条线。 */
     .facets__form {
       display: block;
-    }
-    .facets__form .facets__sort-card {
-      padding-block-end: 0.9rem;
-      margin-block-end: 0.9rem;
-      border-block-end: 1px solid rgb(0 0 0 / 10%);
     }
   }
 
