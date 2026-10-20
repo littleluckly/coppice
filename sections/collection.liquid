@@ -391,92 +391,176 @@
 
 {% stylesheet %}
   /* 包裹层退回 block：section 顶部的 script/link 标签不能成为 .shopify-section
-     grid 的 item（否则会在横幅上方挤出空行，破坏"沉浸贴页头"）；通栏由根 div
-     的 full-width + 内部 grid 自行管理。 */
+     grid 的 item（否则会在内容上方挤出空行）；通栏由根 div 的 full-width +
+     内部 grid 自行管理。 */
   .shopify-section.collection-section {
     display: block;
   }
+
+  /* ===================================================================
+     集合页骨架（2026-10-20 刘工拍板，参考稿「首页布局-左侧集合入侵 banner」）
+     左列 320px（标题卡 + 筛选卡）｜右列（横幅 + 产品区）自适应铺到右缘。
+     首列留页面边距，与主题其余 section 的内容起点对齐；整块 1920px 居中。
+
+     ⚠️ 沉浸页头已弃用（同日拍板）：左列是浅底黑字、透明页头叠上去必打架，
+     横幅不再钻到页头背后，导航行全程实底（critical.css 的沉浸组已删除）。
+     =================================================================== */
   .collection {
+    /* 内容区底色：横幅遮罩、mask 透明处、产品区共用——必须从令牌派生，
+       Noir 深色预设下自动翻转（禁止硬编码 #F7F7F5，配色纪律） */
+    --collection-surface: color-mix(in srgb, var(--color-foreground) 3%, var(--color-background));
+    --collection-left: 320px;
+    --banner-h: 650px;
+
     display: grid;
-    grid-template-columns: var(--content-grid);
+    grid-template-columns: var(--page-margin) var(--collection-left) minmax(0, 1fr);
     width: 100%;
+    max-width: 1920px;
+    margin-inline: auto;
+    align-items: start;
+    background-color: var(--collection-surface);
   }
-  .collection > * {
-    grid-column: 2;
-  }
-  .collection > .collection__banner {
-    grid-column: 1 / -1;
+  .collection__layout {
+    grid-column: 2 / -1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    align-items: start;
   }
 
-  /* 横幅沉浸通栏（贴页头）：面包屑/标题/描述白字直接叠图，
-     左向暗化渐变 + text-shadow 保证可读性（WCAG 对比度）。 */
-  .collection {
-    --banner-h: clamp(200px, 30vh, 340px);
+  /* ---- 左列：z-index 压在横幅上（侵入式构图的命门） ---- */
+  .collection__left {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 40px 20px 40px 24px;
   }
+  /* 标题卡越界：560px > 320px 左列，向右侵入横幅 240px（参考稿同值） */
+  .collection__intro {
+    width: 560px;
+    max-width: 100%;
+    padding-block-start: 10px;
+    margin-block-end: 50px;
+  }
+  /* 亮点行（blocks：图标 + 文案，参考稿「Quieter Operation」那一条） */
+  .collection__features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .collection__feature {
+    font-size: 0.82rem;
+    line-height: 1.3;
+    color: color-mix(in srgb, var(--color-foreground) 85%, transparent);
+  }
+  .collection__feature-icon {
+    display: block;
+    margin-block-end: 5px;
+    font-size: 1.25rem;
+    color: var(--color-brand);
+  }
+  .collection__feature-text {
+    display: block;
+    max-width: 9ch;
+  }
+  /* 无横幅：标题卡不再越界（没有横幅可压，越界会盖到产品网格上） */
+  .collection--no-banner .collection__intro {
+    width: 100%;
+    margin-block-end: 2rem;
+  }
+
+  /* ---- 右列 ---- */
+  .collection__right {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* ===================================================================
+     横幅四层（参数 1:1 对齐参考稿，勿改层级与取值——2026-10-20 第三轮）
+     ① 底图（mask 向左渐显，透明处透出 --collection-surface）
+     ② 异形遮罩（页面色 + 圆弧边界；只压底图，不碰产品岛——「光晕只能垫底」
+        那条纪律针对的是产品图，这里不适用）
+     ③ 产品悬浮岛（alpha 抠图，drop-shadow 是配色纪律的合法例外：永远黑）
+     ④ 毛玻璃小卡（背景色 85% 透明，backdrop-filter 毛玻璃）
+     =================================================================== */
   .collection__banner {
     position: relative;
-    grid-column: 1 / -1;
+    width: 100%;
     height: var(--banner-h);
-    display: flex;
-    align-items: flex-end;
     overflow: hidden;
+    flex-shrink: 0;
+    background-color: var(--collection-surface);
   }
-  .collection__banner > img {
+  .collection__banner-bg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-  }
-  .collection__banner::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to right, rgb(0 0 0 / 40%), rgb(0 0 0 / 14%) 55%, rgb(0 0 0 / 0%) 85%);
-  }
-  .collection__intro {
-    position: relative;
+    object-position: center right;
     z-index: 1;
-    width: 100%;
-    /* 与下方主体同一条内容列：intro 自己跑 content-grid，文字落第 2 列 */
-    display: grid;
-    grid-template-columns: var(--content-grid);
-    padding-block: 1.5rem;
-    color: #ffffff;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 15%, #000 40%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 15%, #000 40%, #000 100%);
   }
-  .collection__intro > * {
-    grid-column: 2;
+  .collection__banner-mask {
+    position: absolute;
+    top: -10%;
+    left: -5%;
+    width: 55%;
+    height: 120%;
+    background: linear-gradient(
+      to right,
+      var(--collection-surface) 0%,
+      color-mix(in srgb, var(--collection-surface) 70%, transparent) 40%,
+      transparent 80%
+    );
+    border-radius: 0 60% 50% 0 / 0 70% 50% 0;
+    z-index: 2;
+    pointer-events: none;
   }
-  .collection__banner .collection__breadcrumb-list,
-  .collection__banner .collection__breadcrumb-item a {
-    color: rgb(255 255 255 / 82%);
+  .collection__banner-island {
+    position: absolute;
+    top: 50%;
+    left: 60%;
+    transform: translate(-50%, -45%);
+    width: 75%;
+    max-width: 900px;
+    z-index: 3;
+    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
   }
-  .collection__banner .collection__breadcrumb-item a:hover {
-    color: #ffffff;
+  .collection__banner-badge {
+    position: absolute;
+    top: 45%;
+    right: 5%;
+    z-index: 4;
+    padding: 20px 30px;
+    border-radius: 20px;
+    background-color: color-mix(in srgb, var(--color-background) 85%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 8%);
   }
-  .collection__banner .collection__title,
-  .collection__banner .collection__description {
-    color: #ffffff;
-    text-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+  .collection__banner-badge-eyebrow {
+    margin-block-end: 5px;
+    font-size: 0.78rem;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
-  .collection__banner .collection__title {
-    margin-block-start: 0.35rem;
+  .collection__banner-badge-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.25;
   }
-  /* 无横幅：介绍区黑字常规排版（同样走内容列） */
-  .collection--no-banner .collection__intro--plain {
-    color: var(--color-foreground);
-    padding-block: 2rem 0;
-  }
-  .collection--no-banner .collection__intro--plain .collection__breadcrumb-list {
-    color: rgb(0 0 0 / 55%);
-  }
-  @media (max-width: 989.98px) {
-    .collection__banner {
-      height: clamp(170px, 26vh, 260px);
-    }
-    .collection__title {
-      font-size: clamp(1.5rem, 6vw, 2rem);
-    }
+
+  /* 产品区：与横幅同底色，padding 参考稿 40px */
+  .collection__content {
+    padding: 40px;
+    min-width: 0;
   }
 
   /* 面包屑 */
