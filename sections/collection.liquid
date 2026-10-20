@@ -412,8 +412,11 @@
     --collection-left: 320px;
     --banner-h: 650px;
 
+    /* 首列 = 页面边距（与其余 section 的内容起点对齐），第二列承载整个两栏。
+       列宽只在 .collection__layout 里定义一次（--collection-left），避免
+       「外层轨道 + 内层列」两处 320px 各写各的。 */
     display: grid;
-    grid-template-columns: var(--page-margin) var(--collection-left) minmax(0, 1fr);
+    grid-template-columns: var(--page-margin) minmax(0, 1fr);
     width: 100%;
     max-width: 1920px;
     margin-inline: auto;
@@ -421,11 +424,11 @@
     background-color: var(--collection-surface);
   }
   .collection__layout {
-    grid-column: 2 / -1;
+    grid-column: 2;
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1.5rem;
     align-items: start;
+    min-width: 0;
   }
 
   /* ---- 左列：z-index 压在横幅上（侵入式构图的命门） ---- */
@@ -1244,10 +1247,12 @@
      data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
   @media (min-width: 990px) {
     .collection__layout {
-      /* 左列宽度与外层 .collection 的左栏轨道同值（320px，参考稿）；
-         右列 1fr 铺到右缘。卡面内边距占用 2.5rem，min-width 收缩链已放开。 */
-      grid-template-columns: 320px 1fr;
-      gap: 2rem;
+      /* 左列 320px（参考稿），右列 1fr 铺到右缘。
+         列间距 0：横幅与左列的实际间距由左列的 padding-inline-end（20px）
+         提供——参考稿同值，多给 gap 会把横幅推离左列。
+         卡面内边距占用 2.5rem，min-width 收缩链已放开（见 .facets__form）。 */
+      grid-template-columns: var(--collection-left) minmax(0, 1fr);
+      gap: 0;
     }
     /* 筛选卡（含顶部排序组）：白卡浮在浅灰内容底上（参考稿 filters-card）。
        排序卡已并进卡内，不再单独套卡面；工具条里那份（无筛选集合）是紧凑
