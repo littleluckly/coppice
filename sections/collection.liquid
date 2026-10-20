@@ -224,7 +224,11 @@
                   alt: island_alt
               }}
             {%- endif -%}
-            {%- if section.settings.banner_badge_title != blank -%}
+            {%- comment -%}
+              ④ 毛玻璃小卡：两个文本设置 + 一个总开关（2026-10-20 刘工要求可关）。
+              开关关掉则不渲染；开关开着但标题为空时同样不渲染（避免只留一个 eyebrow 空卡）。
+            {%- endcomment -%}
+            {%- if section.settings.show_banner_badge and section.settings.banner_badge_title != blank -%}
               <div class="collection__banner-badge">
                 {%- if section.settings.banner_badge_eyebrow != blank -%}
                   <p class="collection__banner-badge-eyebrow">{{ section.settings.banner_badge_eyebrow | escape }}</p>
@@ -612,6 +616,11 @@
   .collection__breadcrumb-list {
     display: flex;
     flex-wrap: wrap;
+    /* ⚠️ 必须 center（2026-10-20 修「面包屑错层」）：行内链接有 44px 触控高度
+       （min-height，项目统一约定），纯文本的当前项只有 ~16px 行高；stretch 下
+       li 被拉到同高、纯文本项贴顶 → 实测两项文字中心差 14px。居中后文字对齐，
+       44px 触控区上下溢出但不影响视觉。 */
+    align-items: center;
     gap: 0.35rem;
     list-style: none;
     padding: 0;
@@ -1475,6 +1484,13 @@
       "id": "banner_product_image",
       "label": "t:sections.collection.labels.banner_product_image",
       "info": "t:sections.collection.labels.banner_product_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_banner_badge",
+      "label": "t:sections.collection.labels.show_banner_badge",
+      "info": "t:sections.collection.labels.show_banner_badge_info",
+      "default": true
     },
     {
       "type": "text",
