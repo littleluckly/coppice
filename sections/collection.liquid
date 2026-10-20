@@ -181,7 +181,21 @@
                不碰产品岛）→ ③ 产品悬浮岛（alpha 抠图，仅 banner_product_image
                有值时渲染）→ ④ 毛玻璃小卡（两个文本设置，标题空则整卡不渲染）。
           {%- endcomment -%}
-          <div class="collection__banner">
+          {%- comment -%}
+            根节点是 tilt-element（assets/tilt-element.js）：整块横幅 = 触发区
+            （鼠标不必压在岛上也跟随），产品岛 = 倾斜目标。幅度比商品卡收敛
+            （10°→6°、scale 1.08→1.02、perspective 700→1200）——岛宽 825px，
+            商品卡那套参数在大元素上会畸变夸张。无 JS / 触屏 / reduced-motion
+            下脚本根本不挂载，岛保持静态居中。
+          {%- endcomment -%}
+          <tilt-element
+            class="collection__banner"
+            data-tilt-target=".collection__banner-island"
+            data-tilt-rotate="6"
+            data-tilt-shift="10"
+            data-tilt-scale="1.02"
+            data-tilt-perspective="1200"
+          >
             {{
               banner_image
               | image_url: width: 2400
@@ -218,7 +232,7 @@
                 <p class="collection__banner-badge-title">{{ section.settings.banner_badge_title | escape }}</p>
               </div>
             {%- endif -%}
-          </div>
+          </tilt-element>
         {%- endif -%}
 
         <div class="collection__content">
