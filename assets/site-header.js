@@ -9,7 +9,9 @@
  * 1. measure：量导航行高 → CSS 变量 --site-nav-h + 内联 margin 兜底
  *    （critical.css 被浏览器缓存旧版时，内联样式照样让横幅上移）。
  *    仅桌面（≥990px）：移动端导航不吸顶、也不透明，不需要也不该上移。
- * 2. update：横幅底边滚过导航行底边 → .site-header--solid 恢复不透明。
+ * 2. update：滚过页头高度（公告条 + 导航行）→ .site-header--solid 上实底。
+ *    透明底只在横幅还垫在导航行背后时成立；一旦滚过页头，导航行下面就是
+ *    白底内容，再保持透明文字就看不见了（2026-10-20 刘工）。
  *    初始 scrollY=0 → 不加 solid，与 CSS 默认态同向，无闪烁翻转。
  *
  * 降级：
@@ -38,27 +40,48 @@
      移动端导航既不吸顶也不透明，把横幅塞到它背后只会被它盖住。 */
   const DESKTOP = window.matchMedia('(min-width: 990px)');
   const NAV_ROOT = '.main-nav';
+  const HEADER_ROOTS = '.announcement-bar, .utility-bar, .main-nav';
 
-  /** 导航行高（只算导航，不含公告条）。用最近一级 .shopify-section 包裹层测高——
-      包裹层与 section 根节点的可见高度一致，隐藏状态下两者都是 0。 */
-  const navHeight = () => {
-    const nav = document.querySelector(NAV_ROOT);
-    const box = nav ? nav.closest('.shopify-section') || nav : null;
+  /** 单个页头根节点的高度（取最近一级 .shopify-section 包裹层——
+      包裹层与 section 根节点可见高度一致，隐藏状态下两者 offsetParent 都是 null）。 */
+  const rowHeight = (selector) => {
+    const el = document.querySelector(selector);
+    const box = el ? el.closest('.shopify-section') || el : null;
     if (!box || box.offsetParent === null) return 0;
     return box.getBoundingClientRect().height;
   };
 
+  /** 导航行高（只算导航，不含公告条）——沉浸偏移量用 */
+  const navHeight = () => rowHeight(NAV_ROOT);
+
+  /** 页头总高（公告条 + 导航行，utility 在沉浸态隐藏会自动跳过）——solid 阈值用 */
+  const headerHeight = () => {
+    let height = 0;
+    for (const el of document.querySelectorAll(HEADER_ROOTS)) {
+      const box = el.closest('.shopify-section') || el;
+      if (box.offsetParent !== null) height += box.getBoundingClientRect().height;
+    }
+    return height;
+  };
+
+  /* 页头总高缓存：update() 每次滚动都要用，measure 时刷新一次 */
+  let headerH = 0;
+
   const measure = () => {
     const height = navHeight();
+    headerH = headerHeight();
     document.documentElement.style.setProperty('--site-nav-h', `${height}px`);
     /* CSS 缓存兜底：桌面端内联负上移；非桌面清掉内联值，交回正常文档流 */
     const main = document.querySelector('.main-content');
     if (main) main.style.marginTop = DESKTOP.matches ? `${-height}px` : '';
   };
 
-  /** solid 判定：横幅底边滚过导航行底边即恢复不透明。
-      阈值用文档绝对坐标（rect.bottom + scrollY）算——布局/断点变化后仍自洽，
-      且把"公告条已滚走的那段"算进去（旧公式「横幅高 − 页头高」会漏掉它）。 */
+  /** solid 判定（2026-10-20 刘工）：滚过页头高度就上实底——透明底一旦离开横幅、
+      压到白底内容上，导航文字就看不见了。因此阈值取：
+        ① 页头总高（公告条 + 导航行）——主判据；
+        ② 横幅底边滚过导航行底边——保底，横幅若比页头还矮也不会出现
+           "透明底压在白底内容上"的空档。
+      两者取小：先到先实底。 */
   const update = () => {
     const banner = document.querySelector('.collection__banner');
     if (!banner) {
@@ -66,7 +89,8 @@
       return;
     }
     const bannerBottom = banner.getBoundingClientRect().bottom + window.scrollY;
-    const threshold = Math.max(0, bannerBottom - navHeight());
+    const bannerLeaves = Math.max(0, bannerBottom - navHeight());
+    const threshold = Math.max(0, Math.min(headerH, bannerLeaves));
     document.body.classList.toggle('site-header--solid', window.scrollY >= threshold);
   };
 
