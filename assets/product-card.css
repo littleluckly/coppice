@@ -214,7 +214,8 @@
 }
 
 /* ===== 3D hover（2026-10-17，参考 dev-docs/local-assets/product-3d.html）=====
-   几何（倾斜/位移）由 assets/product-card-3d.js 驱动；这里只管静态态与 hover 反馈。
+   几何（倾斜/位移）由 assets/tilt-element.js 驱动（2026-10-20 泛化，商品卡与
+   集合页横幅岛共用）；这里只管静态态与 hover 反馈。
    配色全部走主题令牌（不硬编码色值），换 preset 自动跟随。
    与参考 demo 的三处有意差异：
    1. demo 的图片是 contain 浮在底色上，落地椭圆阴影看得见；我们图片 cover 满幅，
