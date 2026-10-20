@@ -465,8 +465,7 @@ class CollectionFacets extends HTMLElement {
 
   /**
    * 排序卡落点：同一 DOM 节点在两个容器间搬移，不做副本（状态不分裂）。
-   * 移动端 → 工具条计数之前；桌面 → Filters 卡（.facets__aside）顶部的
-   *  .facets__sort-slot（2026-10-20 刘工：排序并进 Filters 卡顶部）。
+   * 移动端 → 工具条计数之前；桌面 → form 内首位（左列第一张卡）。
    * 卡片靠 form 属性与表单关联，所以脱离 form 子树后提交照常。
    */
   _placeSort() {
@@ -481,8 +480,8 @@ class CollectionFacets extends HTMLElement {
       }
       return;
     }
-    const slot = this.querySelector('.facets__sort-slot');
-    if (slot && card.parentElement !== slot) slot.appendChild(card);
+    const form = this.querySelector('[data-facets-form]');
+    if (form && card.parentElement !== form) form.prepend(card);
   }
 
   /**

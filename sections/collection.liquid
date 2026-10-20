@@ -42,9 +42,7 @@
     endif
   endfor
   assign has_banner = false
-  assign banner_background_image = section.settings.banner_background_image | default: collection.image
-  assign banner_product_image = section.settings.banner_product_image
-  if banner_background_image and section.settings.show_banner
+  if collection.image and section.settings.show_banner
     assign has_banner = true
   endif
 -%}
@@ -80,43 +78,21 @@
     </header>
   {%- endcapture -%}
 
-  {%- comment -%}
-    两栏侵入式骨架（2026-10-20 刘工，参考 首页布局-左侧集合入侵 banner-1.html）：
-    .collection__intro 文字卡落左栏（320px 轨道），越界 560px + z-index 压右侧 banner；
-    .collection__banner 落右栏顶部、固定高；.collection__sheet 横跨两栏，内部
-    layout 保持 form|content 两栏，form 的 320px 列与左栏精确对齐（Filters 卡
-    视觉上在文字卡正下方）。无 banner 时退化为单栏常规排版。
-  {%- endcomment -%}
-
   {%- if has_banner -%}
-    <div class="collection__intro collection__intro--invade">{{ intro_content }}</div>
-
     <div class="collection__banner">
       {{
-        banner_background_image
+        collection.image
         | image_url: width: 2400
         | image_tag:
           widths: '750, 1100, 1500, 2000, 2400',
-          sizes: '(min-width: 990px) 60vw, 100vw',
-          width: banner_background_image.width,
-          height: banner_background_image.height,
+          sizes: '100vw',
+          width: collection.image.width,
+          height: collection.image.height,
           loading: 'eager',
           fetchpriority: 'high',
-          alt: banner_background_image.alt
+          alt: collection.image.alt
       }}
-      {%- if banner_product_image -%}
-        {{
-          banner_product_image
-          | image_url: width: 1600
-          | image_tag:
-            widths: '600, 900, 1200, 1600',
-            sizes: '(min-width: 990px) 48vw, 90vw',
-            width: banner_product_image.width,
-            height: banner_product_image.height,
-            loading: 'eager',
-            alt: banner_product_image.alt
-        }}
-      {%- endif -%}
+      <div class="collection__intro">{{ intro_content }}</div>
     </div>
   {%- else -%}
     <div class="collection__intro collection__intro--plain">{{ intro_content }}</div>
@@ -134,44 +110,40 @@
             data-facets-form
           >
             {%- comment -%}
-              排序卡（2026-10-20 刘工定：排序并进 Filters 卡顶部）。
-              桌面：排序卡嵌在 Filters 卡（.facets__aside）顶部，与筛选组共享
-              同一张卡面。移动端：faceted-filters.js 的 _placeSort 把这一张卡
+              左列两张卡（2026-10-16 刘工定）：排序卡在上，筛选卡在下。
+              桌面：排序卡留在 form 内。移动端：faceted-filters.js 把这一张卡
               移进工具条（pages-ui §4 移动端工具条 = [筛选☰] [排序▾]）——同一
               DOM 节点，不做副本。故 select 恒带 form 属性：离开 form 子树后仍是
               表单成员，FormData / requestSubmit / 无 JS 原生提交都照常带上 sort_by。
-              排序卡经 sort_card 参数传入 faceted-filters，落在 aside 顶部。
             {%- endcomment -%}
-            {%- capture sort_card -%}
-              {%- if section.settings.show_sort -%}
-                <div class="facets__sort-card">
-                  <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
-                    {{ 'collections.sort.label' | t }}
-                  </label>
-                  <facet-sort class="facets__sort-select">
-                    <select
-                      id="SortBy-{{ section.id }}"
-                      name="sort_by"
-                      data-facets-sort
-                      form="FacetsForm-{{ section.id }}"
-                    >
-                      {%- for option in collection.sort_options -%}
-                        <option
-                          value="{{ option.value }}"
-                          {% if option.value == collection.sort_by %}
-                            selected
-                          {% endif %}
-                        >
-                          {{ option.name | escape }}
-                        </option>
-                      {%- endfor -%}
-                    </select>
-                  </facet-sort>
-                </div>
-              {%- endif -%}
-            {%- endcapture -%}
+            {%- if section.settings.show_sort -%}
+              <div class="facets__sort-card">
+                <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
+                  {{ 'collections.sort.label' | t }}
+                </label>
+                <facet-sort class="facets__sort-select">
+                  <select
+                    id="SortBy-{{ section.id }}"
+                    name="sort_by"
+                    data-facets-sort
+                    form="FacetsForm-{{ section.id }}"
+                  >
+                    {%- for option in collection.sort_options -%}
+                      <option
+                        value="{{ option.value }}"
+                        {% if option.value == collection.sort_by %}
+                          selected
+                        {% endif %}
+                      >
+                        {{ option.name | escape }}
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                </facet-sort>
+              </div>
+            {%- endif -%}
 
-            {% render 'faceted-filters', filters: collection.filters, sort_card: sort_card %}
+            {% render 'faceted-filters', filters: collection.filters %}
           </form>
         {%- endif -%}
 
@@ -350,47 +322,30 @@
   .shopify-section.collection-section {
     display: block;
   }
-  /* 两栏侵入式骨架（2026-10-20 刘工）：页边距 | 左栏 320px 固定 | 右栏 1fr | 页边距。
-     左栏锁死宽度——无论右侧产品/横幅怎么排，Filters 与文字卡都不变形；
-     右栏 banner + 产品在自己的列里向下流式排布，高度互不干扰。 */
   .collection {
     display: grid;
-    grid-template-columns: var(--content-margin) 320px minmax(0, 1fr) var(--content-margin);
+    grid-template-columns: var(--content-grid);
     width: 100%;
   }
   .collection > * {
-    grid-column: 3;
-  }
-  /* 文字卡落左栏；无 banner 时横跨左右两栏做常规排版 */
-  .collection__intro--invade {
     grid-column: 2;
   }
-  .collection--no-banner .collection__intro--plain {
-    grid-column: 2 / 4;
-  }
-  /* 主体横跨左右两栏：内部 layout 再分 320px | 1fr，form 列与左栏精确对齐。
-     有 banner 时加一层从背景派生的淡灰底（2026-10-20 刘工"灰底过渡"）：
-     Filters 卡与产品卡都是白底，浮在淡灰上形成层次，banner 照片在上方衔接。
-     左右不留 padding——layout 的 320px 列必须从 sheet 左边缘开始才能与外层
-     左栏对齐；右栏产品内容右贴页边距列（与正常内容列右边缘一致）。 */
-  .collection__sheet {
-    grid-column: 2 / 4;
-    padding-block: 2rem 3rem;
-  }
-  .collection:not(.collection--no-banner) .collection__sheet {
-    background: color-mix(in srgb, var(--color-foreground) 3%, var(--color-background));
+  .collection > .collection__banner {
+    grid-column: 1 / -1;
   }
 
-  /* 横幅（右栏顶部，固定高） */
+  /* 横幅沉浸通栏（贴页头）：面包屑/标题/描述白字直接叠图，
+     左向暗化渐变 + text-shadow 保证可读性（WCAG 对比度）。 */
   .collection {
-    --banner-h: 650px;
+    --banner-h: clamp(200px, 30vh, 340px);
   }
   .collection__banner {
     position: relative;
-    grid-column: 3;
+    grid-column: 1 / -1;
     height: var(--banner-h);
+    display: flex;
+    align-items: flex-end;
     overflow: hidden;
-    background-color: var(--color-background);
   }
   .collection__banner > img {
     position: absolute;
@@ -399,65 +354,41 @@
     height: 100%;
     object-fit: cover;
   }
-  /* 背景风景图：左端透明、向右逐渐显现（mask 渐变虚化），给侵入的文字卡让出"空气感" */
-  .collection__banner > img:first-child {
-    object-position: center right;
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.3) 15%, #000 42%, #000 100%);
-    mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.3) 15%, #000 42%, #000 100%);
-  }
-  /* 光晕垫底（::before 在背景图之下，靠悬浮产品的 alpha 透明区透出，不罩灰产品——
-     配色纪律红线：满幅 cover 图上叠遮罩会罩灰产品，光晕只能垫底） */
-  .collection__banner::before {
+  .collection__banner::after {
     content: '';
     position: absolute;
-    top: -10%;
-    left: -5%;
-    width: 55%;
-    height: 120%;
-    z-index: 0;
-    background: linear-gradient(to right, var(--color-background) 0%, color-mix(in srgb, var(--color-background) 70%, transparent) 40%, transparent 80%);
-    border-radius: 0 60% 50% 0 / 0 70% 50% 0;
-    pointer-events: none;
+    inset: 0;
+    background: linear-gradient(to right, rgb(0 0 0 / 40%), rgb(0 0 0 / 14%) 55%, rgb(0 0 0 / 0%) 85%);
   }
-  .collection__banner > img {
-    z-index: 1;
-  }
-  /* 悬浮产品图：压在背景之上，右侧偏中 */
-  .collection__banner > img:nth-child(2) {
-    z-index: 2;
-    top: 50%;
-    left: 60%;
-    width: 72%;
-    height: auto;
-    max-width: 820px;
-    object-fit: contain;
-    transform: translate(-50%, -45%);
-    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
-  }
-  /* 文字卡：左栏 320px 越界到 560px，z-index 压右侧 banner 形成立体悬浮感 */
-  .collection__intro--invade {
+  .collection__intro {
     position: relative;
-    z-index: 10;
-    align-self: start;
-    padding-block: 1.5rem 0;
-    color: var(--color-foreground);
+    z-index: 1;
+    width: 100%;
+    /* 与下方主体同一条内容列：intro 自己跑 content-grid，文字落第 2 列 */
+    display: grid;
+    grid-template-columns: var(--content-grid);
+    padding-block: 1.5rem;
+    color: #ffffff;
   }
-  .collection__intro--invade .collection__head {
-    /* 越界：文字卡内容区超左栏宽，压到 banner 上 */
-    width: 560px;
-    max-width: calc(100vw - var(--page-margin) * 2);
+  .collection__intro > * {
+    grid-column: 2;
   }
-  .collection__intro--invade .collection__title {
-    font-size: clamp(2.2rem, 4vw, 3.4rem);
-    letter-spacing: -0.02em;
+  .collection__banner .collection__breadcrumb-list,
+  .collection__banner .collection__breadcrumb-item a {
+    color: rgb(255 255 255 / 82%);
   }
-  .collection__intro--invade .collection__description {
-    color: rgb(0 0 0 / 60%);
+  .collection__banner .collection__breadcrumb-item a:hover {
+    color: #ffffff;
   }
-  .collection__intro--invade .collection__breadcrumb-list {
-    color: rgb(0 0 0 / 55%);
+  .collection__banner .collection__title,
+  .collection__banner .collection__description {
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 35%);
   }
-  /* 无横幅：介绍区黑字常规排版（横跨左右两栏） */
+  .collection__banner .collection__title {
+    margin-block-start: 0.35rem;
+  }
+  /* 无横幅：介绍区黑字常规排版（同样走内容列） */
   .collection--no-banner .collection__intro--plain {
     color: var(--color-foreground);
     padding-block: 2rem 0;
@@ -466,62 +397,11 @@
     color: rgb(0 0 0 / 55%);
   }
   @media (max-width: 989.98px) {
-    /* 移动端退化（沿用现有沉浸逻辑）：单列。banner 全宽，文字卡重新叠回
-       banner 上（白字、底部对齐）——与旧版沉浸 banner 逐像素一致；
-       文字卡不再越界压层，宽度回落到内容列。 */
-    .collection {
-      grid-template-columns: var(--content-margin) minmax(0, 1fr) var(--content-margin);
-    }
-    .collection > * {
-      grid-column: 2;
-    }
-    /* intro 与 banner 叠到同一行：intro 全幅、底部对齐、白字压图 */
-    .collection__intro--invade {
-      grid-column: 1 / -1;
-      grid-row: 1;
-      z-index: 10;
-      align-self: end;
-      padding: 0 var(--page-margin) 1.5rem;
-      color: #ffffff;
-    }
-    .collection__intro--invade .collection__head {
-      width: 100%;
-      max-width: none;
-    }
-    .collection__intro--invade .collection__title,
-    .collection__intro--invade .collection__description {
-      color: #ffffff;
-      text-shadow: 0 1px 3px rgb(0 0 0 / 35%);
-    }
-    .collection__intro--invade .collection__breadcrumb-list,
-    .collection__intro--invade .collection__breadcrumb-item a {
-      color: rgb(255 255 255 / 82%);
-    }
-    .collection__intro--invade .collection__title {
-      font-size: clamp(1.5rem, 6vw, 2rem);
-    }
     .collection__banner {
-      grid-column: 1 / -1;
-      grid-row: 1;
-      height: clamp(300px, 40vh, 440px);
+      height: clamp(170px, 26vh, 260px);
     }
-    .collection__banner > img:first-child {
-      -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
-      mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
-    }
-    .collection__banner::before {
-      width: 100%;
-      border-radius: 0;
-      background: linear-gradient(to bottom, var(--color-background) 0%, transparent 80%);
-    }
-    .collection__banner > img:nth-child(2) {
-      width: 88%;
-      left: 50%;
-    }
-    .collection__sheet {
-      grid-column: 2;
-      grid-row: 2;
-      padding-block: 1.5rem 2rem;
+    .collection__title {
+      font-size: clamp(1.5rem, 6vw, 2rem);
     }
   }
 
@@ -569,13 +449,15 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 1.5rem;
+    margin-block-start: 1.5rem;
   }
 
-  /* 左列 = 单张 Filters 卡（2026-10-20 刘工：排序并进 Filters 卡顶部，原"排序卡在上、
-     筛选卡在下"两张卡改为单卡）。桌面由 ≥990px 规则给卡面；移动端排序卡被 JS
-     移进工具条，余下的 form 整体进抽屉，改 block + 分隔线。 */
+  /* 左列 = 两张卡堆叠（2026-10-16 刘工定：排序卡在上、筛选卡在下）。
+     桌面由 ≥990px 规则给卡面；移动端排序卡被 JS 移进工具条，余下的 form 整体
+     进抽屉，改 block + 分隔线。 */
   .facets__form {
     display: grid;
+    gap: 1rem;
     align-content: start;
     /* 左列轨道定宽 260px，但 grid item 默认 min-width:auto——排序 select 的
        最长选项文本会撑破轨道、叠到右侧产品列。逐级放开收缩（BUG 链：
@@ -591,17 +473,6 @@
     gap: 0.5rem;
     align-content: start;
     min-width: 0;
-  }
-  /* 排序卡在 Filters 卡内的落点（2026-10-20 刘工）：aside 顶部、与下方筛选组
-     用分隔线隔开，共享同一张卡面——不再是一张独立的排序卡 */
-  .facets__sort-slot {
-    min-width: 0;
-    padding-block-end: 0.9rem;
-    margin-block-end: 0.9rem;
-    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
-  }
-  .facets__sort-slot:empty {
-    display: none;
   }
   .facets__sort-card-label {
     font-size: 0.88rem;
@@ -1210,21 +1081,19 @@
      data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
   @media (min-width: 990px) {
     .collection__layout {
-      /* 320px 与外层 .collection 左栏精确对齐（2026-10-20 刘工两栏侵入式骨架）：
-         form 的 Filters 卡视觉上落在左栏文字卡正下方。min-width 收缩链已放开
-         （见 .facets__form）。 */
-      grid-template-columns: 320px 1fr;
+      /* 260 → 290px（2026-10-17 刘工两轮微调：280 仍挤，最终定 290）；
+         卡面内边距占用 2.5rem，min-width 收缩链已放开（见 .facets__form） */
+      grid-template-columns: 290px 1fr;
       gap: 2rem;
     }
     /* 无筛选集合不渲染表单：内容区独占整行，不空一列 */
     .collection__layout--no-facets {
       grid-template-columns: 1fr;
     }
-    /* 左列单张卡（2026-10-20 刘工：排序已并入 Filters 卡顶部）：
-       只有 .facets__aside 套卡面（描边 + 圆角 + 内边距），排序卡作为
-       aside 内部顶部区块，共享这张卡面，不再单独套卡面。
-       工具条里的排序卡（无筛选集合）是紧凑控件，也不套卡面
-       （选择器限定作用域，见 .collection__toolbar 的横排形态）。 */
+    /* 左列两张卡：排序卡在上、筛选卡在下（描边 + 圆角 + 内边距）。
+       卡面只给 form 内的那一份——工具条里的排序卡（无筛选集合）是紧凑控件，
+       不该套卡面（选择器限定作用域，见 .collection__toolbar 的横排形态）。 */
+    .facets__form .facets__sort-card,
     .facets__aside {
       padding: 1rem 1.25rem;
       border: 1px solid rgb(0 0 0 / 10%);
@@ -1299,9 +1168,14 @@
       min-height: 40px;
       max-width: 40vw;
     }
-    /* 抽屉 / 无 JS 流内：form 改 block（排序卡的分隔线由 .facets__sort-slot 提供） */
+    /* 抽屉 / 无 JS 流内（排序卡还在 form 里）：与筛选块之间用分隔线，不做卡面 */
     .facets__form {
       display: block;
+    }
+    .facets__form .facets__sort-card {
+      padding-block-end: 0.9rem;
+      margin-block-end: 0.9rem;
+      border-block-end: 1px solid rgb(0 0 0 / 10%);
     }
   }
 
@@ -1324,18 +1198,6 @@
       "id": "show_banner",
       "label": "t:sections.collection.labels.show_banner",
       "default": true
-    },
-    {
-      "type": "image_picker",
-      "id": "banner_background_image",
-      "label": "t:sections.collection.labels.banner_background_image",
-      "info": "t:sections.collection.labels.banner_background_image_info"
-    },
-    {
-      "type": "image_picker",
-      "id": "banner_product_image",
-      "label": "t:sections.collection.labels.banner_product_image",
-      "info": "t:sections.collection.labels.banner_product_image_info"
     },
     {
       "type": "range",
