@@ -80,6 +80,7 @@
           "type": "card",
           "settings": {
             "collection": "80v-battery",
+            "image": "shopify://shop_images/product-nb-21b80-1-main_webp.webp",
             "title": "",
             "description": ""
           }
@@ -88,6 +89,7 @@
           "type": "card",
           "settings": {
             "collection": "40v-battery",
+            "image": "shopify://shop_images/product-nb-21bp-2-kit_webp.webp",
             "title": "",
             "description": ""
           }
