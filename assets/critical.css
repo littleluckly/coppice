@@ -254,64 +254,18 @@ body {
  */
 
 /**
- * 集合页沉浸页头（2026-10-15 干净版，曾名"透明页头"）。
+ * 集合页沉浸页头：2026-10-20 已整组删除（刘工拍板「集合页弃沉浸」）。
  *
- * 2026-10-20 收窄为「只沉浸导航行」（刘工：横幅不能沉浸到公告条）：
- * 横幅只钻到导航行背后，公告条保持品牌实底、文字不被盖住。
+ * 原因：集合页改版为「左列 320px 文字卡侵入 banner」的两栏式后，横幅不再是
+ * 全幅、左列是浅底黑字——透明页头（白字）横跨全宽必然叠在文字卡上互相干扰。
+ * 沉浸机制是为旧的全幅 banner 设计的，布局换了就失去意义；与其留一个
+ * 「开了也没用」的设置，不如连同 settings.immersive_header、site-header.js
+ * 一起收掉（导航行全程实底）。
  *
- * 机制：透明是【CSS 默认态】——.js 门控（禁 JS 不命中）+ 集合页 body class；
- * JS 只做两件事：量导航行高（写 --site-nav-h + 内联 margin 兜底 CSS 缓存）、
- * 滚过页头高度（公告条 + 导航行）后加 .site-header--solid 上实底。
- * 初始 scrollY=0 不加 solid，与 CSS 默认态同向 → 无"闪现后翻转"。
- *
- * - main 负上移 = 导航行高（**不含公告条**）→ 横幅顶边落在公告条下沿；
- * - 仅桌面（≥990px）：移动端导航不吸顶、也不透明，横幅钻过去只会被它盖住；
- * - utility 栏隐藏（内容与 footer 重复，pages-ui §1.1）；
- * - 公告条保持实底（品牌色 + 反白字，基础规则已给），只有导航行透明；
- * - solid：nav 白底/文字原色。两态高度一致，margin 不跳。
- * - 无 collection.image 的集合：JS threshold=0 → 恒 solid → 不沉浸（正确降级）。
+ * 若将来要做首页 hero 沉浸，别照抄旧实现：那条路依赖 body 复合类
+ * （.template-collection.immersive-header.site-header--solid，BUG-046），
+ * 且偏移量与 solid 阈值是两个独立的量（BUG-045），重写时先分清。
  */
-@media (min-width: 990px) {
-  .js .template-collection.immersive-header .main-content {
-    /* 76px = 导航行默认高（上下各 1rem + 44px 触控行），JS 实测后覆盖 */
-    margin-block-start: calc(-1 * var(--site-nav-h, 76px));
-  }
-}
-.js .template-collection.immersive-header .utility-bar {
-  display: none;
-}
-.js .template-collection.immersive-header .main-nav__desktop {
-  background-color: transparent;
-}
-.js .template-collection.immersive-header .main-nav__brand,
-.js .template-collection.immersive-header .main-nav__link,
-.js .template-collection.immersive-header .main-nav__logo,
-.js .template-collection.immersive-header .main-nav__tools {
-  color: #ffffff;
-}
-.js .template-collection.immersive-header .main-nav__logo-img {
-  filter: brightness(0) invert(1);
-}
-/* 滚动恢复态（2026-10-20 修：solid 类挂在 <body> 上，与 immersive-header 是
-   **同一元素的复合类**，必须写成 .immersive-header.site-header--solid；
-   原先的空格（后代）选择器永远不命中，实底自 2026-10-18 起从未生效过） */
-.js .template-collection.immersive-header.site-header--solid .main-nav-section {
-  background-color: var(--color-background);
-}
-.js .template-collection.immersive-header.site-header--solid .main-nav__desktop {
-  background-color: var(--color-background);
-}
-.js .template-collection.immersive-header.site-header--solid .main-nav__brand {
-  color: var(--color-brand);
-}
-.js .template-collection.immersive-header.site-header--solid .main-nav__link,
-.js .template-collection.immersive-header.site-header--solid .main-nav__logo,
-.js .template-collection.immersive-header.site-header--solid .main-nav__tools {
-  color: var(--color-foreground);
-}
-.js .template-collection.immersive-header.site-header--solid .main-nav__logo-img {
-  filter: none;
-}
 
 /**
  * 焦点可见的统一口径（SDD §8.2） */
