@@ -466,26 +466,43 @@
     color: rgb(0 0 0 / 55%);
   }
   @media (max-width: 989.98px) {
-    /* 移动端退化（沿用现有沉浸逻辑）：单列，banner 全宽、文字卡不再越界 */
+    /* 移动端退化（沿用现有沉浸逻辑）：单列。banner 全宽，文字卡重新叠回
+       banner 上（白字、底部对齐）——与旧版沉浸 banner 逐像素一致；
+       文字卡不再越界压层，宽度回落到内容列。 */
     .collection {
       grid-template-columns: var(--content-margin) minmax(0, 1fr) var(--content-margin);
     }
     .collection > * {
       grid-column: 2;
     }
+    /* intro 与 banner 叠到同一行：intro 全幅、底部对齐、白字压图 */
     .collection__intro--invade {
-      grid-column: 2;
-      padding-block: 1.5rem 0;
+      grid-column: 1 / -1;
+      grid-row: 1;
+      z-index: 10;
+      align-self: end;
+      padding: 0 var(--page-margin) 1.5rem;
+      color: #ffffff;
     }
     .collection__intro--invade .collection__head {
       width: 100%;
       max-width: none;
+    }
+    .collection__intro--invade .collection__title,
+    .collection__intro--invade .collection__description {
+      color: #ffffff;
+      text-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+    }
+    .collection__intro--invade .collection__breadcrumb-list,
+    .collection__intro--invade .collection__breadcrumb-item a {
+      color: rgb(255 255 255 / 82%);
     }
     .collection__intro--invade .collection__title {
       font-size: clamp(1.5rem, 6vw, 2rem);
     }
     .collection__banner {
       grid-column: 1 / -1;
+      grid-row: 1;
       height: clamp(300px, 40vh, 440px);
     }
     .collection__banner > img:first-child {
@@ -503,6 +520,8 @@
     }
     .collection__sheet {
       grid-column: 2;
+      grid-row: 2;
+      padding-block: 1.5rem 2rem;
     }
   }
 
