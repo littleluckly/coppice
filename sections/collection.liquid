@@ -350,30 +350,39 @@
   .shopify-section.collection-section {
     display: block;
   }
+  /* 两栏侵入式骨架（2026-10-20 刘工）：页边距 | 左栏 320px 固定 | 右栏 1fr | 页边距。
+     左栏锁死宽度——无论右侧产品/横幅怎么排，Filters 与文字卡都不变形；
+     右栏 banner + 产品在自己的列里向下流式排布，高度互不干扰。 */
   .collection {
     display: grid;
-    grid-template-columns: var(--content-grid);
+    grid-template-columns: var(--content-margin) 320px minmax(0, 1fr) var(--content-margin);
     width: 100%;
   }
   .collection > * {
+    grid-column: 3;
+  }
+  /* 文字卡落左栏；无 banner 时横跨左右两栏做常规排版 */
+  .collection__intro--invade {
     grid-column: 2;
   }
-  .collection > .collection__banner {
-    grid-column: 1 / -1;
+  .collection--no-banner .collection__intro--plain {
+    grid-column: 2 / 4;
+  }
+  /* 主体横跨左右两栏：内部 layout 再分 320px | 1fr，form 列与左栏精确对齐 */
+  .collection__sheet {
+    grid-column: 2 / 4;
   }
 
-  /* 横幅沉浸通栏（贴页头）：面包屑/标题/描述白字直接叠图，
-     左向暗化渐变 + text-shadow 保证可读性（WCAG 对比度）。 */
+  /* 横幅（右栏顶部，固定高） */
   .collection {
-    --banner-h: clamp(200px, 30vh, 340px);
+    --banner-h: 650px;
   }
   .collection__banner {
     position: relative;
-    grid-column: 1 / -1;
+    grid-column: 3;
     height: var(--banner-h);
-    display: flex;
-    align-items: flex-end;
     overflow: hidden;
+    background-color: var(--color-background);
   }
   .collection__banner > img {
     position: absolute;
@@ -382,41 +391,65 @@
     height: 100%;
     object-fit: cover;
   }
-  .collection__banner::after {
+  /* 背景风景图：左端透明、向右逐渐显现（mask 渐变虚化），给侵入的文字卡让出"空气感" */
+  .collection__banner > img:first-child {
+    object-position: center right;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.3) 15%, #000 42%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.3) 15%, #000 42%, #000 100%);
+  }
+  /* 光晕垫底（::before 在背景图之下，靠悬浮产品的 alpha 透明区透出，不罩灰产品——
+     配色纪律红线：满幅 cover 图上叠遮罩会罩灰产品，光晕只能垫底） */
+  .collection__banner::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background: linear-gradient(to right, rgb(0 0 0 / 40%), rgb(0 0 0 / 14%) 55%, rgb(0 0 0 / 0%) 85%);
+    top: -10%;
+    left: -5%;
+    width: 55%;
+    height: 120%;
+    z-index: 0;
+    background: linear-gradient(to right, var(--color-background) 0%, color-mix(in srgb, var(--color-background) 70%, transparent) 40%, transparent 80%);
+    border-radius: 0 60% 50% 0 / 0 70% 50% 0;
+    pointer-events: none;
   }
-  .collection__intro {
-    position: relative;
+  .collection__banner > img {
     z-index: 1;
-    width: 100%;
-    /* 与下方主体同一条内容列：intro 自己跑 content-grid，文字落第 2 列 */
-    display: grid;
-    grid-template-columns: var(--content-grid);
-    padding-block: 1.5rem;
-    color: #ffffff;
   }
-  .collection__intro > * {
-    grid-column: 2;
+  /* 悬浮产品图：压在背景之上，右侧偏中 */
+  .collection__banner > img:nth-child(2) {
+    z-index: 2;
+    top: 50%;
+    left: 60%;
+    width: 72%;
+    height: auto;
+    max-width: 820px;
+    object-fit: contain;
+    transform: translate(-50%, -45%);
+    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
   }
-  .collection__banner .collection__breadcrumb-list,
-  .collection__banner .collection__breadcrumb-item a {
-    color: rgb(255 255 255 / 82%);
+  /* 文字卡：左栏 320px 越界到 560px，z-index 压右侧 banner 形成立体悬浮感 */
+  .collection__intro--invade {
+    position: relative;
+    z-index: 10;
+    align-self: start;
+    padding-block: 1.5rem 0;
+    color: var(--color-foreground);
   }
-  .collection__banner .collection__breadcrumb-item a:hover {
-    color: #ffffff;
+  .collection__intro--invade .collection__head {
+    /* 越界：文字卡内容区超左栏宽，压到 banner 上 */
+    width: 560px;
+    max-width: calc(100vw - var(--page-margin) * 2);
   }
-  .collection__banner .collection__title,
-  .collection__banner .collection__description {
-    color: #ffffff;
-    text-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+  .collection__intro--invade .collection__title {
+    font-size: clamp(2.2rem, 4vw, 3.4rem);
+    letter-spacing: -0.02em;
   }
-  .collection__banner .collection__title {
-    margin-block-start: 0.35rem;
+  .collection__intro--invade .collection__description {
+    color: rgb(0 0 0 / 60%);
   }
-  /* 无横幅：介绍区黑字常规排版（同样走内容列） */
+  .collection__intro--invade .collection__breadcrumb-list {
+    color: rgb(0 0 0 / 55%);
+  }
+  /* 无横幅：介绍区黑字常规排版（横跨左右两栏） */
   .collection--no-banner .collection__intro--plain {
     color: var(--color-foreground);
     padding-block: 2rem 0;
@@ -425,11 +458,43 @@
     color: rgb(0 0 0 / 55%);
   }
   @media (max-width: 989.98px) {
-    .collection__banner {
-      height: clamp(170px, 26vh, 260px);
+    /* 移动端退化（沿用现有沉浸逻辑）：单列，banner 全宽、文字卡不再越界 */
+    .collection {
+      grid-template-columns: var(--content-margin) minmax(0, 1fr) var(--content-margin);
     }
-    .collection__title {
+    .collection > * {
+      grid-column: 2;
+    }
+    .collection__intro--invade {
+      grid-column: 2;
+      padding-block: 1.5rem 0;
+    }
+    .collection__intro--invade .collection__head {
+      width: 100%;
+      max-width: none;
+    }
+    .collection__intro--invade .collection__title {
       font-size: clamp(1.5rem, 6vw, 2rem);
+    }
+    .collection__banner {
+      grid-column: 1 / -1;
+      height: clamp(300px, 40vh, 440px);
+    }
+    .collection__banner > img:first-child {
+      -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+      mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+    }
+    .collection__banner::before {
+      width: 100%;
+      border-radius: 0;
+      background: linear-gradient(to bottom, var(--color-background) 0%, transparent 80%);
+    }
+    .collection__banner > img:nth-child(2) {
+      width: 88%;
+      left: 50%;
+    }
+    .collection__sheet {
+      grid-column: 2;
     }
   }
 
