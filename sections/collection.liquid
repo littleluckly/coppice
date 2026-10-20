@@ -41,8 +41,11 @@
       break
     endif
   endfor
+  # 横幅底图：设置优先，未设则回落集合自带图（collection.image）。
+  # 产品悬浮岛（banner_product_image）为空时不渲染——退化为纯风景横幅。
+  assign banner_image = section.settings.banner_background_image | default: collection.image
   assign has_banner = false
-  if collection.image and section.settings.show_banner
+  if banner_image and section.settings.show_banner
     assign has_banner = true
   endif
 -%}
