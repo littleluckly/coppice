@@ -80,21 +80,43 @@
     </header>
   {%- endcapture -%}
 
+  {%- comment -%}
+    两栏侵入式骨架（2026-10-20 刘工，参考 首页布局-左侧集合入侵 banner-1.html）：
+    .collection__intro 文字卡落左栏（320px 轨道），越界 560px + z-index 压右侧 banner；
+    .collection__banner 落右栏顶部、固定高；.collection__sheet 横跨两栏，内部
+    layout 保持 form|content 两栏，form 的 320px 列与左栏精确对齐（Filters 卡
+    视觉上在文字卡正下方）。无 banner 时退化为单栏常规排版。
+  {%- endcomment -%}
+
   {%- if has_banner -%}
+    <div class="collection__intro collection__intro--invade">{{ intro_content }}</div>
+
     <div class="collection__banner">
       {{
-        collection.image
+        banner_background_image
         | image_url: width: 2400
         | image_tag:
           widths: '750, 1100, 1500, 2000, 2400',
-          sizes: '100vw',
-          width: collection.image.width,
-          height: collection.image.height,
+          sizes: '(min-width: 990px) 60vw, 100vw',
+          width: banner_background_image.width,
+          height: banner_background_image.height,
           loading: 'eager',
           fetchpriority: 'high',
-          alt: collection.image.alt
+          alt: banner_background_image.alt
       }}
-      <div class="collection__intro">{{ intro_content }}</div>
+      {%- if banner_product_image -%}
+        {{
+          banner_product_image
+          | image_url: width: 1600
+          | image_tag:
+            widths: '600, 900, 1200, 1600',
+            sizes: '(min-width: 990px) 48vw, 90vw',
+            width: banner_product_image.width,
+            height: banner_product_image.height,
+            loading: 'eager',
+            alt: banner_product_image.alt
+        }}
+      {%- endif -%}
     </div>
   {%- else -%}
     <div class="collection__intro collection__intro--plain">{{ intro_content }}</div>
