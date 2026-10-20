@@ -32,14 +32,12 @@
   </head>
 
   {%- comment -%}
-    body class：模板名（CSS 门控）+ 沉浸页头开关（settings.immersive_header）。
-    data-site-header：沉浸页头脚本的挂点（2026-10-18 从包裹元素移到 body，
-    页头组因此保持 body 直接子级，编辑器画布才能管理它）。
+    body class：模板名（CSS 门控）。
+    2026-10-20：沉浸页头开关（settings.immersive_header）与 data-site-header
+    挂点一并移除——集合页改版后弃用沉浸（详见 assets/critical.css 的同名注释）。
+    body 保持无包裹属性：header-group 仍是 body 直接子级，编辑器画布才能管理它。
   {%- endcomment -%}
-  <body
-    class="template-{{ template.name }}{% if settings.immersive_header %} immersive-header{% endif %}"
-    data-site-header
-  >
+  <body class="template-{{ template.name }}">
     {% comment %}
       Skip link first, before any landmark. It is the first thing keyboard focus
       reaches, letting people bypass the header. Rendered from layout rather than
@@ -48,8 +46,6 @@
     {% render 'skip-link' %}
 
     {% sections 'header-group' %}
-
-    <script src="{{ 'site-header.js' | asset_url }}" defer></script>
 
     {% comment %}
       购物车角标同步 + 加购飞入动画（2026-10-16）。页头购物车入口全站共享，
