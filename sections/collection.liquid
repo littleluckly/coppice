@@ -448,10 +448,12 @@
     min-width: 0;
     padding: 40px 20px 40px 24px;
   }
-  /* 标题卡越界：560px > 320px 左列，向右侵入横幅 240px（参考稿同值） */
+  /* 标题卡越界：560px > 320px 左列，向右侵入横幅 240px（参考稿同值）。
+     ⚠️ 不能加 max-width: 100%——那会把 560 钳回 276（左列内容宽），
+     侵入效果消失、h1 折行、亮点竖排（2026-10-20 实渲染抓到）。
+     移动端另有 width: 100% 的覆盖，小屏不会溢出。 */
   .collection__intro {
     width: 560px;
-    max-width: 100%;
     padding-block-start: 10px;
     margin-block-end: 50px;
   }
@@ -1290,7 +1292,12 @@
     .collection__toolbar .collection__count {
       order: 3;
     }
+    /* 筛选卡头部：桌面复用抽屉的头行做「Filters」卡头（参考稿同形态），
+       关闭按钮只在抽屉里有意义，桌面隐藏。 */
     .facets__mobile-head {
+      display: flex;
+    }
+    .facets__close {
       display: none;
     }
   }
