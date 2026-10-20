@@ -1184,9 +1184,10 @@
      data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
   @media (min-width: 990px) {
     .collection__layout {
-      /* 260 → 290px（2026-10-17 刘工两轮微调：280 仍挤，最终定 290）；
-         卡面内边距占用 2.5rem，min-width 收缩链已放开（见 .facets__form） */
-      grid-template-columns: 290px 1fr;
+      /* 320px 与外层 .collection 左栏精确对齐（2026-10-20 刘工两栏侵入式骨架）：
+         form 的 Filters 卡视觉上落在左栏文字卡正下方。min-width 收缩链已放开
+         （见 .facets__form）。 */
+      grid-template-columns: 320px 1fr;
       gap: 2rem;
     }
     /* 无筛选集合不渲染表单：内容区独占整行，不空一列 */
