@@ -1409,6 +1409,36 @@
       "default": true
     },
     {
+      "type": "paragraph",
+      "content": "t:sections.collection.paragraphs.banner_images"
+    },
+    {
+      "type": "image_picker",
+      "id": "banner_background_image",
+      "label": "t:sections.collection.labels.banner_background_image",
+      "info": "t:sections.collection.labels.banner_background_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "banner_product_image",
+      "label": "t:sections.collection.labels.banner_product_image",
+      "info": "t:sections.collection.labels.banner_product_info"
+    },
+    {
+      "type": "text",
+      "id": "banner_badge_eyebrow",
+      "label": "t:sections.collection.labels.banner_badge_eyebrow",
+      "info": "t:sections.collection.labels.banner_badge_info",
+      "default": "Popular Choice"
+    },
+    {
+      "type": "text",
+      "id": "banner_badge_title",
+      "label": "t:sections.collection.labels.banner_badge_title",
+      "info": "t:sections.collection.labels.banner_badge_info",
+      "default": "Self-Propelled Mowers"
+    },
+    {
       "type": "range",
       "id": "products_per_page",
       "min": 8,
@@ -1461,6 +1491,55 @@
       "label": "t:sections.collection.labels.show_spec_weight",
       "info": "t:sections.collection.labels.spec_info",
       "default": false
+    }
+  ],
+  "blocks": [
+    {
+      "type": "banner_feature",
+      "name": "t:sections.collection.blocks.banner_feature.name",
+      "settings": [
+        {
+          "type": "text",
+          "id": "icon",
+          "label": "t:sections.collection.blocks.banner_feature.settings.icon.label",
+          "info": "t:sections.collection.blocks.banner_feature.settings.icon.info"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "t:sections.collection.blocks.banner_feature.settings.text.label",
+          "default": "Quieter Operation"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 4,
+  "presets": [
+    {
+      "name": "t:sections.collection.presets.default",
+      "blocks": [
+        {
+          "type": "banner_feature",
+          "settings": {
+            "icon": "🔊",
+            "text": "Quieter Operation"
+          }
+        },
+        {
+          "type": "banner_feature",
+          "settings": {
+            "icon": "🍃",
+            "text": "Lower Emissions"
+          }
+        },
+        {
+          "type": "banner_feature",
+          "settings": {
+            "icon": "🔋",
+            "text": "Longer Runtime"
+          }
+        }
+      ]
     }
   ]
 }
