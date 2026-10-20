@@ -423,8 +423,16 @@
     align-items: start;
     background-color: var(--collection-surface);
   }
-  .collection__layout {
+  /* ⚠️ 落列位置必须给 <collection-facets> 本身，不能给 .collection__layout：
+     它是 facets 的子元素，grid-column 只对直接父网格生效——写到里面时
+     facets 作为 grid item 自动落到第 1 列（20px 边距列），右列被压成 0、
+     横幅宽度塌成 0（2026-10-20 实渲染验证抓到的真 bug）。 */
+  .collection__facets {
     grid-column: 2;
+    display: block;
+    min-width: 0;
+  }
+  .collection__layout {
     display: grid;
     grid-template-columns: 1fr;
     align-items: start;
@@ -1298,7 +1306,7 @@
     .collection {
       display: block;
     }
-    .collection__layout {
+    .collection__facets {
       grid-column: auto;
     }
     .collection__left {
