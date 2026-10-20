@@ -456,12 +456,11 @@
     margin-block-start: 1.5rem;
   }
 
-  /* 左列 = 两张卡堆叠（2026-10-16 刘工定：排序卡在上、筛选卡在下）。
-     桌面由 ≥990px 规则给卡面；移动端排序卡被 JS 移进工具条，余下的 form 整体
-     进抽屉，改 block + 分隔线。 */
+  /* 左列 = 单张 Filters 卡（2026-10-20 刘工：排序并进 Filters 卡顶部，原"排序卡在上、
+     筛选卡在下"两张卡改为单卡）。桌面由 ≥990px 规则给卡面；移动端排序卡被 JS
+     移进工具条，余下的 form 整体进抽屉，改 block + 分隔线。 */
   .facets__form {
     display: grid;
-    gap: 1rem;
     align-content: start;
     /* 左列轨道定宽 260px，但 grid item 默认 min-width:auto——排序 select 的
        最长选项文本会撑破轨道、叠到右侧产品列。逐级放开收缩（BUG 链：
@@ -477,6 +476,17 @@
     gap: 0.5rem;
     align-content: start;
     min-width: 0;
+  }
+  /* 排序卡在 Filters 卡内的落点（2026-10-20 刘工）：aside 顶部、与下方筛选组
+     用分隔线隔开，共享同一张卡面——不再是一张独立的排序卡 */
+  .facets__sort-slot {
+    min-width: 0;
+    padding-block-end: 0.9rem;
+    margin-block-end: 0.9rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+  .facets__sort-slot:empty {
+    display: none;
   }
   .facets__sort-card-label {
     font-size: 0.88rem;
