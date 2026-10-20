@@ -589,42 +589,47 @@
     text-decoration: underline;
   }
 
+  /* 集合标题（参考稿 64px / 700）：左列是这一屏的视觉重心，
+     比原 41px 上限大得多，也因此才需要 320px 的列宽兜住长标题。 */
   .collection__title {
-    font-size: clamp(1.8rem, 3.2vw, 2.6rem);
-    font-weight: 600;
-    line-height: 1.12;
+    font-size: clamp(2rem, 4.4vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-block-end: 0.75rem;
   }
   .collection__description {
     margin-block-start: 0.5rem;
-    max-width: 60ch;
-    font-size: 0.95rem;
-    color: rgb(0 0 0 / 65%);
+    max-width: 46ch;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
   }
 
-  /* 两栏：筛选 + 内容。桌面 ≥990px 恒两栏（纯 CSS，不依赖 JS）；
-     无 JS 降级：应用按钮整页提交。移动端单列，JS 就绪后 Filters 按钮开抽屉。 */
-  .collection__layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-    margin-block-start: 1.5rem;
-  }
-
-  /* 左列 = 两张卡堆叠（2026-10-16 刘工定：排序卡在上、筛选卡在下）。
-     桌面由 ≥990px 规则给卡面；移动端排序卡被 JS 移进工具条，余下的 form 整体
-     进抽屉，改 block + 分隔线。 */
+  /* 左列只剩一张筛选卡（2026-10-20 排序卡已并进卡顶部的 .facets__sort-slot），
+     form 不再需要两张卡之间的 gap。定宽轨道里的每一级都要 min-width: 0：
+     排序 select 的最长选项文本会撑破 320px 轨道、叠到右侧产品列
+     （BUG 链：form → slot → sort-card → select）。 */
   .facets__form {
     display: grid;
-    gap: 1rem;
     align-content: start;
-    /* 左列轨道定宽 260px，但 grid item 默认 min-width:auto——排序 select 的
-       最长选项文本会撑破轨道、叠到右侧产品列。逐级放开收缩（BUG 链：
-       form → sort-card → select），长选项由 select 内部截断。 */
     min-width: 0;
   }
-  /* 筛选卡同风险：长筛选标签 / 计数也可能撑破 260px 轨道 */
+  /* form 归位槽：抽屉关闭后 JS 把 form 放回这里（不能 layout.prepend，
+     否则表单会顶到标题卡之前）。 */
+  .facets__form-slot {
+    min-width: 0;
+  }
+  /* 筛选卡同风险：长筛选标签 / 计数也可能撑破轨道 */
   .facets__aside {
     min-width: 0;
+  }
+  /* 排序卡落点（桌面在筛选卡顶部、移动端被 JS 搬进工具条）。
+     空槽（未启用排序）不渲染分隔线。 */
+  .facets__sort-slot:not(:empty) {
+    padding-block-end: 0.9rem;
+    margin-block-end: 0.9rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
   }
   .facets__sort-card {
     display: grid;
