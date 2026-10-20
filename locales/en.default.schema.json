@@ -171,6 +171,10 @@
       "name": "Collection page",
       "labels": {
         "show_banner": "Show banner image",
+        "banner_background_image": "Banner background image",
+        "banner_background_image_info": "Full-bleed landscape behind the product. Falls back to the collection image when empty.",
+        "banner_product_image": "Banner product image",
+        "banner_product_image_info": "Cut-out product (transparent background) that floats over the banner. Recommended PNG/WebP with alpha.",
         "show_sort": "Show sort",
         "show_quick_add": "Show quick add on product cards",
         "quick_add_info": "Only single-variant products get an Add to cart button; sold out shows disabled.",
