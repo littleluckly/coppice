@@ -23,7 +23,9 @@
  * section 是 body 直接子级）正常。页头组先后用 <site-header> 自定义元素和
  * div + display:contents 包裹，画布都空 ⇒ 编辑器只认"section 是 body 直接子级"。
  * 所以包裹层彻底去掉，本脚本改为按已知的页头根节点直接量测，solid 状态类
- * 切在 <body> 上（CSS 选择器 .site-header--solid 不变，仍是后代选择器）。
+ * 切在 <body> 上（CSS 必须写成 .template-collection.immersive-header.site-header--solid
+ * ——与 body 上的 immersive-header 是同一元素的复合类，不是后代；写成空格后代
+ * 选择器永远不命中，实底会静默失效，见 BUG-046）。
  */
 (() => {
   if (!document.body.hasAttribute('data-site-header')) return;

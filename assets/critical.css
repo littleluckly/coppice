@@ -292,22 +292,24 @@ body {
 .js .template-collection.immersive-header .main-nav__logo-img {
   filter: brightness(0) invert(1);
 }
-/* 滚动恢复态（公告条无需恢复：它全程保持品牌实底，不再有透明态） */
-.js .template-collection.immersive-header .site-header--solid .main-nav-section {
+/* 滚动恢复态（2026-10-20 修：solid 类挂在 <body> 上，与 immersive-header 是
+   **同一元素的复合类**，必须写成 .immersive-header.site-header--solid；
+   原先的空格（后代）选择器永远不命中，实底自 2026-10-18 起从未生效过） */
+.js .template-collection.immersive-header.site-header--solid .main-nav-section {
   background-color: var(--color-background);
 }
-.js .template-collection.immersive-header .site-header--solid .main-nav__desktop {
+.js .template-collection.immersive-header.site-header--solid .main-nav__desktop {
   background-color: var(--color-background);
 }
-.js .template-collection.immersive-header .site-header--solid .main-nav__brand {
+.js .template-collection.immersive-header.site-header--solid .main-nav__brand {
   color: var(--color-brand);
 }
-.js .template-collection.immersive-header .site-header--solid .main-nav__link,
-.js .template-collection.immersive-header .site-header--solid .main-nav__logo,
-.js .template-collection.immersive-header .site-header--solid .main-nav__tools {
+.js .template-collection.immersive-header.site-header--solid .main-nav__link,
+.js .template-collection.immersive-header.site-header--solid .main-nav__logo,
+.js .template-collection.immersive-header.site-header--solid .main-nav__tools {
   color: var(--color-foreground);
 }
-.js .template-collection.immersive-header .site-header--solid .main-nav__logo-img {
+.js .template-collection.immersive-header.site-header--solid .main-nav__logo-img {
   filter: none;
 }
 
