@@ -171,6 +171,13 @@
       "name": "Collection page",
       "labels": {
         "show_banner": "Show banner image",
+        "banner_background_image": "Banner background photo",
+        "banner_background_info": "The landscape or lifestyle photo behind the product. If empty, the collection image is used.",
+        "banner_product_image": "Banner product cut-out",
+        "banner_product_info": "A product image with a transparent background (PNG or WebP) that floats in front of the photo. Leave empty for a photo-only banner.",
+        "banner_badge_eyebrow": "Banner badge label",
+        "banner_badge_title": "Banner badge title",
+        "banner_badge_info": "Small frosted card on the right of the banner. Leave the title empty to hide the card.",
         "show_sort": "Show sort",
         "show_quick_add": "Show quick add on product cards",
         "quick_add_info": "Only single-variant products get an Add to cart button; sold out shows disabled.",
@@ -182,6 +189,26 @@
       },
       "headers": {
         "card_specs": "Product card specs"
+      },
+      "paragraphs": {
+        "banner_images": "The banner is built from two images: a background photo behind, and a transparent product cut-out floating in front of it."
+      },
+      "blocks": {
+        "banner_feature": {
+          "name": "Banner highlight",
+          "settings": {
+            "icon": {
+              "label": "Icon",
+              "info": "A single emoji or symbol, shown in the brand color above the text. Leave empty for text only."
+            },
+            "text": {
+              "label": "Text"
+            }
+          }
+        }
+      },
+      "presets": {
+        "default": "Collection"
       }
     }
   },
@@ -238,8 +265,6 @@
     "utility_item": "Item",
     "view_all_label": "'View all' link label",
     "view_all_link": "'View all' link target",
-    "immersive_header": "Immersive header on collection pages",
-    "immersive_header_info": "The header floats transparently over the collection banner image (white text). Turn off to keep the standard solid header on all pages.",
     "skeleton_background": "Header & footer background",
     "skeleton_background_info": "Leave empty to follow the global Background color above. Set a value to give the header and footer their own background, over both the header group and the footer.",
     "skeleton_foreground": "Header & footer text",
