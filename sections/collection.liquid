@@ -1244,24 +1244,20 @@
      data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
   @media (min-width: 990px) {
     .collection__layout {
-      /* 260 → 290px（2026-10-17 刘工两轮微调：280 仍挤，最终定 290）；
-         卡面内边距占用 2.5rem，min-width 收缩链已放开（见 .facets__form） */
-      grid-template-columns: 290px 1fr;
+      /* 左列宽度与外层 .collection 的左栏轨道同值（320px，参考稿）；
+         右列 1fr 铺到右缘。卡面内边距占用 2.5rem，min-width 收缩链已放开。 */
+      grid-template-columns: 320px 1fr;
       gap: 2rem;
     }
-    /* 无筛选集合不渲染表单：内容区独占整行，不空一列 */
-    .collection__layout--no-facets {
-      grid-template-columns: 1fr;
-    }
-    /* 左列两张卡：排序卡在上、筛选卡在下（描边 + 圆角 + 内边距）。
-       卡面只给 form 内的那一份——工具条里的排序卡（无筛选集合）是紧凑控件，
-       不该套卡面（选择器限定作用域，见 .collection__toolbar 的横排形态）。 */
-    .facets__form .facets__sort-card,
+    /* 筛选卡（含顶部排序组）：白卡浮在浅灰内容底上（参考稿 filters-card）。
+       排序卡已并进卡内，不再单独套卡面；工具条里那份（无筛选集合）是紧凑
+       控件，也不套卡面（见 .collection__toolbar 的横排形态）。 */
     .facets__aside {
-      padding: 1rem 1.25rem;
-      border: 1px solid rgb(0 0 0 / 10%);
-      border-radius: 12px;
+      padding: 1.25rem;
+      border: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+      border-radius: 20px;
       background-color: var(--color-background);
+      box-shadow: 0 10px 30px rgb(0 0 0 / 4%);
     }
     /* 最后一组筛选不再留底边距——卡片内边距已提供呼吸感 */
     .facets__aside .facets__group:last-of-type {
