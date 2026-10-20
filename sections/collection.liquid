@@ -1104,10 +1104,11 @@
     .collection__layout--no-facets {
       grid-template-columns: 1fr;
     }
-    /* 左列两张卡：排序卡在上、筛选卡在下（描边 + 圆角 + 内边距）。
-       卡面只给 form 内的那一份——工具条里的排序卡（无筛选集合）是紧凑控件，
-       不该套卡面（选择器限定作用域，见 .collection__toolbar 的横排形态）。 */
-    .facets__form .facets__sort-card,
+    /* 左列单张卡（2026-10-20 刘工：排序已并入 Filters 卡顶部）：
+       只有 .facets__aside 套卡面（描边 + 圆角 + 内边距），排序卡作为
+       aside 内部顶部区块，共享这张卡面，不再单独套卡面。
+       工具条里的排序卡（无筛选集合）是紧凑控件，也不套卡面
+       （选择器限定作用域，见 .collection__toolbar 的横排形态）。 */
     .facets__aside {
       padding: 1rem 1.25rem;
       border: 1px solid rgb(0 0 0 / 10%);
@@ -1182,14 +1183,9 @@
       min-height: 40px;
       max-width: 40vw;
     }
-    /* 抽屉 / 无 JS 流内（排序卡还在 form 里）：与筛选块之间用分隔线，不做卡面 */
+    /* 抽屉 / 无 JS 流内：form 改 block（排序卡的分隔线由 .facets__sort-slot 提供） */
     .facets__form {
       display: block;
-    }
-    .facets__form .facets__sort-card {
-      padding-block-end: 0.9rem;
-      margin-block-end: 0.9rem;
-      border-block-end: 1px solid rgb(0 0 0 / 10%);
     }
   }
 
