@@ -54,18 +54,6 @@
     ]
   },
   {
-    "name": "t:general.header",
-    "settings": [
-      {
-        "type": "checkbox",
-        "id": "immersive_header",
-        "label": "t:labels.immersive_header",
-        "info": "t:labels.immersive_header_info",
-        "default": false
-      }
-    ]
-  },
-  {
     "name": "t:general.spec_units",
     "settings": [
       {
