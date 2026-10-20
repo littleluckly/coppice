@@ -270,6 +270,16 @@ body {
 .js .template-collection.immersive-header .main-content {
   margin-block-start: calc(-1 * var(--site-header-h, 72px));
 }
+/* 沉浸态层叠顺序（BUG-045，2026-10-20）：横幅 .collection__banner 是定位元素、
+   DOM 又排在页头之后，与页头根节点同为 z-index:auto 时按 DOM 顺序绘制
+   ⇒ 横幅盖住公告条（桌面导航行因 .main-nav-section 的 sticky + z-index:20
+   而幸免；公告条与移动端导航行没有这层保护）。
+   这里只抬 z-index、不写 position：.main-nav-section 的 sticky 不能被覆盖。
+   数字与吸顶行同档（20），页头整体始终压在内容之上。 */
+.js .template-collection.immersive-header .announcement-bar,
+.js .template-collection.immersive-header .main-nav {
+  z-index: 20;
+}
 .js .template-collection.immersive-header .utility-bar {
   display: none;
 }
