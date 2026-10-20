@@ -368,9 +368,15 @@
   .collection--no-banner .collection__intro--plain {
     grid-column: 2 / 4;
   }
-  /* 主体横跨左右两栏：内部 layout 再分 320px | 1fr，form 列与左栏精确对齐 */
+  /* 主体横跨左右两栏：内部 layout 再分 320px | 1fr，form 列与左栏精确对齐。
+     有 banner 时加一层从背景派生的淡灰底（2026-10-20 刘工"灰底过渡"）：
+     Filters 卡与产品卡都是白底，浮在淡灰上形成层次，banner 照片在上方衔接。 */
   .collection__sheet {
     grid-column: 2 / 4;
+    padding: 2rem 2rem 3rem;
+  }
+  .collection:not(.collection--no-banner) .collection__sheet {
+    background: color-mix(in srgb, var(--color-foreground) 3%, var(--color-background));
   }
 
   /* 横幅（右栏顶部，固定高） */
@@ -542,7 +548,6 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 1.5rem;
-    margin-block-start: 1.5rem;
   }
 
   /* 左列 = 单张 Filters 卡（2026-10-20 刘工：排序并进 Filters 卡顶部，原"排序卡在上、
