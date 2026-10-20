@@ -311,6 +311,21 @@
 - **修复**：**方案①（已落码 2026-10-19，经二次修正）**——初版把两处 View All 箭头实体 `&rarr;` 换成字面量 `→`（mega 面板深处）**无效**（刘工实测仍空），因判据要求非 ASCII 落在 **`<nav>` 首子节点文本**而非任意嵌套位置。终版：在 `<nav>` 首子节点放 `<span class="main-nav__bug044-guard" aria-hidden="true">→</span>`（字面量 U+2192），配 `{% stylesheet %}` 内的 `.main-nav__bug044-guard` visually-hidden 裁剪样式（`clip`/`clip-path`，非 `display:none`、非零高度，标准 1px sr-only）。视觉与无障碍树双重隐藏，零可见痕迹。同时删除调试绿条、`sections/header-group.json` 恢复完整态（announcement-bar + utility-bar + main-nav）。**关键判据**（三次成对复现 + 二次修正钉死）：① 非 ASCII 必须在 `<nav>` 首子节点文本（深处、HTML 实体均无效）；② 可见性非变量（y22 死因是 ASCII 文本非 `block-size:0`）；③ 与 CJK 专属、字节长度阈值无关。theme check 移开 dev-docs 后 69 files 0 offense。
 - **预防**：**"仅编辑器画布坏 + 店面正常 + 零报错零横幅"的静默失败，先查本条与「样式块只能在 section 顶层」（BUG 索引）这两类平台级判据，再怀疑自己代码结构**。编辑器二分实验时：① 标志物必须放被测元素内部、判生死以其为准（K 组教训）；② 单变量推进，每步回读远端确认推送成功；③ 先删旧对照主题再建新的（店上限 20 个）。
 
+### BUG-045 · 沉浸页头把横幅顶到公告条底下，公告条整条被盖住
+- **日期**：2026-10-20 ｜ **状态**：Fixed（无头 Chrome 复现页截图实测修复前后）
+- **现象**：`settings.immersive_header` 开启时（集合页），banner 图片盖住顶部公告条：公告条的文字完全看不见（截图里公告条区域显示的是横幅图），而导航行正常。
+- **根因**：**双重问题，主因是偏移量，次因才是层叠**。① `site-header.js` 的 `measure()` 把「公告条 + 导航行」的合计高度写进 `--site-header-h`，`critical.css` 用 `margin-block-start: -var(--site-header-h)` 上移 `.main-content` ⇒ 横幅顶边被顶到**页面最顶端**，连公告条一起盖。② `.announcement-bar` 与 `.collection__banner` 同为 `position: relative`、`z-index: auto`，按 DOM 顺序绘制（横幅在后）⇒ 即使公告条透明叠图，文字也被横幅压住。桌面导航行之所以"幸免"，是因为 `.main-nav-section` 在 ≥990px 是 `position: sticky; z-index: 20`。③ 沉浸态本来还把 `.announcement-bar` 设成 `background-color: transparent`，等于主动放弃了公告条的实底。
+- **修复**：把沉浸范围收窄为**只沉浸导航行**：① 偏移量改为只减导航行高（新变量 `--site-nav-h`），横幅顶边落在公告条下沿；② 删除公告条的透明覆盖，公告条全程品牌实底 + 反白字；③ 偏移只在 ≥990px 生效（移动端导航不吸顶也不透明，横幅钻过去只会被它盖住），JS 非桌面时清掉内联 margin；④ solid 阈值按刘工定的规则改为「**滚过页头高度（公告条 + 导航行）即上实底**」——透明底一旦离开横幅、压到白底内容上，导航文字就看不见了；同时保底取 `min(页头高, 横幅底边滚过导航行底边)`，横幅若比页头还矮也不会留出"透明压白底"的空档。CSS 层不加任何 z-index——导航行靠既有的 sticky `z-index:20` 压在横幅之上，不引入新的层叠博弈。
+- **预防**：**"沉浸/透明页头"这类效果的偏移量必须与"被透明化的元素"逐个对账**：哪个页头部件被设成透明，才允许内容钻到它背后；不透明的部件（公告条、utility 栏）一律排除在偏移之外。改 `measure()` 时先在页面上把每个页头根节点的高度与"是否透明"列成表，再决定减哪几段。**层叠问题不要先动 z-index**——先确认绘制顺序与偏移量，z-index 只解决"叠了但不该叠"的场景，解决不了"根本不该叠"。
+
+### BUG-046 · solid 状态类挂在 `<body>` 上，CSS 却写成后代选择器：实底自 2026-10-18 起从未生效
+- **日期**：2026-10-20 ｜ **状态**：Fixed（无头 Chrome 双页对照实测：同一份 body 类，只改选择器写法）
+- **现象**：沉浸页头滚动后导航行始终不出现白底（实底不生效），白字一直压在滚动经过的产品区上、完全读不出来。刘工反馈"实底没有生效"。
+- **根因**：`site-header.js` 把 `site-header--solid` 切在 `<body>` 上，而 `<body>` 同时已有 `template-collection` / `immersive-header`；`critical.css` 的恢复态全写成
+  `.js .template-collection.immersive-header .site-header--solid .main-nav__desktop`——**`immersive-header` 与 `site-header--solid` 之间有空格 = 后代关系**，但两者是同一元素上的复合类，所以这组规则**永远不可能命中**。2026-10-18 把状态类从包裹元素挪到 `<body>` 时，JS 注释里那句"CSS 选择器不变，仍是后代选择器"正是错误前提（旧结构里包裹元素确实是子元素）。因此实底从 10-18 起静默失效，期间所有"滚动后页头变白"的表现都不存在。
+- **修复**：恢复态选择器全部改为复合类 `.template-collection.immersive-header.site-header--solid ...`（5 组，含 nav 根部/桌面行/品牌字/链接字/logo 反白）；同时修正 JS 注释里的错误前提。
+- **预防**：**状态类的"挂载元素"变了，必须逐条回读引用它的每个选择器，核对组合子（空格=后代、无空格=复合）与实际 DOM 层级**。可执行做法：改完挂载点后 `grep -n "<类名>" assets/ critical.css`，对每条选择器在心里数一次"这个类在目标元素上，还是在它的祖先上"；再用一个最小对照页（同一份 body 类，两条选择器各写一遍）截图验一次，比读代码可靠。**CSS 静默失效不会报错**，theme check 也查不出——只能靠这类对照实验。
+
 ## 记录模板（追加新 bug 用）
 
 ```
