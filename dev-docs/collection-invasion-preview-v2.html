@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>集合页改版 v2 — 左列侵入 banner（含页头·弃沉浸）</title>
+<style>
+  /* ============================================================
+     集合页改版 v2 效果图（2026-10-20 第三轮）
+     逐条对照参考稿 首页布局-左侧集合入侵 banner-1.html：
+     banner 四层结构与参数原样照抄，不做"光晕垫底"之类的改写。
+     已拍板：集合页弃沉浸（导航恒实底）；banner 双图 = 同一 section
+     两个 image_picker；上轮败因是素材观感 → 参数 1:1 对齐参考稿。
+     落地映射（写进 collection.liquid 时）：
+     - --bg-page → color-mix(in srgb, var(--color-foreground) 3%, var(--color-background))
+       （Noir 深色预设下自动翻转，禁止硬编码 #F7F7F5）
+     - --card → var(--color-background)；--brand → var(--color-brand)
+     ============================================================ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --brand: #1E4B3C;
+    --brand-accent: #2E6B4E;
+    --bg-page: #F7F7F5;   /* 页面底色 = 参考稿 banner 左缘色调 */
+    --card: #FFFFFF;
+    --fg: #1A1A1A;
+    --banner-h: 650px;
+    --left-w: 320px;
+  }
+  body {
+    background: var(--bg-page);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--fg);
+  }
+
+  /* ============ 真实页头（弃沉浸：全程实底） ============ */
+  .announce {
+    background: var(--brand);
+    color: #fff;
+    font-size: 12px;
+    text-align: center;
+    padding: 12px 16px;
+    letter-spacing: .02em;
+  }
+  .main-nav {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    height: 76px;
+    padding: 0 40px;
+    background: var(--card);
+    border-bottom: 1px solid rgb(0 0 0 / 6%);
+  }
+  .main-nav__logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--brand);
+  }
+  .main-nav__links { display: flex; gap: 24px; font-size: 14px; font-weight: 500; }
+  .main-nav__links a { color: var(--fg); text-decoration: none; }
+  .main-nav__links a:hover { color: var(--brand); }
+  .main-nav__tools { margin-left: auto; display: flex; gap: 18px; color: var(--fg); }
+  .main-nav__tools svg { width: 20px; height: 20px; }
+
+  /* ============ 集合页两栏骨架 ============ */
+  .collection {
+    display: grid;
+    grid-template-columns: var(--left-w) 1fr;
+    width: 100%;
+    max-width: 1920px;
+    margin: 0 auto;
+    align-items: start;
+  }
+
+  /* ---- 左列（z10：文字卡压在 banner 上） ---- */
+  .collection__aside {
+    position: relative;
+    z-index: 10;
+    padding: 40px 20px 40px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+  .collection__intro { width: 560px; padding-top: 10px; margin-bottom: 50px; }
+  .collection__breadcrumb {
+    display: flex; align-items: center;
+    font-size: 12px; color: #999; font-weight: 500; margin-bottom: 24px;
+  }
+  .collection__breadcrumb a { color: #999; text-decoration: none; }
+  .collection__breadcrumb a:hover { color: var(--brand); }
+  .collection__breadcrumb .sep { margin: 0 8px; color: #ccc; }
+  .collection__breadcrumb .current { color: var(--fg); font-weight: 600; }
+  .collection__title {
+    font-size: 64px; font-weight: 700; letter-spacing: -1.5px;
+    line-height: 1.05; margin-bottom: 15px;
+  }
+  .collection__description { color: #666; font-size: 18px; line-height: 1.5; margin-bottom: 30px; }
+  .collection__features { display: flex; gap: 30px; }
+  .collection__feature { font-size: 13px; color: #333; line-height: 1.3; }
+  .collection__feature span { color: var(--brand); font-size: 20px; display: block; margin-bottom: 5px; }
+
+  /* ---- 筛选卡（排序并进卡顶部，拍板点①） ---- */
+  .facets__card {
+    width: 100%;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 4%);
+  }
+  .facets__head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+  }
+  .facets__head h3 { font-size: 18px; }
+  .facets__head a { font-size: 12px; color: #999; text-decoration: none; }
+  .facets__head a:hover { color: var(--brand); }
+  .facets__group { margin-bottom: 22px; padding-bottom: 22px; border-bottom: 1px solid #F0F0F0; }
+  .facets__group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .facets__group > b { display: block; color: var(--fg); font-size: 15px; margin-bottom: 14px; font-weight: 600; }
+  .facets__value { display: flex; align-items: center; font-size: 14px; color: #666; margin-bottom: 12px; cursor: pointer; }
+  .facets__value:last-child { margin-bottom: 0; }
+  .facets__value input {
+    margin-right: 12px; accent-color: var(--brand-accent); width: 16px; height: 16px;
+  }
+  .facets__value .count { margin-left: auto; font-size: 12px; color: #B5B5B0; }
+  .facets__sort {
+    width: 100%; padding: 10px 12px;
+    border: 1px solid #E2E2DE; border-radius: 12px;
+    background: var(--card); color: var(--fg);
+    font: inherit; font-size: 14px; cursor: pointer;
+  }
+
+  /* ---- 右列 ---- */
+  .collection__main { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+
+  /* ---- banner（参数 1:1 抄参考稿，四层：bg → mask → island → badge） ---- */
+  .collection__banner {
+    position: relative;
+    width: 100%;
+    height: var(--banner-h);
+    overflow: hidden;
+    background: var(--bg-page);   /* mask 透明处透出的底色，必须与页面底色一致 */
+    flex-shrink: 0;
+  }
+  /* 第 1 层：风景底图（图自带左缘白色渐隐，mask 再向左压一档） */
+  .collection__banner-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center right; z-index: 1;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 15%, #000 40%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 15%, #000 40%, #000 100%);
+  }
+  /* 第 2 层：异形遮罩（页面底色 + 圆弧边界，盖底图、不碰产品岛） */
+  .collection__banner-mask {
+    position: absolute; top: -10%; left: -5%; width: 55%; height: 120%;
+    background: linear-gradient(to right, var(--bg-page) 0%, rgb(247 247 245 / 70%) 40%, rgb(255 255 255 / 0%) 80%);
+    border-radius: 0 60% 50% 0 / 0 70% 50% 0;
+    z-index: 2; pointer-events: none;
+  }
+  /* 第 3 层：悬浮产品岛（alpha 抠图 + 大投影） */
+  .collection__banner-island {
+    position: absolute; top: 50%; left: 60%; transform: translate(-50%, -45%);
+    width: 75%; max-width: 900px; z-index: 3;
+    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
+  }
+  /* 第 4 层：毛玻璃小卡 */
+  .collection__banner-badge {
+    position: absolute; right: 5%; top: 45%;
+    background: rgb(255 255 255 / 85%);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    padding: 20px 30px; border-radius: 20px; z-index: 4;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 8%);
+  }
+  .collection__banner-badge .eyebrow { font-size: 12px; color: #666; margin-bottom: 5px; }
+  .collection__banner-badge h4 { font-size: 18px; line-height: 1.25; }
+
+  /* ---- 产品区 ---- */
+  .collection__products { padding: 40px; background: var(--bg-page); }
+  .collection__toolbar {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 24px; min-height: 44px;
+  }
+  .facets__chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: 32px; padding: 4px 14px;
+    border: 1px solid #E2E2DE; border-radius: 999px;
+    background: var(--card); font-size: 13px; color: #444; text-decoration: none;
+  }
+  .facets__chip:hover { border-color: var(--brand-accent); }
+  .facets__chip .x { color: #999; font-size: 12px; }
+  .facets__clear { font-size: 13px; color: var(--brand-accent); text-decoration: underline; text-underline-offset: 2px; }
+  .collection__count { margin-left: auto; font-size: 14px; color: #666; }
+
+  .collection__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+  }
+  .product-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    border: 1px solid #ECECEA;
+    transition: box-shadow .3s;
+  }
+  .product-card:hover { box-shadow: 0 10px 20px rgb(0 0 0 / 5%); }
+  .badge-tag {
+    position: absolute; top: 15px; left: 15px;
+    background: var(--brand); color: #fff;
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 12px;
+    z-index: 1;
+  }
+  .badge-tag.sale { background: #D32F2F; }
+  .badge-tag.new { background: #1976D2; }
+  .product-img {
+    width: 100%; height: 200px; object-fit: contain; margin-bottom: 15px;
+  }
+  .product-title { font-size: 16px; font-weight: 600; margin-bottom: 5px; }
+  .product-desc { font-size: 12px; color: #888; margin-bottom: 15px; }
+  .product-price { font-size: 18px; font-weight: 700; margin-bottom: 15px; }
+  .btn-add {
+    width: 100%; padding: 12px;
+    background: var(--brand); color: #fff;
+    border: none; border-radius: 10px; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: background .2s;
+  }
+  .btn-add:hover { background: var(--brand-accent); }
+
+  .collection__pagination {
+    display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 32px;
+  }
+  .collection__pagination a,
+  .collection__pagination span {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 999px;
+    border: 1px solid #E2E2DE; background: var(--card);
+    font-size: 14px; color: var(--fg); text-decoration: none;
+  }
+  .collection__pagination [aria-current='page'] {
+    background: var(--brand); border-color: var(--brand); color: #fff;
+  }
+  .collection__pagination .gap { border: none; background: none; color: #999; }
+
+  /* ============ 移动端退化（<990px，参考稿同规则） ============ */
+  .mobile-frame { display: none; }
+  @media (max-width: 989.98px) {
+    /* demo 页头收缩（真实主题移动端是汉堡菜单，无此问题） */
+    .main-nav { padding: 0 20px; gap: 16px; }
+    .main-nav__links { display: none; }
+    .main-nav__tools { gap: 14px; }
+    .collection { display: block; }
+    .collection__aside { padding: 20px; }
+    .collection__intro { width: 100%; margin-bottom: 28px; }
+    .collection__title { font-size: 34px; letter-spacing: -.5px; }
+    .collection__banner { height: 500px; }
+    .collection__banner-bg {
+      -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+      mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+      object-position: center;
+    }
+    .collection__banner-mask {
+      width: 100%; border-radius: 0;
+      background: linear-gradient(to bottom, var(--bg-page) 0%, rgb(255 255 255 / 0%) 80%);
+    }
+    .collection__banner-island { width: 90%; left: 50%; }
+    /* 390px 下 badge 超出右缘（参考稿未处理，实测裁切）：贴边 + 缩距 */
+    .collection__banner-badge { right: 12px; top: auto; bottom: 48px; padding: 14px 18px; border-radius: 14px; }
+    .collection__banner-badge h4 { font-size: 15px; }
+    .collection__products { padding: 20px; }
+  }
+
+  /* ============ 文档说明壳（仅效果图用，落地不含） ============ */
+  .doc-head { max-width: 1500px; margin: 0 auto; padding: 32px 24px 20px; }
+  .doc-head h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .doc-head p { color: #666; font-size: 14px; line-height: 1.7; max-width: 88ch; }
+  .doc-head .tag {
+    display: inline-block; font-size: 12px; padding: 2px 10px; border-radius: 999px;
+    background: #E8E8E4; color: #555; margin: 0 6px 6px 0;
+  }
+  .doc-head .tag.new { background: var(--brand); color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="doc-head">
+  <h1>集合页改版 v2 — 左列侵入 banner（含页头 · 弃沉浸）</h1>
+  <p>
+    <span class="tag new">弃沉浸·导航恒实底</span>
+    <span class="tag">左列 320px</span>
+    <span class="tag">文字卡 560px 越界</span>
+    <span class="tag">banner 650px</span>
+    <span class="tag">banner 参数 1:1 抄参考稿</span><br>
+    banner 四层：① 风景底图（mask 左渐显 + 图自带左缘白渐隐）→ ② 异形遮罩（页面底色圆弧）
+    → ③ 产品悬浮岛（alpha 抠图 75% 宽 + 大投影）→ ④ 毛玻璃小卡。排序并进 Filters 卡顶部（拍板点①）。
+    落地时 --bg-page 走 color-mix(foreground 3%, background) 派生，Noir 自动翻转。
+  </p>
+</div>
+
+<!-- ============ 真实页头（全程实底） ============ -->
+<div class="announce">Free shipping on orders over $499 · 2-year warranty</div>
+<nav class="main-nav" aria-label="Main">
+  <span class="main-nav__logo">Northbank</span>
+  <div class="main-nav__links">
+    <a href="#">Lawn Mowers</a>
+    <a href="#">Chainsaws</a>
+    <a href="#">Trimmers</a>
+    <a href="#">Snow Blowers</a>
+    <a href="#">Support</a>
+  </div>
+  <div class="main-nav__tools">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-5.5 8-5.5s6.5 1.5 8 5.5"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8h12l1 13H5L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+  </div>
+</nav>
+
+<!-- ============ 集合页两栏骨架 ============ -->
+<div class="collection">
+
+  <!-- 左列：文字卡（560px 越界压 banner）+ 筛选卡 -->
+  <div class="collection__aside">
+    <div class="collection__intro">
+      <nav class="collection__breadcrumb" aria-label="Breadcrumb">
+        <a href="#">Home</a><span class="sep">&gt;</span><span class="current">Lawn Mowers</span>
+      </nav>
+      <h1 class="collection__title">Lawn Mowers</h1>
+      <p class="collection__description">Precision cutting. A healthier lawn.<br>A better tomorrow.</p>
+      <div class="collection__features">
+        <div class="collection__feature"><span>🔊</span>Quieter<br>Operation</div>
+        <div class="collection__feature"><span>🍃</span>Lower<br>Emissions</div>
+        <div class="collection__feature"><span>🔋</span>Longer<br>Runtime</div>
+      </div>
+    </div>
+
+    <form class="facets__card" action="#" method="get">
+      <div class="facets__head">
+        <h3>Filters</h3>
+        <a href="#">Reset all</a>
+      </div>
+      <!-- 拍板点①：排序并进筛选卡顶部 -->
+      <div class="facets__group">
+        <b><label for="sort">Sort by</label></b>
+        <select id="sort" class="facets__sort">
+          <option>Best Selling</option>
+          <option>Price, low to high</option>
+          <option>Price, high to low</option>
+        </select>
+      </div>
+      <fieldset class="facets__group" style="border:none;">
+        <b>Power Source</b>
+        <label class="facets__value"><input type="checkbox" checked>Gas<span class="count">28</span></label>
+        <label class="facets__value"><input type="checkbox">Battery<span class="count">24</span></label>
+        <label class="facets__value"><input type="checkbox">Electric<span class="count">6</span></label>
+      </fieldset>
+      <fieldset class="facets__group" style="border:none;">
+        <b>Cutting Width</b>
+        <label class="facets__value"><input type="checkbox">20 in<span class="count">12</span></label>
+        <label class="facets__value"><input type="checkbox" checked>21 in<span class="count">35</span></label>
+        <label class="facets__value"><input type="checkbox">22 in<span class="count">18</span></label>
+      </fieldset>
+      <fieldset class="facets__group" style="border:none;">
+        <b>Drive Type</b>
+        <label class="facets__value"><input type="checkbox">FWD<span class="count">12</span></label>
+        <label class="facets__value"><input type="checkbox">RWD<span class="count">35</span></label>
+      </fieldset>
+    </form>
+  </div>
+
+  <!-- 右列：banner + 产品区 -->
+  <div class="collection__main">
+
+    <div class="collection__banner">
+      <!-- 第 1 层：风景底图（= 设置 banner_background_image，空则回落 collection.image） -->
+      <img src="local-assets/banner-bg.png" class="collection__banner-bg" alt="Mountain lake landscape">
+      <!-- 第 2 层：异形遮罩 -->
+      <div class="collection__banner-mask" aria-hidden="true"></div>
+      <!-- 第 3 层：产品悬浮岛（= 设置 banner_product_image，alpha 抠图；空则不渲染） -->
+      <img src="local-assets/banner-isolate-land-alpha_webp.webp" class="collection__banner-island" alt="Northbank self-propelled mower on a floating lawn island">
+      <!-- 第 4 层：毛玻璃小卡（eyebrow + 标题，两个文本设置，空则不渲染） -->
+      <div class="collection__banner-badge">
+        <p class="eyebrow">Popular Choice</p>
+        <h4>Self-Propelled<br>Mowers</h4>
+      </div>
+    </div>
+
+    <div class="collection__products">
+      <!-- 工具条（拍板点③）：已选标签 + 计数（排序已在左列卡） -->
+      <div class="collection__toolbar">
+        <a class="facets__chip" href="#">Gas <span class="x">✕</span></a>
+        <a class="facets__chip" href="#">21 in <span class="x">✕</span></a>
+        <a class="facets__clear" href="#">Clear all</a>
+        <p class="collection__count">56 products</p>
+      </div>
+
+      <div class="collection__grid">
+        <div class="product-card">
+          <div class="badge-tag">Best Seller</div>
+          <img class="product-img" src="local-assets/product-koutu/product-nb-21p-1-main.png" alt="Northbank NB-21P walk behind mower">
+          <div class="product-title">Northbank NB-21P</div>
+          <div class="product-desc">21 in. · 166 cc · Gas Walk Behind</div>
+          <div class="product-price">$499.00</div>
+          <button class="btn-add" type="button">Add to Cart</button>
+        </div>
+        <div class="product-card">
+          <div class="badge-tag new">New</div>
+          <img class="product-img" src="local-assets/product-koutu/product-nb-21bs-1-main.png" alt="Northbank NB-21BS battery mower">
+          <div class="product-title">Northbank NB-21BS</div>
+          <div class="product-desc">21 in. · 40V · Battery Mower</div>
+          <div class="product-price">$549.00</div>
+          <button class="btn-add" type="button">Add to Cart</button>
+        </div>
+        <div class="product-card">
+          <div class="badge-tag sale">On Sale</div>
+          <img class="product-img" src="local-assets/product-koutu/product-nb-21bp-1-main.png" alt="Northbank NB-40P battery mower">
+          <div class="product-title">Northbank NB-40P</div>
+          <div class="product-desc">21 in. · 40V · Battery Mower</div>
+          <div class="product-price">$599.00</div>
+          <button class="btn-add" type="button">Add to Cart</button>
+        </div>
+        <div class="product-card">
+          <img class="product-img" src="local-assets/product-koutu/product-nb-21b80-1-main.png" alt="Northbank NB-42Z zero-turn mower">
+          <div class="product-title">Northbank NB-42Z</div>
+          <div class="product-desc">42 in. · 80V · Zero-Turn Mower</div>
+          <div class="product-price">$4,299.00</div>
+          <button class="btn-add" type="button">Add to Cart</button>
+        </div>
+        <div class="product-card">
+          <img class="product-img" src="local-assets/product-koutu/product-nb-21p-1-main.png" alt="Northbank NB-30S electric mower">
+          <div class="product-title">Northbank NB-30S</div>
+          <div class="product-desc">30 in. · Corded · Electric Mower</div>
+          <div class="product-price">$799.00</div>
+          <button class="btn-add" type="button">Add to Cart</button>
+        </div>
+        <div class="product-card">
+          <img class="product-img" src="local-assets/product-koutu/product-nb-21bs-1-main.png" alt="Northbank NB-21E electric mower">
+          <div class="product-title">Northbank NB-21E</div>
+          <div class="product-desc">21 in. · 2×20V · Battery Mower</div>
+          <div class="product-price">$629.00</div>
+          <button class="btn-add" type="button">Add to Cart</button>
+        </div>
+      </div>
+
+      <nav class="collection__pagination" aria-label="Pagination">
+        <span aria-disabled="true" style="opacity:.35;">‹</span>
+        <a href="#" aria-current="page">1</a>
+        <a href="#">2</a>
+        <a href="#">3</a>
+        <span class="gap">…</span>
+        <a href="#">5</a>
+        <a href="#">›</a>
+      </nav>
+    </div>
+
+  </div>
+</div>
+
+</body>

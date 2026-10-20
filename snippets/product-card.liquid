@@ -27,10 +27,17 @@
 {% enddoc %}
 
 {%- if product != blank -%}
-  {%- comment -%} 根节点是 product-card-3d 自定义元素（2026-10-17）：hover 3D 倾斜由
-     assets/product-card-3d.js 驱动，配色走 CSS 变量（参考 dev-docs/local-assets/product-3d.html）。
-     无 JS 时仅失去倾斜，卡片照常显示；role="article" 补回原生 article 语义。 {%- endcomment -%}
-  <product-card-3d class="product-card" role="article">
+  {%- comment -%} 根节点是 tilt-element 自定义元素（2026-10-17 建、2026-10-20 泛化）：
+     hover 3D 倾斜由 assets/tilt-element.js 驱动，配色走 CSS 变量
+     （参考 dev-docs/local-assets/product-3d.html）。倾斜目标 = 媒体图，
+     触发区 = 媒体盒（与泛化前一致）；无 JS 时仅失去倾斜，卡片照常显示；
+     role="article" 补回原生 article 语义。 {%- endcomment -%}
+  <tilt-element
+    class="product-card"
+    role="article"
+    data-tilt-target=".product-card__media img"
+    data-tilt-area=".product-card__media"
+  >
     <div class="product-card__media-wrap">
       <a class="product-card__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
         {%- if product.featured_image -%}
@@ -225,5 +232,5 @@
         <p class="visually-hidden" role="status" data-quick-add-status></p>
       </quick-add>
     {%- endif -%}
-  </product-card-3d>
+  </tilt-element>
 {%- endif -%}

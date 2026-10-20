@@ -41,8 +41,11 @@
       break
     endif
   endfor
+  # 横幅底图：设置优先，未设则回落集合自带图（collection.image）。
+  # 产品悬浮岛（banner_product_image）为空时不渲染——退化为纯风景横幅。
+  assign banner_image = section.settings.banner_background_image | default: collection.image
   assign has_banner = false
-  if collection.image and section.settings.show_banner
+  if banner_image and section.settings.show_banner
     assign has_banner = true
   endif
 -%}
@@ -50,7 +53,7 @@
 <script src="{{ 'compare-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
-<script src="{{ 'product-card-3d.js' | asset_url }}" defer></script>
+<script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
 {%- if collection.filters.size > 0 -%}
   <script src="{{ 'faceted-filters.js' | asset_url }}" defer></script>
 {%- endif -%}
@@ -78,73 +81,162 @@
     </header>
   {%- endcapture -%}
 
-  {%- if has_banner -%}
-    <div class="collection__banner">
-      {{
-        collection.image
-        | image_url: width: 2400
-        | image_tag:
-          widths: '750, 1100, 1500, 2000, 2400',
-          sizes: '100vw',
-          width: collection.image.width,
-          height: collection.image.height,
-          loading: 'eager',
-          fetchpriority: 'high',
-          alt: collection.image.alt
-      }}
-      <div class="collection__intro">{{ intro_content }}</div>
-    </div>
-  {%- else -%}
-    <div class="collection__intro collection__intro--plain">{{ intro_content }}</div>
-  {%- endif -%}
+  {%- comment -%}
+    两栏骨架（2026-10-20 刘工，参考稿「首页布局-左侧集合入侵 banner」）：
+    左列 = 标题卡（560px 越界压 banner）+ 筛选卡；右列 = banner + 产品区。
+    <collection-facets> 必须包住整个两栏：工具条与结果区在右列、筛选表单在左列，
+    局部更新（Section Rendering）替换的是本元素的全部子节点，缺任何一边就会
+    「筛选后网格不刷新」。代价：banner/标题随局部更新重渲染——图走缓存、带
+    width/height 属性，无 CLS。
+  {%- endcomment -%}
+  <collection-facets class="collection__facets" data-section-id="{{ section.id }}">
+    <div class="collection__layout" data-facets-layout>
 
-  <div class="collection__sheet">
-    <collection-facets class="collection__facets" data-section-id="{{ section.id }}">
-      <div class="collection__layout{% if collection.filters.size == 0 %} collection__layout--no-facets{% endif %}" data-facets-layout>
+      {%- comment -%} ── 左列 ── {%- endcomment -%}
+      <div class="collection__left">
+        <div class="collection__intro">
+          {{ intro_content }}
+          {%- if section.blocks.size > 0 -%}
+            <ul class="collection__features" role="list">
+              {%- for block in section.blocks -%}
+                {%- if block.type == 'banner_feature' and block.settings.text != blank -%}
+                  <li class="collection__feature" {{ block.shopify_attributes }}>
+                    {%- if block.settings.icon != blank -%}
+                      <span class="collection__feature-icon" aria-hidden="true">{{ block.settings.icon }}</span>
+                    {%- endif -%}
+                    <span class="collection__feature-text">{{ block.settings.text | escape }}</span>
+                  </li>
+                {%- endif -%}
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+        </div>
+
         {%- if collection.filters.size > 0 -%}
-          <form
-            class="facets__form"
-            id="FacetsForm-{{ section.id }}"
-            action="{{ collection.url }}"
-            method="get"
-            data-facets-form
-          >
-            {%- comment -%}
-              左列两张卡（2026-10-16 刘工定）：排序卡在上，筛选卡在下。
-              桌面：排序卡留在 form 内。移动端：faceted-filters.js 把这一张卡
-              移进工具条（pages-ui §4 移动端工具条 = [筛选☰] [排序▾]）——同一
-              DOM 节点，不做副本。故 select 恒带 form 属性：离开 form 子树后仍是
-              表单成员，FormData / requestSubmit / 无 JS 原生提交都照常带上 sort_by。
-            {%- endcomment -%}
-            {%- if section.settings.show_sort -%}
-              <div class="facets__sort-card">
-                <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
-                  {{ 'collections.sort.label' | t }}
-                </label>
-                <facet-sort class="facets__sort-select">
-                  <select
-                    id="SortBy-{{ section.id }}"
-                    name="sort_by"
-                    data-facets-sort
-                    form="FacetsForm-{{ section.id }}"
-                  >
-                    {%- for option in collection.sort_options -%}
-                      <option
-                        value="{{ option.value }}"
-                        {% if option.value == collection.sort_by %}
-                          selected
-                        {% endif %}
+          {%- comment -%}
+            筛选表单落在左列的归位槽（.facets__form-slot）：移动抽屉关闭后
+            JS 按槽归位（form 曾被整体移进 dialog），不能靠 layout.prepend
+            ——那会把表单顶到标题卡之前。
+            排序卡在这里 capture 后经 sort_card 参数交 faceted-filters 渲染在
+            筛选卡顶部（2026-10-20 刘工拍板）；移动端由 JS 搬进工具条。
+            select 恒带 form 属性：离开 form 子树后仍是表单成员（无 JS 的原生
+            GET 提交也照常带 sort_by）。
+          {%- endcomment -%}
+          <div class="facets__form-slot" data-facets-form-slot>
+            <form
+              class="facets__form"
+              id="FacetsForm-{{ section.id }}"
+              action="{{ collection.url }}"
+              method="get"
+              data-facets-form
+            >
+              {%- capture sort_card -%}
+                {%- if section.settings.show_sort -%}
+                  <div class="facets__sort-card">
+                    <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
+                      {{ 'collections.sort.label' | t }}
+                    </label>
+                    <facet-sort class="facets__sort-select">
+                      <select
+                        id="SortBy-{{ section.id }}"
+                        name="sort_by"
+                        data-facets-sort
+                        form="FacetsForm-{{ section.id }}"
                       >
-                        {{ option.name | escape }}
-                      </option>
-                    {%- endfor -%}
-                  </select>
-                </facet-sort>
+                        {%- for option in collection.sort_options -%}
+                          <option
+                            value="{{ option.value }}"
+                            {% if option.value == collection.sort_by %}
+                              selected
+                            {% endif %}
+                          >
+                            {{ option.name | escape }}
+                          </option>
+                        {%- endfor -%}
+                      </select>
+                    </facet-sort>
+                  </div>
+                {%- endif -%}
+              {%- endcapture -%}
+
+              {% render 'faceted-filters', filters: collection.filters, sort_card: sort_card %}
+            </form>
+          </div>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} ── 右列 ── {%- endcomment -%}
+      <div class="collection__right">
+        {%- if has_banner -%}
+          {%- liquid
+            assign banner_alt = banner_image.alt | default: ''
+            assign island = section.settings.banner_product_image
+            assign island_alt = island.alt | default: section.settings.banner_badge_title
+            assign island_alt = island_alt | default: ''
+          -%}
+          {%- comment -%}
+            横幅四层（2026-10-20，参数 1:1 对齐参考稿，勿改层级）：
+            ① 风景底图（LCP：eager + fetchpriority high；mask 向左渐显，
+               透明处透出页面色）→ ② 异形遮罩（页面色 + 圆弧边界，只压底图、
+               不碰产品岛）→ ③ 产品悬浮岛（alpha 抠图，仅 banner_product_image
+               有值时渲染）→ ④ 毛玻璃小卡（两个文本设置，标题空则整卡不渲染）。
+          {%- endcomment -%}
+          {%- comment -%}
+            根节点是 tilt-element（assets/tilt-element.js）：整块横幅 = 触发区
+            （鼠标不必压在岛上也跟随），产品岛 = 倾斜目标。幅度比商品卡收敛
+            （10°→6°、scale 1.08→1.02、perspective 700→1200）——岛宽 825px，
+            商品卡那套参数在大元素上会畸变夸张。无 JS / 触屏 / reduced-motion
+            下脚本根本不挂载，岛保持静态居中。
+          {%- endcomment -%}
+          <tilt-element
+            class="collection__banner"
+            data-tilt-target=".collection__banner-island"
+            data-tilt-rotate="6"
+            data-tilt-shift="10"
+            data-tilt-scale="1.02"
+            data-tilt-perspective="1200"
+          >
+            {{
+              banner_image
+              | image_url: width: 2400
+              | image_tag:
+                class: 'collection__banner-bg',
+                widths: '750, 1100, 1500, 2000, 2400',
+                sizes: '(min-width: 990px) 70vw, 100vw',
+                width: banner_image.width,
+                height: banner_image.height,
+                loading: 'eager',
+                fetchpriority: 'high',
+                alt: banner_alt
+            }}
+            <div class="collection__banner-mask" aria-hidden="true"></div>
+            {%- if island -%}
+              {{
+                island
+                | image_url: width: 1600
+                | image_tag:
+                  class: 'collection__banner-island',
+                  widths: '600, 900, 1200, 1600',
+                  sizes: '(min-width: 990px) 45vw, 90vw',
+                  width: island.width,
+                  height: island.height,
+                  loading: 'eager',
+                  alt: island_alt
+              }}
+            {%- endif -%}
+            {%- comment -%}
+              ④ 毛玻璃小卡：两个文本设置 + 一个总开关（2026-10-20 刘工要求可关）。
+              开关关掉则不渲染；开关开着但标题为空时同样不渲染（避免只留一个 eyebrow 空卡）。
+            {%- endcomment -%}
+            {%- if section.settings.show_banner_badge and section.settings.banner_badge_title != blank -%}
+              <div class="collection__banner-badge">
+                {%- if section.settings.banner_badge_eyebrow != blank -%}
+                  <p class="collection__banner-badge-eyebrow">{{ section.settings.banner_badge_eyebrow | escape }}</p>
+                {%- endif -%}
+                <p class="collection__banner-badge-title">{{ section.settings.banner_badge_title | escape }}</p>
               </div>
             {%- endif -%}
-
-            {% render 'faceted-filters', filters: collection.filters %}
-          </form>
+          </tilt-element>
         {%- endif -%}
 
         <div class="collection__content">
@@ -302,8 +394,8 @@
           </div>
         </div>
       </div>
-    </collection-facets>
-  </div>
+    </div>
+  </collection-facets>
 
   {%- if collection.filters.size > 0 -%}
     <dialog
@@ -317,104 +409,230 @@
 
 {% stylesheet %}
   /* 包裹层退回 block：section 顶部的 script/link 标签不能成为 .shopify-section
-     grid 的 item（否则会在横幅上方挤出空行，破坏"沉浸贴页头"）；通栏由根 div
-     的 full-width + 内部 grid 自行管理。 */
+     grid 的 item（否则会在内容上方挤出空行）；通栏由根 div 的 full-width +
+     内部 grid 自行管理。 */
   .shopify-section.collection-section {
     display: block;
   }
+
+  /* ===================================================================
+     集合页骨架（2026-10-20 刘工拍板，参考稿「首页布局-左侧集合入侵 banner」）
+     左列 320px（标题卡 + 筛选卡）｜右列（横幅 + 产品区）自适应铺到右缘。
+     首列留页面边距，与主题其余 section 的内容起点对齐；整块 1920px 居中。
+
+     ⚠️ 沉浸页头已弃用（同日拍板）：左列是浅底黑字、透明页头叠上去必打架，
+     横幅不再钻到页头背后，导航行全程实底（critical.css 的沉浸组已删除）。
+     =================================================================== */
   .collection {
+    /* 内容区底色：横幅遮罩、mask 透明处、产品区共用——必须从令牌派生，
+       Noir 深色预设下自动翻转（禁止硬编码 #F7F7F5，配色纪律） */
+    --collection-surface: color-mix(in srgb, var(--color-foreground) 3%, var(--color-background));
+    --collection-left: 320px;
+    --banner-h: 650px;
+
+    /* 首列 = 页面边距（与其余 section 的内容起点对齐），第二列承载整个两栏。
+       列宽只在 .collection__layout 里定义一次（--collection-left），避免
+       「外层轨道 + 内层列」两处 320px 各写各的。 */
     display: grid;
-    grid-template-columns: var(--content-grid);
+    grid-template-columns: var(--page-margin) minmax(0, 1fr);
     width: 100%;
+    max-width: 1920px;
+    margin-inline: auto;
+    align-items: start;
+    background-color: var(--collection-surface);
   }
-  .collection > * {
+  /* ⚠️ 落列位置必须给 <collection-facets> 本身，不能给 .collection__layout：
+     它是 facets 的子元素，grid-column 只对直接父网格生效——写到里面时
+     facets 作为 grid item 自动落到第 1 列（20px 边距列），右列被压成 0、
+     横幅宽度塌成 0（2026-10-20 实渲染验证抓到的真 bug）。 */
+  .collection__facets {
     grid-column: 2;
+    display: block;
+    min-width: 0;
   }
-  .collection > .collection__banner {
-    grid-column: 1 / -1;
+  .collection__layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    min-width: 0;
   }
 
-  /* 横幅沉浸通栏（贴页头）：面包屑/标题/描述白字直接叠图，
-     左向暗化渐变 + text-shadow 保证可读性（WCAG 对比度）。 */
-  .collection {
-    --banner-h: clamp(200px, 30vh, 340px);
-  }
-  .collection__banner {
+  /* ---- 左列：z-index 压在横幅上（侵入式构图的命门） ---- */
+  .collection__left {
     position: relative;
-    grid-column: 1 / -1;
-    height: var(--banner-h);
+    z-index: 10;
     display: flex;
-    align-items: flex-end;
-    overflow: hidden;
+    flex-direction: column;
+    min-width: 0;
+    padding-left: 20px;
   }
-  .collection__banner > img {
+  /* 标题卡越界：560px > 320px 左列，向右侵入横幅 240px（参考稿同值）。
+     ⚠️ 不能加 max-width: 100%——那会把 560 钳回 276（左列内容宽），
+     侵入效果消失、h1 折行、亮点竖排（2026-10-20 实渲染抓到）。
+     移动端另有 width: 100% 的覆盖，小屏不会溢出。 */
+  .collection__intro {
+    width: 560px;
+    padding-block-start: 10px;
+    margin-block-end: 50px;
+  }
+  /* 亮点行（blocks：图标 + 文案，参考稿「Quieter Operation」那一条） */
+  .collection__features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .collection__feature {
+    font-size: 0.82rem;
+    line-height: 1.3;
+    color: color-mix(in srgb, var(--color-foreground) 85%, transparent);
+  }
+  .collection__feature-icon {
+    display: block;
+    margin-block-end: 5px;
+    font-size: 1.25rem;
+    color: var(--color-brand);
+  }
+  .collection__feature-text {
+    display: block;
+    max-width: 9ch;
+  }
+  /* 无横幅：标题卡不再越界（没有横幅可压，越界会盖到产品网格上） */
+  .collection--no-banner .collection__intro {
+    width: 100%;
+    margin-block-end: 2rem;
+  }
+
+  /* ---- 右列 ---- */
+  .collection__right {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* ===================================================================
+     横幅四层（参数 1:1 对齐参考稿，勿改层级与取值——2026-10-20 第三轮）
+     ① 底图（mask 向左渐显，透明处透出 --collection-surface）
+     ② 异形遮罩（页面色 + 圆弧边界；只压底图，不碰产品岛——「光晕只能垫底」
+        那条纪律针对的是产品图，这里不适用）
+     ③ 产品悬浮岛（alpha 抠图，drop-shadow 是配色纪律的合法例外：永远黑）
+     ④ 毛玻璃小卡（背景色 85% 透明，backdrop-filter 毛玻璃）
+     =================================================================== */
+  .collection__banner {
+    /* 根元素是 tilt-element 自定义元素（默认 display:inline，会塌掉宽高）——
+       必须显式给 block。 */
+    display: block;
+    position: relative;
+    width: 100%;
+    height: var(--banner-h);
+    overflow: hidden;
+    flex-shrink: 0;
+    background-color: var(--collection-surface);
+  }
+  .collection__banner-bg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-  }
-  .collection__banner::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to right, rgb(0 0 0 / 40%), rgb(0 0 0 / 14%) 55%, rgb(0 0 0 / 0%) 85%);
-  }
-  .collection__intro {
-    position: relative;
+    object-position: center right;
     z-index: 1;
-    width: 100%;
-    /* 与下方主体同一条内容列：intro 自己跑 content-grid，文字落第 2 列 */
-    display: grid;
-    grid-template-columns: var(--content-grid);
-    padding-block: 1.5rem;
-    color: #ffffff;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 15%, #000 40%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 15%, #000 40%, #000 100%);
   }
-  .collection__intro > * {
-    grid-column: 2;
+  .collection__banner-mask {
+    position: absolute;
+    top: -10%;
+    left: -5%;
+    /* 宽度随视口收缩（2026-10-20 刘工）：横幅右列是 minmax(0,1fr)，视口越窄它越窄，
+       而左列（320px）与侵入的标题卡（560px）是定值 → 窄屏时固定 55% 会把底图
+       盖掉一大半。改成「横幅宽 − 520px」（520 ≈ 左列 320 + 页边距 + 让出量），
+       中间值随横幅变窄而**更快**变小，两头用 30% / 55% 夹住：
+       横幅 ≥1156px → 55%；743–1156px → calc；≤743px → 30%（两段边界连续）。
+       移动端 <990px 走另一套纵向渐隐规则（width 100%），不受此处影响。 */
+    width: clamp(30%, calc(100% - 520px), 55%);
+    height: 120%;
+    background: linear-gradient(
+      to right,
+      var(--collection-surface) 0%,
+      color-mix(in srgb, var(--collection-surface) 70%, transparent) 40%,
+      transparent 80%
+    );
+    border-radius: 0 60% 50% 0 / 0 70% 50% 0;
+    z-index: 2;
+    pointer-events: none;
   }
-  .collection__banner .collection__breadcrumb-list,
-  .collection__banner .collection__breadcrumb-item a {
-    color: rgb(255 255 255 / 82%);
+  .collection__banner-island {
+    position: absolute;
+    top: 50%;
+    left: 60%;
+    /* ⚠️ 居中偏移走 translate 属性，不要用 transform：tilt-element.js 会整块覆写
+       transform，写在这里的 translate(-50%, -45%) 会被吃掉、岛瞬间跳位。
+       独立变换属性与 transform 各占一个槽位，互不干扰（translate 先、transform 后）。 */
+    translate: -50% -45%;
+    width: 75%;
+    max-width: 900px;
+    z-index: 3;
+    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
   }
-  .collection__banner .collection__breadcrumb-item a:hover {
-    color: #ffffff;
-  }
-  .collection__banner .collection__title,
-  .collection__banner .collection__description {
-    color: #ffffff;
-    text-shadow: 0 1px 3px rgb(0 0 0 / 35%);
-  }
-  .collection__banner .collection__title {
-    margin-block-start: 0.35rem;
-  }
-  /* 无横幅：介绍区黑字常规排版（同样走内容列） */
-  .collection--no-banner .collection__intro--plain {
-    color: var(--color-foreground);
-    padding-block: 2rem 0;
-  }
-  .collection--no-banner .collection__intro--plain .collection__breadcrumb-list {
-    color: rgb(0 0 0 / 55%);
-  }
-  @media (max-width: 989.98px) {
-    .collection__banner {
-      height: clamp(170px, 26vh, 260px);
+  /* 倾斜的平滑感由 CSS 承担（JS 只做 rAF 合帧）：商品卡同款极缓曲线。
+     只给 transform 加，投影不动——大图 filter 动画每帧重绘，性价比低。 */
+  @media (hover: hover) and (pointer: fine) {
+    .collection__banner-island {
+      transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
     }
-    .collection__title {
-      font-size: clamp(1.5rem, 6vw, 2rem);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .collection__banner-island {
+      transition: none;
     }
+  }
+  .collection__banner-badge {
+    position: absolute;
+    top: 45%;
+    right: 5%;
+    z-index: 4;
+    padding: 20px 30px;
+    border-radius: 20px;
+    background-color: color-mix(in srgb, var(--color-background) 85%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 8%);
+  }
+  .collection__banner-badge-eyebrow {
+    margin-block-end: 5px;
+    font-size: 0.78rem;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  }
+  .collection__banner-badge-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  /* 产品区：与横幅同底色，padding 参考稿 40px */
+  .collection__content {
+    padding: 40px;
+    min-width: 0;
   }
 
   /* 面包屑 */
   .collection__breadcrumb-list {
     display: flex;
     flex-wrap: wrap;
+    /* ⚠️ 必须 center（2026-10-20 修「面包屑错层」）：行内链接有 44px 触控高度
+       （min-height，项目统一约定），纯文本的当前项只有 ~16px 行高；stretch 下
+       li 被拉到同高、纯文本项贴顶 → 实测两项文字中心差 14px。居中后文字对齐，
+       44px 触控区上下溢出但不影响视觉。 */
+    align-items: center;
     gap: 0.35rem;
     list-style: none;
     padding: 0;
     margin: 0 0 0.5rem;
     font-size: 0.82rem;
-    color: rgb(0 0 0 / 55%);
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
   }
   .collection__breadcrumb-item + .collection__breadcrumb-item::before {
     content: '/';
@@ -431,42 +649,47 @@
     text-decoration: underline;
   }
 
+  /* 集合标题（参考稿 64px / 700）：左列是这一屏的视觉重心，
+     比原 41px 上限大得多，也因此才需要 320px 的列宽兜住长标题。 */
   .collection__title {
-    font-size: clamp(1.8rem, 3.2vw, 2.6rem);
-    font-weight: 600;
-    line-height: 1.12;
+    font-size: clamp(2rem, 4.4vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-block-end: 0.75rem;
   }
   .collection__description {
     margin-block-start: 0.5rem;
-    max-width: 60ch;
-    font-size: 0.95rem;
-    color: rgb(0 0 0 / 65%);
+    max-width: 46ch;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
   }
 
-  /* 两栏：筛选 + 内容。桌面 ≥990px 恒两栏（纯 CSS，不依赖 JS）；
-     无 JS 降级：应用按钮整页提交。移动端单列，JS 就绪后 Filters 按钮开抽屉。 */
-  .collection__layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-    margin-block-start: 1.5rem;
-  }
-
-  /* 左列 = 两张卡堆叠（2026-10-16 刘工定：排序卡在上、筛选卡在下）。
-     桌面由 ≥990px 规则给卡面；移动端排序卡被 JS 移进工具条，余下的 form 整体
-     进抽屉，改 block + 分隔线。 */
+  /* 左列只剩一张筛选卡（2026-10-20 排序卡已并进卡顶部的 .facets__sort-slot），
+     form 不再需要两张卡之间的 gap。定宽轨道里的每一级都要 min-width: 0：
+     排序 select 的最长选项文本会撑破 320px 轨道、叠到右侧产品列
+     （BUG 链：form → slot → sort-card → select）。 */
   .facets__form {
     display: grid;
-    gap: 1rem;
     align-content: start;
-    /* 左列轨道定宽 260px，但 grid item 默认 min-width:auto——排序 select 的
-       最长选项文本会撑破轨道、叠到右侧产品列。逐级放开收缩（BUG 链：
-       form → sort-card → select），长选项由 select 内部截断。 */
     min-width: 0;
   }
-  /* 筛选卡同风险：长筛选标签 / 计数也可能撑破 260px 轨道 */
+  /* form 归位槽：抽屉关闭后 JS 把 form 放回这里（不能 layout.prepend，
+     否则表单会顶到标题卡之前）。 */
+  .facets__form-slot {
+    min-width: 0;
+  }
+  /* 筛选卡同风险：长筛选标签 / 计数也可能撑破轨道 */
   .facets__aside {
     min-width: 0;
+  }
+  /* 排序卡落点（桌面在筛选卡顶部、移动端被 JS 搬进工具条）。
+     空槽（未启用排序）不渲染分隔线。 */
+  .facets__sort-slot:not(:empty) {
+    padding-block-end: 0.9rem;
+    margin-block-end: 0.9rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
   }
   .facets__sort-card {
     display: grid;
@@ -621,7 +844,7 @@
     align-items: center;
     min-height: 44px;
     padding: 8px 1rem;
-    border: 1px solid rgb(0 0 0 / 25%);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
     border-radius: var(--style-border-radius-inputs);
     background: none;
     font: inherit;
@@ -629,7 +852,7 @@
   }
   .collection__count {
     font-size: 0.85rem;
-    color: rgb(0 0 0 / 60%);
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
     white-space: nowrap;
   }
 
@@ -720,7 +943,7 @@
   }
   .facets__value-count {
     font-size: 0.78rem;
-    color: rgb(0 0 0 / 45%);
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
   .facets__price {
     display: flex;
@@ -918,7 +1141,7 @@
     width: 44px;
     height: 44px;
     padding: 0;
-    border: 1px solid rgb(0 0 0 / 12%);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
     border-radius: 999px;
     background-color: var(--color-background);
     color: inherit;
@@ -939,7 +1162,7 @@
   .collection__pagination-gap {
     min-width: 24px;
     text-align: center;
-    color: rgb(0 0 0 / 45%);
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
 
   /* 空态 */
@@ -949,7 +1172,7 @@
     gap: 0.5rem;
     padding: 3rem 1rem;
     text-align: center;
-    border: 1px dashed rgb(0 0 0 / 20%);
+    border: 1px dashed color-mix(in srgb, var(--color-foreground) 20%, transparent);
     border-radius: 12px;
   }
   .collection__empty-title {
@@ -958,7 +1181,7 @@
   }
   .collection__empty-body {
     font-size: 0.9rem;
-    color: rgb(0 0 0 / 60%);
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
   .collection__empty-link {
     display: inline-flex;
@@ -1044,7 +1267,7 @@
     height: 5px;
     margin: 0 auto 0.9rem;
     border-radius: 999px;
-    background-color: rgb(0 0 0 / 15%);
+    background-color: color-mix(in srgb, var(--color-foreground) 15%, transparent);
     touch-action: none;
     user-select: none;
   }
@@ -1081,24 +1304,22 @@
      data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
   @media (min-width: 990px) {
     .collection__layout {
-      /* 260 → 290px（2026-10-17 刘工两轮微调：280 仍挤，最终定 290）；
-         卡面内边距占用 2.5rem，min-width 收缩链已放开（见 .facets__form） */
-      grid-template-columns: 290px 1fr;
-      gap: 2rem;
+      /* 左列 320px（参考稿），右列 1fr 铺到右缘。
+         列间距 0：横幅与左列的实际间距由左列的 padding-inline-end（20px）
+         提供——参考稿同值，多给 gap 会把横幅推离左列。
+         卡面内边距占用 2.5rem，min-width 收缩链已放开（见 .facets__form）。 */
+      grid-template-columns: var(--collection-left) minmax(0, 1fr);
+      gap: 0;
     }
-    /* 无筛选集合不渲染表单：内容区独占整行，不空一列 */
-    .collection__layout--no-facets {
-      grid-template-columns: 1fr;
-    }
-    /* 左列两张卡：排序卡在上、筛选卡在下（描边 + 圆角 + 内边距）。
-       卡面只给 form 内的那一份——工具条里的排序卡（无筛选集合）是紧凑控件，
-       不该套卡面（选择器限定作用域，见 .collection__toolbar 的横排形态）。 */
-    .facets__form .facets__sort-card,
+    /* 筛选卡（含顶部排序组）：白卡浮在浅灰内容底上（参考稿 filters-card）。
+       排序卡已并进卡内，不再单独套卡面；工具条里那份（无筛选集合）是紧凑
+       控件，也不套卡面（见 .collection__toolbar 的横排形态）。 */
     .facets__aside {
-      padding: 1rem 1.25rem;
-      border: 1px solid rgb(0 0 0 / 10%);
-      border-radius: 12px;
+      padding: 1.25rem;
+      border: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+      border-radius: 20px;
       background-color: var(--color-background);
+      box-shadow: 0 10px 30px rgb(0 0 0 / 4%);
     }
     /* 最后一组筛选不再留底边距——卡片内边距已提供呼吸感 */
     .facets__aside .facets__group:last-of-type {
@@ -1118,14 +1339,73 @@
     .collection__toolbar .collection__count {
       order: 3;
     }
+    /* 筛选卡头部：桌面复用抽屉的头行做「Filters」卡头（参考稿同形态），
+       关闭按钮只在抽屉里有意义，桌面隐藏。 */
     .facets__mobile-head {
+      display: flex;
+    }
+    .facets__close {
       display: none;
     }
   }
   .collection__facets[data-facets-ready] .facets__apply {
     display: none;
   }
+  /* ===================================================================
+     移动端（<990px）单列退化：标题卡全宽不侵入 → 横幅纵向渐隐 → 工具条 → 网格。
+     横幅的渐隐方向从「向左」改成「向下」：下方就是产品区，两者同底色才能接住。
+     参考稿同规则（650px → 500px，产品岛 90% 居中）。
+     =================================================================== */
   @media (max-width: 989.98px) {
+    .collection {
+      display: block;
+    }
+    .collection__facets {
+      grid-column: auto;
+    }
+    .collection__left {
+      padding: 20px;
+    }
+    .collection__intro {
+      width: 100%;
+      padding-block-start: 0;
+      margin-block-end: 28px;
+    }
+    .collection__title {
+      font-size: clamp(1.75rem, 8vw, 2.25rem);
+      letter-spacing: -0.01em;
+    }
+    .collection__banner {
+      height: 500px;
+    }
+    .collection__banner-bg {
+      object-position: center;
+      -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+      mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+    }
+    .collection__banner-mask {
+      width: 100%;
+      border-radius: 0;
+      background: linear-gradient(to bottom, var(--collection-surface) 0%, transparent 80%);
+    }
+    .collection__banner-island {
+      width: 90%;
+      left: 50%;
+    }
+    /* 横幅小卡下移贴边：390px 视口下 top:45% + right:5% 会顶到岛的投影上 */
+    .collection__banner-badge {
+      top: auto;
+      bottom: 48px;
+      right: 12px;
+      padding: 14px 18px;
+      border-radius: 14px;
+    }
+    .collection__banner-badge-title {
+      font-size: 0.95rem;
+    }
+    .collection__content {
+      padding: 20px;
+    }
     .collection__facets[data-facets-ready] .facets__open {
       display: inline-flex;
     }
@@ -1168,14 +1448,10 @@
       min-height: 40px;
       max-width: 40vw;
     }
-    /* 抽屉 / 无 JS 流内（排序卡还在 form 里）：与筛选块之间用分隔线，不做卡面 */
+    /* 抽屉 / 无 JS 流内：排序卡在筛选卡顶部（.facets__sort-slot 已给分隔线），
+       这里只把 form 退回 block，不再重复画一条线。 */
     .facets__form {
       display: block;
-    }
-    .facets__form .facets__sort-card {
-      padding-block-end: 0.9rem;
-      margin-block-end: 0.9rem;
-      border-block-end: 1px solid rgb(0 0 0 / 10%);
     }
   }
 
@@ -1198,6 +1474,43 @@
       "id": "show_banner",
       "label": "t:sections.collection.labels.show_banner",
       "default": true
+    },
+    {
+      "type": "paragraph",
+      "content": "t:sections.collection.paragraphs.banner_images"
+    },
+    {
+      "type": "image_picker",
+      "id": "banner_background_image",
+      "label": "t:sections.collection.labels.banner_background_image",
+      "info": "t:sections.collection.labels.banner_background_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "banner_product_image",
+      "label": "t:sections.collection.labels.banner_product_image",
+      "info": "t:sections.collection.labels.banner_product_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_banner_badge",
+      "label": "t:sections.collection.labels.show_banner_badge",
+      "info": "t:sections.collection.labels.show_banner_badge_info",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "banner_badge_eyebrow",
+      "label": "t:sections.collection.labels.banner_badge_eyebrow",
+      "info": "t:sections.collection.labels.banner_badge_info",
+      "default": "Popular Choice"
+    },
+    {
+      "type": "text",
+      "id": "banner_badge_title",
+      "label": "t:sections.collection.labels.banner_badge_title",
+      "info": "t:sections.collection.labels.banner_badge_info",
+      "default": "Self-Propelled Mowers"
     },
     {
       "type": "range",
@@ -1252,6 +1565,55 @@
       "label": "t:sections.collection.labels.show_spec_weight",
       "info": "t:sections.collection.labels.spec_info",
       "default": false
+    }
+  ],
+  "blocks": [
+    {
+      "type": "banner_feature",
+      "name": "t:sections.collection.blocks.banner_feature.name",
+      "settings": [
+        {
+          "type": "text",
+          "id": "icon",
+          "label": "t:sections.collection.blocks.banner_feature.settings.icon.label",
+          "info": "t:sections.collection.blocks.banner_feature.settings.icon.info"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "t:sections.collection.blocks.banner_feature.settings.text.label",
+          "default": "Quieter Operation"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 4,
+  "presets": [
+    {
+      "name": "t:sections.collection.presets.default",
+      "blocks": [
+        {
+          "type": "banner_feature",
+          "settings": {
+            "icon": "🔊",
+            "text": "Quieter Operation"
+          }
+        },
+        {
+          "type": "banner_feature",
+          "settings": {
+            "icon": "🍃",
+            "text": "Lower Emissions"
+          }
+        },
+        {
+          "type": "banner_feature",
+          "settings": {
+            "icon": "🔋",
+            "text": "Longer Runtime"
+          }
+        }
+      ]
     }
   ]
 }

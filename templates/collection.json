@@ -11,7 +11,38 @@
   "sections": {
     "main": {
       "type": "collection",
-      "settings": {}
+      "settings": {
+        "banner_background_image": "shopify://shop_images/banner-bg.png",
+        "banner_product_image": "shopify://shop_images/banner-isolate-land-alpha_webp.webp"
+      },
+      "blocks": {
+        "highlight_aE7iQu": {
+          "type": "banner_feature",
+          "settings": {
+            "icon": "🔊",
+            "text": "Quieter Operation"
+          }
+        },
+        "highlight_Ya9mKd": {
+          "type": "banner_feature",
+          "settings": {
+            "icon": "🍃",
+            "text": "Lower Emissions"
+          }
+        },
+        "highlight_Rt3vNp": {
+          "type": "banner_feature",
+          "settings": {
+            "icon": "🔋",
+            "text": "Longer Runtime"
+          }
+        }
+      },
+      "block_order": [
+        "highlight_aE7iQu",
+        "highlight_Ya9mKd",
+        "highlight_Rt3vNp"
+      ]
     }
   },
   "order": [

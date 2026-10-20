@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>落地 CSS 实渲染验证 — collection.liquid 新版式</title>
+<style>
+  :root {
+    --color-background: #FFFFFF;
+    --color-foreground: #333333;
+    --color-brand: #1E4B3C;
+    --color-brand-accent: #2E6B4E;
+    --page-margin: 20px;
+    --style-border-radius-inputs: 4px;
+    --font-primary--family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f3f3f0; font-family: var(--font-primary--family); color: var(--color-foreground); }
+  img { display: block; max-width: 100%; height: auto; }
+  /* 页头（实底，弃沉浸后的真实形态） */
+  .announce { background: var(--color-brand); color: #fff; font-size: 12px; text-align: center; padding: 12px; }
+  .main-nav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 32px;
+    height: 76px; padding: 0 40px; background: var(--color-background); border-bottom: 1px solid rgb(0 0 0 / 6%); }
+  .logo { font-size: 22px; font-weight: 800; color: var(--color-brand); }
+  .navlinks { display: flex; gap: 24px; font-size: 14px; }
+  .tools { margin-left: auto; display: flex; gap: 18px; }
+  /* 简化产品卡（真实卡样式来自 product-card.css，此处只验布局） */
+  .product-card { background: var(--color-background); border: 1px solid #ECECEA; border-radius: 16px; padding: 20px; }
+  .product-card img { width: 100%; height: 200px; object-fit: contain; margin-bottom: 12px; }
+  .product-card .tt { font-size: 1rem; font-weight: 600; }
+  .product-card .sp { font-size: 0.75rem; color: #888; margin-bottom: 12px; }
+  .product-card .pr { font-size: 1.125rem; font-weight: 700; }
+</style>
+<style>
+
+  /* 包裹层退回 block：section 顶部的 script/link 标签不能成为 .shopify-section
+     grid 的 item（否则会在内容上方挤出空行）；通栏由根 div 的 full-width +
+     内部 grid 自行管理。 */
+  .shopify-section.collection-section {
+    display: block;
+  }
+
+  /* ===================================================================
+     集合页骨架（2026-10-20 刘工拍板，参考稿「首页布局-左侧集合入侵 banner」）
+     左列 320px（标题卡 + 筛选卡）｜右列（横幅 + 产品区）自适应铺到右缘。
+     首列留页面边距，与主题其余 section 的内容起点对齐；整块 1920px 居中。
+
+     ⚠️ 沉浸页头已弃用（同日拍板）：左列是浅底黑字、透明页头叠上去必打架，
+     横幅不再钻到页头背后，导航行全程实底（critical.css 的沉浸组已删除）。
+     =================================================================== */
+  .collection {
+    /* 内容区底色：横幅遮罩、mask 透明处、产品区共用——必须从令牌派生，
+       Noir 深色预设下自动翻转（禁止硬编码 #F7F7F5，配色纪律） */
+    --collection-surface: color-mix(in srgb, var(--color-foreground) 3%, var(--color-background));
+    --collection-left: 320px;
+    --banner-h: 650px;
+
+    /* 首列 = 页面边距（与其余 section 的内容起点对齐），第二列承载整个两栏。
+       列宽只在 .collection__layout 里定义一次（--collection-left），避免
+       「外层轨道 + 内层列」两处 320px 各写各的。 */
+    display: grid;
+    grid-template-columns: var(--page-margin) minmax(0, 1fr);
+    width: 100%;
+    max-width: 1920px;
+    margin-inline: auto;
+    align-items: start;
+    background-color: var(--collection-surface);
+  }
+  /* ⚠️ 落列位置必须给 <collection-facets> 本身，不能给 .collection__layout：
+     它是 facets 的子元素，grid-column 只对直接父网格生效——写到里面时
+     facets 作为 grid item 自动落到第 1 列（20px 边距列），右列被压成 0、
+     横幅宽度塌成 0（2026-10-20 实渲染验证抓到的真 bug）。 */
+  .collection__facets {
+    grid-column: 2;
+    display: block;
+    min-width: 0;
+  }
+  .collection__layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    min-width: 0;
+  }
+
+  /* ---- 左列：z-index 压在横幅上（侵入式构图的命门） ---- */
+  .collection__left {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 40px 20px 40px 24px;
+  }
+  /* 标题卡越界：560px > 320px 左列，向右侵入横幅 240px（参考稿同值）。
+     ⚠️ 不能加 max-width: 100%——那会把 560 钳回 276（左列内容宽），
+     侵入效果消失、h1 折行、亮点竖排（2026-10-20 实渲染抓到）。
+     移动端另有 width: 100% 的覆盖，小屏不会溢出。 */
+  .collection__intro {
+    width: 560px;
+    padding-block-start: 10px;
+    margin-block-end: 50px;
+  }
+  /* 亮点行（blocks：图标 + 文案，参考稿「Quieter Operation」那一条） */
+  .collection__features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .collection__feature {
+    font-size: 0.82rem;
+    line-height: 1.3;
+    color: color-mix(in srgb, var(--color-foreground) 85%, transparent);
+  }
+  .collection__feature-icon {
+    display: block;
+    margin-block-end: 5px;
+    font-size: 1.25rem;
+    color: var(--color-brand);
+  }
+  .collection__feature-text {
+    display: block;
+    max-width: 9ch;
+  }
+  /* 无横幅：标题卡不再越界（没有横幅可压，越界会盖到产品网格上） */
+  .collection--no-banner .collection__intro {
+    width: 100%;
+    margin-block-end: 2rem;
+  }
+
+  /* ---- 右列 ---- */
+  .collection__right {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* ===================================================================
+     横幅四层（参数 1:1 对齐参考稿，勿改层级与取值——2026-10-20 第三轮）
+     ① 底图（mask 向左渐显，透明处透出 --collection-surface）
+     ② 异形遮罩（页面色 + 圆弧边界；只压底图，不碰产品岛——「光晕只能垫底」
+        那条纪律针对的是产品图，这里不适用）
+     ③ 产品悬浮岛（alpha 抠图，drop-shadow 是配色纪律的合法例外：永远黑）
+     ④ 毛玻璃小卡（背景色 85% 透明，backdrop-filter 毛玻璃）
+     =================================================================== */
+  .collection__banner {
+    /* 根元素是 tilt-element 自定义元素（默认 display:inline，会塌掉宽高）——
+       必须显式给 block。 */
+    display: block;
+    position: relative;
+    width: 100%;
+    height: var(--banner-h);
+    overflow: hidden;
+    flex-shrink: 0;
+    background-color: var(--collection-surface);
+  }
+  .collection__banner-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center right;
+    z-index: 1;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 15%, #000 40%, #000 100%);
+    mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 15%, #000 40%, #000 100%);
+  }
+  .collection__banner-mask {
+    position: absolute;
+    top: -10%;
+    left: -5%;
+    /* 宽度随视口收缩（2026-10-20 刘工）：横幅右列是 minmax(0,1fr)，视口越窄它越窄，
+       而左列（320px）与侵入的标题卡（560px）是定值 → 窄屏时固定 55% 会把底图
+       盖掉一大半。改成「横幅宽 − 520px」（520 ≈ 左列 320 + 页边距 + 让出量），
+       中间值随横幅变窄而**更快**变小，两头用 30% / 55% 夹住：
+       横幅 ≥1156px → 55%；743–1156px → calc；≤743px → 30%（两段边界连续）。
+       移动端 <990px 走另一套纵向渐隐规则（width 100%），不受此处影响。 */
+    width: clamp(30%, calc(100% - 520px), 55%);
+    height: 120%;
+    background: linear-gradient(
+      to right,
+      var(--collection-surface) 0%,
+      color-mix(in srgb, var(--collection-surface) 70%, transparent) 40%,
+      transparent 80%
+    );
+    border-radius: 0 60% 50% 0 / 0 70% 50% 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .collection__banner-island {
+    position: absolute;
+    top: 50%;
+    left: 60%;
+    /* ⚠️ 居中偏移走 translate 属性，不要用 transform：tilt-element.js 会整块覆写
+       transform，写在这里的 translate(-50%, -45%) 会被吃掉、岛瞬间跳位。
+       独立变换属性与 transform 各占一个槽位，互不干扰（translate 先、transform 后）。 */
+    translate: -50% -45%;
+    width: 75%;
+    max-width: 900px;
+    z-index: 3;
+    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
+  }
+  /* 倾斜的平滑感由 CSS 承担（JS 只做 rAF 合帧）：商品卡同款极缓曲线。
+     只给 transform 加，投影不动——大图 filter 动画每帧重绘，性价比低。 */
+  @media (hover: hover) and (pointer: fine) {
+    .collection__banner-island {
+      transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .collection__banner-island {
+      transition: none;
+    }
+  }
+  .collection__banner-badge {
+    position: absolute;
+    top: 45%;
+    right: 5%;
+    z-index: 4;
+    padding: 20px 30px;
+    border-radius: 20px;
+    background-color: color-mix(in srgb, var(--color-background) 85%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 8%);
+  }
+  .collection__banner-badge-eyebrow {
+    margin-block-end: 5px;
+    font-size: 0.78rem;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  }
+  .collection__banner-badge-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  /* 产品区：与横幅同底色，padding 参考稿 40px */
+  .collection__content {
+    padding: 40px;
+    min-width: 0;
+  }
+
+  /* 面包屑 */
+  .collection__breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    /* ⚠️ 必须 center（2026-10-20 修「面包屑错层」）：行内链接有 44px 触控高度
+       （min-height，项目统一约定），纯文本的当前项只有 ~16px 行高；stretch 下
+       li 被拉到同高、纯文本项贴顶 → 实测两项文字中心差 14px。居中后文字对齐，
+       44px 触控区上下溢出但不影响视觉。 */
+    align-items: center;
+    gap: 0.35rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+    font-size: 0.82rem;
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+  }
+  .collection__breadcrumb-item + .collection__breadcrumb-item::before {
+    content: '/';
+    margin-inline-end: 0.35rem;
+  }
+  .collection__breadcrumb-item a {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .collection__breadcrumb-item a:hover {
+    text-decoration: underline;
+  }
+
+  /* 集合标题（参考稿 64px / 700）：左列是这一屏的视觉重心，
+     比原 41px 上限大得多，也因此才需要 320px 的列宽兜住长标题。 */
+  .collection__title {
+    font-size: clamp(2rem, 4.4vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-block-end: 0.75rem;
+  }
+  .collection__description {
+    margin-block-start: 0.5rem;
+    max-width: 46ch;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+  }
+
+  /* 左列只剩一张筛选卡（2026-10-20 排序卡已并进卡顶部的 .facets__sort-slot），
+     form 不再需要两张卡之间的 gap。定宽轨道里的每一级都要 min-width: 0：
+     排序 select 的最长选项文本会撑破 320px 轨道、叠到右侧产品列
+     （BUG 链：form → slot → sort-card → select）。 */
+  .facets__form {
+    display: grid;
+    align-content: start;
+    min-width: 0;
+  }
+  /* form 归位槽：抽屉关闭后 JS 把 form 放回这里（不能 layout.prepend，
+     否则表单会顶到标题卡之前）。 */
+  .facets__form-slot {
+    min-width: 0;
+  }
+  /* 筛选卡同风险：长筛选标签 / 计数也可能撑破轨道 */
+  .facets__aside {
+    min-width: 0;
+  }
+  /* 排序卡落点（桌面在筛选卡顶部、移动端被 JS 搬进工具条）。
+     空槽（未启用排序）不渲染分隔线。 */
+  .facets__sort-slot:not(:empty) {
+    padding-block-end: 0.9rem;
+    margin-block-end: 0.9rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+  .facets__sort-card {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+    min-width: 0;
+  }
+  .facets__sort-card-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .facets__sort-card select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 0.6rem;
+    /* select 同 input 不继承 color；边框从 foreground 派生（配色纪律） */
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
+    border-radius: 12px;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    text-overflow: ellipsis;
+  }
+  /* ---- 排序下拉增强（<facet-sort>，2026-10-17 刘工效果图）----
+     桌面 ≥990px 由 sort-select.js 接管：按钮 + 浮层 listbox；
+     移动端 / 无 JS 保持上面这条原生 select 样式（触屏原生选择器）。 */
+  .facets__sort-select {
+    position: relative;
+    display: block;
+    min-width: 0;
+  }
+  .facets__sort-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: 12px;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font: inherit;
+    font-size: 0.92rem;
+    text-align: start;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .facets__sort-btn:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+  .facets__sort-btn:focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 1px;
+  }
+  .facets__sort-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .facets__sort-chevron {
+    flex: none;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+    transition: transform 0.15s ease;
+  }
+  .facets__sort-btn[aria-expanded='true'] .facets__sort-chevron {
+    transform: rotate(180deg);
+  }
+  .facets__sort-list {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0.4rem;
+    list-style: none;
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 12px;
+    /* 投影：配色纪律的合法例外（永远黑） */
+    box-shadow: 0 12px 32px rgb(0 0 0 / 12%);
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .facets__sort-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 8px 0.75rem;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    color: var(--color-foreground);
+    cursor: pointer;
+  }
+  .facets__sort-option:hover,
+  .facets__sort-option.is-active {
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+  .facets__sort-option[aria-selected='true'] {
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+    color: var(--color-brand);
+    font-weight: 500;
+  }
+  .facets__sort-check {
+    flex: none;
+    visibility: hidden;
+  }
+  .facets__sort-option[aria-selected='true'] .facets__sort-check {
+    visibility: visible;
+  }
+  /* 工具条形态（无筛选集合，桌面）：按钮随内容自适应，浮层右对齐防溢出视口 */
+  .collection__toolbar .facets__sort-btn {
+    width: auto;
+    white-space: nowrap;
+  }
+  .collection__toolbar .facets__sort-list {
+    left: auto;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .facets__sort-chevron {
+      transition: none;
+    }
+  }
+  /* 排序卡在工具条里的形态（无筛选集合常驻；有筛选集合仅移动端，由 JS 移入）：
+     竖向卡面变横排，靠行尾。桌面无筛选集合靠 auto 外边距右贴，计数跟在它右侧。 */
+  .collection__toolbar .facets__sort-card {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    margin-inline-start: auto;
+  }
+  .collection__toolbar .facets__sort-card select {
+    width: auto;
+  }
+
+  /* 工具条 */
+  .collection__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 44px;
+  }
+  .facets__open {
+    display: none;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    background: none;
+    font: inherit;
+    cursor: pointer;
+  }
+  .collection__count {
+    font-size: 0.85rem;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+    white-space: nowrap;
+  }
+
+  /* 已选标签：移动端独占一行（规格「已选标签横滑」）；桌面与计数同行（order 见 ≥990px） */
+  .facets__active {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    flex-basis: 100%;
+  }
+  .facets__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .facets__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 32px;
+    padding: 4px 0.6rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    font-size: 0.82rem;
+    color: inherit;
+    text-decoration: none;
+  }
+  .facets__chip:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+  .facets__chip-x {
+    font-size: 0.75rem;
+    color: color-mix(in srgb, var(--color-foreground) 50%, transparent);
+  }
+  .facets__clear {
+    font-size: 0.82rem;
+    color: var(--color-brand-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* 筛选组 */
+  .facets__group {
+    border: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+    /* fieldset 的 UA 默认 min-inline-size:min-content 不许收缩——长内容（价格
+       双输入框、长标签）会撑破 260px 左列叠到产品列表。放开收缩，内容随轨道截。 */
+    min-width: 0;
+  }
+  .facets__group-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 0;
+    margin-block-end: 0.5rem;
+  }
+  .facets__values {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.15rem;
+  }
+  .facets__value-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .facets__value-label input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    /* 勾选态用品牌强调色（与 Clear all 链接同令牌），preset 换色自动跟随 */
+    accent-color: var(--color-brand-accent);
+  }
+  .facets__value-text {
+    flex: 1;
+  }
+  .facets__value-count {
+    font-size: 0.78rem;
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+  .facets__price {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  /* 2026-10-17 刘工参考图：药丸形输入框（无边框浅灰填充、$ 居左、数值右对齐）。
+     填充色从 foreground 派生（配色纪律：不硬编码 rgb），preset 换色自动跟随 */
+  .facets__price-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 1rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 5%, transparent);
+  }
+  .facets__price-currency {
+    font-size: 0.9rem;
+    color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
+  }
+  .facets__price-field input {
+    flex: 1;
+    min-width: 0;
+    min-height: 32px;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    /* input 不继承 color（UA 默认黑），必须显式给令牌——Noir 下否则黑字贴黑底 */
+    color: var(--color-foreground);
+    caret-color: var(--color-foreground);
+    text-align: right;
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  .facets__price-field input::placeholder {
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+  .facets__price-field input::-webkit-outer-spin-button,
+  .facets__price-field input::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  .facets__price-sep {
+    flex: none;
+    font-size: 0.9rem;
+  }
+  .facets__price-field input:focus {
+    outline: none;
+  }
+  .facets__price-field:focus-within {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 1px;
+  }
+  .facets__apply {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    margin-block-start: 0.75rem;
+    padding: 10px 1rem;
+    /* 2026-10-16 刘工：与产品卡加购按钮同款配色（静态品牌绿 + hover 提亮） */
+    border: 1px solid var(--color-brand);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .facets__apply:hover {
+    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
+  }
+
+  /* 网格 */
+  .collection__results {
+    position: relative;
+    margin-block-start: 0.5rem;
+  }
+  .collection__results:focus {
+    outline: none;
+  }
+  .collection__facets[aria-busy='true'] .collection__results {
+    pointer-events: none;
+  }
+
+  /* 加载骨架（faceted-filters.js 的 _showSkeleton）：fetch 期间盖住结果区。
+     列数复刻 .collection__grid 的三档断点；底色走全局变量，Noir 下自动适配；
+     动画按 prefers-reduced-motion 关停（无障碍红线）。 */
+  .collection__skeleton {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    align-content: start;
+    background: var(--color-background);
+  }
+  .collection__skeleton-card {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+    padding: 0.75rem;
+    /* 块/描边从 foreground 派生——黑 alpha 硬编码在 Noir 深底上不可见
+       （2026-10-17 刘工实测），配色纪律的另一课 */
+    border: 0.5px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    border-radius: 12px;
+  }
+  .collection__skeleton-card .sk-img {
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+  }
+  .collection__skeleton-card .sk-line {
+    width: 70%;
+    height: 10px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+  }
+  .collection__skeleton-card .sk-line--short {
+    width: 40%;
+  }
+  .collection__skeleton-card .sk-line--price {
+    width: 30%;
+  }
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+  .collection__skeleton-card > * {
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  @media (min-width: 750px) {
+    .collection__skeleton {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  @media (min-width: 1280px) {
+    .collection__skeleton {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .collection__skeleton-card > * {
+      animation: none;
+    }
+  }
+  .collection__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  @media (min-width: 750px) {
+    .collection__grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  /* 4 列只在 ≥1280px 出现（2026-10-16 刘工：4 列保留，但断点 1100 → 1280，
+     1100–1279px 走 3 列，卡片不至于太窄） */
+  @media (min-width: 1280px) {
+    .collection__grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  /* 分页：圆形按钮（参考截图 2026-10-16）——白圆 + 浅边框居中一排，
+     当前页主题绿实心（--color-brand，与截图深绿一致；换 --color-brand-accent
+     即改亮绿）。箭头恒在：不可用方向渲染禁用占位（opacity 降）不塌行宽。 */
+  .collection__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-block-start: 1.5rem;
+  }
+  .collection__pagination-nav,
+  .collection__pagination-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: inherit;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .collection__pagination a:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+  .collection__pagination [aria-disabled='true'] {
+    opacity: 0.35;
+  }
+  .collection__pagination [aria-current='page'] {
+    border-color: transparent;
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+  .collection__pagination-gap {
+    min-width: 24px;
+    text-align: center;
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+
+  /* 空态 */
+  .collection__empty {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding: 3rem 1rem;
+    text-align: center;
+    border: 1px dashed color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: 12px;
+  }
+  .collection__empty-title {
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .collection__empty-body {
+    font-size: 0.9rem;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  }
+  .collection__empty-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 1.25rem;
+    margin-block-start: 0.5rem;
+    border: 1px solid var(--color-foreground);
+    border-radius: var(--style-border-radius-inputs);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* 移动抽屉（dialog 承载同一份筛选 DOM，JS 把 aside 移入）。
+     2026-10-16 刘工：① 打开从屏幕底部滑入（不再闪现）；② 标题头部与 Apply
+     按钮钉死在抽屉两端，只有中间筛选组列表滚动——flex 纵链
+     dialog → form → aside → panel → .facets__scroll，滚动只发生在最后一层。
+     注意 display:flex 必须限定 [open]：UA 对未打开 dialog 的 display:none
+     会被作者样式的 display:flex 压过，关着的抽屉会裸露在页面上。 */
+  .facets__dialog {
+    border: none;
+    border-radius: 16px 16px 0 0;
+    padding: 0;
+    /* 通栏底部抽屉（2026-10-16 刘工）：宽度与屏幕一致。
+       max-width 必须显式覆盖——UA 对 dialog:modal 默认
+       max-width: calc((100% - 6px) - 2em)，不覆盖时 width:100vw 会被钳到屏宽减 ~38px。 */
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 85vh;
+    margin: auto auto 0;
+  }
+  .facets__dialog[open] {
+    display: flex;
+    flex-direction: column;
+    animation: facets-slide-up 0.28s ease-out;
+  }
+  .facets__dialog[open]::backdrop {
+    animation: facets-backdrop-in 0.28s ease-out;
+  }
+  @keyframes facets-slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes facets-backdrop-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  .facets__dialog::backdrop {
+    background: rgb(0 0 0 / 40%);
+  }
+  .facets__dialog .facets__form,
+  .facets__dialog .facets__aside,
+  .facets__dialog .facets__panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .facets__dialog .facets__panel {
+    padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+    overflow: hidden; /* 滚动下沉到 .facets__scroll，头/按钮不随内容滚走 */
+  }
+  .facets__dialog .facets__scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  /* 抓手横线（2026-10-16 刘工，iPhone 底部抽屉同款）：拖拽把手，
+     按住下拉收回弹窗（JS 见 faceted-filters.js 的 _onDragStart）。
+     touch-action:none 让浏览器不把手势抢给滚动（初触目标决定手势归属）；
+     user-select:none 防鼠标拖拽时选中标题文字。 */
+  .facets__dialog .facets__grabber {
+    flex-shrink: 0;
+    width: 40px;
+    height: 5px;
+    margin: 0 auto 0.9rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 15%, transparent);
+    touch-action: none;
+    user-select: none;
+  }
+  .facets__dialog .facets__mobile-head {
+    touch-action: none; /* 头部行也是拖拽热区 */
+    user-select: none;
+  }
+  .facets__dialog .facets__mobile-head,
+  .facets__dialog .facets__apply {
+    flex-shrink: 0;
+  }
+  .facets__mobile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-end: 1rem;
+  }
+  .facets__panel-title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .facets__close {
+    min-height: 44px;
+    padding: 8px 0.75rem;
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--color-brand-accent);
+    cursor: pointer;
+  }
+
+  /* 桌面两栏：纯 CSS 媒体查询，不依赖 JS（无 JS 也能筛选——应用按钮整页 GET 提交）。
+     data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
+  @media (min-width: 990px) {
+    .collection__layout {
+      /* 左列 320px（参考稿），右列 1fr 铺到右缘。
+         列间距 0：横幅与左列的实际间距由左列的 padding-inline-end（20px）
+         提供——参考稿同值，多给 gap 会把横幅推离左列。
+         卡面内边距占用 2.5rem，min-width 收缩链已放开（见 .facets__form）。 */
+      grid-template-columns: var(--collection-left) minmax(0, 1fr);
+      gap: 0;
+    }
+    /* 筛选卡（含顶部排序组）：白卡浮在浅灰内容底上（参考稿 filters-card）。
+       排序卡已并进卡内，不再单独套卡面；工具条里那份（无筛选集合）是紧凑
+       控件，也不套卡面（见 .collection__toolbar 的横排形态）。 */
+    .facets__aside {
+      padding: 1.25rem;
+      border: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+      border-radius: 20px;
+      background-color: var(--color-background);
+      box-shadow: 0 10px 30px rgb(0 0 0 / 4%);
+    }
+    /* 最后一组筛选不再留底边距——卡片内边距已提供呼吸感 */
+    .facets__aside .facets__group:last-of-type {
+      margin-block-end: 0;
+    }
+    /* 工具条行序：已选标签在左（可换行），计数靠行尾。有筛选集合的排序卡在
+       左列（不在此处）；无筛选集合的排序卡常驻工具条，排在计数左侧
+       ——「计数在 Sort by 右侧」（2026-10-16 刘工）在两种形态下都成立。 */
+    .collection__toolbar .facets__active {
+      order: 1;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .collection__toolbar .facets__sort-card {
+      order: 2;
+    }
+    .collection__toolbar .collection__count {
+      order: 3;
+    }
+    /* 筛选卡头部：桌面复用抽屉的头行做「Filters」卡头（参考稿同形态），
+       关闭按钮只在抽屉里有意义，桌面隐藏。 */
+    .facets__mobile-head {
+      display: flex;
+    }
+    .facets__close {
+      display: none;
+    }
+  }
+  .collection__facets[data-facets-ready] .facets__apply {
+    display: none;
+  }
+  /* ===================================================================
+     移动端（<990px）单列退化：标题卡全宽不侵入 → 横幅纵向渐隐 → 工具条 → 网格。
+     横幅的渐隐方向从「向左」改成「向下」：下方就是产品区，两者同底色才能接住。
+     参考稿同规则（650px → 500px，产品岛 90% 居中）。
+     =================================================================== */
+  @media (max-width: 989.98px) {
+    .collection {
+      display: block;
+    }
+    .collection__facets {
+      grid-column: auto;
+    }
+    .collection__left {
+      padding: 20px;
+    }
+    .collection__intro {
+      width: 100%;
+      padding-block-start: 0;
+      margin-block-end: 28px;
+    }
+    .collection__title {
+      font-size: clamp(1.75rem, 8vw, 2.25rem);
+      letter-spacing: -0.01em;
+    }
+    .collection__banner {
+      height: 500px;
+    }
+    .collection__banner-bg {
+      object-position: center;
+      -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+      mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+    }
+    .collection__banner-mask {
+      width: 100%;
+      border-radius: 0;
+      background: linear-gradient(to bottom, var(--collection-surface) 0%, transparent 80%);
+    }
+    .collection__banner-island {
+      width: 90%;
+      left: 50%;
+    }
+    /* 横幅小卡下移贴边：390px 视口下 top:45% + right:5% 会顶到岛的投影上 */
+    .collection__banner-badge {
+      top: auto;
+      bottom: 48px;
+      right: 12px;
+      padding: 14px 18px;
+      border-radius: 14px;
+    }
+    .collection__banner-badge-title {
+      font-size: 0.95rem;
+    }
+    .collection__content {
+      padding: 20px;
+    }
+    .collection__facets[data-facets-ready] .facets__open {
+      display: inline-flex;
+    }
+    /* 抽屉承载筛选 DOM：form 整体移入 dialog（见 faceted-filters.js），
+       流内不再渲染，产品列表回到工具条正下方（BUG-042）。无 JS 时
+       data-facets-ready 缺席，筛选面板照常流内展示。 */
+    .collection__facets[data-facets-ready] .facets__form {
+      display: none;
+    }
+    /* 工具条行序（pages-ui §4 移动端）：[筛选☰] [排序▾] …… [N 款]；
+       已选标签另行横滑（.facets__active 的 flex-basis: 100% 保证换行）。 */
+    .collection__toolbar .facets__open {
+      order: 1;
+    }
+    .collection__toolbar .facets__sort-card {
+      order: 2;
+      /* 不右推：紧邻 Filters，自由空间全给计数，行尾对齐 */
+      margin-inline-start: 0;
+    }
+    .collection__toolbar .collection__count {
+      order: 3;
+      margin-inline-start: auto;
+    }
+    .collection__toolbar .facets__active {
+      order: 4;
+    }
+    /* 行宽紧张（375px 内容列约 335px）：排序标签转视觉隐藏——label[for] 仍在
+       无障碍树里提供可访问名（口径同 critical.css 的 .visually-hidden），
+       select 限宽，避免长排序名把计数挤下整行。 */
+    .collection__toolbar .facets__sort-card-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .collection__toolbar .facets__sort-card select {
+      min-height: 40px;
+      max-width: 40vw;
+    }
+    /* 抽屉 / 无 JS 流内：排序卡在筛选卡顶部（.facets__sort-slot 已给分隔线），
+       这里只把 form 退回 block，不再重复画一条线。 */
+    .facets__form {
+      display: block;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .facets__dialog[open],
+    .facets__dialog[open]::backdrop {
+      animation: none;
+    }
+  }
+
+</style>
+</head>
+</head>
+<body>
+<div class="announce">Free shipping on orders over $499 · 2-year warranty</div>
+<nav class="main-nav">
+  <span class="logo">Northbank</span>
+  <div class="navlinks"><a>Lawn Mowers</a><a>Chainsaws</a><a>Trimmers</a><a>Support</a></div>
+  <div class="tools"><span>⌕</span><span>☺</span><span>🛍</span></div>
+</nav>
+
+<!-- ↓↓↓ 结构 = 改动后的 collection.liquid（类名/嵌套逐一对应） ↓↓↓ -->
+<div class="shopify-section collection-section">
+<div class="collection full-width" data-collection-root>
+  <collection-facets class="collection__facets" data-section-id="x" data-facets-ready>
+    <div class="collection__layout" data-facets-layout>
+      <div class="collection__left">
+        <div class="collection__intro">
+          <nav class="collection__breadcrumb">
+            <ol class="collection__breadcrumb-list" role="list">
+              <li class="collection__breadcrumb-item"><a href="#">Home</a></li>
+              <li class="collection__breadcrumb-item" aria-current="page">Lawn Mowers</li>
+            </ol>
+          </nav>
+          <header class="collection__head">
+            <h1 class="collection__title">Lawn Mowers</h1>
+            <div class="collection__description rte">Precision cutting. A healthier lawn.<br>A better tomorrow.</div>
+          </header>
+          <ul class="collection__features" role="list">
+            <li class="collection__feature"><span class="collection__feature-icon" aria-hidden="true">🔊</span><span class="collection__feature-text">Quieter Operation</span></li>
+            <li class="collection__feature"><span class="collection__feature-icon" aria-hidden="true">🍃</span><span class="collection__feature-text">Lower Emissions</span></li>
+            <li class="collection__feature"><span class="collection__feature-icon" aria-hidden="true">🔋</span><span class="collection__feature-text">Longer Runtime</span></li>
+          </ul>
+        </div>
+        <div class="facets__form-slot" data-facets-form-slot>
+          <form class="facets__form" id="FacetsForm-x" action="#" method="get" data-facets-form>
+            <aside class="facets__aside" data-facets-aside>
+              <div class="facets__panel">
+                <div class="facets__grabber" aria-hidden="true"></div>
+                <div class="facets__mobile-head">
+                  <h2 class="facets__panel-title">Filters</h2>
+                </div>
+                <div class="facets__sort-slot" data-facets-sort-slot>
+                  <div class="facets__sort-card">
+                    <label class="facets__sort-card-label" for="SortBy-x">Sort by</label>
+                    <span class="facets__sort-select"><select id="SortBy-x" name="sort_by"><option>Best selling</option></select></span>
+                  </div>
+                </div>
+                <div class="facets__scroll">
+                  <fieldset class="facets__group">
+                    <legend class="facets__group-label">Power Source</legend>
+                    <ul class="facets__values" role="list">
+                      <li class="facets__value"><label class="facets__value-label"><input type="checkbox" checked><span class="facets__value-text">Gas</span><span class="facets__value-count">28</span></label></li>
+                      <li class="facets__value"><label class="facets__value-label"><input type="checkbox"><span class="facets__value-text">Battery</span><span class="facets__value-count">24</span></label></li>
+                    </ul>
+                  </fieldset>
+                  <fieldset class="facets__group">
+                    <legend class="facets__group-label">Cutting Width</legend>
+                    <ul class="facets__values" role="list">
+                      <li class="facets__value"><label class="facets__value-label"><input type="checkbox"><span class="facets__value-text">20 in</span><span class="facets__value-count">12</span></label></li>
+                      <li class="facets__value"><label class="facets__value-label"><input type="checkbox" checked><span class="facets__value-text">21 in</span><span class="facets__value-count">35</span></label></li>
+                    </ul>
+                  </fieldset>
+                </div>
+                <button type="submit" class="facets__apply">Apply</button>
+              </div>
+            </aside>
+          </form>
+        </div>
+      </div>
+
+      <div class="collection__right">
+        <tilt-element class="collection__banner"
+            data-tilt-target=".collection__banner-island"
+            data-tilt-rotate="6"
+            data-tilt-shift="10"
+            data-tilt-scale="1.02"
+            data-tilt-perspective="1200"
+          >
+          <img class="collection__banner-bg" alt="" src="local-assets/banner-bg.png">
+          <div class="collection__banner-mask" aria-hidden="true"></div>
+          <img class="collection__banner-island" alt="Northbank self-propelled mower" src="local-assets/banner-isolate-land-alpha_webp.webp">
+          <div class="collection__banner-badge">
+            <p class="collection__banner-badge-eyebrow">Popular Choice</p>
+            <p class="collection__banner-badge-title">Self-Propelled<br>Mowers</p>
+          </div>
+          </tilt-element>
+        <div class="collection__content">
+          <div class="collection__toolbar">
+            <p class="collection__count" aria-live="polite">56 products</p>
+          </div>
+          <div class="collection__results" data-facets-results tabindex="-1">
+            <ul class="collection__grid" role="list">
+              <li class="collection__item"><div class="product-card"><img src="local-assets/product-koutu/product-nb-21p-1-main.png" alt=""><div class="tt">Northbank NB-21P</div><div class="sp">21 in · Gas</div><div class="pr">$499</div></div></li>
+              <li class="collection__item"><div class="product-card"><img src="local-assets/product-koutu/product-nb-21bs-1-main.png" alt=""><div class="tt">Northbank NB-21BS</div><div class="sp">21 in · Battery</div><div class="pr">$549</div></div></li>
+              <li class="collection__item"><div class="product-card"><img src="local-assets/product-koutu/product-nb-21bp-1-main.png" alt=""><div class="tt">Northbank NB-40P</div><div class="sp">21 in · Battery</div><div class="pr">$599</div></div></li>
+              <li class="collection__item"><div class="product-card"><img src="local-assets/product-koutu/product-nb-21b80-1-main.png" alt=""><div class="tt">Northbank NB-42Z</div><div class="sp">42 in · Zero-Turn</div><div class="pr">$4,299</div></div></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </collection-facets>
+</div>
+</div>
+<script>
+/**
+ * tilt-element — 鼠标跟随 3D 倾斜（通用件）。
+ *
+ * 2026-10-20 由 assets/product-card-3d.js 泛化而来：商品卡（.product-card）与
+ * 集合页横幅的产品悬浮岛（.collection__banner-island）共用同一份几何逻辑，
+ * 幅度 / 触发区 / 倾斜目标全部由 HTML 上的 data-* 覆盖——不为一处新用法复制文件。
+ *
+ * 用法：<tilt-element class="xxx" data-tilt-target=".sel" data-tilt-area=".sel">
+ *
+ *   data-tilt-target       施加 transform 的元素（默认：host 内第一个 <img>）
+ *   data-tilt-area         计算鼠标相对位置的区域（默认：host 自身）
+ *                          横幅传整块 banner：鼠标不必压在岛上也跟随，视差更整。
+ *   data-tilt-rotate       最大倾角 deg（默认 10）
+ *   data-tilt-shift        最大平移 px（默认 6）
+ *   data-tilt-scale        倾斜态缩放（默认 1.08；补偿旋转后露出的边）
+ *   data-tilt-perspective  perspective px（默认 700；元素越大值越大，否则畸变夸张）
+ *
+ * 分工：配色（光晕 / 投影）归 CSS，本文件只管几何；「动多少」改上面的 data，
+ * 「多快」改 CSS 里的 transition（产品卡 0.8s 极缓曲线，横幅同款）。
+ *
+ * 触发：fine pointer + 非 prefers-reduced-motion（触屏跳过，避免粘滞）。
+ * 无 JS：元素保持静态定位，仅失去倾斜（渐进增强）。
+ *
+ * 另把 --tilt-x / --tilt-y（-1..1）写到 host：CSS 可据此做光晕 / 阴影跟随；
+ * 不用就没有成本。离开时归零。
+ *
+ * ⚠️ 静态定位不要用 transform（居中偏移改用 translate 属性）——JS 整块覆写
+ *    transform，写在里面的 translate(-50%, -45%) 会被吃掉、元素跳位。
+ */
+const REDUCE_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
+const FINE_POINTER = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+const DEFAULTS = {
+  rotate: 10,
+  shift: 6,
+  scale: 1.08,
+  perspective: 700,
+};
+
+class TiltElement extends HTMLElement {
+  _controller = new AbortController();
+  _rafId = 0;
+  _rect = null;
+
+  connectedCallback() {
+    if (REDUCE_MOTION.matches || !FINE_POINTER.matches) return;
+
+    const num = (key, fallback) => {
+      const value = parseFloat(this.dataset[key]);
+      return Number.isFinite(value) ? value : fallback;
+    };
+    this._rotate = num('tiltRotate', DEFAULTS.rotate);
+    this._shift = num('tiltShift', DEFAULTS.shift);
+    this._scale = num('tiltScale', DEFAULTS.scale);
+    this._perspective = num('tiltPerspective', DEFAULTS.perspective);
+
+    this._target = this.dataset.tiltTarget
+      ? this.querySelector(this.dataset.tiltTarget)
+      : this.querySelector('img');
+    this._area = this.dataset.tiltArea ? this.querySelector(this.dataset.tiltArea) : this;
+    if (!this._target || !this._area) return;
+
+    /* 位移 / 倾斜以「区域盒」为基准，不能用 target 自己的 rect：它身上带着
+       transform，把当前位姿喂回输入会造成反馈抖动（原 product-card-3d 同坑）。
+       rect 在 mouseenter 缓存一次——transform 不触发布局，缓存即足够；
+       但滚动 / 缩放会让它过期，故这两个时机作废缓存（下一帧重取）。 */
+    const invalidate = () => {
+      this._rect = null;
+    };
+    this.addEventListener('mouseenter', invalidate, { signal: this._controller.signal });
+    this.addEventListener('mousemove', this._onMove, { signal: this._controller.signal });
+    this.addEventListener('mouseleave', this._onLeave, { signal: this._controller.signal });
+    window.addEventListener('scroll', invalidate, {
+      signal: this._controller.signal,
+      passive: true,
+    });
+    window.addEventListener('resize', invalidate, { signal: this._controller.signal });
+  }
+
+  disconnectedCallback() {
+    this._controller.abort();
+    if (this._rafId) cancelAnimationFrame(this._rafId);
+    if (this._target) this._target.style.transform = '';
+  }
+
+  _onMove = (event) => {
+    /* rAF 合帧：mousemove 高频触发，每帧只算最新目标位姿；平滑感交给 CSS transition。 */
+    this._pending = event;
+    if (this._rafId) return;
+    this._rafId = requestAnimationFrame(() => {
+      this._rafId = 0;
+      if (!this._rect) this._rect = this._area.getBoundingClientRect();
+      const rect = this._rect;
+      if (!rect.width || !rect.height) return;
+
+      const e = this._pending;
+      const clamp = (n) => Math.max(-1, Math.min(1, n));
+      const relX = clamp(((e.clientX - rect.left) / rect.width) * 2 - 1);
+      const relY = clamp(((e.clientY - rect.top) / rect.height) * 2 - 1);
+
+      this._target.style.transform =
+        `perspective(${this._perspective}px) ` +
+        `translate3d(${relX * this._shift}px, ${relY * this._shift}px, 0) ` +
+        `rotateX(${-relY * this._rotate}deg) rotateY(${relX * this._rotate}deg) ` +
+        `scale(${this._scale})`;
+      this.style.setProperty('--tilt-x', relX.toFixed(3));
+      this.style.setProperty('--tilt-y', relY.toFixed(3));
+    });
+  };
+
+  _onLeave = () => {
+    this._rect = null;
+    this._target.style.transform = '';
+    this.style.setProperty('--tilt-x', '0');
+    this.style.setProperty('--tilt-y', '0');
+  };
+}
+
+if (!customElements.get('tilt-element')) {
+  customElements.define('tilt-element', TiltElement);
+}
+
+</script>
+</body>
+</html>
