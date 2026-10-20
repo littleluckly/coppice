@@ -1199,27 +1199,26 @@
     flex-direction: column;
     width: 100%;
     text-decoration: none;
-    /* 浅色卡底 + 圆角（2026-10-13 刘工）：前景 4% 叠加，深浅主题都成立；
-       hover 微加深提示可点 */
-    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+    /* 视觉对齐集合页 product-card：实底背景 + 描边 + 圆角 + 内距同款 */
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
     border-radius: 12px;
-    /* 内距放宽（刘工：视觉拥挤）——图与文字、文字行间都拉开 */
-    padding: 0.625rem 0.75rem 1rem;
-    transition: background-color 0.15s ease, translate 0.15s ease;
+    padding: 0.75rem;
+    transition: border-color 0.15s ease, translate 0.15s ease;
   }
 
   .main-nav__mega-card-link:hover {
-    background-color: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+    border-color: color-mix(in srgb, var(--color-foreground) 20%, transparent);
     translate: 0 -2px;
   }
 
   /* 图在卡内上缘，跟随卡圆角内缩 */
   .main-nav__mega-card-media {
     display: block;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1;
     border-radius: 8px;
     overflow: hidden;
-    background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
   }
 
   .main-nav__mega-card-media--empty {
@@ -1241,11 +1240,53 @@
     transform: scale(1.06);
   }
 
+  /* ===== hover 绿色渐变光晕（视觉对齐集合页 product-card 的 hover 反馈）=====
+     移植 product-card.css 的 ::before 光晕 + 品牌绿投影。光晕垫在图片下面、
+     只从图片透明区域透出（koutu alpha 图可见，不透明图自动隐没），产品像素零接触。
+     仅 hover:hover + pointer:fine 生效。 */
+  @media (hover: hover) and (pointer: fine) {
+    .main-nav__mega-card-link {
+      transition: border-color 0.15s ease, translate 0.15s ease, box-shadow 0.8s ease;
+    }
+    .main-nav__mega-card-link:hover {
+      /* 品牌绿低透明投影（与 product-card 同款，浅底不显脏） */
+      box-shadow:
+        0 24px 40px -18px color-mix(in srgb, var(--color-brand) 32%, transparent),
+        0 10px 18px -10px rgb(0 0 0 / 12%);
+    }
+    .main-nav__mega-card-media {
+      position: relative;
+    }
+    .main-nav__mega-card-media::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      /* --color-brand-light：从品牌色算出的高亮度浅绿，光晕渐变 */
+      background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-brand-light) 65%, transparent) 0%,
+        color-mix(in srgb, var(--color-brand-light) 32%, transparent) 55%,
+        color-mix(in srgb, var(--color-brand-light) 5%, transparent) 100%
+      );
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+    }
+    .main-nav__mega-card-img {
+      position: relative; /* 压到 ::before 之上，光晕只在其透明区域可见 */
+    }
+    .main-nav__mega-card-link:hover .main-nav__mega-card-media::before {
+      opacity: 1;
+    }
+  }
+
   .main-nav__mega-card-title {
     display: block;
     margin-block-start: 0.625rem;
-    font-weight: 600;
-    line-height: 1.4;
+    /* 对齐 product-card 标题：weight 500 + line-height 1.35 */
+    font-size: 0.92rem;
+    font-weight: 500;
+    line-height: 1.35;
     color: var(--color-foreground);
     transition: color 0.15s ease;
   }
@@ -1327,14 +1368,15 @@
     translate: 0.25rem 0;
   }
 
-  /* 产品卡：名称与价格同行（demo 同款） */
+  /* 产品卡：名称与价格（对齐 product-card 价格：weight 500） */
   .main-nav__mega-card-price {
     display: block;
     /* auto margin 沉底（等高卡），0.375rem 是与标题的最小间距 */
     margin-block-start: auto;
     padding-block-start: 0.375rem;
     font-size: 0.875rem;
-    color: color-mix(in srgb, var(--color-foreground) 80%, transparent);
+    font-weight: 500;
+    color: var(--color-foreground);
   }
 
   .main-nav__mega-card-vendor {
