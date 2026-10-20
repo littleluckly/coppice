@@ -42,7 +42,9 @@
     endif
   endfor
   assign has_banner = false
-  if collection.image and section.settings.show_banner
+  assign banner_background_image = section.settings.banner_background_image | default: collection.image
+  assign banner_product_image = section.settings.banner_product_image
+  if banner_background_image and section.settings.show_banner
     assign has_banner = true
   endif
 -%}
