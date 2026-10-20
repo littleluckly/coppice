@@ -12,6 +12,9 @@
   - 无 JS：原生 GET 表单 + 应用按钮整页提交，URL 可分享、刷新保留。
 
   @param {object} filters - filter 对象数组：collection.filters 或 search.filters（必填）
+  @param {string} sort_card - 可选的排序卡 HTML，渲染在 Filters 卡顶部（2026-10-20 刘工
+     定：排序并进 Filters 卡顶部，桌面与筛选组共享同一张卡面；移动端由
+     faceted-filters.js 的 _placeSort 把这张卡搬进工具条，抽屉内不含排序）
 {% enddoc %}
 <aside class="facets__aside" data-facets-aside>
   {%- comment -%}
@@ -31,6 +34,12 @@
         <span class="visually-hidden">{{ 'navigation.close' | t }}</span>
       </button>
     </div>
+
+    {%- if sort_card != blank -%}
+      <div class="facets__sort-slot">
+        {{ sort_card }}
+      </div>
+    {%- endif -%}
 
     <div class="facets__scroll">
       {%- for filter in filters -%}
