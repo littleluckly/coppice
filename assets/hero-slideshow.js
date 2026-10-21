@@ -54,12 +54,30 @@
       this.current = 0;
       this.locked = false;
       this.timers = [];
-
-      // 节奏参数（毫秒数）与 reduced-motion 缩放：reduce 时全部时刻 ×0 = 瞬切
-      const css = getComputedStyle(this);
-      const num = (name) => parseFloat(css.getPropertyValue(name)) || 0;
       this.reduced = window.matchMedia(REDUCED_MOTION);
-      this.params = {
+
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.addEventListener('click', (event) => this.#onActionClick(event), { signal });
+      this.addEventListener('keydown', (event) => this.#onKeydown(event), { signal });
+      this.addEventListener('touchstart', this.#onTouchStart.bind(this), { passive: true, signal });
+      this.addEventListener('touchend', this.#onTouchEnd.bind(this), { passive: true, signal });
+
+      this.#preloadSlides();
+    }
+
+    /**
+     * 节奏参数每次切换现读（不缓存），保证样式晚到也能读到真值。
+     * 读不到时回落 DEFAULT_TIMING。
+     */
+    #readParams() {
+      const css = getComputedStyle(this);
+      const num = (name) => {
+        const value = parseFloat(css.getPropertyValue(name));
+        return Number.isFinite(value) ? value : DEFAULT_TIMING[name];
+      };
+      return {
         productOut: num('--hero-product-out-dur'),
         textStart: num('--hero-text-start-offset'),
         textOut: num('--hero-text-out-dur'),
@@ -69,14 +87,25 @@
         nextIn: num('--hero-next-in-dur'),
         nextAdvance: num('--hero-next-in-advance'),
       };
+    }
 
-      this.controller = new AbortController();
-      const { signal } = this.controller;
-
-      this.addEventListener('click', (event) => this.#onActionClick(event), { signal });
-      this.addEventListener('keydown', (event) => this.#onKeydown(event), { signal });
-      this.addEventListener('touchstart', this.#onTouchStart.bind(this), { passive: true, signal });
-      this.addEventListener('touchend', this.#onTouchEnd.bind(this), { passive: true, signal });
+    /**
+     * 预载非首屏图片。
+     * ⚠️ slide 初始带 hidden，里面的 loading="lazy" 图浏览器不会下载，
+     * 切过去就是一片空白（观感上也像「闪一下」）。空闲时把 lazy 翻成 eager 触发加载。
+     * 首屏保持 eager + fetchpriority=high 不动，不抢 LCP 带宽。
+     */
+    #preloadSlides() {
+      const images = this.querySelectorAll('img[loading="lazy"]');
+      if (!images.length) return;
+      const start = () => images.forEach((img) => {
+        img.loading = 'eager';
+      });
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(start, { timeout: 2500 });
+      } else {
+        setTimeout(start, 1500);
+      }
     }
 
     disconnectedCallback() {
@@ -138,7 +167,7 @@
       if (target === this.current) return;
 
       const motionScale = this.reduced.matches ? 0 : 1;
-      const { productOut, textStart, textOut, textStagger, bgDelay, bgOut, nextIn, nextAdvance } = this.params;
+      const { productOut, textStart, textOut, textStagger, bgDelay, bgOut, nextIn, nextAdvance } = this.#readParams();
 
       const currentSlide = this.slides[this.current];
       const nextSlide = this.slides[target];
