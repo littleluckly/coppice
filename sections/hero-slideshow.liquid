@@ -554,13 +554,14 @@
 
   /* ===== 移动端（<990px）：产品岛上移居中、文字沉底居中、遮罩转底部渐隐 ===== */
   @media screen and (max-width: 989px) {
+    /* 移动端是「产品在上、文字在下」的竖排，水平居中固定 50%，
+       因此桌面端的自定义位置设置在这里不生效（设置项的 info 里已写明）。
+       居中仍靠独立属性 translate，不写 margin，transform 保持干净。 */
     .hero-slideshow__product {
-      top: 32%;
+      top: 30%;
       left: 50%;
-      right: auto;
-      width: 60%;
+      width: 66%;
       max-width: none;
-      margin-left: -30%; /* 居中不用 translateX，保持 transform 仅 translateY（动画兼容） */
     }
     .hero-slideshow__content {
       top: auto;
