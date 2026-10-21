@@ -70,22 +70,39 @@
     /**
      * 节奏参数每次切换现读（不缓存），保证样式晚到也能读到真值。
      * 读不到时回落 DEFAULT_TIMING。
+     *
+     * ⚠️⚠️ 必须按单位解析，不能直接 parseFloat —— 这是本项目踩过的真实事故：
+     * CSS 压缩器会把 `550ms` 改写成 `.55s`（线上实测读到的就是 ".55s"），
+     * 而 parseFloat('.55s') = 0.55，当成毫秒用 → setTimeout(fn, 0.55) ≈ 1ms
+     * → 整条时间轴塌到 ~50ms，切换肉眼看就是瞬间完成。
+     * 而 CSS 动画本身完全正常（animation-duration 仍是 0.55s），所以
+     * DevTools 里一切看起来都对，只有 JS 编排是错的 —— 极难排查的形态。
      */
     #readParams() {
       const css = getComputedStyle(this);
-      /* 时长读成 0 与读成 NaN 一样致命：
-         只要四个时长全为 0，bgStart / nextStart 会一起塌成 0，
-         total 只剩末尾那 50ms —— 切换在 50ms 内收尾，肉眼就是「硬切」。
-         这正好是「切换感觉只有 100~150ms」的故障形态，所以时长必须 > 0 才采信。
-         偏移量（delay / advance）0 是合法值，只挡 NaN。 */
+
+      /** 把 "550ms" / ".55s" / "0.55s" / "550" 统一换算成毫秒；无法解析返回 undefined。 */
+      const toMs = (raw) => {
+        const match = /^(-?\d*\.?\d+)\s*(ms|s)?$/i.exec(String(raw).trim());
+        if (!match) return undefined;
+        const value = parseFloat(match[1]);
+        if (!Number.isFinite(value)) return undefined;
+        // 无单位按毫秒处理（本 section 的设计值全部以 ms 书写）
+        return match[2] && match[2].toLowerCase() === 's' ? value * 1000 : value;
+      };
+
+      /* 时长读成 0 同样致命：四个时长全为 0 时 bgStart / nextStart 一起塌成 0，
+         total 只剩末尾那 50ms。所以时长必须 > 0 才采信。
+         偏移量（delay / advance）0 是合法值，只挡无法解析与负值。 */
       const dur = (name) => {
-        const value = parseFloat(css.getPropertyValue(name));
-        return Number.isFinite(value) && value > 0 ? value : DEFAULT_TIMING[name];
+        const value = toMs(css.getPropertyValue(name));
+        return value !== undefined && value > 0 ? value : DEFAULT_TIMING[name];
       };
       const gap = (name) => {
-        const value = parseFloat(css.getPropertyValue(name));
-        return Number.isFinite(value) && value >= 0 ? value : DEFAULT_TIMING[name];
+        const value = toMs(css.getPropertyValue(name));
+        return value !== undefined && value >= 0 ? value : DEFAULT_TIMING[name];
       };
+
       return {
         productOut: dur('--hero-product-out-dur'),
         textStart: gap('--hero-text-start-offset'),
