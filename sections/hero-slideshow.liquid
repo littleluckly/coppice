@@ -387,7 +387,10 @@
     min-height: 44px;
     padding: 0.875rem 1.75rem;
     background-color: var(--color-brand);
-    color: #ffffff;
+    /* 用背景色当前景色，而不是硬编码 #fff：Noir preset 下品牌色是亮 lime，
+       白字压亮绿读不出来（对比度不达 AA）；换成背景色后浅色底仍是白字、
+       Noir 下自动变深字，两端都成立。 */
+    color: var(--color-background);
     font-size: 0.9375rem;
     font-weight: 600;
     line-height: 1;
@@ -616,14 +619,10 @@
         transparent 80%
       );
     }
-    .hero-slideshow__dots {
-      left: 1.25rem;
-      transform: none;
-      bottom: 1.25rem;
-    }
-    .hero-slideshow__nav {
-      right: 1.25rem;
-      bottom: 1.25rem;
+    /* 移动端控件仍居中，只是贴近底边 */
+    .hero-slideshow__controls {
+      bottom: 0.875rem;
+      gap: 0;
     }
   }
 {% endstylesheet %}
