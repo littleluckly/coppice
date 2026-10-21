@@ -54,31 +54,18 @@
           <div class="hero-slideshow__bg">
             <div class="hero-slideshow__media">
               {%- if block.settings.image != blank -%}
-                {%- if block.settings.image_mobile != blank -%}
-                  <picture>
-                    <source
-                      media="(max-width: 749px)"
-                      srcset="{{ block.settings.image_mobile | image_url: width: 900 }} 900w, {{ block.settings.image_mobile | image_url: width: 1400 }} 1400w"
-                      sizes="100vw"
-                      width="{{ block.settings.image_mobile.width }}"
-                      height="{{ block.settings.image_mobile.height }}"
-                    >
-                    {{
-                      block.settings.image
-                      | image_url: width: 2400
-                      | image_tag:
-                        widths: '800, 1200, 1600, 2400',
-                        sizes: '100vw',
-                        width: block.settings.image.width,
-                        height: block.settings.image.height,
-                        loading: loading,
-                        fetchpriority: fetch_priority,
-                        alt: block.settings.image.alt
-                    }}
-                  </picture>
-                {%- else -%}
-                  {{
-                    block.settings.image
+                {%- comment -%}
+                  底图是装饰图：同屏已有 h1 / 副标题 / CTA 承载信息，图片不额外承载语义
+                  （AGENTS §8：装饰性图片必须输出 alt=""，而不是不写 alt）。商家若在
+                  「内容 → 文件」里给这张图写了 alt（照片独有的信息），则原样输出。
+
+                  ⚠️ image_tag 在 alt 为空时会把 alt 属性**整条吞掉**（2026-10-21 实测：
+                  渲染出的 HTML 里根本没有 alt，不是 alt=""）。属性是否存在是硬要求，
+                  所以先 capture 再补一个空 alt。底下产品岛那处有一模一样的兜底，
+                  改的时候别只改一处。
+                {%- endcomment -%}
+                {%- capture hero_bg_img -%}
+                  {{ block.settings.image
                     | image_url: width: 2400
                     | image_tag:
                       widths: '800, 1200, 1600, 2400',
@@ -89,6 +76,23 @@
                       fetchpriority: fetch_priority,
                       alt: block.settings.image.alt
                   }}
+                {%- endcapture -%}
+                {%- unless hero_bg_img contains ' alt=' -%}
+                  {%- assign hero_bg_img = hero_bg_img | replace: '<img ', '<img alt="" ' -%}
+                {%- endunless -%}
+                {%- if block.settings.image_mobile != blank -%}
+                  <picture>
+                    <source
+                      media="(max-width: 749px)"
+                      srcset="{{ block.settings.image_mobile | image_url: width: 900 }} 900w, {{ block.settings.image_mobile | image_url: width: 1400 }} 1400w"
+                      sizes="100vw"
+                      width="{{ block.settings.image_mobile.width }}"
+                      height="{{ block.settings.image_mobile.height }}"
+                    >
+                    {{ hero_bg_img }}
+                  </picture>
+                {%- else -%}
+                  {{ hero_bg_img }}
                 {%- endif -%}
               {%- elsif is_first -%}
                 {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-slideshow__placeholder' }}
@@ -111,19 +115,30 @@
           {%- endcomment -%}
           {%- if block.settings.product_image != blank -%}
             <div class="hero-slideshow__product">
-              {{
-                block.settings.product_image
-                | image_url: width: 1200
-                | image_tag:
-                  widths: '400, 600, 800, 1200',
-                  sizes: '(min-width: 990px) 46vw, 86vw',
-                  width: block.settings.product_image.width,
-                  height: block.settings.product_image.height,
-                  loading: loading,
-                  fetchpriority: fetch_priority,
-                  alt: block.settings.product_image.alt,
-                  class: 'hero-slideshow__product-img'
-              }}
+              {%- comment -%}
+                产品岛的 alt 是**内容**，由商家在「内容 → 文件」逐张填（4 屏的标题是
+                同一句营销语，不具区分性，所以不能用标题兜底——那会得到 4 条一样的 alt）。
+                未填时退化为 alt=""（当装饰），退出的至少是合法语义而不是无属性。
+                兜底逻辑与上面底图相同，原因见那段注释。
+              {%- endcomment -%}
+              {%- capture hero_island_img -%}
+                {{ block.settings.product_image
+                  | image_url: width: 1200
+                  | image_tag:
+                    widths: '400, 600, 800, 1200',
+                    sizes: '(min-width: 990px) 46vw, 86vw',
+                    width: block.settings.product_image.width,
+                    height: block.settings.product_image.height,
+                    loading: loading,
+                    fetchpriority: fetch_priority,
+                    alt: block.settings.product_image.alt,
+                    class: 'hero-slideshow__product-img'
+                }}
+              {%- endcapture -%}
+              {%- unless hero_island_img contains ' alt=' -%}
+                {%- assign hero_island_img = hero_island_img | replace: '<img ', '<img alt="" ' -%}
+              {%- endunless -%}
+              {{ hero_island_img }}
             </div>
           {%- endif -%}
 
