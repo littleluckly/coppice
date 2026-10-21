@@ -11,10 +11,6 @@
   "sections": {
     "main": {
       "type": "collection",
-      "settings": {
-        "banner_background_image": "shopify://shop_images/banner-bg.png",
-        "banner_product_image": "shopify://shop_images/banner-isolate-land-alpha_webp.webp"
-      },
       "blocks": {
         "highlight_aE7iQu": {
           "type": "banner_feature",
@@ -42,7 +38,20 @@
         "highlight_aE7iQu",
         "highlight_Ya9mKd",
         "highlight_Rt3vNp"
-      ]
+      ],
+      "settings": {
+        "show_banner": true,
+        "show_banner_badge": true,
+        "banner_badge_eyebrow": "Popular Choice",
+        "banner_badge_title": "Self-Propelled Mowers",
+        "products_per_page": 12,
+        "show_sort": true,
+        "show_quick_add": true,
+        "show_spec_width": true,
+        "show_spec_cc": true,
+        "show_spec_power": true,
+        "show_spec_weight": false
+      }
     }
   },
   "order": [
