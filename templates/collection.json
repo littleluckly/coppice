@@ -41,6 +41,8 @@
       ],
       "settings": {
         "show_banner": true,
+        "banner_background_image": "shopify://shop_images/banner-bg.png",
+        "banner_product_image": "shopify://shop_images/banner-isolate-land-alpha_webp.webp",
         "show_banner_badge": true,
         "banner_badge_eyebrow": "Popular Choice",
         "banner_badge_title": "Self-Propelled Mowers",
