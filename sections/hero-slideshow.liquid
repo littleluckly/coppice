@@ -96,21 +96,29 @@
           {%- endcomment -%}
           <div class="hero-slideshow__fade" aria-hidden="true"></div>
 
-          {%- comment -%} 第 3 层：悬浮产品岛（alpha 抠图 + 投影，空则不渲染） {%- endcomment -%}
+          {%- comment -%}
+            第 3 层：悬浮产品岛（alpha 抠图 + 投影，空则不渲染）。
+            分两层是有意的：外层 .hero-slideshow__product 只负责定位 + 切换时的
+            退出动画（transform），内层 img 只负责自主漂浮动画（transform）。
+            两层的 transform 互不覆写——合成一层会导致退出动画把漂浮状态吃掉，
+            或漂浮动画把退出位移吃掉（tilt-element 同款教训）。
+          {%- endcomment -%}
           {%- if block.settings.product_image != blank -%}
-            {{
-              block.settings.product_image
-              | image_url: width: 1200
-              | image_tag:
-                widths: '400, 600, 800, 1200',
-                sizes: '(min-width: 990px) 46vw, 86vw',
-                width: block.settings.product_image.width,
-                height: block.settings.product_image.height,
-                loading: loading,
-                fetchpriority: fetch_priority,
-                alt: block.settings.product_image.alt,
-                class: 'hero-slideshow__product'
-            }}
+            <div class="hero-slideshow__product">
+              {{
+                block.settings.product_image
+                | image_url: width: 1200
+                | image_tag:
+                  widths: '400, 600, 800, 1200',
+                  sizes: '(min-width: 990px) 46vw, 86vw',
+                  width: block.settings.product_image.width,
+                  height: block.settings.product_image.height,
+                  loading: loading,
+                  fetchpriority: fetch_priority,
+                  alt: block.settings.product_image.alt,
+                  class: 'hero-slideshow__product-img'
+              }}
+            </div>
           {%- endif -%}
 
           {%- comment -%}
