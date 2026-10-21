@@ -7,6 +7,7 @@
  *   t=bgStart(300)   背景组（底图+弧形遮罩）整组卷出 —— 与文字/产品岛并行，
  *                    只等 bgDelay，不等文字出完
  *   t=nextStart      **与 bgStart 同一时刻**，下一屏整屏顶入
+ *   t=nextStart+300  下一屏的图文逐行落位（从下方升起 + 淡入，与退场镜像）
  *
  * 「无缝」的成立条件（改参数前必读）：
  *   1. bgOut / nextInDur / nextAdvance 三者相等（否则两条边错开 → 两张图叠着走）
@@ -207,7 +208,8 @@
       if (target === this.current) return;
 
       const motionScale = this.reduced.matches ? 0 : 1;
-      const { productOut, textStart, textOut, textStagger, bgDelay, bgOut, nextIn, nextAdvance } = this.#readParams();
+      const { productOut, textStart, textOut, textStagger, bgDelay, bgOut, nextIn, nextAdvance, enterOffset } =
+        this.#readParams();
 
       const currentSlide = this.slides[this.current];
       const nextSlide = this.slides[target];
@@ -215,6 +217,9 @@
       const lines = currentSlide.querySelectorAll('.hero-slideshow__line');
       // 背景组（底图 + 弧形遮罩）整体卷动，不是单独动底图
       const bg = currentSlide.querySelector('.hero-slideshow__bg');
+      // 下一屏的图文（入场动画的对象，与退场一一对应）
+      const nextLines = nextSlide.querySelectorAll('.hero-slideshow__line');
+      const nextProduct = nextSlide.querySelector('.hero-slideshow__product');
 
       this.locked = true;
       this.#setControlsDisabled(true);
@@ -229,11 +234,20 @@
       //   产品岛  0ms 起退场
       //   文字    textStart(220ms) 起逐行退场
       //   背景    bgDelay(300ms) 起卷动 —— 不再等文字出完（行数多时会白等近 1 秒）
+      //   新屏图文  nextStart + enterOffset 起落位（逐行错开，与退场镜像）
       const lastLineEnd = textStart + textOut + Math.max(0, lines.length - 1) * textStagger;
       const bgStart = bgDelay;
       const nextStart = Math.max(0, bgStart + bgOut - nextAdvance);
-      // 收尾必须等最晚的那条线结束，否则退场动画会被提前截断
-      const total = Math.max(nextStart + nextIn, lastLineEnd, productOut) + 50;
+
+      const enterStart = nextStart + enterOffset;
+      // 入场结束时刻：文字按「末行结束」算，产品岛按自身时长算，取较晚的
+      const enterEnd = Math.max(
+        enterStart + textOut + Math.max(0, nextLines.length - 1) * textStagger,
+        enterStart + (nextProduct ? productOut : 0)
+      );
+
+      // 收尾必须等最晚的那条线结束，否则退场/入场动画会被提前截断
+      const total = Math.max(nextStart + nextIn, lastLineEnd, productOut, enterEnd) + 50;
 
       const at = (ms, fn) => {
         if (ms <= 0) {
@@ -246,7 +260,13 @@
       at(0, () => product?.classList.add('is-out'));
       at(textStart, () => lines.forEach((line) => line.classList.add('is-out')));
       at(bgStart, () => bg?.classList.add('is-out'));
-      at(nextStart, () => nextSlide.classList.add('is-next-in'));
+      // is-in 与 is-next-in 同一刻挂上：入场靠 animation-delay + fill-mode:both
+      // 在延迟期间 hold 住 from（opacity 0），避免「先闪一下再淡入」。
+      at(nextStart, () => {
+        nextSlide.classList.add('is-next-in');
+        nextLines.forEach((line) => line.classList.add('is-in'));
+        nextProduct?.classList.add('is-in');
+      });
 
       at(total, () => {
         // 收尾：隐藏旧屏、清全部动画态（下一屏动画 forwards 已停在 0 位，移除类无跳动）
@@ -256,6 +276,8 @@
         lines.forEach((line) => line.classList.remove('is-out'));
         bg?.classList.remove('is-out');
         nextSlide.classList.remove('is-next-in');
+        nextLines.forEach((line) => line.classList.remove('is-in'));
+        nextProduct?.classList.remove('is-in');
         nextSlide.style.transform = '';
         nextSlide.style.zIndex = '';
 
