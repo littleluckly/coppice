@@ -595,9 +595,59 @@
     }
   }
 
+<<<<<<< HEAD
+  /* ===== 入场（新屏的图文落位，与退场镜像） =====
+     ⚠️ fill-mode 必须是 **both**，不能是 forwards：
+     类是在「下一屏刚开始顶入」那一刻就挂上的，此时离动画真正开始还有
+     --hero-enter-offset 的延迟。用 backwards/both 才会在延迟期间把元素按
+     `from`（opacity 0）hold 住；只写 forwards 的话，延迟期间元素是正常可见的，
+     等延迟一过又会跳回 opacity 0 再淡入 —— 肉眼看就是文字先闪一下再消失。 */
+  .hero-slideshow__line.is-in {
+    animation: hero-text-in var(--hero-text-out-dur, 400ms)
+      var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)) both;
+    animation-delay: calc(
+      var(--hero-enter-offset, 300ms) + var(--line-index, 0) * var(--hero-text-stagger, 90ms)
+    );
+  }
+  @keyframes hero-text-in {
+    from {
+      transform: translateY(60px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* 产品岛入场：外层 wrapper 的 transform 是空的（居中靠独立属性 translate），
+     所以这里可以放心用 transform，不会和静态定位打架。 */
+  .hero-slideshow__product.is-in {
+    animation: hero-product-in var(--hero-product-out-dur, 450ms)
+      var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)) both;
+    animation-delay: var(--hero-enter-offset, 300ms);
+  }
+  @keyframes hero-product-in {
+    from {
+      transform: translateY(60px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-slideshow__product.is-out,
+    .hero-slideshow__product.is-in,
+    .hero-slideshow__line.is-out,
+    .hero-slideshow__line.is-in,
+=======
   @media (prefers-reduced-motion: reduce) {
     .hero-slideshow__product.is-out,
     .hero-slideshow__line.is-out,
+>>>>>>> 4306d29512a4ff5459886504c1de4bb1373fabc1
     .hero-slideshow__bg.is-out,
     .hero-slideshow__slide.is-next-in {
       animation-duration: 1ms !important;
