@@ -173,23 +173,11 @@
     </div>
 
     {%- comment -%}
-      切换控件（仅多张时）：圆点（底部居中，毛玻璃胶囊承底保证任何底图上可读）
-      + 上一张/下一张箭头（右下角，品牌实底圆钮）。位置固定，不随文字高度跳动。
+      切换控件（仅多张时）：一条居中的毛玻璃胶囊，箭头在左、圆点在右——
+      箭头与圆点同处一个视觉簇，比原先「圆点居中 + 箭头飘在右下角」更容易被看到。
     {%- endcomment -%}
     {%- if section.blocks.size > 1 -%}
-      <div class="hero-slideshow__dots">
-        {%- for block in section.blocks -%}
-          <button
-            type="button"
-            class="hero-slideshow__dot{% if forloop.first %} is-active{% endif %}"
-            aria-label="{{ 'sections.hero_slideshow.go_to_slide' | t: index: forloop.index }}"
-            {% unless forloop.first %}tabindex="-1"{% endunless %}
-            data-hero-dot="{{ forloop.index0 }}"
-          ></button>
-        {%- endfor -%}
-      </div>
-
-      <div class="hero-slideshow__nav">
+      <div class="hero-slideshow__controls">
         <button
           type="button"
           class="hero-slideshow__arrow"
@@ -198,6 +186,19 @@
         >
           {{ 'icon-chevron-down.svg' | inline_asset_content }}
         </button>
+
+        <div class="hero-slideshow__dots">
+          {%- for block in section.blocks -%}
+            <button
+              type="button"
+              class="hero-slideshow__dot{% if forloop.first %} is-active{% endif %}"
+              aria-label="{{ 'sections.hero_slideshow.go_to_slide' | t: index: forloop.index }}"
+              {% unless forloop.first %}tabindex="-1"{% endunless %}
+              data-hero-dot="{{ forloop.index0 }}"
+            ></button>
+          {%- endfor -%}
+        </div>
+
         <button
           type="button"
           class="hero-slideshow__arrow hero-slideshow__arrow--next"
