@@ -72,6 +72,17 @@
     "hero_slideshow": {
       "name": "Hero slideshow",
       "aria_label": "Highlights",
+      "settings": {
+        "product_header": "Product image",
+        "product_position_x": "Horizontal position",
+        "product_position_y": "Vertical position",
+        "product_position_info": "Center of the product image, measured from the slide's top-left. Desktop only — mobile uses a fixed stacked layout.",
+        "product_size": "Width",
+        "product_size_info": "Share of the slide width. Scales with the viewport.",
+        "product_float": "Animate the product image",
+        "product_float_info": "Slow drifting tilt, similar to the collection banner's pointer-follow effect but running on its own. Automatically off for visitors who prefer reduced motion.",
+        "unit_percent": "%"
+      },
       "blocks": {
         "slide": {
           "name": "Slide",
@@ -79,9 +90,12 @@
             "image": "Image (landscape)",
             "image_info": "Recommended at least 2400px wide. First slide's image is the LCP element and loads with high priority.",
             "image_mobile": "Mobile image (portrait, optional)",
-            "image_mobile_info": "Recommended 3:4. When empty, the landscape image is cropped on mobile."
+            "image_mobile_info": "Recommended 3:4. When empty, the landscape image is cropped on mobile.",
+            "product_image": "Product image (transparent cutout)",
+            "product_image_info": "PNG or WebP with transparency. Floats above the background with a soft shadow; leave empty to skip."
           },
           "defaults": {
+            "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
             "button_label": "Shop mowers"
@@ -90,6 +104,7 @@
       },
       "presets": {
         "slide_1": {
+          "eyebrow": "New · 40V battery series",
           "heading": "Mowing season starts here",
           "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
           "button_label": "Shop mowers"
@@ -228,10 +243,13 @@
     "brand_accent": "Brand accent (buttons, links)",
     "brand_name": "Brand name",
     "button_label": "Button label",
+    "button_label_2": "Secondary button label",
     "button_link": "Button link",
+    "button_link_2": "Secondary button link",
     "collection": "Collection",
     "customer_account_menu": "Customer account menu",
     "description": "Description",
+    "eyebrow": "Eyebrow (small text above heading)",
     "follow_on_shop": "Show Follow on Shop button",
     "foreground": "Foreground",
     "grid_gap": "Grid spacing",

@@ -1,45 +1,82 @@
 {% comment %}
-  Hero slideshow — 首页首屏（task-index T-2.1，pages-ui §2）。
+  Hero slideshow — 首页首屏（task-index T-2.1，pages-ui §2；2026-10-20 改版）。
 
-  实现：CSS scroll-snap 横滑（原生滚动，触摸/键盘可达）。文字内容放在
-  左下角一张**固定的半透明卡片**里（图片随 track 滚动，卡片不滚）：
-  卡片内含标题/副标题/CTA（多张各自渲染成 caption，切换时淡入淡出过渡）
-  + 底部「圆点 + 上一张/下一张」箭头。图片切换循环：到最后一张再点
-  下一张回到第一张（反向同理）。
-  LCP 硬约束（SDD §8.1）：第一张幻灯图 eager + fetchpriority high，其余 lazy。
+  形态参考已验收效果图（Ardot「Coppice 首页 Hero 效果图」）+ 集合页 banner 语言：
+  左侧文字块（eyebrow / 大标题 / 副标题 / 主次 CTA）+ 右侧悬浮产品岛（alpha 抠图）
+  + 底图 + 弧形渐隐遮罩。slide 全屏纵向叠放，JS 编排「电影式」切换
+  （参考 dev-docs/local-assets/首页-hero图动画效果.html，节奏参数 1:1）：
+
+    t=0              产品图向上滑出并淡出（450ms，ease-in）
+    t=220ms          文字紧随其后逐行向上滑出（400ms，行间隔 90ms）
+    t=bgStart        最后一行结束后背景图上滑（550ms，opacity 止于 0.6 不淡透）
+    t=bgStart+290ms  背景未滑完，下一屏从底部顶入（700ms），两屏重叠、无缝无黑屏
+
+  bgStart = max(450, 220+400+(行数-1)×90) + 100。全程只用 transform/opacity。
+  动画的 transform 会整体覆写元素 transform，因此静态定位只允许 translateY
+  居中这一种，且动画 to 值里显式带 calc(-50% …)（tilt-element 同款教训）。
+
+  无 JS 退化：非首屏带 hidden，首屏文字与图片可直接索引。
+  LCP（SDD §8.1）：首屏背景图与产品图 eager + fetchpriority high。
   首块标题为 h1（每页一个 h1，AGENTS.md §8）；其余块 h2。
 {% endcomment %}
 
 {%- if section.blocks.size > 0 -%}
-  <div
-    class="hero-slideshow full-width"
+  <hero-slideshow
+    class="hero-slideshow full-width{% unless section.settings.product_float %} hero-slideshow--no-float{% endunless %}"
     role="region"
     aria-roledescription="carousel"
     aria-label="{{ 'sections.hero_slideshow.aria_label' | t }}"
+    data-status-template="{{ 'sections.hero_slideshow.slide_status' | t: index: '#', count: section.blocks.size | escape }}"
+    style="--hero-product-x: {{ section.settings.product_position_x }}%; --hero-product-y: {{ section.settings.product_position_y }}%; --hero-product-size: {{ section.settings.product_size }}%;"
   >
-    <div class="hero-slideshow__track" tabindex="0">
+    <div class="hero-slideshow__viewport">
       {%- for block in section.blocks -%}
         {%- liquid
           assign is_first = forloop.first
           assign loading = 'lazy'
-          assign fetch_priority = 'auto'
+          assign fetch_priority = 'low'
           if is_first
             assign loading = 'eager'
             assign fetch_priority = 'high'
           endif
         -%}
-        <div class="hero-slideshow__slide" {{ block.shopify_attributes }}>
-          <div class="hero-slideshow__media{% if is_first == false %} hero-slideshow__media--lazy{% endif %}">
-            {%- if block.settings.image != blank -%}
-              {%- if block.settings.image_mobile != blank -%}
-                <picture>
-                  <source
-                    media="(max-width: 749px)"
-                    srcset="{{ block.settings.image_mobile | image_url: width: 900 }} 900w, {{ block.settings.image_mobile | image_url: width: 1400 }} 1400w"
-                    sizes="100vw"
-                    width="{{ block.settings.image_mobile.width }}"
-                    height="{{ block.settings.image_mobile.height }}"
-                  >
+        <div
+          class="hero-slideshow__slide"
+          data-hero-slide="{{ forloop.index0 }}"
+          {% unless is_first %}hidden{% endunless %}
+          {{ block.shopify_attributes }}
+        >
+          {%- comment -%}
+            第 1 层：背景组（底图 + 弧形渐隐遮罩，作为一个整体卷动）。
+            包一层是必须的：遮罩高 120%、top -10%，如果让它各自跑同一个
+            translateY(-100%)，它会比底图多走 20%，卷动时边缘就露馅了。
+          {%- endcomment -%}
+          <div class="hero-slideshow__bg">
+            <div class="hero-slideshow__media">
+              {%- if block.settings.image != blank -%}
+                {%- if block.settings.image_mobile != blank -%}
+                  <picture>
+                    <source
+                      media="(max-width: 749px)"
+                      srcset="{{ block.settings.image_mobile | image_url: width: 900 }} 900w, {{ block.settings.image_mobile | image_url: width: 1400 }} 1400w"
+                      sizes="100vw"
+                      width="{{ block.settings.image_mobile.width }}"
+                      height="{{ block.settings.image_mobile.height }}"
+                    >
+                    {{
+                      block.settings.image
+                      | image_url: width: 2400
+                      | image_tag:
+                        widths: '800, 1200, 1600, 2400',
+                        sizes: '100vw',
+                        width: block.settings.image.width,
+                        height: block.settings.image.height,
+                        loading: loading,
+                        fetchpriority: fetch_priority,
+                        alt: block.settings.image.alt
+                    }}
+                  </picture>
+                {%- else -%}
                   {{
                     block.settings.image
                     | image_url: width: 2400
@@ -52,23 +89,89 @@
                       fetchpriority: fetch_priority,
                       alt: block.settings.image.alt
                   }}
-                </picture>
-              {%- else -%}
-                {{
-                  block.settings.image
-                  | image_url: width: 2400
-                  | image_tag:
-                    widths: '800, 1200, 1600, 2400',
-                    sizes: '100vw',
-                    width: block.settings.image.width,
-                    height: block.settings.image.height,
-                    loading: loading,
-                    fetchpriority: fetch_priority,
-                    alt: block.settings.image.alt
-                }}
+                {%- endif -%}
+              {%- elsif is_first -%}
+                {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-slideshow__placeholder' }}
               {%- endif -%}
-            {%- elsif is_first -%}
-              {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-slideshow__placeholder' }}
+            </div>
+
+            {%- comment -%}
+              第 2 层：弧形渐隐遮罩（集合页 banner 同语言：页面底色渐变 + 圆弧右缘，
+              只压底图、不碰产品岛与文字）。空 image 时也渲染，保证文字可读。
+            {%- endcomment -%}
+            <div class="hero-slideshow__fade" aria-hidden="true"></div>
+          </div>
+
+          {%- comment -%}
+            第 3 层：悬浮产品岛（alpha 抠图 + 投影，空则不渲染）。
+            分两层是有意的：外层 .hero-slideshow__product 只负责定位 + 切换时的
+            退出动画（transform），内层 img 只负责自主漂浮动画（transform）。
+            两层的 transform 互不覆写——合成一层会导致退出动画把漂浮状态吃掉，
+            或漂浮动画把退出位移吃掉（tilt-element 同款教训）。
+          {%- endcomment -%}
+          {%- if block.settings.product_image != blank -%}
+            <div class="hero-slideshow__product">
+              {{
+                block.settings.product_image
+                | image_url: width: 1200
+                | image_tag:
+                  widths: '400, 600, 800, 1200',
+                  sizes: '(min-width: 990px) 46vw, 86vw',
+                  width: block.settings.product_image.width,
+                  height: block.settings.product_image.height,
+                  loading: loading,
+                  fetchpriority: fetch_priority,
+                  alt: block.settings.product_image.alt,
+                  class: 'hero-slideshow__product-img'
+              }}
+            </div>
+          {%- endif -%}
+
+          {%- comment -%}
+            第 4 层：左侧文字块。每行包一个 __line（带 --line-index 供逐行 stagger），
+            行数随商家填写条件增减，index 用 Liquid 计数保证与实际行序一致。
+          {%- endcomment -%}
+          <div class="hero-slideshow__content">
+            {%- assign line_index = 0 -%}
+
+            {%- if block.settings.eyebrow != blank -%}
+              <div class="hero-slideshow__line" style="--line-index: {{ line_index }};">
+                <p class="hero-slideshow__eyebrow">{{ block.settings.eyebrow | escape }}</p>
+              </div>
+              {%- assign line_index = line_index | plus: 1 -%}
+            {%- endif -%}
+
+            {%- if block.settings.heading != blank -%}
+              <div class="hero-slideshow__line" style="--line-index: {{ line_index }};">
+                {%- if is_first -%}
+                  <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
+                {%- else -%}
+                  <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
+                {%- endif -%}
+              </div>
+              {%- assign line_index = line_index | plus: 1 -%}
+            {%- endif -%}
+
+            {%- if block.settings.subheading != blank -%}
+              <div class="hero-slideshow__line" style="--line-index: {{ line_index }};">
+                <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
+              </div>
+              {%- assign line_index = line_index | plus: 1 -%}
+            {%- endif -%}
+
+            {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
+              <div class="hero-slideshow__line" style="--line-index: {{ line_index }};">
+                <div class="hero-slideshow__cta-row">
+                  <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
+                    {{ block.settings.button_label | escape }}
+                  </a>
+                  {%- if block.settings.button_label_2 != blank and block.settings.button_link_2 != blank -%}
+                    <a class="hero-slideshow__cta hero-slideshow__cta--secondary" href="{{ block.settings.button_link_2 }}">
+                      {{ block.settings.button_label_2 | escape }}
+                    </a>
+                  {%- endif -%}
+                </div>
+              </div>
             {%- endif -%}
           </div>
         </div>
@@ -76,240 +179,345 @@
     </div>
 
     {%- comment -%}
-      固定半透明卡片：文字 caption（每张一份）+ 底部切换控件。
-      文字不再随图滚动——caption 多份并存，第一张可见，JS 淡入淡出切换。
-      卡片固定于左下，图片在背后滚动，是标准 hero 轮播形态（参考效果图）。
+      切换控件（仅多张时）：一条居中的毛玻璃胶囊，箭头在左、圆点在右——
+      箭头与圆点同处一个视觉簇，比原先「圆点居中 + 箭头飘在右下角」更容易被看到。
     {%- endcomment -%}
-    <div class="hero-slideshow__card">
-      <div class="hero-slideshow__captions">
-        {%- for block in section.blocks -%}
-          {%- liquid
-            assign is_first = forloop.first
-          -%}
-          <div
-            class="hero-slideshow__caption{% if is_first %} is-active{% endif %}"
-            {% unless is_first %}aria-hidden="true"{% endunless %}
-            data-hero-caption="{{ forloop.index0 }}"
-          >
-            {%- if block.settings.heading != blank -%}
-              {%- if is_first -%}
-                <h1 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h1>
-              {%- else -%}
-                <h2 class="hero-slideshow__heading">{{ block.settings.heading | escape }}</h2>
-              {%- endif -%}
-            {%- endif -%}
+    {%- if section.blocks.size > 1 -%}
+      <div class="hero-slideshow__controls">
+        <button
+          type="button"
+          class="hero-slideshow__arrow"
+          aria-label="{{ 'sections.hero_slideshow.previous' | t }}"
+          data-hero-prev
+        >
+          {{ 'icon-chevron-down.svg' | inline_asset_content }}
+        </button>
 
-            {%- if block.settings.subheading != blank -%}
-              <p class="hero-slideshow__subheading">{{ block.settings.subheading | escape }}</p>
-            {%- endif -%}
+        <div class="hero-slideshow__dots">
+          {%- for block in section.blocks -%}
+            <button
+              type="button"
+              class="hero-slideshow__dot{% if forloop.first %} is-active{% endif %}"
+              aria-label="{{ 'sections.hero_slideshow.go_to_slide' | t: index: forloop.index }}"
+              {% unless forloop.first %}tabindex="-1"{% endunless %}
+              data-hero-dot="{{ forloop.index0 }}"
+            ></button>
+          {%- endfor -%}
+        </div>
 
-            {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
-              <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
-                {{ block.settings.button_label | escape }}
-              </a>
-            {%- endif -%}
-          </div>
-        {%- endfor -%}
-
-        {%- comment -%}
-          底部控件（仅多张时）：圆点（左）+ 上一张/下一张箭头（右），同一行、共享一份。
-          放在卡片底部，位置固定，不随标题文字高度变化而跳动。
-        {%- endcomment -%}
-        {%- if section.blocks.size > 1 -%}
-          <div class="hero-slideshow__indicators">
-            <div class="hero-slideshow__dots">
-              {%- for block in section.blocks -%}
-                <button
-                  type="button"
-                  class="hero-slideshow__dot{% if forloop.first %} is-active{% endif %}"
-                  aria-label="{{ 'sections.hero_slideshow.go_to_slide' | t: index: forloop.index }}"
-                  {% unless forloop.first %}tabindex="-1"{% endunless %}
-                  data-hero-dot="{{ forloop.index0 }}"
-                ></button>
-              {%- endfor -%}
-            </div>
-            <div class="hero-slideshow__arrows">
-              <button
-                type="button"
-                class="hero-slideshow__arrow"
-                aria-label="{{ 'sections.hero_slideshow.previous' | t }}"
-                data-hero-prev
-              >
-                {{ 'icon-chevron-down.svg' | inline_asset_content }}
-              </button>
-              <button
-                type="button"
-                class="hero-slideshow__arrow hero-slideshow__arrow--next"
-                aria-label="{{ 'sections.hero_slideshow.next' | t }}"
-                data-hero-next
-              >
-                {{ 'icon-chevron-down.svg' | inline_asset_content }}
-              </button>
-            </div>
-          </div>
-        {%- endif -%}
+        <button
+          type="button"
+          class="hero-slideshow__arrow hero-slideshow__arrow--next"
+          aria-label="{{ 'sections.hero_slideshow.next' | t }}"
+          data-hero-next
+        >
+          {{ 'icon-chevron-down.svg' | inline_asset_content }}
+        </button>
       </div>
-    </div>
-  </div>
+    {%- endif -%}
+
+    {%- comment -%} 切换播报（aria-live），模板经 locale，JS 只替换序号占位 {%- endcomment -%}
+    <p class="hero-slideshow__status visually-hidden" aria-live="polite" data-hero-status>
+      {{ 'sections.hero_slideshow.slide_status' | t: index: 1, count: section.blocks.size }}
+    </p>
+  </hero-slideshow>
 {%- endif -%}
 
 {% stylesheet %}
+  /* ===== 节奏参数（改这里即改 JS 编排时长；JS 读不到时回落到同名默认值） =====
+     与动画参考稿 dev-docs/local-assets/首页-hero图动画效果.html 的差异：
+     ① 背景改为与文字/产品岛**同时**进行（只延迟 300ms 启动），参考稿是等
+        最后一行文字出完才启动背景，行数多时会白等近 1 秒；
+     ② 下一屏顶入与背景卷动严格等长等曲线，见下面的注释。 */
   .hero-slideshow {
+    --hero-product-out-dur: 450ms;
+    --hero-text-start-offset: 220ms;
+    --hero-text-out-dur: 400ms;
+    --hero-text-stagger: 90ms;
+    --hero-bg-out-dur: 600ms;
+    /* 背景组相对**切换起点**的延迟。注意语义：不再是「等文字出完再等这么久」，
+       而是「切换开始后 300ms 就滚」。所以行数增减不会推迟背景。 */
+    --hero-bg-out-delay: 300ms;
+    /* 下一屏顶入：**必须与背景卷动同长、同曲线、同时启动**，否则两条边对不齐。
+       早期版本是 700ms / 提前 260ms / ease-out（背景是 550ms ease-in），
+       曲线与时长都不同 → 中途一边快一边慢，观感就是两张背景图叠在一起。
+       三者相等时，滑出底边 ≡ 顶入顶边，全程严丝合缝（即真正的「胶片卷动」）。 */
+    --hero-next-in-dur: 600ms;
+    --hero-next-in-advance: 600ms;
+    --hero-ease-in: cubic-bezier(0.6, 0, 0.8, 0.4);
+    --hero-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+    /* 卷动专用曲线：背景滑出与下一屏顶入共用这一条，是「无缝」的前提 */
+    --hero-roll-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    /* 入场延迟：下一屏顶入开始后多久，它的图文开始落位。
+       取 300ms 是因为此时整屏已走过约 6 成，图文刚从下沿进画，看得见动作。 */
+    --hero-enter-offset: 300ms;
+    /* 产品图自主漂浮一轮的时长（越小越活泼、越大越沉稳） */
+    --hero-float-dur: 11s;
+
+    display: block;
     position: relative;
   }
-  .hero-slideshow__track {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    scroll-behavior: smooth;
-  }
-  .hero-slideshow__track::-webkit-scrollbar {
-    display: none;
-  }
-    .hero-slideshow__slide {
-      position: relative;
-      flex: 0 0 100%;
-      scroll-snap-align: start;
-      min-height: clamp(22rem, 56vw, 44rem);
-    }
-    .hero-slideshow__media,
-    .hero-slideshow__media img {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
-    .hero-slideshow__media img {
-      object-fit: cover;
-    }
 
-  /* ---- 固定半透明卡片（右下角，文字 + 切换控件同卡） ---- */
-  .hero-slideshow__card {
+  /* ===== 视口与幻灯（全屏纵向叠放，底色即页面底色 → 滑出/顶入间不露黑） ===== */
+  .hero-slideshow__viewport {
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(22rem, 56vw, 44rem);
+    background-color: var(--color-background);
+  }
+  .hero-slideshow__slide {
     position: absolute;
     inset: 0;
-    z-index: 2;
-    display: flex;
-    /* 底部对齐：卡片高度随文字向上生长，箭头在卡片底部位置恒定，
-       不随文字长度/卡片高度变化而跳变（垂直居中会因高度重算而跳） */
-    align-items: flex-end;
-    justify-content: flex-end;
-    padding-inline-end: var(--page-margin);
-    padding-block-end: var(--page-margin);
-    pointer-events: none; /* 卡片空白不挡图，文字链接/控件单独恢复 */
+    overflow: hidden;
   }
-  .hero-slideshow__card > * {
-    pointer-events: auto;
+  .hero-slideshow__slide[hidden] {
+    display: none;
   }
-  .hero-slideshow__captions {
-    position: relative;
-    /* 半透明玻璃卡片（参考效果图）：背景从主题背景色派生 65% + 毛玻璃 + 圆角 +
-       柔和阴影 + 白边高光。白底主题 = 白色卡片（参考效果），Noir = 深色卡片自动适配。 */
-    width: min(26rem, 100%);
-    background-color: color-mix(in srgb, var(--color-background) 65%, transparent);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgb(255 255 255 / 40%);
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgb(0 0 0 / 10%);
-    padding: 1.25rem 1.5rem;
-    overflow: hidden; /* 裁掉切换时移出卡片的 caption */
-  }
-  .hero-slideshow__caption {
-    /* 多份 caption 叠加在卡片同一位置：激活的 relative 撑高卡片，
-       其余 absolute 不占位。动画下沉到 subheading/heading 子元素，
-       caption 层只做瞬时可见性切换（不做退出动画）。 */
-  }
-  .hero-slideshow__caption:not(.is-active) {
+  /* 背景组：底图 + 弧形遮罩装在一起整体卷动。
+     高度必须严格等于视口高（inset:0），这样 translateY(±100%) 的距离
+     与「下一屏整屏位移」完全一致——无缝卷动的几何前提。 */
+  .hero-slideshow__bg {
     position: absolute;
-    inset-block-start: 1.25rem;
-    inset-inline-start: 1.5rem;
-    inset-inline-end: 1.5rem;
-    visibility: hidden;
-    pointer-events: none;
+    inset: 0;
+    z-index: 0;
+    will-change: transform;
   }
-  .hero-slideshow__caption.is-active {
-    position: relative;
+  .hero-slideshow__media {
+    position: absolute;
+    inset: 0;
+  }
+  .hero-slideshow__media img,
+  .hero-slideshow__media svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
-  /* 文字子元素的滑入动画：非激活项停在「屏外+透明」起始态，
-     切到激活时滑入归位。方向由 root 的 data-direction 决定。 */
-  .hero-slideshow__subheading,
-  .hero-slideshow__heading {
-    transition: opacity 0.4s ease, transform 0.4s ease;
+  /* ===== 第 2 层：弧形渐隐遮罩（页面底色派生，Noir 自动翻转） ===== */
+  .hero-slideshow__fade {
+    position: absolute;
+    top: -10%;
+    left: -5%;
+    width: 55%;
+    height: 120%;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      to right,
+      var(--color-background) 0%,
+      color-mix(in srgb, var(--color-background) 70%, transparent) 40%,
+      transparent 80%
+    );
+    border-radius: 0 60% 50% 0 / 0 70% 50% 0;
   }
-  /* 主标题比副标题晚 200ms（错峰滑入） */
-  .hero-slideshow__heading {
-    transition-delay: 0.2s;
+
+  /* ===== 第 3 层：悬浮产品岛 =====
+     定位三件套由 section 级设置驱动（--hero-product-x / -y / -size 写在根元素 style 上）。
+     ⚠️ 居中一律用独立属性 `translate`，不能用 transform：本层的 transform 被切换时的
+     退出动画整块覆写，写进 transform 的居中会被吃掉（tilt-element 同款教训）。
+     投影永远用黑（配色纪律里的合法例外：压在商品图上的元素跟图不跟主题）。 */
+  .hero-slideshow__product {
+    position: absolute;
+    left: var(--hero-product-x, 62%);
+    top: var(--hero-product-y, 50%);
+    translate: -50% -50%;
+    z-index: 2;
+    width: var(--hero-product-size, 46%);
+    /* 刻意不设 max-width：宽度已经是百分比设置，硬上限会让设置值在大屏上
+       被静默截断（实测 1440 视口下 46% 只渲染出 43.5%），等于给商家一个
+       转不动却没反应的旋钮。范围上限 80% 本身已经是护栏。 */
+    perspective: 1200px; /* 给内层 3D 倾斜提供透视 */
+    will-change: transform, opacity;
   }
-  .hero-slideshow__caption:not(.is-active) .hero-slideshow__subheading,
-  .hero-slideshow__caption:not(.is-active) .hero-slideshow__heading {
-    opacity: 0;
-    transform: translateX(2.5rem); /* 默认（前进）方向：新文字从右滑入 */
+  .hero-slideshow__product-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transform-origin: 50% 60%;
+    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
+    animation: hero-product-float var(--hero-float-dur, 11s) ease-in-out infinite;
+    will-change: transform;
   }
-  /* 后退方向：新文字从左滑入 */
-  .hero-slideshow[data-direction='prev']
-    .hero-slideshow__caption:not(.is-active)
-    .hero-slideshow__subheading,
-  .hero-slideshow[data-direction='prev']
-    .hero-slideshow__caption:not(.is-active)
-    .hero-slideshow__heading {
-    transform: translateX(-2.5rem);
+  .hero-slideshow--no-float .hero-slideshow__product-img {
+    animation: none;
   }
-  .hero-slideshow__subheading {
-    /* 副标题（标题下方）：灰绿弱化，从前景色派生 */
-    margin: 0.5rem 0 0;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+
+  /* 自主漂浮：无鼠标参与的「呼吸版 tilt」——缓慢的三维倾斜 + 轻微上下浮动。
+     挂在 img 上（transform），与外层的退出动画（也在 transform，但不同元素）互不干扰。 */
+  @keyframes hero-product-float {
+    0%,
+    100% {
+      transform: rotateX(2.2deg) rotateY(-3.4deg) rotateZ(0.5deg) translateY(0) scale(1);
+    }
+    25% {
+      transform: rotateX(-1.4deg) rotateY(1.8deg) rotateZ(-0.6deg) translateY(-10px) scale(1.012);
+    }
+    50% {
+      transform: rotateX(2.8deg) rotateY(3.6deg) rotateZ(0.4deg) translateY(-4px) scale(1);
+    }
+    75% {
+      transform: rotateX(-2deg) rotateY(-1.6deg) rotateZ(0.9deg) translateY(-12px) scale(1.008);
+    }
+  }
+
+  /* ===== 第 4 层：左侧文字块 ===== */
+  .hero-slideshow__content {
+    position: absolute;
+    top: 50%;
+    left: 6%;
+    z-index: 3;
+    width: min(34rem, 88vw);
+    transform: translateY(-50%);
+  }
+  .hero-slideshow__line {
+    will-change: transform, opacity;
+  }
+  .hero-slideshow__eyebrow {
+    margin: 0 0 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.125em;
+    text-transform: uppercase;
+    color: var(--color-brand-accent);
   }
   .hero-slideshow__heading {
     margin: 0;
-    /* 深绿粗体标题（参考效果图），跟随品牌色 */
-    color: var(--color-brand);
-    font-size: clamp(1.25rem, 2.5vw, 1.5rem);
-    line-height: 1.2;
+    font-size: clamp(2.25rem, 4.6vw, 4.125rem);
+    line-height: 1.08;
     font-weight: 700;
-    max-width: 13rem;
+    letter-spacing: -0.03em;
+    color: var(--color-foreground);
+  }
+  .hero-slideshow__subheading {
+    margin: 1rem 0 0;
+    max-width: 30rem;
+    font-size: clamp(1rem, 1.25vw, 1.125rem);
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  }
+  .hero-slideshow__cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.875rem;
+    margin-block-start: 1.75rem;
   }
   .hero-slideshow__cta {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-block-start: 1rem;
-    padding: 0.6rem 1.25rem;
     min-height: 44px;
-    background-color: var(--color-brand-accent);
-    color: #ffffff;
-    font-size: 0.9rem;
+    padding: 0.875rem 1.75rem;
+    background-color: var(--color-brand);
+    /* 用背景色当前景色，而不是硬编码 #fff：Noir preset 下品牌色是亮 lime，
+       白字压亮绿读不出来（对比度不达 AA）；换成背景色后浅色底仍是白字、
+       Noir 下自动变深字，两端都成立。 */
+    color: var(--color-background);
+    font-size: 0.9375rem;
+    font-weight: 600;
     line-height: 1;
     text-decoration: none;
     border-radius: var(--style-border-radius-inputs);
+    transition: background-color 0.3s ease;
+  }
+  .hero-slideshow__cta:hover {
+    background-color: var(--color-brand-accent);
+  }
+  .hero-slideshow__cta--secondary {
+    background-color: var(--color-background);
+    color: var(--color-brand);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+  .hero-slideshow__cta--secondary:hover {
+    background-color: var(--color-background);
+    color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
+  }
+  .hero-slideshow__cta:focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 2px;
   }
 
-  /* ---- 底部控件行内的圆形箭头（深绿底白箭头） ---- */
-  .hero-slideshow__arrows {
+  /* ===== 切换控件：一条居中的毛玻璃胶囊，箭头在两侧、圆点在中间 =====
+     居中用独立属性 translate（不用 transform），与全站「动画会覆写 transform」的
+     约定一致：这层以后若加动效也不会被居中值绊住。 */
+  .hero-slideshow__controls {
+    position: absolute;
+    bottom: 1.75rem;
+    left: 50%;
+    translate: -50% 0;
+    z-index: 10;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
+    gap: 0.25rem;
+    padding: 0.375rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-background) 72%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 12%);
   }
+  .hero-slideshow__dots {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding-inline: 0.25rem;
+  }
+  /* 圆点本体 8px，但按钮做成 24px 见方保证可点中（视觉尺寸不变，热区变大）。
+     装饰圆点走 ::after，缩放不撑大热区。 */
+  .hero-slideshow__dot {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .hero-slideshow__dot::after {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-foreground) 32%, transparent);
+    transition: background-color 0.2s ease, scale 0.2s ease;
+  }
+  .hero-slideshow__dot.is-active::after {
+    background-color: var(--color-brand);
+    scale: 1.4;
+  }
+  .hero-slideshow__dot:focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 0;
+  }
+
   .hero-slideshow__arrow {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 2.125rem;
+    height: 2.125rem;
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background-color: var(--color-brand);
-    color: #ffffff;
+    background-color: transparent;
+    /* 图标色跟随前景色；hover 反转时用背景色作前景——
+       这样浅色 preset（白底）与 Noir（深底 + lime 品牌色）两端都不会出现
+       白字压亮绿那种读不出来的组合。 */
+    color: var(--color-foreground);
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
   .hero-slideshow__arrow:hover {
-    background-color: var(--color-brand-accent);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+  .hero-slideshow__arrow:focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: -2px;
   }
   .hero-slideshow__arrow svg {
     width: 0.75rem;
@@ -321,45 +529,172 @@
   .hero-slideshow__arrow:not(.hero-slideshow__arrow--next) svg {
     transform: rotate(90deg);
   }
-  .hero-slideshow__arrow:focus-visible {
-    outline: 2px solid var(--color-brand-accent);
-    outline-offset: 2px;
+
+  /* ===== 切换动画（全程只用 transform / opacity） =====
+     ⚠️ 每个 var() 都必须带内联兜底值，且兜底值 = 上面的设计值。
+     原因（已实测）：animation 简写里只要有一个 var() 解析不到，整条声明会被判为
+     invalid at computed-value time —— 浏览器不报错、直接把 animation-name 变成 none，
+     动画整条消失，切换变成硬切。
+     ⚠️ 另外 CSS 里写的 `550ms` 会被 Shopify 压缩成 `.55s`，JS 读这个变量时必须
+     按单位换算（见 assets/hero-slideshow.js 的 toMs），否则会小 1000 倍。 */
+
+  /* 产品岛：向上滑出并淡出。居中由独立属性 translate 承担，
+     所以这里的 transform 是纯位移，不用再写 calc(-50% - …)。 */
+  .hero-slideshow__product.is-out {
+    animation: hero-product-out var(--hero-product-out-dur, 450ms)
+      var(--hero-ease-in, cubic-bezier(0.6, 0, 0.8, 0.4)) forwards;
+  }
+  @keyframes hero-product-out {
+    to {
+      transform: translateY(-120px);
+      opacity: 0;
+    }
   }
 
-  /* ---- 卡片底部控件（在卡片背景内）：圆点（左）+ 箭头（右） ---- */
-  .hero-slideshow__indicators {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    /* 与文字区分：顶部分隔线 + 上间距（已在卡片 padding 内） */
-    margin-block-start: 1rem;
-    padding-block-start: 0.75rem;
-    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  /* 文字逐行上滑淡出。启动时机由 JS 统一控制（--hero-text-start-offset），
+     CSS 只承担行间隔（--line-index × stagger）。 */
+  .hero-slideshow__line.is-out {
+    animation: hero-text-out var(--hero-text-out-dur, 400ms)
+      var(--hero-ease-in, cubic-bezier(0.6, 0, 0.8, 0.4)) forwards;
+    animation-delay: calc(var(--line-index, 0) * var(--hero-text-stagger, 90ms));
   }
-  .hero-slideshow__dots {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
+  @keyframes hero-text-out {
+    to {
+      transform: translateY(-80px);
+      opacity: 0;
+    }
   }
-  .hero-slideshow__dot {
-    width: 0.5rem;
-    height: 0.5rem;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    /* 未激活：弱化（从前景色派生淡档） */
-    background-color: color-mix(in srgb, var(--color-foreground) 35%, transparent);
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+
+  /* 背景组卷出：整组上滑一个视口高。
+     **不淡透**——不是「淡到 0.6」那个意思，而是彻底不加 opacity。
+     原因：滑出层压在下一屏之上，一旦给它 opacity < 1，下面透出来的就是
+     已经在顶入的那张照片 → 两张图叠影，这正是「重叠很明显」的观感来源。
+     严丝合缝时不存在需要透出的空隙，保持 1 才干净。 */
+  .hero-slideshow__bg.is-out {
+    animation: hero-bg-out var(--hero-bg-out-dur, 600ms)
+      var(--hero-roll-ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
   }
-  .hero-slideshow__dot.is-active {
-    background-color: var(--color-brand);
-    transform: scale(1.25);
+  @keyframes hero-bg-out {
+    to {
+      transform: translateY(-100%);
+    }
   }
-  /* 移动端：隐藏底部控件（圆点+箭头，触摸横滑已覆盖），文字半透明卡片保留 */
+
+  /* 下一屏整屏顶入：位移距离 = 自身高度 = 视口高，与 .hero-slideshow__bg 的
+     -100% 完全等长；时长与曲线也与它一致 —— 两条边全程贴合，无重叠无缝隙。 */
+  .hero-slideshow__slide.is-next-in {
+    animation: hero-next-in var(--hero-next-in-dur, 600ms)
+      var(--hero-roll-ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
+  }
+  @keyframes hero-next-in {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  /* ===== 入场（新屏的图文落位，与退场镜像） =====
+     ⚠️ fill-mode 必须是 **both**，不能是 forwards：
+     类是在「下一屏刚开始顶入」那一刻就挂上的，此时离动画真正开始还有
+     --hero-enter-offset 的延迟。用 backwards/both 才会在延迟期间把元素按
+     `from`（opacity 0）hold 住；只写 forwards 的话，延迟期间元素是正常可见的，
+     等延迟一过又会跳回 opacity 0 再淡入 —— 肉眼看就是文字先闪一下再消失。 */
+  .hero-slideshow__line.is-in {
+    animation: hero-text-in var(--hero-text-out-dur, 400ms)
+      var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)) both;
+    animation-delay: calc(
+      var(--hero-enter-offset, 300ms) + var(--line-index, 0) * var(--hero-text-stagger, 90ms)
+    );
+  }
+  @keyframes hero-text-in {
+    from {
+      transform: translateY(60px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* 产品岛入场：外层 wrapper 的 transform 是空的（居中靠独立属性 translate），
+     所以这里可以放心用 transform，不会和静态定位打架。 */
+  .hero-slideshow__product.is-in {
+    animation: hero-product-in var(--hero-product-out-dur, 450ms)
+      var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)) both;
+    animation-delay: var(--hero-enter-offset, 300ms);
+  }
+  @keyframes hero-product-in {
+    from {
+      transform: translateY(60px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-slideshow__product.is-out,
+    .hero-slideshow__product.is-in,
+    .hero-slideshow__line.is-out,
+    .hero-slideshow__line.is-in,
+    .hero-slideshow__bg.is-out,
+    .hero-slideshow__slide.is-next-in {
+      animation-duration: 1ms !important;
+      animation-delay: 0ms !important;
+    }
+    /* 自住漂浮是无限循环动画，reduce 下必须整个关掉（压时长会变成高频抖动） */
+    .hero-slideshow__product-img {
+      animation: none !important;
+    }
+  }
+
+  /* ===== 移动端（<990px）：产品岛上移居中、文字沉底居中、遮罩转底部渐隐 ===== */
   @media screen and (max-width: 989px) {
-    .hero-slideshow__indicators {
-      display: none;
+    /* 移动端是「产品在上、文字在下」的竖排，水平居中固定 50%，
+       因此桌面端的自定义位置设置在这里不生效（设置项的 info 里已写明）。
+       居中仍靠独立属性 translate，不写 margin，transform 保持干净。 */
+    .hero-slideshow__product {
+      top: 30%;
+      left: 50%;
+      width: 66%;
+      max-width: none;
+    }
+    .hero-slideshow__content {
+      top: auto;
+      bottom: 12%;
+      left: 50%;
+      transform: translate(-50%, 0);
+      text-align: center;
+    }
+    .hero-slideshow__subheading {
+      margin-inline: auto;
+    }
+    .hero-slideshow__cta-row {
+      justify-content: center;
+    }
+    .hero-slideshow__fade {
+      top: auto;
+      left: 0;
+      bottom: -10%;
+      width: 100%;
+      height: 75%;
+      border-radius: 0;
+      background: linear-gradient(
+        to top,
+        var(--color-background) 0%,
+        color-mix(in srgb, var(--color-background) 70%, transparent) 40%,
+        transparent 80%
+      );
+    }
+    /* 移动端控件仍居中，只是贴近底边 */
+    .hero-slideshow__controls {
+      bottom: 0.875rem;
+      gap: 0;
     }
   }
 {% endstylesheet %}
@@ -372,6 +707,52 @@
   "tag": "section",
   "class": "hero-slideshow-section",
   "max_blocks": 5,
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:sections.hero_slideshow.settings.product_header"
+    },
+    {
+      "type": "range",
+      "id": "product_position_x",
+      "label": "t:sections.hero_slideshow.settings.product_position_x",
+      "info": "t:sections.hero_slideshow.settings.product_position_info",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "t:sections.hero_slideshow.settings.unit_percent",
+      "default": 62
+    },
+    {
+      "type": "range",
+      "id": "product_position_y",
+      "label": "t:sections.hero_slideshow.settings.product_position_y",
+      "info": "t:sections.hero_slideshow.settings.product_position_info",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "t:sections.hero_slideshow.settings.unit_percent",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "product_size",
+      "label": "t:sections.hero_slideshow.settings.product_size",
+      "info": "t:sections.hero_slideshow.settings.product_size_info",
+      "min": 20,
+      "max": 80,
+      "step": 1,
+      "unit": "t:sections.hero_slideshow.settings.unit_percent",
+      "default": 46
+    },
+    {
+      "type": "checkbox",
+      "id": "product_float",
+      "label": "t:sections.hero_slideshow.settings.product_float",
+      "info": "t:sections.hero_slideshow.settings.product_float_info",
+      "default": true
+    }
+  ],
   "blocks": [
     {
       "type": "slide",
@@ -388,6 +769,18 @@
           "id": "image_mobile",
           "label": "t:sections.hero_slideshow.blocks.slide.labels.image_mobile",
           "info": "t:sections.hero_slideshow.blocks.slide.labels.image_mobile_info"
+        },
+        {
+          "type": "image_picker",
+          "id": "product_image",
+          "label": "t:sections.hero_slideshow.blocks.slide.labels.product_image",
+          "info": "t:sections.hero_slideshow.blocks.slide.labels.product_image_info"
+        },
+        {
+          "type": "text",
+          "id": "eyebrow",
+          "label": "t:labels.eyebrow",
+          "default": "t:sections.hero_slideshow.blocks.slide.defaults.eyebrow"
         },
         {
           "type": "text",
@@ -411,6 +804,16 @@
           "type": "url",
           "id": "button_link",
           "label": "t:labels.button_link"
+        },
+        {
+          "type": "text",
+          "id": "button_label_2",
+          "label": "t:labels.button_label_2"
+        },
+        {
+          "type": "url",
+          "id": "button_link_2",
+          "label": "t:labels.button_link_2"
         }
       ]
     }
@@ -422,6 +825,7 @@
         {
           "type": "slide",
           "settings": {
+            "eyebrow": "t:sections.hero_slideshow.presets.slide_1.eyebrow",
             "heading": "t:sections.hero_slideshow.presets.slide_1.heading",
             "subheading": "t:sections.hero_slideshow.presets.slide_1.subheading",
             "button_label": "t:sections.hero_slideshow.presets.slide_1.button_label"
