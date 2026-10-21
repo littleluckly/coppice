@@ -558,22 +558,26 @@
     }
   }
 
-  /* 背景上滑：不淡透（opacity 止于 0.6），保持画面有内容直到下一屏覆盖。 */
-  .hero-slideshow__media.is-out {
-    animation: hero-bg-out var(--hero-bg-out-dur, 550ms)
-      var(--hero-ease-in, cubic-bezier(0.6, 0, 0.8, 0.4)) forwards;
+  /* 背景组卷出：整组上滑一个视口高。
+     **不淡透**——不是「淡到 0.6」那个意思，而是彻底不加 opacity。
+     原因：滑出层压在下一屏之上，一旦给它 opacity < 1，下面透出来的就是
+     已经在顶入的那张照片 → 两张图叠影，这正是「重叠很明显」的观感来源。
+     严丝合缝时不存在需要透出的空隙，保持 1 才干净。 */
+  .hero-slideshow__bg.is-out {
+    animation: hero-bg-out var(--hero-bg-out-dur, 600ms)
+      var(--hero-roll-ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
   }
   @keyframes hero-bg-out {
     to {
       transform: translateY(-100%);
-      opacity: 0.6;
     }
   }
 
-  /* 下一屏从底部顶入（背景结束前 --hero-next-in-advance 启动，两屏重叠）。 */
+  /* 下一屏整屏顶入：位移距离 = 自身高度 = 视口高，与 .hero-slideshow__bg 的
+     -100% 完全等长；时长与曲线也与它一致 —— 两条边全程贴合，无重叠无缝隙。 */
   .hero-slideshow__slide.is-next-in {
     animation: hero-next-in var(--hero-next-in-dur, 600ms)
-      var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
+      var(--hero-roll-ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
   }
   @keyframes hero-next-in {
     from {
@@ -587,7 +591,7 @@
   @media (prefers-reduced-motion: reduce) {
     .hero-slideshow__product.is-out,
     .hero-slideshow__line.is-out,
-    .hero-slideshow__media.is-out,
+    .hero-slideshow__bg.is-out,
     .hero-slideshow__slide.is-next-in {
       animation-duration: 1ms !important;
       animation-delay: 0ms !important;
