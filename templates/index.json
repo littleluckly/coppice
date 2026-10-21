@@ -60,8 +60,9 @@
         "slide_6VKME8": {
           "type": "slide",
           "settings": {
-            "image": "shopify://shop_images/mower-large-lawn-push-pc-16x9_webp.webp",
+            "image": "shopify://shop_images/banner-bg-4_webp.webp",
             "image_mobile": "shopify://shop_images/mower-large-lawn-push-mobile-3x4_webp.webp",
+            "product_image": "shopify://shop_images/banner-island-string-trimmer_rmbg_webp.webp",
             "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
