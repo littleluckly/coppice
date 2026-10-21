@@ -1,11 +1,17 @@
 /**
  * hero-slideshow — 「电影式」纵向切换编排（Custom Element）。
  *
- * 时序（节奏参数从 CSS 变量读取，与参考稿 1:1；CSS 变量即唯一调参口）：
+ * 时序（节奏参数从 CSS 变量读取；CSS 变量即唯一调参口）：
  *   t=0              当前屏产品岛上滑淡出
  *   t=textStart(220) 当前屏文字逐行上滑（行间隔由 CSS --line-index × stagger）
- *   t=bgStart        最后一行文字结束后背景上滑（不淡透，opacity 止于 0.6）
- *   t=nextStart      背景结束前 260ms 下一屏从底部顶入（两屏重叠，无缝无黑屏）
+ *   t=bgStart        最后一行文字结束后，背景组（底图+弧形遮罩）整组卷出
+ *   t=nextStart      **与 bgStart 同一时刻**，下一屏整屏顶入
+ *
+ * 「无缝」的成立条件（改参数前必读）：
+ *   1. bgOut / nextInDur / nextAdvance 三者相等（否则两条边错开 → 两张图叠着走）
+ *   2. 两个 keyframe 的位移距离相等（都是 100% 自身高度 = 视口高）
+ *   3. 两个 keyframe 用同一条缓动（--hero-roll-ease）
+ *   4. 滑出层不能有 opacity < 1（会透出底下正在顶入的那张图 = 叠影）
  *
  * JS 的 setTimeout 时刻 = 动画实际开始时刻；CSS 动画自身不再带启动 delay
  * （只有文字行间隔在 CSS 里算 stagger），避免参考稿的双重延迟。
