@@ -23,9 +23,12 @@
    * 节奏参数兜底值（毫秒）。与 sections/hero-slideshow.liquid 的 {% stylesheet %}
    * 里的同名 CSS 变量一一对应——改一边必须改另一边。
    *
-   * ⚠️ 这不是冗余保险：{% stylesheet %} 的产物是外链样式表，若脚本先于样式就绪，
-   * getPropertyValue 会返回空串 → parseFloat → NaN → 所有时长归零 → 切换瞬闪。
-   * 有兜底后最坏情况是按设计时长跑，不会退化成闪现。
+   * 兜底要挡三种真实出现过的读取失败：
+   *   1. 样式表尚未就绪 → getPropertyValue 返回空串 → NaN
+   *   2. CSS 压缩器把 550ms 改写成 .55s → parseFloat 得到 0.55（当作毫秒），
+   *      整条时间轴塌到 ~50ms。**这就是线上「切换像瞬间完成」的真正原因**，
+   *      所以下面必须用 toMs() 按单位换算，不能直接 parseFloat。
+   *   3. 变量被写成 0ms → 时长必须 > 0 才采信。
    */
   const DEFAULT_TIMING = {
     '--hero-product-out-dur': 450,
