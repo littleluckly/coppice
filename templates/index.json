@@ -15,45 +15,61 @@
         "slide_K4yFhb": {
           "type": "slide",
           "settings": {
-            "image": "shopify://shop_images/mower-small-yard-ride-on-pc-16x9_webp.webp",
+            "image": "shopify://shop_images/banner-bg.png",
             "image_mobile": "shopify://shop_images/mower-small-yard-ride-on-mobile-3x4_webp.webp",
+            "product_image": "shopify://shop_images/banner-island-push-mower_rmbg_webp.webp",
+            "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
             "button_label": "Shop mowers",
-            "button_link": "shopify://collections/20v-battery"
+            "button_link": "shopify://collections/20v-battery",
+            "button_label_2": "",
+            "button_link_2": ""
           }
         },
         "slide_qiadTF": {
           "type": "slide",
           "settings": {
-            "image": "shopify://shop_images/mower-small-yard-push-pc-16x9_webp.webp",
+            "image": "shopify://shop_images/banner-bg-2_webp.webp",
             "image_mobile": "shopify://shop_images/mower-small-yard-push-mobile-3x4_webp.webp",
+            "product_image": "shopify://shop_images/banner-island-riding-mower_rmbg_webp.webp",
+            "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
             "button_label": "Shop mowers",
-            "button_link": ""
+            "button_link": "",
+            "button_label_2": "",
+            "button_link_2": ""
           }
         },
         "slide-1": {
           "type": "slide",
           "settings": {
-            "image": "shopify://shop_images/mower-large-lawn-ride-on-pc-16x9_webp.webp",
+            "image": "shopify://shop_images/banner-bg-chainsaw_webp.webp",
             "image_mobile": "shopify://shop_images/mower-large-lawn-ride-on-mobile-3x4_webp.webp",
+            "product_image": "shopify://shop_images/banner-island-chainsaw_rmbg_webp.webp",
+            "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
             "button_label": "Shop mowers",
-            "button_link": ""
+            "button_link": "",
+            "button_label_2": "",
+            "button_link_2": ""
           }
         },
         "slide_6VKME8": {
           "type": "slide",
           "settings": {
-            "image": "shopify://shop_images/mower-large-lawn-push-pc-16x9_webp.webp",
+            "image": "shopify://shop_images/banner-bg-4_webp.webp",
             "image_mobile": "shopify://shop_images/mower-large-lawn-push-mobile-3x4_webp.webp",
+            "product_image": "shopify://shop_images/banner-island-string-trimmer_rmbg_webp.webp",
+            "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",
             "subheading": "Walk-behind, riding, and battery platform mowers with full specs up front.",
             "button_label": "Shop mowers",
-            "button_link": ""
+            "button_link": "",
+            "button_label_2": "",
+            "button_link_2": ""
           }
         }
       },
@@ -63,7 +79,12 @@
         "slide-1",
         "slide_6VKME8"
       ],
-      "settings": {}
+      "settings": {
+        "product_position_x": 62,
+        "product_position_y": 50,
+        "product_size": 46,
+        "product_float": true
+      }
     },
     "platform-cards": {
       "type": "platform-cards",
