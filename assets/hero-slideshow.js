@@ -42,7 +42,7 @@
     '--hero-text-start-offset': 220,
     '--hero-text-out-dur': 400,
     '--hero-text-stagger': 90,
-    '--hero-bg-out-delay': 200,
+    '--hero-bg-out-delay': 300,
     '--hero-bg-out-dur': 600,
     '--hero-next-in-dur': 600,
     // 必须与 bgOut 相等（= 同时启动），否则两条边对不齐，会看到两张背景叠着走
