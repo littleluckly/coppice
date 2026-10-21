@@ -73,19 +73,28 @@
      */
     #readParams() {
       const css = getComputedStyle(this);
-      const num = (name) => {
+      /* 时长读成 0 与读成 NaN 一样致命：
+         只要四个时长全为 0，bgStart / nextStart 会一起塌成 0，
+         total 只剩末尾那 50ms —— 切换在 50ms 内收尾，肉眼就是「硬切」。
+         这正好是「切换感觉只有 100~150ms」的故障形态，所以时长必须 > 0 才采信。
+         偏移量（delay / advance）0 是合法值，只挡 NaN。 */
+      const dur = (name) => {
         const value = parseFloat(css.getPropertyValue(name));
-        return Number.isFinite(value) ? value : DEFAULT_TIMING[name];
+        return Number.isFinite(value) && value > 0 ? value : DEFAULT_TIMING[name];
+      };
+      const gap = (name) => {
+        const value = parseFloat(css.getPropertyValue(name));
+        return Number.isFinite(value) && value >= 0 ? value : DEFAULT_TIMING[name];
       };
       return {
-        productOut: num('--hero-product-out-dur'),
-        textStart: num('--hero-text-start-offset'),
-        textOut: num('--hero-text-out-dur'),
-        textStagger: num('--hero-text-stagger'),
-        bgDelay: num('--hero-bg-out-delay'),
-        bgOut: num('--hero-bg-out-dur'),
-        nextIn: num('--hero-next-in-dur'),
-        nextAdvance: num('--hero-next-in-advance'),
+        productOut: dur('--hero-product-out-dur'),
+        textStart: gap('--hero-text-start-offset'),
+        textOut: dur('--hero-text-out-dur'),
+        textStagger: gap('--hero-text-stagger'),
+        bgDelay: gap('--hero-bg-out-delay'),
+        bgOut: dur('--hero-bg-out-dur'),
+        nextIn: dur('--hero-next-in-dur'),
+        nextAdvance: gap('--hero-next-in-advance'),
       };
     }
 
