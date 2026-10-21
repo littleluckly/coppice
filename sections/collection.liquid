@@ -41,9 +41,17 @@
       break
     endif
   endfor
-  # 横幅底图：设置优先，未设则回落集合自带图（collection.image）。
-  # 产品悬浮岛（banner_product_image）为空时不渲染——退化为纯风景横幅。
-  assign banner_image = section.settings.banner_background_image | default: collection.image
+  # 横幅底图取值链（2026-10-20）：取第一个非空
+  #   ① 集合 metafield custom.banner_background（File > Image）——每个集合各填一张；
+  #   ② section 设置 banner_background_image——全店共用的模板值（演示数据在这里）；
+  #   ③ collection.image——集合后台的封面图，最后兜底。
+  # 产品悬浮岛同链条（见右列）：岛图为空则不渲染——退化为纯风景横幅。
+  # ⚠️ metafield 的 .value 是 media 对象，属性与 image 对象不同：用 preview_image
+  #    归一化成 image，后面的 .width / .height / .alt 才有值（image_tag 尺寸靠它们）。
+  #    键名改了这里会静默取到空值、页面照旧 —— 改键必须同步改这一行。
+  assign banner_image = collection.metafields.custom.banner_background.value
+  assign banner_image = banner_image.preview_image | default: banner_image
+  assign banner_image = banner_image | default: section.settings.banner_background_image | default: collection.image
   assign has_banner = false
   if banner_image and section.settings.show_banner
     assign has_banner = true
@@ -170,7 +178,11 @@
         {%- if has_banner -%}
           {%- liquid
             assign banner_alt = banner_image.alt | default: ''
-            assign island = section.settings.banner_product_image
+            # 岛图同取值链：集合 metafield（custom.banner_product）→ section 设置。
+            # preview_image 归一化理由同上（media → image）。
+            assign island = collection.metafields.custom.banner_product.value
+            assign island = island.preview_image | default: island
+            assign island = island | default: section.settings.banner_product_image
             assign island_alt = island.alt | default: section.settings.banner_badge_title
             assign island_alt = island_alt | default: ''
           -%}
@@ -178,8 +190,8 @@
             横幅四层（2026-10-20，参数 1:1 对齐参考稿，勿改层级）：
             ① 风景底图（LCP：eager + fetchpriority high；mask 向左渐显，
                透明处透出页面色）→ ② 异形遮罩（页面色 + 圆弧边界，只压底图、
-               不碰产品岛）→ ③ 产品悬浮岛（alpha 抠图，仅 banner_product_image
-               有值时渲染）→ ④ 毛玻璃小卡（两个文本设置，标题空则整卡不渲染）。
+               不碰产品岛）→ ③ 产品悬浮岛（alpha 抠图，仅岛图取值链有值时渲染）
+               → ④ 毛玻璃小卡（两个文本设置，标题空则整卡不渲染）。
           {%- endcomment -%}
           {%- comment -%}
             根节点是 tilt-element（assets/tilt-element.js）：整块横幅 = 触发区

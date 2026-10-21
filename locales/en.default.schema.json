@@ -172,9 +172,9 @@
       "labels": {
         "show_banner": "Show banner image",
         "banner_background_image": "Banner background photo",
-        "banner_background_info": "The landscape or lifestyle photo behind the product. If empty, the collection image is used.",
+        "banner_background_info": "The landscape or lifestyle photo behind the product. A collection metafield (custom.banner_background) takes priority over this setting; if neither is set, the collection image is used.",
         "banner_product_image": "Banner product cut-out",
-        "banner_product_info": "A product image with a transparent background (PNG or WebP) that floats in front of the photo. Leave empty for a photo-only banner.",
+        "banner_product_info": "A product image with a transparent background (PNG or WebP) that floats in front of the photo. A collection metafield (custom.banner_product) takes priority over this setting. Leave both empty for a photo-only banner.",
         "show_banner_badge": "Show banner badge card",
         "show_banner_badge_info": "Frosted card on the right of the banner. The card also stays hidden when its title is empty.",
         "banner_badge_eyebrow": "Banner badge label",
