@@ -47,6 +47,8 @@
     '--hero-next-in-dur': 600,
     // 必须与 bgOut 相等（= 同时启动），否则两条边对不齐，会看到两张背景叠着走
     '--hero-next-in-advance': 600,
+    // 下一屏顶入开始后多久，它的图文开始落位
+    '--hero-enter-offset': 300,
   };
 
   class HeroSlideshow extends HTMLElement {
@@ -123,6 +125,7 @@
         bgOut: dur('--hero-bg-out-dur'),
         nextIn: dur('--hero-next-in-dur'),
         nextAdvance: gap('--hero-next-in-advance'),
+        enterOffset: gap('--hero-enter-offset'),
       };
     }
 
