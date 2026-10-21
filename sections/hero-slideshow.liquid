@@ -266,10 +266,18 @@
   .hero-slideshow__slide[hidden] {
     display: none;
   }
+  /* 背景组：底图 + 弧形遮罩装在一起整体卷动。
+     高度必须严格等于视口高（inset:0），这样 translateY(±100%) 的距离
+     与「下一屏整屏位移」完全一致——无缝卷动的几何前提。 */
+  .hero-slideshow__bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    will-change: transform;
+  }
   .hero-slideshow__media {
     position: absolute;
     inset: 0;
-    will-change: transform, opacity;
   }
   .hero-slideshow__media img,
   .hero-slideshow__media svg {
@@ -519,9 +527,9 @@
      ⚠️ 每个 var() 都必须带内联兜底值，且兜底值 = 上面的设计值。
      原因（已实测）：animation 简写里只要有一个 var() 解析不到，整条声明会被判为
      invalid at computed-value time —— 浏览器不报错、直接把 animation-name 变成 none，
-     动画整条消失，切换变成硬切。实测证据：变量存在时 animation-name=hero-bg-out、
-     duration=0.55s；把变量删掉后 animation-name=none、duration=0s。
-     带兜底后，变量丢了最差也只是回到设计时长，不会退化成闪现。 */
+     动画整条消失，切换变成硬切。
+     ⚠️ 另外 CSS 里写的 `550ms` 会被 Shopify 压缩成 `.55s`，JS 读这个变量时必须
+     按单位换算（见 assets/hero-slideshow.js 的 toMs），否则会小 1000 倍。 */
 
   /* 产品岛：向上滑出并淡出。居中由独立属性 translate 承担，
      所以这里的 transform 是纯位移，不用再写 calc(-50% - …)。 */
