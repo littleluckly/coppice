@@ -72,6 +72,16 @@
     "hero_slideshow": {
       "name": "Hero slideshow",
       "aria_label": "Highlights",
+      "settings": {
+        "product_header": "Product image",
+        "product_position_x": "Horizontal position",
+        "product_position_y": "Vertical position",
+        "product_position_info": "Center of the product image, measured from the slide's top-left. Desktop only — mobile uses a fixed stacked layout.",
+        "product_size": "Width",
+        "product_float": "Animate the product image",
+        "product_float_info": "Slow drifting tilt, similar to the collection banner's pointer-follow effect but running on its own. Automatically off for visitors who prefer reduced motion.",
+        "unit_percent": "%"
+      },
       "blocks": {
         "slide": {
           "name": "Slide",
