@@ -41,7 +41,7 @@
     '--hero-text-start-offset': 220,
     '--hero-text-out-dur': 400,
     '--hero-text-stagger': 90,
-    '--hero-bg-out-delay': 100,
+    '--hero-bg-out-delay': 200,
     '--hero-bg-out-dur': 600,
     '--hero-next-in-dur': 600,
     // 必须与 bgOut 相等（= 同时启动），否则两条边对不齐，会看到两张背景叠着走
@@ -221,11 +221,15 @@
       nextSlide.style.zIndex = '1';
       currentSlide.style.zIndex = '2';
 
-      // 时间轴：文字最后一行结束 → (+delay) 背景卷动；同刻下一屏顶入（无缝卷动）
+      // 时间轴：三条线并行，互不等待。
+      //   产品岛  0ms 起退场
+      //   文字    textStart(220ms) 起逐行退场
+      //   背景    bgDelay(200ms) 起卷动 —— 不再等文字出完（行数多时会白等近 1 秒）
       const lastLineEnd = textStart + textOut + Math.max(0, lines.length - 1) * textStagger;
-      const bgStart = Math.max(productOut, lastLineEnd) + bgDelay;
+      const bgStart = bgDelay;
       const nextStart = Math.max(0, bgStart + bgOut - nextAdvance);
-      const total = nextStart + nextIn + 50;
+      // 收尾必须等最晚的那条线结束，否则退场动画会被提前截断
+      const total = Math.max(nextStart + nextIn, lastLineEnd, productOut) + 50;
 
       const at = (ms, fn) => {
         if (ms <= 0) {
