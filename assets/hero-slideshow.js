@@ -20,6 +20,8 @@
   const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
   class HeroSlideshow extends HTMLElement {
+    #touchStart = null;
+
     connectedCallback() {
       this.slides = Array.from(this.querySelectorAll('[data-hero-slide]'));
       this.dots = Array.from(this.querySelectorAll('[data-hero-dot]'));
