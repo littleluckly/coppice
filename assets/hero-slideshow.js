@@ -62,8 +62,10 @@
 
     disconnectedCallback() {
       this.controller?.abort();
-      this.timers.forEach(clearTimeout);
+      // slides < 2 时 connectedCallback 提前返回，timers 尚未初始化
+      this.timers?.forEach(clearTimeout);
       this.timers = [];
+      this.locked = false;
     }
 
     #onActionClick(event) {
