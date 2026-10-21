@@ -4,7 +4,7 @@
  * 时序（节奏参数从 CSS 变量读取；CSS 变量即唯一调参口）：
  *   t=0              当前屏产品岛上滑淡出
  *   t=textStart(220) 当前屏文字逐行上滑（行间隔由 CSS --line-index × stagger）
- *   t=bgStart(200)   背景组（底图+弧形遮罩）整组卷出 —— 与文字/产品岛并行，
+ *   t=bgStart(300)   背景组（底图+弧形遮罩）整组卷出 —— 与文字/产品岛并行，
  *                    只等 bgDelay，不等文字出完
  *   t=nextStart      **与 bgStart 同一时刻**，下一屏整屏顶入
  *
@@ -225,7 +225,7 @@
       // 时间轴：三条线并行，互不等待。
       //   产品岛  0ms 起退场
       //   文字    textStart(220ms) 起逐行退场
-      //   背景    bgDelay(200ms) 起卷动 —— 不再等文字出完（行数多时会白等近 1 秒）
+      //   背景    bgDelay(300ms) 起卷动 —— 不再等文字出完（行数多时会白等近 1 秒）
       const lastLineEnd = textStart + textOut + Math.max(0, lines.length - 1) * textStagger;
       const bgStart = bgDelay;
       const nextStart = Math.max(0, bgStart + bgOut - nextAdvance);
