@@ -22,18 +22,19 @@
 
 {%- if section.blocks.size > 0 -%}
   <hero-slideshow
-    class="hero-slideshow full-width"
+    class="hero-slideshow full-width{% unless section.settings.product_float %} hero-slideshow--no-float{% endunless %}"
     role="region"
     aria-roledescription="carousel"
     aria-label="{{ 'sections.hero_slideshow.aria_label' | t }}"
     data-status-template="{{ 'sections.hero_slideshow.slide_status' | t: index: '#', count: section.blocks.size | escape }}"
+    style="--hero-product-x: {{ section.settings.product_position_x }}%; --hero-product-y: {{ section.settings.product_position_y }}%; --hero-product-size: {{ section.settings.product_size }}%;"
   >
     <div class="hero-slideshow__viewport">
       {%- for block in section.blocks -%}
         {%- liquid
           assign is_first = forloop.first
           assign loading = 'lazy'
-          assign fetch_priority = 'auto'
+          assign fetch_priority = 'low'
           if is_first
             assign loading = 'eager'
             assign fetch_priority = 'high'
