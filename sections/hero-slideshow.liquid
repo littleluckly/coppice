@@ -610,6 +610,51 @@
   "tag": "section",
   "class": "hero-slideshow-section",
   "max_blocks": 5,
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:sections.hero_slideshow.settings.product_header"
+    },
+    {
+      "type": "range",
+      "id": "product_position_x",
+      "label": "t:sections.hero_slideshow.settings.product_position_x",
+      "info": "t:sections.hero_slideshow.settings.product_position_info",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "t:sections.hero_slideshow.settings.unit_percent",
+      "default": 62
+    },
+    {
+      "type": "range",
+      "id": "product_position_y",
+      "label": "t:sections.hero_slideshow.settings.product_position_y",
+      "info": "t:sections.hero_slideshow.settings.product_position_info",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "t:sections.hero_slideshow.settings.unit_percent",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "product_size",
+      "label": "t:sections.hero_slideshow.settings.product_size",
+      "min": 20,
+      "max": 80,
+      "step": 1,
+      "unit": "t:sections.hero_slideshow.settings.unit_percent",
+      "default": 46
+    },
+    {
+      "type": "checkbox",
+      "id": "product_float",
+      "label": "t:sections.hero_slideshow.settings.product_float",
+      "info": "t:sections.hero_slideshow.settings.product_float_info",
+      "default": true
+    }
+  ],
   "blocks": [
     {
       "type": "slide",
