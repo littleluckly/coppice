@@ -46,18 +46,37 @@
           {% unless is_first %}hidden{% endunless %}
           {{ block.shopify_attributes }}
         >
-          {%- comment -%} 第 1 层：底图（is-out 时整体上滑，opacity 止于 0.6） {%- endcomment -%}
-          <div class="hero-slideshow__media">
-            {%- if block.settings.image != blank -%}
-              {%- if block.settings.image_mobile != blank -%}
-                <picture>
-                  <source
-                    media="(max-width: 749px)"
-                    srcset="{{ block.settings.image_mobile | image_url: width: 900 }} 900w, {{ block.settings.image_mobile | image_url: width: 1400 }} 1400w"
-                    sizes="100vw"
-                    width="{{ block.settings.image_mobile.width }}"
-                    height="{{ block.settings.image_mobile.height }}"
-                  >
+          {%- comment -%}
+            第 1 层：背景组（底图 + 弧形渐隐遮罩，作为一个整体卷动）。
+            包一层是必须的：遮罩高 120%、top -10%，如果让它各自跑同一个
+            translateY(-100%)，它会比底图多走 20%，卷动时边缘就露馅了。
+          {%- endcomment -%}
+          <div class="hero-slideshow__bg">
+            <div class="hero-slideshow__media">
+              {%- if block.settings.image != blank -%}
+                {%- if block.settings.image_mobile != blank -%}
+                  <picture>
+                    <source
+                      media="(max-width: 749px)"
+                      srcset="{{ block.settings.image_mobile | image_url: width: 900 }} 900w, {{ block.settings.image_mobile | image_url: width: 1400 }} 1400w"
+                      sizes="100vw"
+                      width="{{ block.settings.image_mobile.width }}"
+                      height="{{ block.settings.image_mobile.height }}"
+                    >
+                    {{
+                      block.settings.image
+                      | image_url: width: 2400
+                      | image_tag:
+                        widths: '800, 1200, 1600, 2400',
+                        sizes: '100vw',
+                        width: block.settings.image.width,
+                        height: block.settings.image.height,
+                        loading: loading,
+                        fetchpriority: fetch_priority,
+                        alt: block.settings.image.alt
+                    }}
+                  </picture>
+                {%- else -%}
                   {{
                     block.settings.image
                     | image_url: width: 2400
@@ -70,31 +89,18 @@
                       fetchpriority: fetch_priority,
                       alt: block.settings.image.alt
                   }}
-                </picture>
-              {%- else -%}
-                {{
-                  block.settings.image
-                  | image_url: width: 2400
-                  | image_tag:
-                    widths: '800, 1200, 1600, 2400',
-                    sizes: '100vw',
-                    width: block.settings.image.width,
-                    height: block.settings.image.height,
-                    loading: loading,
-                    fetchpriority: fetch_priority,
-                    alt: block.settings.image.alt
-                }}
+                {%- endif -%}
+              {%- elsif is_first -%}
+                {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-slideshow__placeholder' }}
               {%- endif -%}
-            {%- elsif is_first -%}
-              {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-slideshow__placeholder' }}
-            {%- endif -%}
-          </div>
+            </div>
 
-          {%- comment -%}
-            第 2 层：弧形渐隐遮罩（集合页 banner 同语言：页面底色渐变 + 圆弧右缘，
-            只压底图、不碰产品岛与文字）。空 image 时也渲染，保证文字可读。
-          {%- endcomment -%}
-          <div class="hero-slideshow__fade" aria-hidden="true"></div>
+            {%- comment -%}
+              第 2 层：弧形渐隐遮罩（集合页 banner 同语言：页面底色渐变 + 圆弧右缘，
+              只压底图、不碰产品岛与文字）。空 image 时也渲染，保证文字可读。
+            {%- endcomment -%}
+            <div class="hero-slideshow__fade" aria-hidden="true"></div>
+          </div>
 
           {%- comment -%}
             第 3 层：悬浮产品岛（alpha 抠图 + 投影，空则不渲染）。
@@ -226,17 +232,18 @@
     --hero-text-start-offset: 220ms;
     --hero-text-out-dur: 400ms;
     --hero-text-stagger: 90ms;
-    --hero-bg-out-dur: 550ms;
+    --hero-bg-out-dur: 600ms;
     --hero-bg-out-delay: 100ms;
-    /* 下一屏顶入：参考稿是 700ms / 提前 260ms。这里改成 600ms / 提前 550ms
-       （= 背景时长，即两者同时启动）。原因：参考稿的底色是 #111 深色，
-       露底看不出来；本主题底色是浅色 --color-background，压在深色风景照上，
-       只要下一屏顶入慢于背景上滑，就会持续露出 15~28% 视口高度的浅底，
-       观感就是「闪一下白」。同步启动后按缓动曲线算，最大缺口 ≈ 14px。 */
+    /* 下一屏顶入：**必须与背景卷动同长、同曲线、同时启动**，否则两条边对不齐。
+       早期版本是 700ms / 提前 260ms / ease-out（背景是 550ms ease-in），
+       曲线与时长都不同 → 中途一边快一边慢，观感就是两张背景图叠在一起。
+       三者相等时，滑出底边 ≡ 顶入顶边，全程严丝合缝（即真正的「胶片卷动」）。 */
     --hero-next-in-dur: 600ms;
-    --hero-next-in-advance: 550ms;
+    --hero-next-in-advance: 600ms;
     --hero-ease-in: cubic-bezier(0.6, 0, 0.8, 0.4);
     --hero-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+    /* 卷动专用曲线：背景滑出与下一屏顶入共用这一条，是「无缝」的前提 */
+    --hero-roll-ease: cubic-bezier(0.4, 0, 0.2, 1);
     /* 产品图自主漂浮一轮的时长（越小越活泼、越大越沉稳） */
     --hero-float-dur: 11s;
 
