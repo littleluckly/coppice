@@ -217,7 +217,9 @@
 {%- endif -%}
 
 {% stylesheet %}
-  /* ===== 节奏参数（与动画参考稿 1:1，改这里即改 JS 编排时长） ===== */
+  /* ===== 节奏参数（改这里即改 JS 编排时长；JS 读不到时回落到同名默认值） =====
+     与动画参考稿 dev-docs/local-assets/首页-hero图动画效果.html 的差异只有两处，
+     都是为了消灭「露底闪烁」，见下一屏顶入参数的注释。 */
   .hero-slideshow {
     --hero-product-out-dur: 450ms;
     --hero-text-start-offset: 220ms;
@@ -225,8 +227,13 @@
     --hero-text-stagger: 90ms;
     --hero-bg-out-dur: 550ms;
     --hero-bg-out-delay: 100ms;
-    --hero-next-in-dur: 700ms;
-    --hero-next-in-advance: 260ms;
+    /* 下一屏顶入：参考稿是 700ms / 提前 260ms。这里改成 600ms / 提前 550ms
+       （= 背景时长，即两者同时启动）。原因：参考稿的底色是 #111 深色，
+       露底看不出来；本主题底色是浅色 --color-background，压在深色风景照上，
+       只要下一屏顶入慢于背景上滑，就会持续露出 15~28% 视口高度的浅底，
+       观感就是「闪一下白」。同步启动后按缓动曲线算，最大缺口 ≈ 14px。 */
+    --hero-next-in-dur: 600ms;
+    --hero-next-in-advance: 550ms;
     --hero-ease-in: cubic-bezier(0.6, 0, 0.8, 0.4);
     --hero-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
 
