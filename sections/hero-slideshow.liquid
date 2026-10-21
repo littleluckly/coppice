@@ -527,8 +527,9 @@
   /* 文字逐行上滑淡出。启动时机由 JS 统一控制（--hero-text-start-offset），
      CSS 只承担行间隔（--line-index × stagger）。 */
   .hero-slideshow__line.is-out {
-    animation: hero-text-out var(--hero-text-out-dur) var(--hero-ease-in) forwards;
-    animation-delay: calc(var(--line-index, 0) * var(--hero-text-stagger));
+    animation: hero-text-out var(--hero-text-out-dur, 400ms)
+      var(--hero-ease-in, cubic-bezier(0.6, 0, 0.8, 0.4)) forwards;
+    animation-delay: calc(var(--line-index, 0) * var(--hero-text-stagger, 90ms));
   }
   @keyframes hero-text-out {
     to {
@@ -539,7 +540,8 @@
 
   /* 背景上滑：不淡透（opacity 止于 0.6），保持画面有内容直到下一屏覆盖。 */
   .hero-slideshow__media.is-out {
-    animation: hero-bg-out var(--hero-bg-out-dur) var(--hero-ease-in) forwards;
+    animation: hero-bg-out var(--hero-bg-out-dur, 550ms)
+      var(--hero-ease-in, cubic-bezier(0.6, 0, 0.8, 0.4)) forwards;
   }
   @keyframes hero-bg-out {
     to {
@@ -550,7 +552,8 @@
 
   /* 下一屏从底部顶入（背景结束前 --hero-next-in-advance 启动，两屏重叠）。 */
   .hero-slideshow__slide.is-next-in {
-    animation: hero-next-in var(--hero-next-in-dur) var(--hero-ease-out) forwards;
+    animation: hero-next-in var(--hero-next-in-dur, 600ms)
+      var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
   }
   @keyframes hero-next-in {
     from {
