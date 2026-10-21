@@ -19,6 +19,25 @@
 
   const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
+  /**
+   * 节奏参数兜底值（毫秒）。与 sections/hero-slideshow.liquid 的 {% stylesheet %}
+   * 里的同名 CSS 变量一一对应——改一边必须改另一边。
+   *
+   * ⚠️ 这不是冗余保险：{% stylesheet %} 的产物是外链样式表，若脚本先于样式就绪，
+   * getPropertyValue 会返回空串 → parseFloat → NaN → 所有时长归零 → 切换瞬闪。
+   * 有兜底后最坏情况是按设计时长跑，不会退化成闪现。
+   */
+  const DEFAULT_TIMING = {
+    '--hero-product-out-dur': 450,
+    '--hero-text-start-offset': 220,
+    '--hero-text-out-dur': 400,
+    '--hero-text-stagger': 90,
+    '--hero-bg-out-delay': 100,
+    '--hero-bg-out-dur': 550,
+    '--hero-next-in-dur': 600,
+    '--hero-next-in-advance': 550,
+  };
+
   class HeroSlideshow extends HTMLElement {
     #touchStart = null;
 
@@ -168,6 +187,7 @@
 
         this.current = target;
         this.#sync();
+        this.timers.length = 0; // 编排结束，计时器句柄不再需要
         this.locked = false;
         this.#setControlsDisabled(false);
       });
