@@ -288,17 +288,51 @@
     border-radius: 0 60% 50% 0 / 0 70% 50% 0;
   }
 
-  /* ===== 第 3 层：悬浮产品岛（投影永远黑是合法例外） ===== */
+  /* ===== 第 3 层：悬浮产品岛 =====
+     定位三件套由 section 级设置驱动（--hero-product-x / -y / -size 写在根元素 style 上）。
+     ⚠️ 居中一律用独立属性 `translate`，不能用 transform：本层的 transform 被切换时的
+     退出动画整块覆写，写进 transform 的居中会被吃掉（tilt-element 同款教训）。
+     投影永远用黑（配色纪律里的合法例外：压在商品图上的元素跟图不跟主题）。 */
   .hero-slideshow__product {
     position: absolute;
-    top: 50%;
-    right: 5%;
+    left: var(--hero-product-x, 62%);
+    top: var(--hero-product-y, 50%);
+    translate: -50% -50%;
     z-index: 2;
-    width: 46%;
-    max-width: 560px;
-    transform: translateY(-50%);
-    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
+    width: var(--hero-product-size, 46%);
+    max-width: 620px;
+    perspective: 1200px; /* 给内层 3D 倾斜提供透视 */
     will-change: transform, opacity;
+  }
+  .hero-slideshow__product-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transform-origin: 50% 60%;
+    filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
+    animation: hero-product-float var(--hero-float-dur, 11s) ease-in-out infinite;
+    will-change: transform;
+  }
+  .hero-slideshow--no-float .hero-slideshow__product-img {
+    animation: none;
+  }
+
+  /* 自主漂浮：无鼠标参与的「呼吸版 tilt」——缓慢的三维倾斜 + 轻微上下浮动。
+     挂在 img 上（transform），与外层的退出动画（也在 transform，但不同元素）互不干扰。 */
+  @keyframes hero-product-float {
+    0%,
+    100% {
+      transform: rotateX(2.2deg) rotateY(-3.4deg) rotateZ(0.5deg) translateY(0) scale(1);
+    }
+    25% {
+      transform: rotateX(-1.4deg) rotateY(1.8deg) rotateZ(-0.6deg) translateY(-10px) scale(1.012);
+    }
+    50% {
+      transform: rotateX(2.8deg) rotateY(3.6deg) rotateZ(0.4deg) translateY(-4px) scale(1);
+    }
+    75% {
+      transform: rotateX(-2deg) rotateY(-1.6deg) rotateZ(0.9deg) translateY(-12px) scale(1.008);
+    }
   }
 
   /* ===== 第 4 层：左侧文字块 ===== */
