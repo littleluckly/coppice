@@ -1,95 +1,196 @@
 /**
- * hero-slideshow — 切换控件（圆点 + 上一张/下一张）+ 文字 caption 过渡。
+ * hero-slideshow — 「电影式」纵向切换编排（Custom Element）。
  *
- * 架构：图片本体是 CSS scroll-snap 原生横滑，本脚本不接管滚动——按钮只
- * 触发一次 scrollTo，snap 负责对齐；触摸/键盘滚动零损失。
- * 文字在固定卡片里以多份 caption 并存，JS 按当前序号淡入淡出切换。
- * 循环：到最后一张再点下一张回到第一张（反向同理），scrollTo 直接回绕。
+ * 时序（节奏参数从 CSS 变量读取，与参考稿 1:1；CSS 变量即唯一调参口）：
+ *   t=0              当前屏产品岛上滑淡出
+ *   t=textStart(220) 当前屏文字逐行上滑（行间隔由 CSS --line-index × stagger）
+ *   t=bgStart        最后一行文字结束后背景上滑（不淡透，opacity 止于 0.6）
+ *   t=nextStart      背景结束前 260ms 下一屏从底部顶入（两屏重叠，无缝无黑屏）
+ *
+ * JS 的 setTimeout 时刻 = 动画实际开始时刻；CSS 动画自身不再带启动 delay
+ * （只有文字行间隔在 CSS 里算 stagger），避免参考稿的双重延迟。
+ *
+ * 约定（AGENTS.md §6）：Custom Element 自包含，AbortController 一次拆绑，
+ * Section Rendering 重注入时 connectedCallback 自动重新接管，无需事件监听。
+ * prefers-reduced-motion 下所有编排时刻归零 = 瞬切。
  */
-(function () {
+(() => {
   'use strict';
 
-  function init(root) {
-    if (!root || root.dataset.heroInitialized) return;
-    root.dataset.heroInitialized = 'true';
+  const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
-    const track = root.querySelector('.hero-slideshow__track');
-    if (!track) return;
+  class HeroSlideshow extends HTMLElement {
+    connectedCallback() {
+      this.slides = Array.from(this.querySelectorAll('[data-hero-slide]'));
+      this.dots = Array.from(this.querySelectorAll('[data-hero-dot]'));
+      this.status = this.querySelector('[data-hero-status]');
+      this.prevButton = this.querySelector('[data-hero-prev]');
+      this.nextButton = this.querySelector('[data-hero-next]');
 
-    const captions = Array.from(root.querySelectorAll('[data-hero-caption]'));
-    const dots = Array.from(root.querySelectorAll('[data-hero-dot]'));
-    const count = captions.length || dots.length;
-    if (count < 2) return;
+      if (this.slides.length < 2 || this.dataset.heroReady) return;
+      this.dataset.heroReady = 'true';
 
-    const slideWidth = () => track.clientWidth;
+      this.current = 0;
+      this.locked = false;
+      this.timers = [];
 
-    // 目标序号 → 滚动位置（带回绕：clamp 到 [0, count-1]），并记录方向供文字动画用
-    function goTo(index) {
-      const from = currentIndex();
-      const clamped = ((index % count) + count) % count;
-      // 方向：目标序号在「当前序号 +1」处（含跨末回绕）= 前进，否则后退。
-      // 相邻切换（循环点击时 ±1 或跨边界）走这一步；圆点跳转跨多张时按最近方向判。
-      const delta = ((clamped - from + count) % count);
-      root.dataset.direction = delta <= count / 2 ? 'next' : 'prev';
-      track.scrollTo({ left: clamped * slideWidth(), behavior: 'smooth' });
+      // 节奏参数（毫秒数）与 reduced-motion 缩放：reduce 时全部时刻 ×0 = 瞬切
+      const css = getComputedStyle(this);
+      const num = (name) => parseFloat(css.getPropertyValue(name)) || 0;
+      this.reduced = window.matchMedia(REDUCED_MOTION);
+      this.params = {
+        productOut: num('--hero-product-out-dur'),
+        textStart: num('--hero-text-start-offset'),
+        textOut: num('--hero-text-out-dur'),
+        textStagger: num('--hero-text-stagger'),
+        bgDelay: num('--hero-bg-out-delay'),
+        bgOut: num('--hero-bg-out-dur'),
+        nextIn: num('--hero-next-in-dur'),
+        nextAdvance: num('--hero-next-in-advance'),
+      };
+
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.addEventListener('click', (event) => this.#onActionClick(event), { signal });
+      this.addEventListener('keydown', (event) => this.#onKeydown(event), { signal });
+      this.addEventListener('touchstart', this.#onTouchStart.bind(this), { passive: true, signal });
+      this.addEventListener('touchend', this.#onTouchEnd.bind(this), { passive: true, signal });
     }
 
-    // 当前序号：滚动位置取整（snap 对齐后每格恰一个视口宽）
-    function currentIndex() {
-      return Math.round(track.scrollLeft / slideWidth());
+    disconnectedCallback() {
+      this.controller?.abort();
+      this.timers.forEach(clearTimeout);
+      this.timers = [];
     }
 
-    // 同步文字 caption + 圆点的 active 态
-    function sync(i) {
-      captions.forEach((c, ci) => {
-        const active = ci === i;
-        c.classList.toggle('is-active', active);
-        c.setAttribute('aria-hidden', active ? 'false' : 'true');
+    #onActionClick(event) {
+      const target = event.target.closest('[data-hero-prev], [data-hero-dot], [data-hero-next]');
+      if (!target) return;
+      if (target.hasAttribute('data-hero-prev')) {
+        this.goTo(this.current - 1);
+      } else if (target.hasAttribute('data-hero-next')) {
+        this.goTo(this.current + 1);
+      } else {
+        this.goTo(Number(target.dataset.heroDot));
+      }
+    }
+
+    #onKeydown(event) {
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        this.goTo(this.current + 1);
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        this.goTo(this.current - 1);
+      }
+    }
+
+    #onTouchStart(event) {
+      const touch = event.changedTouches[0];
+      this.#touchStart = { x: touch.clientX, y: touch.clientY };
+    }
+
+    #onTouchEnd(event) {
+      const start = this.#touchStart;
+      this.#touchStart = null;
+      if (!start) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        this.goTo(this.current + (dx < 0 ? 1 : -1));
+      }
+    }
+
+    /**
+     * 编排一次切换。nextIndex 任意整数（含越界，模回绕）。
+     * reduced-motion 下 motionScale = 0，所有编排时刻归零 → 瞬切。
+     */
+    goTo(nextIndex) {
+      if (this.locked) return;
+
+      const count = this.slides.length;
+      const target = ((nextIndex % count) + count) % count;
+      if (target === this.current) return;
+
+      const motionScale = this.reduced.matches ? 0 : 1;
+      const { productOut, textStart, textOut, textStagger, bgDelay, bgOut, nextIn, nextAdvance } = this.params;
+
+      const currentSlide = this.slides[this.current];
+      const nextSlide = this.slides[target];
+      const product = currentSlide.querySelector('.hero-slideshow__product');
+      const lines = currentSlide.querySelectorAll('.hero-slideshow__line');
+      const media = currentSlide.querySelector('.hero-slideshow__media');
+
+      this.locked = true;
+      this.#setControlsDisabled(true);
+
+      // 下一屏预置到屏幕下方并显示（仍在当前屏之下，被其盖住不露面）
+      nextSlide.hidden = false;
+      nextSlide.style.transform = 'translateY(100%)';
+      nextSlide.style.zIndex = '1';
+      currentSlide.style.zIndex = '2';
+
+      // 时间轴：文字最后一行结束 → (+delay) 背景启动；背景结束前 advance → 下一屏顶入
+      const lastLineEnd = textStart + textOut + Math.max(0, lines.length - 1) * textStagger;
+      const bgStart = Math.max(productOut, lastLineEnd) + bgDelay;
+      const nextStart = Math.max(0, bgStart + bgOut - nextAdvance);
+      const total = nextStart + nextIn + 50;
+
+      const at = (ms, fn) => {
+        if (ms <= 0) {
+          fn();
+        } else {
+          this.timers.push(setTimeout(fn, ms * motionScale));
+        }
+      };
+
+      at(0, () => product?.classList.add('is-out'));
+      at(textStart, () => lines.forEach((line) => line.classList.add('is-out')));
+      at(bgStart, () => media?.classList.add('is-out'));
+      at(nextStart, () => nextSlide.classList.add('is-next-in'));
+
+      at(total, () => {
+        // 收尾：隐藏旧屏、清全部动画态（下一屏动画 forwards 已停在 0 位，移除类无跳动）
+        currentSlide.hidden = true;
+        currentSlide.style.zIndex = '';
+        product?.classList.remove('is-out');
+        lines.forEach((line) => line.classList.remove('is-out'));
+        media?.classList.remove('is-out');
+        nextSlide.classList.remove('is-next-in');
+        nextSlide.style.transform = '';
+        nextSlide.style.zIndex = '';
+
+        this.current = target;
+        this.#sync();
+        this.locked = false;
+        this.#setControlsDisabled(false);
       });
-      dots.forEach((dot, di) => {
-        const active = di === i;
+    }
+
+    #sync() {
+      this.dots.forEach((dot, i) => {
+        const active = i === this.current;
         dot.classList.toggle('is-active', active);
         dot.tabIndex = active ? 0 : -1;
+        if (active) {
+          dot.setAttribute('aria-current', 'true');
+        } else {
+          dot.removeAttribute('aria-current');
+        }
       });
+      if (this.status && this.dataset.statusTemplate) {
+        this.status.textContent = this.dataset.statusTemplate.replace('#', String(this.current + 1));
+      }
     }
 
-    // 事件委托：箭头随每份 caption 各渲染一份，委托到 root 绑一次，
-    // 无论点哪一份都只触发一次（closest 定位真实点击源）。
-    root.addEventListener('click', (event) => {
-      const prevBtn = event.target.closest('[data-hero-prev]');
-      const nextBtn = event.target.closest('[data-hero-next]');
-      if (nextBtn) {
-        goTo(currentIndex() + 1);
-      } else if (prevBtn) {
-        goTo(currentIndex() - 1);
-      }
-    });
-
-    dots.forEach((dot, i) => {
-      dot.addEventListener('click', () => goTo(i));
-    });
-
-    // scroll → 同步 caption + 圆点（rAF 节流）
-    let ticking = false;
-    track.addEventListener(
-      'scroll',
-      () => {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(() => {
-          ticking = false;
-          sync(currentIndex());
-        });
-      },
-      { passive: true }
-    );
+    #setControlsDisabled(disabled) {
+      [this.prevButton, this.nextButton].forEach((button) => {
+        if (button) button.disabled = disabled;
+      });
+    }
   }
 
-  document.querySelectorAll('.hero-slideshow').forEach(init);
-
-  // 主题编辑器重渲染 section 时重新初始化（幂等守卫防重复绑定）
-  document.addEventListener('shopify:section:load', (event) => {
-    const root = document.getElementById(`shopify-section-${event.detail.sectionId}`);
-    root?.querySelectorAll('.hero-slideshow').forEach(init);
-  });
+  customElements.define('hero-slideshow', HeroSlideshow);
 })();
