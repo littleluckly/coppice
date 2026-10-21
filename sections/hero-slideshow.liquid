@@ -489,13 +489,14 @@
 
   /* ===== 切换动画（全程只用 transform / opacity） ===== */
 
-  /* 产品岛：向上滑出并淡出。静态定位是 translateY(-50%)，动画 to 必须带上它。 */
+  /* 产品岛：向上滑出并淡出。居中由独立属性 translate 承担，
+     所以这里的 transform 是纯位移，不用再写 calc(-50% - …)。 */
   .hero-slideshow__product.is-out {
     animation: hero-product-out var(--hero-product-out-dur) var(--hero-ease-in) forwards;
   }
   @keyframes hero-product-out {
     to {
-      transform: translateY(calc(-50% - 120px));
+      transform: translateY(-120px);
       opacity: 0;
     }
   }
@@ -544,6 +545,10 @@
     .hero-slideshow__slide.is-next-in {
       animation-duration: 1ms !important;
       animation-delay: 0ms !important;
+    }
+    /* 自住漂浮是无限循环动画，reduce 下必须整个关掉（压时长会变成高频抖动） */
+    .hero-slideshow__product-img {
+      animation: none !important;
     }
   }
 
