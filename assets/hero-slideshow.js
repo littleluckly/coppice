@@ -36,9 +36,10 @@
     '--hero-text-out-dur': 400,
     '--hero-text-stagger': 90,
     '--hero-bg-out-delay': 100,
-    '--hero-bg-out-dur': 550,
+    '--hero-bg-out-dur': 600,
     '--hero-next-in-dur': 600,
-    '--hero-next-in-advance': 550,
+    // 必须与 bgOut 相等（= 同时启动），否则两条边对不齐，会看到两张背景叠着走
+    '--hero-next-in-advance': 600,
   };
 
   class HeroSlideshow extends HTMLElement {
@@ -202,7 +203,8 @@
       const nextSlide = this.slides[target];
       const product = currentSlide.querySelector('.hero-slideshow__product');
       const lines = currentSlide.querySelectorAll('.hero-slideshow__line');
-      const media = currentSlide.querySelector('.hero-slideshow__media');
+      // 背景组（底图 + 弧形遮罩）整体卷动，不是单独动底图
+      const bg = currentSlide.querySelector('.hero-slideshow__bg');
 
       this.locked = true;
       this.#setControlsDisabled(true);
@@ -213,7 +215,7 @@
       nextSlide.style.zIndex = '1';
       currentSlide.style.zIndex = '2';
 
-      // 时间轴：文字最后一行结束 → (+delay) 背景启动；背景结束前 advance → 下一屏顶入
+      // 时间轴：文字最后一行结束 → (+delay) 背景卷动；同刻下一屏顶入（无缝卷动）
       const lastLineEnd = textStart + textOut + Math.max(0, lines.length - 1) * textStagger;
       const bgStart = Math.max(productOut, lastLineEnd) + bgDelay;
       const nextStart = Math.max(0, bgStart + bgOut - nextAdvance);
@@ -229,7 +231,7 @@
 
       at(0, () => product?.classList.add('is-out'));
       at(textStart, () => lines.forEach((line) => line.classList.add('is-out')));
-      at(bgStart, () => media?.classList.add('is-out'));
+      at(bgStart, () => bg?.classList.add('is-out'));
       at(nextStart, () => nextSlide.classList.add('is-next-in'));
 
       at(total, () => {
@@ -238,7 +240,7 @@
         currentSlide.style.zIndex = '';
         product?.classList.remove('is-out');
         lines.forEach((line) => line.classList.remove('is-out'));
-        media?.classList.remove('is-out');
+        bg?.classList.remove('is-out');
         nextSlide.classList.remove('is-next-in');
         nextSlide.style.transform = '';
         nextSlide.style.zIndex = '';
