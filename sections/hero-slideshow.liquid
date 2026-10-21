@@ -303,7 +303,9 @@
     translate: -50% -50%;
     z-index: 2;
     width: var(--hero-product-size, 46%);
-    max-width: 620px;
+    /* 刻意不设 max-width：宽度已经是百分比设置，硬上限会让设置值在大屏上
+       被静默截断（实测 1440 视口下 46% 只渲染出 43.5%），等于给商家一个
+       转不动却没反应的旋钮。范围上限 80% 本身已经是护栏。 */
     perspective: 1200px; /* 给内层 3D 倾斜提供透视 */
     will-change: transform, opacity;
   }
@@ -666,6 +668,7 @@
       "type": "range",
       "id": "product_size",
       "label": "t:sections.hero_slideshow.settings.product_size",
+      "info": "t:sections.hero_slideshow.settings.product_size_info",
       "min": 20,
       "max": 80,
       "step": 1,
