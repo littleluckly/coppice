@@ -16,7 +16,7 @@
     "probe": {
       "type": "zz-probe",
       "settings": {
-        "access_pages": false
+        "access_pages": true
       }
     }
   },
