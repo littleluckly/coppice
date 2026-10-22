@@ -12,17 +12,9 @@
     "main": {
       "type": "page",
       "settings": {}
-    },
-    "probe": {
-      "type": "zz-probe",
-      "settings": {
-        "access_pages": true,
-        "existing_handle": "contact"
-      }
     }
   },
   "order": [
-    "main",
-    "probe"
+    "main"
   ]
 }
