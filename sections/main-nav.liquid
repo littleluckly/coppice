@@ -824,8 +824,16 @@
   }
 
   .main-nav__logo-img {
-    inline-size: 2.5rem;
+    /* 高度定死、宽度按图片自身比例算（2026-10-21）。
+       原来 inline/block 都写 2.5rem = 强制方形，把 160×152 的 demo logo
+       压成正方形（Lighthouse image-aspect-ratio 判失败），商家传横向
+       wordmark 会被压得更狠。inline-size: auto 会覆盖 img 的 width 属性，
+       按固有比例算出宽度；max-inline-size 兜住超宽 logo，防止撑开导航，
+       触发兜底时靠 object-fit 保比例、不拉伸。 */
     block-size: 2.5rem;
+    inline-size: auto;
+    max-inline-size: 6rem;
+    object-fit: contain;
   }
 
   .main-nav__brand {
@@ -1742,8 +1750,10 @@
   }
 
   .nav-drawer__brand-img {
-    inline-size: 32px;
-    block-size: 32px;
+    /* 同 .main-nav__logo-img：高度定死、宽度按比例，不写死方形 */
+    block-size: 2rem;
+    inline-size: auto;
+    max-inline-size: 5rem;
     object-fit: contain;
     flex: none;
   }
