@@ -16,6 +16,13 @@
     --color-brand: {{ settings.brand_color }};
     --color-brand-accent: {{ settings.brand_accent }};
 
+    /* 次级文字色（2026-10-21）：规格行 / 划线价 / 评论数这类"比正文轻一档"的小字。
+       定在 70% 是有依据的，不是随手取：本主题前景 #333 与白底按 60% 混出来是
+       #858585 = 3.69:1，**低于 WCAG AA 对小字的 4.5:1**；临界点约 68%，
+       70% 得到 ≈4.95:1，Noir 深底上 ≈8:1。调这个值之前先算对比度，
+       别再往 60% 以下走（Lighthouse color-contrast 会挂）。 */
+    --color-foreground-muted: color-mix(in srgb, var(--color-foreground) 70%, transparent);
+
     /* 浅品牌绿（2026-10-17）：hover 光晕等场合用。oklch from 只取品牌色相，
        亮度/饱和度独立定值——商家换任何深浅的品牌绿，算出来的浅绿都够亮
        （当前 Coppice 品牌色下 ≈ #74C4A7；Noir 同色）。
