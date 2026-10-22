@@ -12,9 +12,31 @@
     "main": {
       "type": "page",
       "settings": {}
+    },
+    "probe-a": {
+      "type": "zz-probe",
+      "settings": {
+        "access_pages": false
+      }
+    },
+    "probe-b": {
+      "type": "zz-probe",
+      "settings": {
+        "access_pages": true
+      }
+    },
+    "probe-c": {
+      "type": "zz-probe",
+      "settings": {
+        "access_pages": true,
+        "existing_handle": "about"
+      }
     }
   },
   "order": [
-    "main"
+    "main",
+    "probe-a",
+    "probe-b",
+    "probe-c"
   ]
 }
