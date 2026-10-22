@@ -6,12 +6,12 @@
 
 {%- if section.settings.access_pages -%}
   {%- if section.settings.existing_handle == blank -%}
-    {%- for i in (1..500) -%}{%- assign probe = pages['zz-nonexistent-handle-a4'] -%}{%- endfor -%}
+    {%- for i in (1..5000) -%}{%- assign probe = pages['zz-nonexistent-handle-a4'] -%}{%- endfor -%}
   {%- else -%}
-    {%- for i in (1..500) -%}{%- assign probe = pages[section.settings.existing_handle] -%}{%- endfor -%}
+    {%- for i in (1..5000) -%}{%- assign probe = pages[section.settings.existing_handle] -%}{%- endfor -%}
   {%- endif -%}
 {%- else -%}
-  {%- for i in (1..500) -%}{%- assign probe = 1 -%}{%- endfor -%}
+  {%- for i in (1..5000) -%}{%- assign probe = 1 -%}{%- endfor -%}
 {%- endif -%}
 <span hidden data-a4-probe="{{ probe | default: 'nil' }}"></span>
 
