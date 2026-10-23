@@ -80,6 +80,12 @@
   endif
 -%}
 
+{%- comment -%}
+  对比页标记：底部确认条据此判断「我自己就在对比页」，从而不显示
+  —— 在对比页上再给一个「查看对比」是多余的。
+{%- endcomment -%}
+<span hidden data-compare-page-marker></span>
+
 {%- if compare_group == blank -%}
 
   <div class="compare-page__notice">

@@ -384,6 +384,8 @@
 
       this.max = clampMax(this);
       this.built = false;
+      /* 自己就在对比页时整条不显示（含胶囊）：那里不需要「去对比」的入口 */
+      this.suppressed = Boolean(document.querySelector('[data-compare-page-marker]'));
 
       document.addEventListener('compare:added', (event) => this.announce(event), { signal });
       document.addEventListener('compare:updated', () => this.sync(), { signal });
@@ -458,6 +460,11 @@
     }
 
     sync() {
+      if (this.suppressed) {
+        this.hidden = true;
+        return;
+      }
+
       const list = readList();
       if (list.length === 0) {
         this.hidden = true;
