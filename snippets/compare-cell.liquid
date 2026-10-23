@@ -11,6 +11,7 @@
   @param {string} row_key - 行键：power_source | operation_type | drive_type |
     area_coverage | duty_level | cutting_width_mm | bar_length_mm | power |
     weight_kg | noise_db | warranty_months
+  @param {boolean} [as_text] - true → 只输出纯文本（给数据岛用）；缺值输出空串
 {% enddoc %}
 
 {%- liquid
@@ -70,7 +71,9 @@
     assign cell = ''
   endif
 -%}
-{%- if cell != blank -%}
+{%- if as_text -%}
+  {{- cell -}}
+{%- elsif cell != blank -%}
   <span class="compare-table__value">{{ cell }}</span>
 {%- else -%}
   <span class="compare-table__value compare-table__value--missing" aria-label="{{ 'compare.page.missing' | t }}">&mdash;</span>
