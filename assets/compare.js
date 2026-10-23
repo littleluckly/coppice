@@ -663,7 +663,10 @@
 
     pending.forEach(({ col, index }) => {
       const url = `${base}${encodeURIComponent(col.h)}?sections=compare-lookup`;
-      fetch(url, { headers: { Accept: 'application/json' } })
+      /* ⚠️ 不要带 Accept: application/json —— 那会让 Shopify 把 /products/x
+         当成 AJAX Product API 请求，返回 {"product":{...}}（不含 metafields），
+         而不是 ?sections= 的 {"compare-lookup":"<section html>"}。 */
+      fetch(url)
         .then((response) => (response.ok ? response.json() : null))
         .then((payload) => {
           const html = payload && payload['compare-lookup'];
