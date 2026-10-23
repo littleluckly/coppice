@@ -739,7 +739,11 @@
 
       /* 差异标记：同一行各列不全相同才算差异（§6.2.2 要求高亮差异、相同可折叠） */
       const distinct = new Set(values.filter(Boolean));
-      if (distinct.size <= 1) tr.dataset.compareSame = '';
+      if (distinct.size <= 1) {
+        tr.dataset.compareSame = '';
+      } else {
+        tr.dataset.compareDiff = '';
+      }
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);

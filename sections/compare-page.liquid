@@ -348,6 +348,22 @@
   color: var(--compare-muted);
 }
 
+/* 差异值高亮（§6.2.2）：只有 JS 重建的表带 data-compare-diff，
+   服务端默认表不加标记，避免所有行一起加粗 */
+.compare-table tr[data-compare-diff] .compare-table__value {
+  font-weight: 600;
+}
+
+.compare-page__diff-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: 44px;
+  margin-block-end: 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 /* 变体差异提示：原生 details，自带展开状态与键盘支持（§6.2.4） */
 .compare-table__note {
   margin-block-start: 0.35rem;
