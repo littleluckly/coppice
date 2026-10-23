@@ -31,7 +31,7 @@
     assign key = item | strip
     if key != blank
       assign handle = key | append: '-compare'
-      if pages[handle]
+      if pages[handle].title != blank
         assign compare_keys = compare_keys | append: key | append: ','
         if compare_default == blank
           assign compare_default = key
@@ -44,4 +44,4 @@
 
   assign compare_keys = compare_keys | split: ',' | compact
 -%}
-{%- if compare_keys.size > 0 -%}data-groups="{{ compare_keys | join: ',' }}" data-default-group="{{ compare_default }}"{{ compare_url_attrs }}{%- endif -%}
+{%- if compare_keys.size > 0 -%}data-groups="{{ compare_keys | join: ',' }}" data-default-group="{{ compare_default }}"{{ compare_url_attrs }}{%- else -%}hidden{%- endif -%}
