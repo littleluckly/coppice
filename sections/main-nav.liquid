@@ -2020,6 +2020,16 @@
     display: inline-flex;
   }
 
+  /* 没有任何分组配置对比页 → snippet 输出 hidden，整个入口不占位 */
+  compare-entry[hidden] {
+    display: none;
+  }
+
+  /* JS 接管前保留布局空间：图标稍后出现时不推动相邻元素（CLS） */
+  compare-entry[data-pending] {
+    visibility: hidden;
+  }
+
   .compare-entry__link {
     position: relative;
     display: flex;
