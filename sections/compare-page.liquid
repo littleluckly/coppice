@@ -268,6 +268,31 @@
   padding-inline: clamp(1rem, 4vw, 2.5rem);
 }
 
+/* ===== 表格渐显（2026-10-22）=====
+   对比页有两版内容：服务端默认表（3 列）→ JS 按访客清单重建（N 列）。
+   两版之间会「突变」，肉眼像闪一下。这里让表格在 JS 执行窗口内先不可见，
+   再用纯 CSS 渐显：JS 快 → 用户看到的是重建后的表在渐入；JS 慢 → 顶多晚 0.4s 出现。
+   **纯 CSS 不依赖 JS 回调**：即使 compare.js 加载失败，动画照样跑完并停在 opacity 1，
+   不会把内容永久藏起来。无 JS 时 html 没有 .js，直接按不透明渲染。 */
+html.js [data-compare-table-wrap] {
+  animation: compare-table-reveal 0.3s ease 0.12s both;
+}
+
+@keyframes compare-table-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-compare-table-wrap] {
+    animation: none;
+  }
+}
+
 .compare-page__header {
   margin-block-end: clamp(1.5rem, 3vw, 2.5rem);
 }

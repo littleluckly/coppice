@@ -499,16 +499,14 @@
           li.appendChild(img);
         }
 
-        /* 只剩 1 个时不显示移除：对比至少要两款，删到空不是这里的职责 */
-        if (list.length > 1) {
-          const remove = document.createElement('button');
-          remove.type = 'button';
-          remove.className = 'compare-bar__remove';
-          remove.dataset.compareRemove = item.h;
-          remove.setAttribute('aria-label', `${this.dataset.labelRemove || 'Remove'} ${item.t}`.trim());
-          remove.textContent = '\u00d7';
-          li.appendChild(remove);
-        }
+        /* 允许删到空：清空即回到「没有选择」的状态，对比页会显示默认表 */
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'compare-bar__remove';
+        remove.dataset.compareRemove = item.h;
+        remove.setAttribute('aria-label', `${this.dataset.labelRemove || 'Remove'} ${item.t}`.trim());
+        remove.textContent = '\u00d7';
+        li.appendChild(remove);
 
         this.list.appendChild(li);
       });
@@ -744,13 +742,16 @@
     });
   }
 
-  /** 表头 × ：从清单移除该商品并删掉这一列（对比至少留 1 列） */
+  /**
+   * 表头 × ：从清单移除该商品并删掉这一列。
+   * 允许删到空——清空清单是合法状态，但表格会变成零列，没有意义，
+   * 所以删空后重新载入页面，让服务端默认表回来（这是唯一的边界操作）。
+   */
   function removeColumn(wrap, handle) {
     const table = wrap.querySelector('table');
     if (!table) return;
-    const ths = Array.from(table.querySelectorAll('thead th'));
-    if (ths.length <= 2) return; /* 角落 + 最后 1 个商品列：不允许删空 */
 
+    const ths = Array.from(table.querySelectorAll('thead th'));
     const index = ths.findIndex((th) => th.dataset.compareColumn === handle);
     if (index < 1) return;
 
@@ -760,18 +761,13 @@
     });
 
     commit((list) => list.filter((item) => item.h !== handle));
-    recomputeDiff(table.querySelector('tbody'));
 
-    /* 删完只剩 1 列 → 摘掉残余的 ×，别留一个点了没反应的按钮 */
-    const remaining = Array.from(table.querySelectorAll('thead th'));
-    if (remaining.length <= 2) {
-      table.querySelectorAll('[data-compare-remove-col]').forEach((btn) => btn.remove());
-    } else {
-      table.querySelectorAll('[data-compare-remove-col]').forEach((btn) => {
-        btn.disabled = false;
-      });
+    if (table.querySelectorAll('thead th').length <= 1) {
+      window.location.reload();
+      return;
     }
 
+    recomputeDiff(table.querySelector('tbody'));
     initColumnNav(wrap);
   }
 
@@ -932,17 +928,14 @@
       th.appendChild(link);
 
       th.dataset.compareColumn = col.h;
-      /* 只剩 1 列时不显示 ×：对比表只有一款没意义 */
-      if (columns.length > 1) {
-        const removeCol = document.createElement('button');
-        removeCol.type = 'button';
-        removeCol.className = 'compare-table__col-remove';
-        removeCol.dataset.compareRemoveCol = col.h;
-        const removeLabel = dataEl.dataset.labelRemove || '';
-        removeCol.setAttribute('aria-label', `${removeLabel} ${col.t || col.h}`.trim());
-        removeCol.textContent = '\u00d7';
-        th.appendChild(removeCol);
-      }
+      const removeCol = document.createElement('button');
+      removeCol.type = 'button';
+      removeCol.className = 'compare-table__col-remove';
+      removeCol.dataset.compareRemoveCol = col.h;
+      const removeLabel = dataEl.dataset.labelRemove || '';
+      removeCol.setAttribute('aria-label', `${removeLabel} ${col.t || col.h}`.trim());
+      removeCol.textContent = '\u00d7';
+      th.appendChild(removeCol);
 
       if (col.n) {
         const details = document.createElement('details');
