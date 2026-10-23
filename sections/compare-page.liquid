@@ -213,6 +213,10 @@
 .compare-page-section {
   --compare-border: color-mix(in srgb, var(--color-foreground) 14%, transparent);
   --compare-muted: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  /* 兜底：表格最小 640px，窄屏下由 .compare-table-wrap 内部横滚消化。
+     这里再裁一次，防止任何溢出传到文档级 —— 一旦文档被撑宽，
+     position: absolute / width:100% 的抽屉会跟着变宽（实测）。 */
+  overflow-x: clip;
 }
 
 .compare-page {
@@ -313,8 +317,10 @@ html:not(.js) .compare-empty__js {
   display: none;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-block-start: 0.75rem;
+  min-inline-size: 0;
 }
 
 .compare-cols[data-overflow] {
@@ -328,7 +334,10 @@ html:not(.js) .compare-cols {
 .compare-cols__btn {
   /* 触摸目标 ≥ 44×44（AGENTS §8） */
   min-block-size: 44px;
-  padding: 0 1rem;
+  /* 文字长时允许收缩换行，别把导航撑出容器（窄屏实测曾把文档撑宽） */
+  min-inline-size: 0;
+  flex: 0 1 auto;
+  padding: 0 0.9rem;
   border: 1px solid color-mix(in srgb, var(--color-foreground) 30%, transparent);
   border-radius: 4px;
   background-color: transparent;
@@ -344,6 +353,8 @@ html:not(.js) .compare-cols {
 }
 
 .compare-cols__status {
+  flex: 1 1 auto;
+  text-align: center;
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
   color: var(--compare-muted);
