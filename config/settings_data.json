@@ -11,10 +11,10 @@
   "current": {
     "max_page_width": "90rem",
     "compare_collections": [
-      "riding-mower-compare",
       "walk-behind-mower",
       "chainsaw",
-      "string-trimmer"
+      "string-trimmer",
+      "riding-mower-compare"
     ],
     "compare_page_indexing": false,
     "content_for_index": [],
