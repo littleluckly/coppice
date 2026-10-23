@@ -1,0 +1,589 @@
+/**
+ * compare — 产品对比清单：状态层 + 三个自定义元素 + 飞入动画。
+ *
+ * 架构（SDD §6.2）：localStorage 存清单（key `ib:compare:v1`，只存 handle /
+ * 分组键 / 标题 / 缩略图 URL，不存价格库存等易变数据）；服务端不知情，
+ * 对比页由 `pages[<group>-compare]` 存在与否决定入口是否渲染（§6.2.1）。
+ *
+ * 元素分工（§6.2.8）：
+ *   <compare-toggle>  商品卡 / 产品页的加入按钮容器（内部放原生 <button>）
+ *   <compare-entry>   页头图标 + 角标（持久状态）
+ *   <compare-bar>     底部临时确认条（瞬时反馈，不设自动消失计时）
+ *
+ * 纪律：
+ * - 全部逻辑收在 Custom Element 内，无全局委托、无 window 上的函数挂载
+ * - 监听用 AbortController 统一拆除；disconnectedCallback 释放后重连会重新绑
+ * - 状态用 attribute 反映（aria-pressed / hidden），样式与 :has() 挂钩
+ * - 冲突提示就地展开，不用模态弹窗（打断成本高、视线离开商品）
+ * - prefers-reduced-motion: reduce → 飞入动画整段跳过
+ */
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'ib:compare:v1';
+  const BAR_DISMISS_KEY = 'ib:compare-bar-dismissed';
+  const DEFAULT_MAX = 4;
+
+  // ---------------------------------------------------------------- 状态层
+
+  /** 读取清单，逐条校验并去重（同 handle 只留一条，位置以首次出现为准） */
+  function readList() {
+    let raw;
+    try {
+      raw = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      return [];
+    }
+    if (!raw) return [];
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(parsed)) return [];
+
+    const seen = new Set();
+    const out = [];
+    parsed.forEach((item) => {
+      if (!item || typeof item.h !== 'string' || typeof item.g !== 'string') return;
+      if (!item.h || !item.g || seen.has(item.h)) return;
+      seen.add(item.h);
+      out.push({
+        h: item.h,
+        g: item.g,
+        t: typeof item.t === 'string' ? item.t : '',
+        i: typeof item.i === 'string' ? item.i : '',
+      });
+    });
+    return out;
+  }
+
+  function writeList(list) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      /* 隐私模式或配额满：功能降级为「本次点击无效」，不抛错 */
+    }
+  }
+
+  function emit(name, detail) {
+    document.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
+  }
+
+  /** 统一写入口：写盘 + 广播。mutator 收到副本，返回新数组 */
+  function commit(mutator) {
+    const next = mutator(readList());
+    writeList(next);
+    emit('compare:updated', { list: next, count: next.length });
+    return next;
+  }
+
+  function clampMax(node) {
+    const raw = parseInt(node && node.dataset ? node.dataset.max : '', 10);
+    return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX;
+  }
+
+  // ------------------------------------------------------- 冲突提示（就地）
+
+  const CONFLICT_CLASS = 'compare-conflict';
+
+  /**
+   * 在 host 内渲染一条冲突提示。三类冲突共用同一骨架，只换文案与主动作。
+   * @returns {{destroy: () => void}} 便于调用方在取消/成功后回收
+   */
+  function renderConflict(host, { message, primaryLabel, onPrimary, cancelLabel, onCancel }) {
+    const box = document.createElement('div');
+    box.className = CONFLICT_CLASS;
+    box.setAttribute('role', 'group');
+
+    const text = document.createElement('p');
+    text.className = `${CONFLICT_CLASS}__text`;
+    text.textContent = message;
+    box.appendChild(text);
+
+    const actions = document.createElement('div');
+    actions.className = `${CONFLICT_CLASS}__actions`;
+
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const primary = document.createElement('button');
+    primary.type = 'button';
+    primary.className = `${CONFLICT_CLASS}__primary`;
+    primary.textContent = primaryLabel;
+    primary.addEventListener('click', () => onPrimary(), { signal });
+    actions.appendChild(primary);
+
+    if (cancelLabel) {
+      const cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = `${CONFLICT_CLASS}__cancel`;
+      cancel.textContent = cancelLabel;
+      cancel.addEventListener('click', () => onCancel(), { signal });
+      actions.appendChild(cancel);
+    }
+
+    box.appendChild(actions);
+    host.appendChild(box);
+
+    /* 焦点移到主动作：提示是用户操作触发的，键盘用户不能停在原地猜发生了什么 */
+    primary.focus();
+
+    return {
+      destroy() {
+        controller.abort();
+        box.remove();
+      },
+    };
+  }
+
+  // ------------------------------------------------------------ compare-toggle
+
+  class CompareToggle extends HTMLElement {
+    connectedCallback() {
+      if (this.controller) return;
+      this.button = this.querySelector('button');
+      if (!this.button) return;
+
+      this.max = clampMax(this);
+      this.conflict = null;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.onClick = this.onClick.bind(this);
+      this.button.addEventListener('click', this.onClick, { signal });
+      document.addEventListener('compare:updated', () => this.sync(), { signal });
+
+      this.sync();
+    }
+
+    disconnectedCallback() {
+      if (this.conflict) {
+        this.conflict.destroy();
+        this.conflict = null;
+      }
+      if (this.controller) {
+        this.controller.abort();
+        this.controller = null;
+      }
+    }
+
+    get group() {
+      return (this.dataset.group || '').trim();
+    }
+
+    get handle() {
+      return (this.dataset.handle || '').trim();
+    }
+
+    /** aria-pressed 跟随清单状态（样式靠 [aria-pressed='true'] 命中） */
+    sync() {
+      if (!this.button) return;
+      const inList = readList().some((item) => item.h === this.handle);
+      this.button.setAttribute('aria-pressed', inList ? 'true' : 'false');
+      this.toggleAttribute('data-in-list', inList);
+    }
+
+    onClick() {
+      const handle = this.handle;
+      const group = this.group;
+      if (!handle || !group) return;
+
+      this.clearConflict();
+
+      const list = readList();
+      const existing = list.find((item) => item.h === handle);
+
+      if (existing) {
+        this.remove(handle);
+        return;
+      }
+
+      if (list.length === 0) {
+        this.add();
+        return;
+      }
+
+      if (list[0].g !== group) {
+        this.showCrossGroupConflict(list);
+        return;
+      }
+
+      if (list.length >= this.max) {
+        this.showFullConflict(list);
+        return;
+      }
+
+      this.add();
+    }
+
+    remove(handle) {
+      const next = commit((list) => list.filter((item) => item.h !== handle));
+      emit('compare:removed', { handle, count: next.length });
+    }
+
+    add() {
+      const item = {
+        h: this.handle,
+        g: this.group,
+        t: (this.dataset.title || '').trim(),
+        i: (this.dataset.image || '').trim(),
+      };
+      const next = commit((list) => list.concat([item]));
+      emit('compare:added', {
+        handle: item.h,
+        group: item.g,
+        image: item.i,
+        button: this.button,
+        count: next.length,
+      });
+    }
+
+    /** 跨组：清空是安全的，那几款本来就不能与新品同组比较 */
+    showCrossGroupConflict(list) {
+      this.conflict = renderConflict(this, {
+        message: this.t('conflict_cross_group'),
+        primaryLabel: this.t('conflict_clear_and_add'),
+        cancelLabel: this.t('conflict_cancel'),
+        onPrimary: () => {
+          this.clearConflict();
+          commit(() => []);
+          this.add();
+        },
+        onCancel: () => this.clearConflict(),
+      });
+    }
+
+    /** 已满：不给一键替换 —— 牺牲哪一款是用户的判断，替用户猜是越权 */
+    showFullConflict() {
+      this.conflict = renderConflict(this, {
+        message: this.t('conflict_full'),
+        primaryLabel: this.t('conflict_cancel'),
+        onPrimary: () => this.clearConflict(),
+        onCancel: null,
+      });
+    }
+
+    clearConflict() {
+      if (this.conflict) {
+        this.conflict.destroy();
+        this.conflict = null;
+        this.button.focus();
+      }
+    }
+
+    /** 文案由 Liquid 通过 data-* 下发，前端不硬编码 */
+    t(key) {
+      const attr = `label${key.replace(/(^|_)(\w)/g, (_, __, c) => c.toUpperCase())}`;
+      return this.dataset[attr] || '';
+    }
+  }
+
+  // ------------------------------------------------------------- compare-entry
+
+  class CompareEntry extends HTMLElement {
+    connectedCallback() {
+      if (this.controller) return;
+      this.link = this.querySelector('a');
+      if (!this.link) return;
+
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.max = clampMax(this);
+      this.urls = this.parseUrls();
+
+      document.addEventListener('compare:updated', () => this.sync(), { signal });
+      /* 跨标签页同步：另一个标签页改了清单，这里跟着走 */
+      window.addEventListener(
+        'storage',
+        (event) => {
+          if (event.key === STORAGE_KEY) this.sync();
+        },
+        { signal },
+      );
+
+      this.sync();
+    }
+
+    disconnectedCallback() {
+      if (this.controller) {
+        this.controller.abort();
+        this.controller = null;
+      }
+    }
+
+    parseUrls() {
+      try {
+        const parsed = JSON.parse(this.dataset.urls || '{}');
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    /** 清单非空取首项的分组，空清单落到默认组（服务端给的第一个有对比页的组） */
+    resolveGroup(list) {
+      if (list.length > 0 && this.urls[list[0].g]) return list[0].g;
+      const fallback = (this.dataset.defaultGroup || '').trim();
+      if (fallback && this.urls[fallback]) return fallback;
+      const keys = Object.keys(this.urls);
+      return keys.length > 0 ? keys[0] : '';
+    }
+
+    sync() {
+      const list = readList();
+      const count = list.length;
+      const group = this.resolveGroup(list);
+      const url = group ? this.urls[group] : '';
+
+      const badge = this.querySelector('[data-compare-count]');
+      if (badge) {
+        badge.textContent = String(count);
+        badge.hidden = count === 0;
+      }
+
+      this.toggleAttribute('data-empty', count === 0);
+
+      if (url) {
+        this.link.href = url;
+        this.link.removeAttribute('aria-disabled');
+      } else {
+        this.link.setAttribute('aria-disabled', 'true');
+      }
+
+      const labelTpl = count > 0 ? this.dataset.labelCount : this.dataset.labelEmpty;
+      if (labelTpl) {
+        this.link.setAttribute('aria-label', labelTpl.replace('[count]', String(count)));
+      }
+    }
+  }
+
+  // --------------------------------------------------------------- compare-bar
+
+  class CompareBar extends HTMLElement {
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.max = clampMax(this);
+      this.built = false;
+
+      document.addEventListener('compare:added', () => this.reveal(), { signal });
+      document.addEventListener('compare:updated', () => this.sync(), { signal });
+
+      this.sync();
+    }
+
+    disconnectedCallback() {
+      if (this.controller) {
+        this.controller.abort();
+        this.controller = null;
+      }
+    }
+
+    /** 惰性构建：首次需要时才克隆 <template>，隐藏组件不提前占 DOM */
+    build() {
+      if (this.built) return;
+      const tpl = this.querySelector('template');
+      if (!tpl) return;
+      this.appendChild(tpl.content.cloneNode(true));
+      this.built = true;
+
+      this.inner = this.querySelector('[data-compare-inner]');
+      this.list = this.querySelector('[data-compare-items]');
+      this.progress = this.querySelector('[data-compare-progress]');
+      this.view = this.querySelector('[data-compare-view]');
+      this.status = this.querySelector('[data-compare-status]');
+
+      const closeBtn = this.querySelector('[data-compare-close]');
+      if (closeBtn) closeBtn.addEventListener('click', () => this.dismiss());
+
+      /* 单项移除用事件委托：条目是动态生成的，委托在容器上而非 document */
+      if (this.list) {
+        this.list.addEventListener('click', (event) => {
+          const btn = event.target.closest('[data-compare-remove]');
+          if (!btn) return;
+          const handle = btn.dataset.compareRemove;
+          commit((list) => list.filter((item) => item.h !== handle));
+          emit('compare:removed', { handle });
+        });
+      }
+    }
+
+    isDismissed() {
+      try {
+        return sessionStorage.getItem(BAR_DISMISS_KEY) === '1';
+      } catch {
+        return false;
+      }
+    }
+
+    /** 只在「刚加入一款」时冒头；用户关过后本次会话不再自动弹 */
+    reveal() {
+      if (this.isDismissed()) return;
+      this.build();
+      this.hidden = false;
+      this.sync();
+    }
+
+    dismiss() {
+      this.hidden = true;
+      try {
+        sessionStorage.setItem(BAR_DISMISS_KEY, '1');
+      } catch {
+        /* 忽略 */
+      }
+      /* 焦点交还给页面主内容区，避免落到 body */
+      const main = document.getElementById('MainContent');
+      if (main) main.focus({ preventScroll: true });
+    }
+
+    sync() {
+      const list = readList();
+      if (list.length === 0) {
+        this.hidden = true;
+        return;
+      }
+      if (!this.built) return;
+
+      this.list.textContent = '';
+      list.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'compare-bar__item';
+
+        if (item.i) {
+          const img = document.createElement('img');
+          img.src = item.i;
+          img.alt = '';
+          img.width = 40;
+          img.height = 40;
+          img.loading = 'lazy';
+          li.appendChild(img);
+        }
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'compare-bar__remove';
+        remove.dataset.compareRemove = item.h;
+        remove.setAttribute('aria-label', `${this.dataset.labelRemove || 'Remove'} ${item.t}`.trim());
+        remove.textContent = '\u00d7';
+        li.appendChild(remove);
+
+        this.list.appendChild(li);
+      });
+
+      if (this.progress) {
+        const tpl = this.dataset.labelProgress || '[count]/[max]';
+        this.progress.textContent = tpl
+          .replace('[count]', String(list.length))
+          .replace('[max]', String(this.max));
+      }
+
+      const group = list[0].g;
+      const url = this.resolveUrl(group);
+      if (this.view) {
+        if (url) {
+          this.view.href = url;
+          this.view.removeAttribute('aria-disabled');
+        } else {
+          this.view.setAttribute('aria-disabled', 'true');
+        }
+      }
+    }
+
+    resolveUrl(group) {
+      try {
+        const urls = JSON.parse(this.dataset.urls || '{}');
+        return urls[group] || '';
+      } catch {
+        return '';
+      }
+    }
+  }
+
+  // ------------------------------------------------------------- 飞入动画
+
+  const FLY_DURATION_MS = 480;
+  const FLY_SIZE = 56;
+  const FLY_ARC_PX = 90;
+
+  function findTarget() {
+    const entry = document.querySelector('compare-entry');
+    if (!entry) return null;
+    const icon = entry.querySelector('svg') || entry;
+    const rect = icon.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 ? icon : null;
+  }
+
+  function buildFlyFrames(from, to) {
+    const half = FLY_SIZE / 2;
+    const x1 = from.left + from.width / 2;
+    const y1 = from.top + from.height / 2;
+    const x2 = to.left + to.width / 2;
+    const y2 = to.top + to.height / 2;
+    const yc = Math.min(y1, y2) - FLY_ARC_PX;
+
+    const frames = [];
+    for (let i = 0; i <= 10; i += 1) {
+      const t = i / 10;
+      const x = (1 - t) * x1 + t * x2;
+      const y = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * yc + t * t * y2;
+      frames.push({
+        transform: `translate(${x - half}px, ${y - half}px) scale(${1 - 0.65 * t})`,
+        opacity: i === 10 ? 0 : 1,
+      });
+    }
+    return frames;
+  }
+
+  document.addEventListener('compare:added', (event) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const detail = event.detail || {};
+    const target = findTarget();
+    if (!target) return; /* 页头图标因未配置对比页而不存在 → 不播放动画 */
+
+    const button = detail.button;
+    const card = button ? button.closest('.product-card') : null;
+    const sourceImg = card ? card.querySelector('.product-card__media img') : null;
+    const source = sourceImg ? sourceImg.getBoundingClientRect() : null;
+    if (!source || source.width === 0) return;
+
+    const clone = document.createElement('img');
+    clone.src = detail.image || sourceImg.currentSrc || sourceImg.src;
+    clone.alt = '';
+    clone.setAttribute('aria-hidden', 'true');
+    Object.assign(clone.style, {
+      position: 'fixed',
+      insetBlockStart: '0',
+      insetInlineStart: '0',
+      width: `${FLY_SIZE}px`,
+      height: `${FLY_SIZE}px`,
+      objectFit: 'cover',
+      borderRadius: '50%',
+      zIndex: '9999',
+      pointerEvents: 'none',
+      boxShadow: '0 4px 14px rgb(0 0 0 / 25%)',
+    });
+    document.body.appendChild(clone);
+
+    const animation = clone.animate(buildFlyFrames(source, target.getBoundingClientRect()), {
+      duration: FLY_DURATION_MS,
+      easing: 'linear',
+      fill: 'forwards',
+    });
+
+    const cleanup = () => clone.remove();
+    animation.addEventListener('finish', cleanup, { once: true });
+    animation.addEventListener('cancel', cleanup, { once: true });
+  });
+
+  // ------------------------------------------------------------- 注册元素
+
+  customElements.define('compare-toggle', CompareToggle);
+  customElements.define('compare-entry', CompareEntry);
+  customElements.define('compare-bar', CompareBar);
+})();

@@ -192,18 +192,37 @@
       </ul>
     {%- endif -%}
 
+    {%- comment -%} 对比入口（SDD §6.2.8）：行为由 assets/compare.js 的
+        <compare-toggle> 接管；文案与上限全部由 Liquid 下发，脚本不硬编码。
+        分组键为空或 compare_hidden 为真 → 整个入口不渲染。
+        缩略图只用于底部确认条与飞入动画，走 120px 派生，不额外请求原图。 {%- endcomment -%}
     {%- if product.metafields.spec.compare_group.value != blank
       and product.metafields.spec.compare_hidden.value != 'TRUE' -%}
-      <button
-        type="button"
-        class="product-card__compare"
-        aria-pressed="false"
-        data-compare-group="{{ product.metafields.spec.compare_group.value }}"
-        data-compare-handle="{{ product.handle }}"
-        data-compare-title="{{ product.title | escape }}"
+      {%- assign compare_group = product.metafields.spec.compare_group.value -%}
+      {%- assign compare_image = '' -%}
+      {%- if product.featured_image -%}
+        {%- assign compare_image = product.featured_image | image_url: width: 120 -%}
+      {%- endif -%}
+      <compare-toggle
+        class="product-card__compare-toggle"
+        data-group="{{ compare_group | escape }}"
+        data-handle="{{ product.handle }}"
+        data-title="{{ product.title | escape }}"
+        {%- if compare_image != '' %} data-image="{{ compare_image }}"{% endif -%}
+        data-max="4"
+        data-label-conflict-cross-group="{{ 'compare.conflict.cross_group' | t }}"
+        data-label-conflict-clear-and-add="{{ 'compare.conflict.clear_and_add' | t }}"
+        data-label-conflict-full="{{ 'compare.conflict.full' | t: max: 4 }}"
+        data-label-conflict-cancel="{{ 'compare.conflict.cancel' | t }}"
       >
-        {{ 'products.product_card.add_to_compare' | t }}
-      </button>
+        <button
+          type="button"
+          class="product-card__compare"
+          aria-pressed="false"
+        >
+          {{ 'products.product_card.add_to_compare' | t }}
+        </button>
+      </compare-toggle>
     {%- endif -%}
 
     {%- comment -%} 快速加购（T-1.1）：仅调用方传 quick_add 且单变体时渲染；多变体无 CTA；售罄置灰。
