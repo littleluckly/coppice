@@ -47,6 +47,7 @@
     data-max="4"
     data-label-empty="{{ 'compare.entry_label_empty' | t }}"
     data-label-count="{{ 'compare.entry_label' | t: count: '[count]' }}"
+    data-empty
     {%- for key in compare_found -%}
       {%- assign key_handle = key | append: '-compare' -%}
       {%- if pages[key_handle] %} data-url-{{ key }}="{{ routes.root_url }}pages/{{ key_handle }}"{% endif -%}

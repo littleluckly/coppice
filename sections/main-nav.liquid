@@ -2006,9 +2006,73 @@
     border-radius: 999px;
   }
 
-  .cart-entry__link:focus-visible {
+    .cart-entry__link:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
+  }
+
+  /* ============ 对比入口（SDD §6.2.8，2026-10-22） ============
+     与购物车同规格：44×44 触摸目标、图标 1.5rem、角标绝对定位（不占流，避免 CLS）。
+     移动端页头已被 ☰/logo/搜索/账号/购物车占满，常驻会挤爆 ——
+     data-empty 由 JS 按清单是否为空切换，这里只负责移动端隐藏。 */
+
+  compare-entry {
+    display: inline-flex;
+  }
+
+  .compare-entry__link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .compare-entry__link svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  /* 该组尚无对比页时 href 落空：视觉弱化且不可点，但仍占位（不引起页头跳动） */
+  .compare-entry__link[aria-disabled='true'] {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .compare-entry__count {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-end: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 1.125rem;
+    block-size: 1.125rem;
+    padding-inline: 0.25rem;
+    font-size: 0.6875rem;
+    line-height: 1;
+    color: var(--color-background);
+    background-color: var(--color-brand);
+    border-radius: 999px;
+  }
+
+  .compare-entry__count[hidden] {
+    display: none;
+  }
+
+  .compare-entry__link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 767px) {
+    compare-entry[data-empty] {
+      display: none;
+    }
   }
 
   .account {
