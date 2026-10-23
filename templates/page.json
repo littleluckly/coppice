@@ -10,9 +10,11 @@
 {
   "sections": {
     "main": {
-      "type": "compare-page",
+      "type": "page",
       "settings": {}
     }
   },
-  "order": ["main"]
+  "order": [
+    "main"
+  ]
 }
