@@ -164,5 +164,46 @@
     "utility_bar": {
       "label": "Service information"
     }
+  },
+  "compare": {
+    "heading": "Compare products",
+    "add": "Compare",
+    "added": "Added to compare",
+    "remove": "Remove",
+    "clear": "Clear all",
+    "view": "View comparison",
+    "entry_label": "Comparison list, {{ count }} products",
+    "entry_label_empty": "Comparison list",
+    "count": "{{ count }} of {{ max }}",
+    "max_reached": "You can compare up to {{ max }} products",
+    "empty": "Your comparison list is empty",
+    "conflict": {
+      "cross_group": "Comparison only works within the same product type.",
+      "cross_group_detail": "Your list currently has {{ count }} product(s) from another group.",
+      "clear_and_add": "Clear list and add this product",
+      "full": "You can compare up to {{ max }} products. Remove one first.",
+      "no_group": "This product has no comparison group yet.",
+      "cancel": "Cancel"
+    },
+    "bar": {
+      "added": "Added to compare",
+      "progress": "{{ count }} of {{ max }}",
+      "close": "Close comparison bar"
+    },
+    "announce": {
+      "added": "Added 1 product, {{ count }} in total",
+      "removed": "Removed 1 product, {{ count }} remaining",
+      "cleared": "Comparison list cleared",
+      "full": "Comparison list is full"
+    },
+    "page": {
+      "default_title": "Compare",
+      "empty_group": "There are no products to compare in this group yet.",
+      "back": "Browse products",
+      "over_limit": "This group has {{ count }} products. The table covers the first {{ limit }}.",
+      "not_in_scope": "This product is outside the data range of this page.",
+      "variant_note": "Specs vary by variant",
+      "loaded": "Loaded {{ count }} product(s) from your comparison list"
+    }
   }
 }

@@ -7,24 +7,6 @@
  * made to this file may be overwritten.
  * ------------------------------------------------------------
  */
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file is auto-generated.
- *
- * This file may be updated by the Shopify admin language editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file is auto-generated.
- *
- * This file may be updated by the Shopify admin language editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
 {
   "general": {
     "404": "Not found",
@@ -66,7 +48,10 @@
     "text": "Text",
     "theme": "Theme",
     "typography": "Typography",
-    "utility_bar": "Utility bar"
+    "utility_bar": "Utility bar",
+    "compare": "Compare",
+    "compare_groups_header": "Comparison groups",
+    "compare_page_header": "Comparison page"
   },
   "sections": {
     "hero_slideshow": {
@@ -290,7 +275,13 @@
     "skeleton_foreground": "Header & footer text",
     "skeleton_foreground_info": "Leave empty to follow the global Foreground color above. Must stay readable on the header/footer background chosen above.",
     "skeleton_accent": "Header & footer accent",
-    "skeleton_accent_info": "Leave empty to follow the global Brand color above. Drives the announcement bar fill and the brand name in the header."
+    "skeleton_accent_info": "Leave empty to follow the global Brand color above. Drives the announcement bar fill and the brand name in the header.",
+    "compare_groups": "Comparison group keys",
+    "compare_groups_info": "Comma-separated list. Each key needs a page whose title is \"<Group name> Compare\" -- for example key \"chainsaw\" needs a page titled \"Chainsaw Compare\". Comparison entry points only appear for keys that have a matching page.",
+    "compare_default_columns": "Products in the default table",
+    "compare_default_columns_info": "How many products the server-rendered comparison table shows before the visitor picks their own.",
+    "compare_page_indexing": "Allow search engines to index comparison pages",
+    "compare_page_indexing_info": "Turn off if comparison pages should not appear in search results."
   },
   "options": {
     "alignment": {
