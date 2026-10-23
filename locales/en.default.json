@@ -208,7 +208,11 @@
       "no_rows": "The comparison table for this group is not defined.",
       "missing": "No data",
       "diff_only": "Show differences only",
-      "editor_warning": "This group has {{ count }} products, over the platform limit of {{ limit }}. The comparison table only covers the first {{ limit }}; products beyond that cannot show specs. Consider splitting this group into smaller ones."
+      "editor_warning": "This group has {{ count }} products, over the platform limit of {{ limit }}. The comparison table only covers the first {{ limit }}; products beyond that cannot show specs. Consider splitting this group into smaller ones.",
+      "columns_nav": "Compare table columns",
+      "prev_column": "Previous product",
+      "next_column": "Next product",
+      "column_status": "Product {{ current }} of {{ total }}"
     },
     "rows": {
       "power_source": "Power source",
