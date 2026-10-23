@@ -1,4 +1,4 @@
-{% doc %}
+{% comment %}
   compare-page — 对比页主体（SDD §6.2）。挂在 `templates/page.compare.json` 上。
 
   ## 为什么是一个 section 而不是三个
@@ -26,7 +26,7 @@
   JS 有有效选择时用同一标记结构重建表格并替换（§6.2.4）。
 
   @param {string} [heading] — 覆盖 h1（默认用页面标题）
-{% enddoc %}
+{% endcomment %}
 
 {%- liquid
   assign compare_group = ''
@@ -161,7 +161,7 @@
           {%- for row_key in row_keys -%}
             <tr>
               <th scope="row" class="compare-table__row-label">
-                {{- 'compare.rows.' | append: row_key | t -}}
+                {%- render 'compare-row-label', row_key: row_key -%}
               </th>
               {%- for product in compare_products limit: default_columns -%}
                 <td class="compare-table__cell">
@@ -188,7 +188,7 @@
   {%- capture compare_rows_json -%}
     {%- for row_key in row_keys -%}
       {%- if forloop.index > 1 -%},{%- endif -%}
-      {"k":{{ row_key | json }},"l":{{ 'compare.rows.' | append: row_key | t | json }}}
+      {%- capture row_label -%}{%- render 'compare-row-label', row_key: row_key -%}{%- endcapture -%}{"k":{{ row_key | json }},"l":{{ row_label | strip | json }}}
     {%- endfor -%}
   {%- endcapture -%}
 
