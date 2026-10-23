@@ -123,65 +123,21 @@
     </header>
 
     {%- comment -%}
-      服务端默认表：爬虫、无 JS、JS 报错时页面仍有实质内容。
-      JS 接管后会用同一标记结构重建（class 名与 compare.js 里的构建函数保持一致）。
+      表格完全由 JS 按访客清单构建（数据源 = 页面末尾的数据岛）。
+      服务端**不再渲染默认表**（2026-10-22 刘工定）：对比页 noindex、不走 SEO，
+      而默认表会让「有选择的访客」先看到一版别人的商品再突变成自己的 —— 那个闪烁不值。
+      没选择的访客看空状态 + 引导；无 JS 的访客看 noscript 说明。
     {%- endcomment -%}
-    <div class="compare-table-wrap" data-compare-table-wrap>
-      <table class="compare-table">
-        <caption class="visually-hidden">
-          {{ 'compare.heading' | t }}
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col" class="compare-table__corner">
-              <span class="visually-hidden">{{ 'compare.rows.power_source' | t }}</span>
-            </th>
-            {%- for product in compare_products limit: default_columns -%}
-              <th scope="col" class="compare-table__col">
-                <a class="compare-table__product" href="{{ product.url }}">
-                  {%- if product.featured_image -%}
-                    {{
-                      product.featured_image
-                      | image_url: width: 200
-                      | image_tag:
-                        widths: '100, 200',
-                        sizes: '(min-width: 768px) 180px, 45vw',
-                        width: product.featured_image.width,
-                        height: product.featured_image.height,
-                        loading: 'lazy',
-                        alt: product.featured_image.alt
-                    }}
-                  {%- endif -%}
-                  <span class="compare-table__product-title">{{ product.title | escape }}</span>
-                </a>
-                {%- assign variance_note = product.metafields.spec.spec_variance_note.value -%}
-                {%- if variance_note != blank -%}
-                  <details class="compare-table__note">
-                    <summary aria-label="{{ 'compare.page.variant_note' | t: title: product.title }}">
-                      <span aria-hidden="true">i</span>
-                    </summary>
-                    <p>{{ variance_note }}</p>
-                  </details>
-                {%- endif -%}
-              </th>
-            {%- endfor -%}
-          </tr>
-        </thead>
-        <tbody>
-          {%- for row_key in row_keys -%}
-            <tr>
-              <th scope="row" class="compare-table__row-label">
-                {%- render 'compare-row-label', row_key: row_key -%}
-              </th>
-              {%- for product in compare_products limit: default_columns -%}
-                <td class="compare-table__cell">
-                  {%- render 'compare-cell', product: product, row_key: row_key -%}
-                </td>
-              {%- endfor -%}
-            </tr>
-          {%- endfor -%}
-        </tbody>
-      </table>
+    <div class="compare-table-wrap" data-compare-table-wrap></div>
+
+    <div class="compare-empty" data-compare-empty>
+      <p class="compare-empty__js">{{ 'compare.page.empty_selection' | t }}</p>
+      <noscript>
+        <p>{{ 'compare.page.no_js' | t }}</p>
+      </noscript>
+      <a class="compare-page__back" href="{{ routes.all_products_collection_url }}">
+        {{- 'compare.page.back' | t -}}
+      </a>
     </div>
 
     {%- comment -%}

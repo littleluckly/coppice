@@ -214,7 +214,9 @@
       "columns_nav": "Compare table columns",
       "prev_column": "Previous product",
       "next_column": "Next product",
-      "column_status": "Product {{ current }} of {{ total }}"
+      "column_status": "Product {{ current }} of {{ total }}",
+      "empty_selection": "You have not picked any products to compare yet.",
+      "no_js": "Comparison needs JavaScript. Enable it to compare products side by side."
     },
     "rows": {
       "power_source": "Power source",
