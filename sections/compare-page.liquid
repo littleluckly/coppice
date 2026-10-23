@@ -279,6 +279,20 @@
   text-decoration: none;
 }
 
+/* 超出数据岛范围的列（集合 > 50 款时排在后面的商品）：
+   整列淡底 + 表头说明，让「缺数据」和「这个商品没填这个参数」一眼可区分 */
+.compare-table__col--out-of-scope,
+.compare-table__cell--out-of-scope {
+  background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+}
+
+.compare-table__out-of-scope {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--compare-muted);
+}
+
 .compare-page__limit {
   margin-block-start: 1rem;
   font-size: 0.85rem;
