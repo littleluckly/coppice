@@ -55,6 +55,12 @@
     <script src="{{ 'fly-to-cart.js' | asset_url }}" defer></script>
 
     {% comment %}
+      产品对比（SDD §6.2）：状态层 + 三个自定义元素 + 飞入动画，单文件全局引入。
+      页头图标与底部确认条都是全站元素，故挂 layout；商品卡只负责输出 data-* 。
+    {% endcomment %}
+    <script src="{{ 'compare.js' | asset_url }}" defer></script>
+
+    {% comment %}
       Main landmark — the skip link target. The id here and the href in
       snippets/skip-link.liquid must stay in sync.
 
