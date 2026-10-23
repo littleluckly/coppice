@@ -347,6 +347,9 @@
       const group = this.resolveGroup(list);
       const url = group ? this.urls[group] : '';
 
+      /* JS 已接管：撤掉 reserved 隐藏态，入口可以显示了 */
+      this.removeAttribute('data-pending');
+
       const badge = this.querySelector('[data-compare-count]');
       if (badge) {
         badge.textContent = String(count);
@@ -586,9 +589,202 @@
     animation.addEventListener('cancel', cleanup, { once: true });
   });
 
+  // ------------------------------------------------- 对比页：客户端接管表格
+
+  /**
+   * 服务端默认表在无 JS / JS 报错时是最终答案；这里只在「清单里有本组商品」时
+   * 用同一套 class 结构重建（SDD §6.2.4 要求两份标记逐项一致）。
+   * 数据岛只含 metafield 值，缩略图取自加入时存下的 120px 派生图。
+   */
+  function initComparePage() {
+    const root = document.querySelector('[data-compare-page]');
+    const dataEl = document.getElementById('cmp-data');
+    if (!root || !dataEl) return;
+
+    let data;
+    try {
+      data = JSON.parse(dataEl.textContent);
+    } catch {
+      return; /* 数据岛坏了就保留服务端表格，不抛错 */
+    }
+    if (!data || !Array.isArray(data.rows) || !Array.isArray(data.items)) return;
+
+    const group = root.dataset.compareGroup || data.group;
+    const list = readList().filter((item) => item.g === group);
+    if (list.length === 0) return; /* 没有本组选择 → 不动默认表，也不 JSON.parse 后续 */
+
+    const rows = data.rows;
+    const byHandle = new Map(data.items.map((item) => [item.h, item]));
+
+    const columns = list.map((entry) => {
+      const found = byHandle.get(entry.h);
+      if (found) return { ...found, image: entry.i, outOfScope: false };
+      /* 超出数据岛范围的 handle：显式降级，不静默丢列（§6.2.6） */
+      return {
+        h: entry.h,
+        t: entry.t,
+        u: '',
+        n: null,
+        v: [],
+        image: entry.i,
+        outOfScope: true,
+      };
+    });
+
+    const wrap = root.querySelector('[data-compare-table-wrap]');
+    if (!wrap) return;
+
+    const table = document.createElement('table');
+    table.className = 'compare-table';
+
+    const caption = document.createElement('caption');
+    caption.className = 'visually-hidden';
+    caption.textContent = root.querySelector('.compare-page__title')?.textContent?.trim() || '';
+    table.appendChild(caption);
+
+    // ---- thead ----
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    const corner = document.createElement('th');
+    corner.scope = 'col';
+    corner.className = 'compare-table__corner';
+    headRow.appendChild(corner);
+
+    columns.forEach((col) => {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.className = 'compare-table__col';
+
+      if (col.outOfScope) {
+        const note = document.createElement('p');
+        note.className = 'compare-table__out-of-scope';
+        note.textContent = dataEl.dataset.labelNotInScope || '';
+        th.appendChild(note);
+        const link = document.createElement('a');
+        link.href = col.u || '#';
+        link.textContent = col.t || col.h;
+        th.appendChild(link);
+        headRow.appendChild(th);
+        return;
+      }
+
+      const link = document.createElement('a');
+      link.className = 'compare-table__product';
+      link.href = col.u || '#';
+
+      if (col.image) {
+        const img = document.createElement('img');
+        img.src = col.image;
+        img.alt = '';
+        img.width = 200;
+        img.height = 150;
+        img.loading = 'lazy';
+        link.appendChild(img);
+      }
+
+      const title = document.createElement('span');
+      title.className = 'compare-table__product-title';
+      title.textContent = col.t || '';
+      link.appendChild(title);
+      th.appendChild(link);
+
+      if (col.n) {
+        const details = document.createElement('details');
+        details.className = 'compare-table__note';
+        const summary = document.createElement('summary');
+        summary.setAttribute('aria-label', dataEl.dataset.labelVariantNote || '');
+        const mark = document.createElement('span');
+        mark.setAttribute('aria-hidden', 'true');
+        mark.textContent = 'i';
+        summary.appendChild(mark);
+        details.appendChild(summary);
+        const noteText = document.createElement('p');
+        noteText.textContent = col.n;
+        details.appendChild(noteText);
+        th.appendChild(details);
+      }
+
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    // ---- tbody ----
+    const tbody = document.createElement('tbody');
+    rows.forEach((row, rowIndex) => {
+      const tr = document.createElement('tr');
+
+      const labelCell = document.createElement('th');
+      labelCell.scope = 'row';
+      labelCell.className = 'compare-table__row-label';
+      labelCell.textContent = row.l || '';
+      tr.appendChild(labelCell);
+
+      const values = columns.map((col) => (Array.isArray(col.v) ? col.v[rowIndex] || '' : ''));
+
+      values.forEach((value) => {
+        const td = document.createElement('td');
+        td.className = 'compare-table__cell';
+        const span = document.createElement('span');
+        if (value) {
+          span.className = 'compare-table__value';
+          span.textContent = value;
+        } else {
+          span.className = 'compare-table__value compare-table__value--missing';
+          span.textContent = '\u2014';
+        }
+        td.appendChild(span);
+        tr.appendChild(td);
+      });
+
+      /* 差异标记：同一行各列不全相同才算差异（§6.2.2 要求高亮差异、相同可折叠） */
+      const distinct = new Set(values.filter(Boolean));
+      if (distinct.size <= 1) tr.dataset.compareSame = '';
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    wrap.textContent = '';
+    wrap.appendChild(table);
+
+    // ---- 只看差异（相同行折叠） ----
+    if (tbody.querySelectorAll('tr[data-compare-same]').length > 0) {
+      const toggle = document.createElement('label');
+      toggle.className = 'compare-page__diff-toggle';
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      const text = document.createElement('span');
+      text.textContent = dataEl.dataset.labelDiffOnly || '';
+      toggle.appendChild(box);
+      toggle.appendChild(text);
+      wrap.parentNode.insertBefore(toggle, wrap);
+
+      box.addEventListener('change', () => {
+        tbody.querySelectorAll('tr[data-compare-same]').forEach((tr) => {
+          tr.hidden = box.checked;
+        });
+      });
+    }
+
+    /* 载入播报：不抢焦点，只让屏读用户知道表格换了（§6.2.4） */
+    const status = document.createElement('p');
+    status.className = 'visually-hidden';
+    status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
+    const loadedTpl = dataEl.dataset.labelLoaded || '';
+    status.textContent = loadedTpl.replace('[count]', String(columns.length));
+    root.appendChild(status);
+  }
+
   // ------------------------------------------------------------- 注册元素
 
   customElements.define('compare-toggle', CompareToggle);
   customElements.define('compare-entry', CompareEntry);
   customElements.define('compare-bar', CompareBar);
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initComparePage, { once: true });
+  } else {
+    initComparePage();
+  }
 })();
