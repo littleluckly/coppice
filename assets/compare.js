@@ -492,13 +492,16 @@
           li.appendChild(img);
         }
 
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'compare-bar__remove';
-        remove.dataset.compareRemove = item.h;
-        remove.setAttribute('aria-label', `${this.dataset.labelRemove || 'Remove'} ${item.t}`.trim());
-        remove.textContent = '\u00d7';
-        li.appendChild(remove);
+        /* 只剩 1 个时不显示移除：对比至少要两款，删到空不是这里的职责 */
+        if (list.length > 1) {
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'compare-bar__remove';
+          remove.dataset.compareRemove = item.h;
+          remove.setAttribute('aria-label', `${this.dataset.labelRemove || 'Remove'} ${item.t}`.trim());
+          remove.textContent = '\u00d7';
+          li.appendChild(remove);
+        }
 
         this.list.appendChild(li);
       });
@@ -751,6 +754,17 @@
 
     commit((list) => list.filter((item) => item.h !== handle));
     recomputeDiff(table.querySelector('tbody'));
+
+    /* 删完只剩 1 列 → 摘掉残余的 ×，别留一个点了没反应的按钮 */
+    const remaining = Array.from(table.querySelectorAll('thead th'));
+    if (remaining.length <= 2) {
+      table.querySelectorAll('[data-compare-remove-col]').forEach((btn) => btn.remove());
+    } else {
+      table.querySelectorAll('[data-compare-remove-col]').forEach((btn) => {
+        btn.disabled = false;
+      });
+    }
+
     initColumnNav(wrap);
   }
 
@@ -911,14 +925,17 @@
       th.appendChild(link);
 
       th.dataset.compareColumn = col.h;
-      const removeCol = document.createElement('button');
-      removeCol.type = 'button';
-      removeCol.className = 'compare-table__col-remove';
-      removeCol.dataset.compareRemoveCol = col.h;
-      const removeLabel = dataEl.dataset.labelRemove || '';
-      removeCol.setAttribute('aria-label', `${removeLabel} ${col.t || col.h}`.trim());
-      removeCol.textContent = '\u00d7';
-      th.appendChild(removeCol);
+      /* 只剩 1 列时不显示 ×：对比表只有一款没意义 */
+      if (columns.length > 1) {
+        const removeCol = document.createElement('button');
+        removeCol.type = 'button';
+        removeCol.className = 'compare-table__col-remove';
+        removeCol.dataset.compareRemoveCol = col.h;
+        const removeLabel = dataEl.dataset.labelRemove || '';
+        removeCol.setAttribute('aria-label', `${removeLabel} ${col.t || col.h}`.trim());
+        removeCol.textContent = '\u00d7';
+        th.appendChild(removeCol);
+      }
 
       if (col.n) {
         const details = document.createElement('details');
@@ -1030,6 +1047,17 @@
   customElements.define('compare-toggle', CompareToggle);
   customElements.define('compare-entry', CompareEntry);
   customElements.define('compare-bar', CompareBar);
+
+  /**
+   * 浏览器「回退」命中 bfcache 时不会重新执行脚本，DOM 停在旧快照上 ——
+   * 表现为：对比页删了商品，退回去底部条还在、商品卡的勾选态还是旧的。
+   * 这里在 pageshow(persisted) 时重新读盘并广播一次，全部组件按新状态 sync。
+   */
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    const list = readList();
+    emit('compare:updated', { list, count: list.length });
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initComparePage, { once: true });
