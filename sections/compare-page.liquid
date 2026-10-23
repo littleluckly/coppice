@@ -238,6 +238,7 @@
     data-label-diff-only="{{ 'compare.page.diff_only' | t }}"
     data-label-loaded="{{ 'compare.page.loaded' | t: count: '[count]' }}"
     data-product-base="{{ routes.root_url }}products/"
+    data-label-remove="{{ 'compare.remove' | t }}"
   >
     {"group":{{ compare_group | json }},"rows":[{{ compare_rows_json }}],"items":[{{ compare_items_json }}]}
   </script>
@@ -402,6 +403,47 @@ html:not(.js) .compare-cols {
 
 .compare-table__col {
   min-inline-size: 11rem;
+}
+
+/* 表头 × ：移除该对比商品（JS 接管后才有；至少保留 1 列） */
+.compare-table__col {
+  position: relative;
+}
+
+.compare-table__col-remove {
+  position: absolute;
+  inset-block-start: 0.3rem;
+  inset-inline-end: 0.3rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 22%, transparent);
+  border-radius: 50%;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* 视觉 24px，命中区外扩到 44×44（AGENTS §8） */
+.compare-table__col-remove::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+.compare-table__col-remove:hover {
+  border-color: var(--color-foreground);
+}
+
+.compare-table__col-remove:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 .compare-table__product {

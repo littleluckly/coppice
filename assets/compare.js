@@ -415,8 +415,15 @@
       const collapseBtn = this.querySelector('[data-compare-collapse]');
       if (collapseBtn) collapseBtn.addEventListener('click', () => this.setCollapsed(true));
 
-      const expandBtn = this.querySelector('[data-compare-expand]');
-      if (expandBtn) expandBtn.addEventListener('click', () => this.setCollapsed(false));
+      this.pill = this.querySelector('[data-compare-expand]');
+      if (this.pill) {
+        this.pill.addEventListener('click', (event) => {
+          /* 移动端：胶囊本身就是进对比页的入口，不拦截 */
+          if (window.matchMedia('(max-width: 767px)').matches) return;
+          event.preventDefault();
+          this.setCollapsed(false);
+        });
+      }
 
       /* 单项移除用事件委托：条目是动态生成的，委托在容器上而非 document */
       if (this.list) {
@@ -464,6 +471,11 @@
 
       const pillCount = this.querySelector('[data-compare-pill-count]');
       if (pillCount) pillCount.textContent = String(list.length);
+
+      if (this.pill) {
+        const target = this.resolveUrl(list[0].g);
+        if (target) this.pill.setAttribute('href', target);
+      }
 
       this.list.textContent = '';
       list.forEach((item) => {
@@ -722,6 +734,26 @@
     });
   }
 
+  /** 表头 × ：从清单移除该商品并删掉这一列（对比至少留 1 列） */
+  function removeColumn(wrap, handle) {
+    const table = wrap.querySelector('table');
+    if (!table) return;
+    const ths = Array.from(table.querySelectorAll('thead th'));
+    if (ths.length <= 2) return; /* 角落 + 最后 1 个商品列：不允许删空 */
+
+    const index = ths.findIndex((th) => th.dataset.compareColumn === handle);
+    if (index < 1) return;
+
+    ths[index].remove();
+    table.querySelectorAll('tbody tr').forEach((tr) => {
+      if (tr.children[index]) tr.children[index].remove();
+    });
+
+    commit((list) => list.filter((item) => item.h !== handle));
+    recomputeDiff(table.querySelector('tbody'));
+    initColumnNav(wrap);
+  }
+
   /**
    * 超范围商品的按需补拉（SDD §6.2.6）。
    *
@@ -878,6 +910,16 @@
       link.appendChild(title);
       th.appendChild(link);
 
+      th.dataset.compareColumn = col.h;
+      const removeCol = document.createElement('button');
+      removeCol.type = 'button';
+      removeCol.className = 'compare-table__col-remove';
+      removeCol.dataset.compareRemoveCol = col.h;
+      const removeLabel = dataEl.dataset.labelRemove || '';
+      removeCol.setAttribute('aria-label', `${removeLabel} ${col.t || col.h}`.trim());
+      removeCol.textContent = '\u00d7';
+      th.appendChild(removeCol);
+
       if (col.n) {
         const details = document.createElement('details');
         details.className = 'compare-table__note';
@@ -944,6 +986,13 @@
     wrap.textContent = '';
     wrap.appendChild(table);
     initColumnNav(wrap); /* 表格换了，导航要按新的列数重装 */
+
+    /* 表头 × 移除该列（委托挂在 wrap 上，列是动态生成的） */
+    wrap.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-compare-remove-col]');
+      if (!btn) return;
+      removeColumn(wrap, btn.dataset.compareRemoveCol);
+    });
 
     // ---- 只看差异（相同行折叠） ----
     if (tbody.querySelectorAll('tr[data-compare-same]').length > 0) {
