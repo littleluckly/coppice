@@ -186,6 +186,12 @@
       <p class="compare-page__limit">
         {{ 'compare.page.over_limit' | t: count: compare_total, limit: 50 }}
       </p>
+      {%- if request.design_mode -%}
+        {%- comment -%} 只在编辑器里出现：商家必须提前知道，而不是等顾客撞上 {%- endcomment -%}
+        <p class="compare-page__editor-warning" role="note">
+          {{ 'compare.page.editor_warning' | t: count: compare_total, limit: 50 }}
+        </p>
+      {%- endif -%}
     {%- endif -%}
   </section>
 
@@ -291,6 +297,16 @@
   font-size: 0.8rem;
   line-height: 1.35;
   color: var(--compare-muted);
+}
+
+.compare-page__editor-warning {
+  margin-block-start: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--color-foreground) 6%, var(--color-background));
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .compare-page__limit {

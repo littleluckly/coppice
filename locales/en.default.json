@@ -182,7 +182,6 @@
       "cross_group_detail": "Your list currently has {{ count }} product(s) from another group.",
       "clear_and_add": "Clear list and add this product",
       "full": "You can compare up to {{ max }} products. Remove one first.",
-      "no_group": "This product has no comparison group yet.",
       "cancel": "Cancel"
     },
     "bar": {
@@ -208,7 +207,8 @@
       "collection_missing": "No product collection is linked to this comparison group yet.",
       "no_rows": "The comparison table for this group is not defined.",
       "missing": "No data",
-      "diff_only": "Show differences only"
+      "diff_only": "Show differences only",
+      "editor_warning": "This group has {{ count }} products, over the platform limit of {{ limit }}. The comparison table only covers the first {{ limit }}; products beyond that cannot show specs. Consider splitting this group into smaller ones."
     },
     "rows": {
       "power_source": "Power source",
