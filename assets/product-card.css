@@ -132,7 +132,7 @@
   border-radius: 999px;
   background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
   font-size: 0.75rem;
-  color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
+  color: var(--color-foreground-muted);
   white-space: nowrap;
 }
 
@@ -283,4 +283,65 @@
   .product-card__media::before {
     transition: none;
   }
+}
+
+/* ===== 对比入口外壳（2026-10-22，SDD §6.2.8）=====
+   <compare-toggle> 只是行为容器，display:contents 让它不生成盒子：
+   内部原生 button 仍直接参与卡片 flex 布局，原有 margin-top:auto 等规则不受影响。
+   颜色走令牌派生，不硬编码。 */
+compare-toggle {
+  display: contents;
+}
+
+/* 无 JS 时按钮点了不会有任何反应 → 整块不渲染（SDD §6.2.5「勾选入口优雅不出现」）。
+   .js 由 layout/theme.liquid 的 head 内联脚本加在 <html> 上。 */
+html:not(.js) compare-toggle {
+  display: none;
+}
+
+/* 冲突提示：跨组 / 已满共用骨架，就地展开（不用模态弹窗） */
+.compare-conflict {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-block-start: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--color-foreground) 4%, var(--color-background));
+}
+.compare-conflict__text {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--color-foreground);
+}
+.compare-conflict__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.compare-conflict__primary,
+.compare-conflict__cancel {
+  /* 触摸目标 ≥ 44×44（AGENTS §8），高风险控件 */
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.compare-conflict__primary {
+  border: 1px solid var(--color-foreground);
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+}
+.compare-conflict__cancel {
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 30%, transparent);
+  background-color: transparent;
+  color: var(--color-foreground);
+}
+.compare-conflict__primary:hover,
+.compare-conflict__cancel:hover {
+  opacity: 0.85;
 }
