@@ -25,7 +25,6 @@
   ② 界外末尾：`<script type="application/json" id="cmp-data">` 数据岛
   JS 有有效选择时用同一标记结构重建表格并替换（§6.2.4）。
 
-  @param {string} [heading] — 覆盖 h1（默认用页面标题）
 {% endcomment %}
 
 {%- liquid
@@ -74,6 +73,14 @@
   endif
 
   assign datasheet_limit = 50
+
+  assign compare_heading = section.settings.heading
+  if compare_heading == blank
+    assign compare_heading = page.title
+  endif
+  if compare_heading == blank
+    assign compare_heading = 'compare.page.default_title' | t
+  endif
 -%}
 
 {%- if compare_group == blank -%}
@@ -105,7 +112,7 @@
   <section class="compare-page" data-compare-page data-compare-group="{{ compare_group }}">
     <header class="compare-page__header">
       <h1 class="compare-page__title">
-        {{ heading | default: page.title | default: 'compare.page.default_title' | t }}
+        {{ compare_heading }}
       </h1>
       {%- if section.settings.intro != blank -%}
         <div class="compare-page__intro">{{ section.settings.intro }}</div>
