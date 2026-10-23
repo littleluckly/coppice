@@ -401,9 +401,9 @@ html:not(.js) .compare-cols {
 }
 
 .compare-table {
-  /* 用 max() 而不是只写 min-inline-size：column 数固定 + table-layout:fixed 时，
-     部分浏览器会把 width:100% 当作硬约束，min 被压回容器宽 —— 表现为
-     「只能看到第一列，其余不见了」（2026-10-22 实测）。 */
+  /* 窄屏下宽度取下限 640px，由 .compare-table-wrap 横向滚动消费。
+     max() 与 min-inline-size 同时写是防御性的（无头实测：只写 min-inline-size
+     在 Chrome 里同样生效，两写法结果一致）。 */
   inline-size: max(100%, 640px);
   min-inline-size: 640px;
   border-collapse: collapse;
