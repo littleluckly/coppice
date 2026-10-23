@@ -195,13 +195,14 @@
     {%- comment -%} 对比入口（SDD §6.2.8）：行为由 assets/compare.js 的
         <compare-toggle> 接管；文案与上限全部由 Liquid 下发，脚本不硬编码。
         分组键为空或 compare_hidden 为真 → 整个入口不渲染。
-        缩略图只用于底部确认条与飞入动画，走 120px 派生，不额外请求原图。 {%- endcomment -%}
+        缩略图存 480px 派生：底部条把它缩到 40px 显示，对比页表头则要铺到 ~400px ——
+        存 120px 会在表头上被放大成糊图（2026-10-22 实测）。同一张图两处复用，不多一次请求。 {%- endcomment -%}
     {%- if product.metafields.spec.compare_group.value != blank
       and product.metafields.spec.compare_hidden.value != 'TRUE' -%}
       {%- assign compare_group = product.metafields.spec.compare_group.value -%}
       {%- assign compare_image = '' -%}
       {%- if product.featured_image -%}
-        {%- assign compare_image = product.featured_image | image_url: width: 120 -%}
+        {%- assign compare_image = product.featured_image | image_url: width: 480 -%}
       {%- endif -%}
       <compare-toggle
         class="product-card__compare-toggle"

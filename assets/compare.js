@@ -896,8 +896,9 @@
           const img = document.createElement('img');
           img.src = col.image;
           img.alt = '';
-          img.width = 200;
-          img.height = 150;
+          /* 与 CSS 的 aspect-ratio: 4/3 对齐，避免属性尺寸把容器高度带偏 */
+          img.width = 400;
+          img.height = 300;
           img.loading = 'lazy';
           th.appendChild(img);
         }
@@ -922,8 +923,8 @@
         const img = document.createElement('img');
         img.src = col.image;
         img.alt = '';
-        img.width = 200;
-        img.height = 150;
+        img.width = 400;
+        img.height = 300;
         img.loading = 'lazy';
         link.appendChild(img);
       }

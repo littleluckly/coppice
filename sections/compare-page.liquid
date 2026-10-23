@@ -392,6 +392,8 @@ html:not(.js) .compare-cols {
   inline-size: 100%;
   min-inline-size: 640px;
   border-collapse: collapse;
+  /* 固定布局：列宽不随内容长短变化，否则标题长的列更宽、图片被撑得大小不一（实测） */
+  table-layout: fixed;
   font-size: 0.9rem;
 }
 
@@ -408,12 +410,14 @@ html:not(.js) .compare-cols {
   font-weight: 400;
 }
 
-.compare-table__corner {
+/* 固定布局下第一列（行标签）定宽，其余列自动均分 */
+.compare-table__corner,
+.compare-table__row-label {
   inline-size: 10rem;
 }
 
 .compare-table__col {
-  min-inline-size: 11rem;
+  inline-size: auto;
 }
 
 /* 表头 × ：移除该对比商品（JS 接管后才有；至少保留 1 列） */
