@@ -599,6 +599,99 @@
    * 用同一套 class 结构重建（SDD §6.2.4 要求两份标记逐项一致）。
    * 数据岛只含 metafield 值，缩略图取自加入时存下的 120px 派生图。
    */
+  /** 把补拉回来的值填进某一列（就地改单元格，不重建表格以免闪烁） */
+  function fillColumn(tbody, index, values) {
+    tbody.querySelectorAll('tr').forEach((tr, rowIndex) => {
+      const cell = tr.children[index + 1];
+      if (!cell) return;
+      cell.classList.remove('compare-table__cell--out-of-scope');
+      const value = values[rowIndex] || '';
+      let span = cell.querySelector('.compare-table__value');
+      if (!span) {
+        span = document.createElement('span');
+        cell.appendChild(span);
+      }
+      span.className = value
+        ? 'compare-table__value'
+        : 'compare-table__value compare-table__value--missing';
+      span.textContent = value || '\u2014';
+    });
+  }
+
+  /** 补拉成功后摘掉该列的表头提示与底色（th 第一个是角落格，列从 1 起） */
+  function clearOutOfScopeHeader(headRow, index) {
+    const th = headRow.children[index + 1];
+    if (!th) return;
+    th.classList.remove('compare-table__col--out-of-scope');
+    const note = th.querySelector('.compare-table__out-of-scope');
+    if (note) note.remove();
+  }
+
+  /** 值变了要重算差异标记（同一行各列去重后 ≤1 即视为相同） */
+  function recomputeDiff(tbody) {
+    const tableRows = Array.from(tbody.querySelectorAll('tr'));
+    if (tableRows.length === 0) return;
+    const columnCount = tableRows[0].children.length - 1;
+    tableRows.forEach((tr) => {
+      const values = [];
+      for (let i = 0; i < columnCount; i += 1) {
+        const cell = tr.children[i + 1];
+        const text = cell ? cell.textContent.trim() : '';
+        if (text && text !== '\u2014') values.push(text);
+      }
+      delete tr.dataset.compareSame;
+      delete tr.dataset.compareDiff;
+      if (new Set(values).size <= 1) tr.dataset.compareSame = '';
+      else tr.dataset.compareDiff = '';
+    });
+  }
+
+  /**
+   * 超范围商品的按需补拉（SDD §6.2.6）。
+   *
+   * 数据岛受 `for` 循环 50 次硬限：集合超过 50 款时，排在后面的商品在岛里没有规格。
+   * 这里对每一列单独拉一次产品页的 compare-lookup section 补齐。
+   * 失败一律静默——占位本身就设计好的降级，不能让补拉失败变成更糟的状态。
+   */
+  function backfillOutOfScope({ dataEl, rows, columns, tbody, headRow }) {
+    const base = dataEl.dataset.productBase || '/products/';
+    const pending = columns
+      .map((col, index) => ({ col, index }))
+      .filter((entry) => entry.col.outOfScope && entry.col.h);
+    if (pending.length === 0) return;
+
+    pending.forEach(({ col, index }) => {
+      const url = `${base}${encodeURIComponent(col.h)}?sections=compare-lookup`;
+      fetch(url, { headers: { Accept: 'application/json' } })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((payload) => {
+          const html = payload && payload['compare-lookup'];
+          if (!html) return;
+          const match = html.match(/data-compare-lookup[^>]*>([\s\S]*?)<\/script>/);
+          if (!match) return;
+
+          let data;
+          try {
+            data = JSON.parse(match[1]);
+          } catch {
+            return;
+          }
+          if (!data || typeof data.v !== 'object' || data.v === null) return;
+
+          columns[index].v = rows.map((row) => data.v[row.k] || '');
+          columns[index].outOfScope = false;
+          if (data.n) columns[index].n = data.n;
+
+          fillColumn(tbody, index, columns[index].v);
+          clearOutOfScopeHeader(headRow, index);
+          recomputeDiff(tbody);
+        })
+        .catch(() => {
+          /* 保留占位 */
+        });
+    });
+  }
+
   function initComparePage() {
     const root = document.querySelector('[data-compare-page]');
     const dataEl = document.getElementById('cmp-data');
@@ -660,6 +753,15 @@
 
       if (col.outOfScope) {
         th.className = 'compare-table__col compare-table__col--out-of-scope';
+        if (col.image) {
+          const img = document.createElement('img');
+          img.src = col.image;
+          img.alt = '';
+          img.width = 200;
+          img.height = 150;
+          img.loading = 'lazy';
+          th.appendChild(img);
+        }
         const note = document.createElement('p');
         note.className = 'compare-table__out-of-scope';
         note.textContent = dataEl.dataset.labelNotInScope || '';
@@ -786,6 +888,8 @@
     const loadedTpl = dataEl.dataset.labelLoaded || '';
     status.textContent = loadedTpl.replace('[count]', String(columns.length));
     root.appendChild(status);
+
+    backfillOutOfScope({ dataEl, rows, columns, tbody, headRow });
   }
 
   // ------------------------------------------------------------- 注册元素

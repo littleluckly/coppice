@@ -223,6 +223,7 @@
     data-label-variant-note="{{ 'compare.page.variant_note' | t }}"
     data-label-diff-only="{{ 'compare.page.diff_only' | t }}"
     data-label-loaded="{{ 'compare.page.loaded' | t: count: '[count]' }}"
+    data-product-base="{{ routes.root_url }}products/"
   >
     {"group":{{ compare_group | json }},"rows":[{{ compare_rows_json }}],"items":[{{ compare_items_json }}]}
   </script>
