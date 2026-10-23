@@ -72,7 +72,12 @@
   endif
 -%}
 {%- if as_text -%}
-  {{- cell -}}
+  {%- comment -%}
+    必须 strip_html：长度/重量走 spec-value，它的返回值本身带
+    <span class="spec-value"> 包装，直接塞进 JSON 会变成值里的 HTML 标签
+    （同时把数据岛体积撑大约一倍）。
+  {%- endcomment -%}
+  {{- cell | strip_html -}}
 {%- elsif cell != blank -%}
   <span class="compare-table__value">{{ cell }}</span>
 {%- else -%}
