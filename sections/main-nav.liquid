@@ -454,6 +454,8 @@
         </button>
 
         {% render 'account-entry', menu: section.settings.customer_account_menu %}
+        {%- comment -%} 对比入口紧邻购物车左侧（SDD §6.2.8）；单文件内部做页面探测，未配置则整块不输出 {%- endcomment -%}
+        {% render 'compare-entry' %}
         {% render 'cart-entry' %}
 
         {%- comment -%}
