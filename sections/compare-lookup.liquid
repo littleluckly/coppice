@@ -1,0 +1,60 @@
+{% comment %}
+  compare-lookup — 单商品规格的按需补拉端点（Section Rendering API）。
+
+  **解决什么问题**：对比页数据岛受 `for` 循环 50 次硬限约束，集合超过 50 款时，
+  排在后面的商品在对比表里只有占位、没有参数。此 section 让前端在发现超范围商品时
+  单独补拉那一款的规格：
+
+  ```js
+  fetch('/products/<handle>?sections=compare-lookup')
+  ```
+
+  **代价（必须知道）**：它注册在 `templates/product.json` 里，所以**每个产品页都会
+  渲染一次**。为此输出被压到极小（一个 `<script type="application/json">`，单商品
+  约 400–600 字节），页面本身不读它，只有对比页需要时才按需取用。
+
+  **只在商品有 compare_group 时输出**；没有分组的产品页零成本。
+
+  **为什么用对象而不是数组**：客户端按自己那组的行顺序取值，对象键更抗行定义变化。
+
+  @param - 无（依赖 product 上下文）
+{% endcomment %}
+
+{%- liquid
+  assign lookup_group = product.metafields.spec.compare_group.value
+  assign lookup_hidden = product.metafields.spec.compare_hidden.value
+  assign lookup_emit = false
+
+  if lookup_group != blank and lookup_hidden != 'TRUE'
+    assign lookup_group = lookup_group | strip | downcase | remove: '-compare'
+    assign lookup_emit = true
+  endif
+-%}
+
+{%- if lookup_emit -%}
+  {%- capture lookup_row_keys -%}{%- render 'compare-row-keys', group: lookup_group -%}{%- endcapture -%}
+  {%- assign lookup_row_keys = lookup_row_keys | strip | split: ',' -%}
+
+  {%- capture lookup_values -%}
+    {%- for row_key in lookup_row_keys -%}
+      {%- capture cell_text -%}{%- render 'compare-cell', product: product, row_key: row_key, as_text: true -%}{%- endcapture -%}
+      {{- row_key | json -}}:{{- cell_text | strip | json -}}{%- unless forloop.last -%},{%- endunless -%}
+    {%- endfor -%}
+  {%- endcapture -%}
+
+  {%- comment -%}
+    花括号一律写在 {{ }} 之外当纯文本输出。
+    写成 {{ '{"h":' }} 会触发 LiquidSyntaxError（变量输出里出现未配对的引号/花括号）。
+  {%- endcomment -%}
+  {%- capture lookup_json -%}
+{"h":{{ product.handle | json }},"g":{{ lookup_group | json }},"v":{ {{- lookup_values -}} }}
+  {%- endcapture -%}
+  <script type="application/json" data-compare-lookup>{{ lookup_json | strip }}</script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.compare_lookup.name",
+  "settings": []
+}
+{% endschema %}
