@@ -165,16 +165,6 @@
         "limit": 12
       },
       {
-        "type": "range",
-        "id": "compare_default_columns",
-        "min": 2,
-        "max": 4,
-        "step": 1,
-        "label": "t:labels.compare_default_columns",
-        "info": "t:labels.compare_default_columns_info",
-        "default": 3
-      },
-      {
         "type": "checkbox",
         "id": "compare_page_indexing",
         "label": "t:labels.compare_page_indexing",

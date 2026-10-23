@@ -40,7 +40,6 @@
       "skeleton_foreground_color": "",
       "skeleton_accent_color": "",
       "input_corner_radius": 4,
-      "compare_default_columns": 3,
       "compare_page_indexing": true
     },
     "Coppice Noir": {
@@ -56,7 +55,6 @@
       "skeleton_background_color": "#0F1012",
       "skeleton_foreground_color": "#E9E9EC",
       "skeleton_accent_color": "#A3E635",
-      "compare_default_columns": 3,
       "compare_page_indexing": true
     }
   }

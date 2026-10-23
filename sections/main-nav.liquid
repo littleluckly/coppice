@@ -2106,11 +2106,10 @@
     inset: auto;
   }
 
-  @media (max-width: 767px) {
-    /* 只藏页头那份：移动端页头宽度不够，抽屉里那份常驻 */
-    compare-entry[data-empty]:not(.compare-entry--in-drawer) {
-      display: none;
-    }
+  /* 没有选择时页头图标不显示（2026-10-22）：它是「现在有几款在比」的状态指示，
+     清单为空时没有信息量。抽屉里那份不在此列——那是发现入口，要常驻。 */
+  compare-entry[data-empty]:not(.compare-entry--in-drawer) {
+    display: none;
   }
 
   .account {

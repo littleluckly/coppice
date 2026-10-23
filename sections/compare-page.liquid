@@ -63,7 +63,6 @@
     assign compare_total = compare_products.size
   endif
 
-  assign default_columns = settings.compare_default_columns | default: 3
   assign over_limit = false
   if compare_total > 50
     assign over_limit = true
@@ -194,7 +193,6 @@
   <script
     type="application/json"
     id="cmp-data"
-    data-default-columns="{{ default_columns }}"
     data-label-not-in-scope="{{ 'compare.page.not_in_scope' | t }}"
     data-label-variant-note="{{ 'compare.page.variant_note' | t }}"
     data-label-diff-only="{{ 'compare.page.diff_only' | t }}"

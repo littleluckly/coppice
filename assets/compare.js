@@ -575,42 +575,47 @@
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const detail = event.detail || {};
-    const target = findTarget();
-    if (!target) return; /* 页头图标因未配置对比页而不存在 → 不播放动画 */
 
-    const button = detail.button;
-    const card = button ? button.closest('.product-card') : null;
-    const sourceImg = card ? card.querySelector('.product-card__media img') : null;
-    const source = sourceImg ? sourceImg.getBoundingClientRect() : null;
-    if (!source || source.width === 0) return;
+    /* 第一次加入时页头图标刚从 display:none 变可见，等一帧再量坐标，
+       否则可能拿到 0×0 的矩形而放弃动画（实测过） */
+    requestAnimationFrame(() => {
+      const target = findTarget();
+      if (!target) return; /* 页头图标不存在（未配置对比页）→ 不播放 */
 
-    const clone = document.createElement('img');
-    clone.src = detail.image || sourceImg.currentSrc || sourceImg.src;
-    clone.alt = '';
-    clone.setAttribute('aria-hidden', 'true');
-    Object.assign(clone.style, {
-      position: 'fixed',
-      insetBlockStart: '0',
-      insetInlineStart: '0',
-      width: `${FLY_SIZE}px`,
-      height: `${FLY_SIZE}px`,
-      objectFit: 'cover',
-      borderRadius: '50%',
-      zIndex: '9999',
-      pointerEvents: 'none',
-      boxShadow: '0 4px 14px rgb(0 0 0 / 25%)',
+      const button = detail.button;
+      const card = button ? button.closest('.product-card') : null;
+      const sourceImg = card ? card.querySelector('.product-card__media img') : null;
+      const source = sourceImg ? sourceImg.getBoundingClientRect() : null;
+      if (!source || source.width === 0) return;
+
+      const clone = document.createElement('img');
+      clone.src = detail.image || sourceImg.currentSrc || sourceImg.src;
+      clone.alt = '';
+      clone.setAttribute('aria-hidden', 'true');
+      Object.assign(clone.style, {
+        position: 'fixed',
+        insetBlockStart: '0',
+        insetInlineStart: '0',
+        width: `${FLY_SIZE}px`,
+        height: `${FLY_SIZE}px`,
+        objectFit: 'cover',
+        borderRadius: '50%',
+        zIndex: '9999',
+        pointerEvents: 'none',
+        boxShadow: '0 4px 14px rgb(0 0 0 / 25%)',
+      });
+      document.body.appendChild(clone);
+
+      const animation = clone.animate(buildFlyFrames(source, target.getBoundingClientRect()), {
+        duration: FLY_DURATION_MS,
+        easing: 'linear',
+        fill: 'forwards',
+      });
+
+      const cleanup = () => clone.remove();
+      animation.addEventListener('finish', cleanup, { once: true });
+      animation.addEventListener('cancel', cleanup, { once: true });
     });
-    document.body.appendChild(clone);
-
-    const animation = clone.animate(buildFlyFrames(source, target.getBoundingClientRect()), {
-      duration: FLY_DURATION_MS,
-      easing: 'linear',
-      fill: 'forwards',
-    });
-
-    const cleanup = () => clone.remove();
-    animation.addEventListener('finish', cleanup, { once: true });
-    animation.addEventListener('cancel', cleanup, { once: true });
   });
 
   // ------------------------------------------------- 对比页：客户端接管表格
