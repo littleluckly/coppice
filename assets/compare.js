@@ -54,6 +54,8 @@
         g: item.g,
         t: typeof item.t === 'string' ? item.t : '',
         i: typeof item.i === 'string' ? item.i : '',
+        /* 商品页 URL：超范围降级列要靠它给出「去看这个商品」的出口 */
+        u: typeof item.u === 'string' ? item.u : '',
       });
     });
     return out;
@@ -229,6 +231,7 @@
         g: this.group,
         t: (this.dataset.title || '').trim(),
         i: (this.dataset.image || '').trim(),
+        u: (this.dataset.url || '').trim(),
       };
       const next = commit((list) => list.concat([item]));
       emit('compare:added', {
@@ -623,7 +626,7 @@
       return {
         h: entry.h,
         t: entry.t,
-        u: '',
+        u: entry.u || '',
         n: null,
         v: [],
         image: entry.i,
@@ -656,11 +659,13 @@
       th.className = 'compare-table__col';
 
       if (col.outOfScope) {
+        th.className = 'compare-table__col compare-table__col--out-of-scope';
         const note = document.createElement('p');
         note.className = 'compare-table__out-of-scope';
         note.textContent = dataEl.dataset.labelNotInScope || '';
         th.appendChild(note);
         const link = document.createElement('a');
+        link.className = 'compare-table__product-title';
         link.href = col.u || '#';
         link.textContent = col.t || col.h;
         th.appendChild(link);
@@ -722,9 +727,12 @@
 
       const values = columns.map((col) => (Array.isArray(col.v) ? col.v[rowIndex] || '' : ''));
 
-      values.forEach((value) => {
+      values.forEach((value, index) => {
         const td = document.createElement('td');
         td.className = 'compare-table__cell';
+        if (columns[index] && columns[index].outOfScope) {
+          td.className = 'compare-table__cell compare-table__cell--out-of-scope';
+        }
         const span = document.createElement('span');
         if (value) {
           span.className = 'compare-table__value';
