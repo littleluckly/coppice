@@ -4,8 +4,9 @@
   **与页头图标的分工**：页头图标是持久状态（有几款在比），这里只在「刚加入一款」
   时冒头，告诉用户刚做了什么、并提供移除/查看的快捷方式。
 
-  · **常驻**：只要清单非空就一直显示（2026-10-22 刘工改）。不设自动消失计时
-    （WCAG 2.2.1）；用户可点「收起」折成右下角胶囊，点胶囊还原，**收起不持久化**。
+  · **常驻**：只要清单非空就一直显示（2026-10-22 刘工改）。不设自动消失计时（WCAG 2.2.1）。
+  · **桌面**：可点「收起」折成右下角胶囊，点胶囊还原，收起不持久化。
+  · **移动端**：只显示胶囊，点击直接进对比页（不展开整条——底部整条在手机上挡内容）。
   · DOM 惰性构建：内容放在 `<template>` 里，首次需要时才实例化。
   · 没有分组配置对比页时不渲染（`compare-page-urls` 输出 hidden 时无从跳转）。
   · 关闭后焦点交还 `#MainContent`，不落回 body。
@@ -42,15 +43,19 @@
       收起态：只留一个胶囊，点开还原。底部条是**常驻**的（有对比项就在），
       收起只是让开内容，不是关闭功能。
     {%- endcomment -%}
-    <button
-      type="button"
+    {%- comment -%}
+      胶囊：桌面端点击 = 展开整条（JS 拦截）；移动端 = 直接进对比页（不拦截）。
+      所以用 <a> 而不是 <button>——href 由 JS 按当前组写入。
+    {%- endcomment -%}
+    <a
       class="compare-bar__pill"
       data-compare-expand
+      href="#"
       aria-label="{{ 'compare.bar.expand' | t }}"
     >
       {{ 'icon-compare.svg' | inline_asset_content }}
       <span class="compare-bar__pill-count" data-compare-pill-count>0</span>
-    </button>
+    </a>
 
     <p class="visually-hidden" role="status" aria-live="polite" data-compare-status></p>
   </template>

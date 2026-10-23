@@ -154,6 +154,7 @@ compare-bar[hidden] {
 .compare-bar__pill {
   display: none;
   align-items: center;
+  text-decoration: none;
   gap: 0.35rem;
   min-block-size: 44px;
   padding: 0 0.9rem;
@@ -194,4 +195,26 @@ compare-bar[data-collapsed] .compare-bar__pill {
 .compare-bar__pill:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
+}
+
+/* ===== 移动端：只留胶囊（2026-10-22 刘工改）=====
+   手机上整条会挡住底部内容，且空间不够放缩略图 + 文案 +
+   这里不做「点开再收起」的循环——胶囊直接就是进对比页的入口。 */
+
+@media (max-width: 767px) {
+  compare-bar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+    pointer-events: none;
+  }
+
+  compare-bar .compare-bar__inner {
+    display: none;
+  }
+
+  compare-bar .compare-bar__pill {
+    display: inline-flex;
+    pointer-events: auto;
+  }
 }
