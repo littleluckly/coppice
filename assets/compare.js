@@ -658,6 +658,7 @@
     const pending = columns
       .map((col, index) => ({ col, index }))
       .filter((entry) => entry.col.outOfScope && entry.col.h);
+    console.log('[compare] backfill pending', pending.length, pending.map((p) => p.col.h));
     if (pending.length === 0) return;
 
     pending.forEach(({ col, index }) => {
@@ -666,8 +667,10 @@
         .then((response) => (response.ok ? response.json() : null))
         .then((payload) => {
           const html = payload && payload['compare-lookup'];
+          console.log('[compare] fetch ok', col.h, 'htmlLen=', html && html.length);
           if (!html) return;
           const match = html.match(/data-compare-lookup[^>]*>([\s\S]*?)<\/script>/);
+          console.log('[compare] regex match', !!match);
           if (!match) return;
 
           let data;
@@ -682,12 +685,16 @@
           columns[index].outOfScope = false;
           if (data.n) columns[index].n = data.n;
 
+          console.log('[compare] parsed v', index, columns[index].v);
           fillColumn(tbody, index, columns[index].v);
           clearOutOfScopeHeader(headRow, index);
           recomputeDiff(tbody);
+          const after = tbody.querySelector('tr');
+          console.log('[compare] after fill, row children', after && after.children.length,
+            after && after.children[index + 1] && after.children[index + 1].textContent.trim());
         })
-        .catch(() => {
-          /* 保留占位 */
+        .catch((err) => {
+          console.log('[compare] backfill error', col.h, err);
         });
     });
   }
@@ -888,6 +895,16 @@
     const loadedTpl = dataEl.dataset.labelLoaded || '';
     status.textContent = loadedTpl.replace('[count]', String(columns.length));
     root.appendChild(status);
+
+    /* TEMP-DEBUG 补拉排查用，定位后删除 */
+    console.log('[compare] 重建完成', {
+      group,
+      listCount: list.length,
+      columnCount: columns.length,
+      outOfScope: columns.map((c) => ({ h: c.h, out: c.outOfScope })),
+      tbodyRows: tbody.querySelectorAll('tr').length,
+      firstRowChildren: tbody.querySelector('tr') ? tbody.querySelector('tr').children.length : 0,
+    });
 
     backfillOutOfScope({ dataEl, rows, columns, tbody, headRow });
   }
