@@ -599,6 +599,81 @@
    * 用同一套 class 结构重建（SDD §6.2.4 要求两份标记逐项一致）。
    * 数据岛只含 metafield 值，缩略图取自加入时存下的 120px 派生图。
    */
+  /**
+   * 列切换导航（SDD §6.2.4）：移动端横向滚动对键盘/屏读用户不可用，
+   * 这条「上一款 / 下一款」是等价路径。表格没溢出时整块不显示。
+   */
+  function initColumnNav(wrap) {
+    const host = wrap.parentNode;
+    const nav = host && host.querySelector('[data-compare-cols]');
+    if (!nav) return;
+
+    /* 表格可能被重建（JS 接管），重复初始化前先拆掉旧监听 */
+    if (nav.__cleanup) nav.__cleanup();
+    const controller = new AbortController();
+    const { signal } = controller;
+    nav.__cleanup = () => controller.abort();
+
+    const table = wrap.querySelector('table');
+    if (!table) return;
+
+    const headerCells = Array.from(table.querySelectorAll('thead th')).slice(1);
+    if (headerCells.length < 2) {
+      nav.removeAttribute('data-overflow');
+      return;
+    }
+
+    const prev = nav.querySelector('[data-compare-prev]');
+    const next = nav.querySelector('[data-compare-next]');
+    const status = nav.querySelector('[data-compare-col-status]');
+
+    const overflow = wrap.scrollWidth - wrap.clientWidth > 4;
+    nav.toggleAttribute('data-overflow', overflow);
+    if (!overflow) return;
+
+    let index = 0;
+
+    const paint = () => {
+      if (prev) prev.disabled = index <= 0;
+      if (next) next.disabled = index >= headerCells.length - 1;
+      if (status) status.textContent = `${index + 1} / ${headerCells.length}`;
+    };
+
+    const go = (target) => {
+      index = Math.max(0, Math.min(headerCells.length - 1, target));
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      wrap.scrollTo({
+        left: headerCells[index].offsetLeft,
+        behavior: reduce ? 'auto' : 'smooth',
+      });
+      paint();
+    };
+
+    if (prev) prev.addEventListener('click', () => go(index - 1), { signal });
+    if (next) next.addEventListener('click', () => go(index + 1), { signal });
+
+    /* 用户直接横滚时也要让按钮状态跟上 */
+    wrap.addEventListener(
+      'scroll',
+      () => {
+        let best = 0;
+        let bestDist = Infinity;
+        headerCells.forEach((cell, i) => {
+          const dist = Math.abs(cell.offsetLeft - wrap.scrollLeft);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = i;
+          }
+        });
+        index = best;
+        paint();
+      },
+      { passive: true, signal },
+    );
+
+    paint();
+  }
+
   /** 把补拉回来的值填进某一列（就地改单元格，不重建表格以免闪烁） */
   function fillColumn(tbody, index, values) {
     tbody.querySelectorAll('tr').forEach((tr, rowIndex) => {
@@ -709,6 +784,10 @@
     if (!data || !Array.isArray(data.rows) || !Array.isArray(data.items)) return;
 
     const group = root.dataset.compareGroup || data.group;
+    /* 服务端默认表也可能是溢出的，先装一次导航 */
+    const navWrap = root.querySelector('[data-compare-table-wrap]');
+    if (navWrap) initColumnNav(navWrap);
+
     const list = readList().filter((item) => item.g === group);
     if (list.length === 0) return; /* 没有本组选择 → 不动默认表，也不 JSON.parse 后续 */
 
@@ -863,6 +942,7 @@
 
     wrap.textContent = '';
     wrap.appendChild(table);
+    initColumnNav(wrap); /* 表格换了，导航要按新的列数重装 */
 
     // ---- 只看差异（相同行折叠） ----
     if (tbody.querySelectorAll('tr[data-compare-same]').length > 0) {
