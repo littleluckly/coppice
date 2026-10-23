@@ -13,6 +13,15 @@ body {
   min-height: 100svh;
 }
 
+/* body 是 flex 容器 → main 是 flex item，默认 min-inline-size: auto 等于其内容的
+   min-content 宽。对比表有 min-inline-size: 640px，会把 main 直接撑到 640，
+   于是「容器宽 == 内容宽」，内部横向滚动无从发生（2026-10-22 实测：
+   wrap 宽 640、scrollWidth 也 640、列导航判定无溢出）。
+   这一条把自动最小尺寸截断，超宽内容交由各自的滚动容器消化。 */
+.main-content {
+  min-inline-size: 0;
+}
+
 html:has(dialog[scroll-lock][open], details[scroll-lock][open]) {
   overflow: hidden;
   /* 锁滚动时滚动条从布局中消失，内容区凭空变宽一个滚动条宽度 → 页面抖动。

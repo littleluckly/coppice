@@ -213,10 +213,11 @@
 .compare-page-section {
   --compare-border: color-mix(in srgb, var(--color-foreground) 14%, transparent);
   --compare-muted: color-mix(in srgb, var(--color-foreground) 60%, transparent);
-  /* 兜底：表格最小 640px，窄屏下由 .compare-table-wrap 内部横滚消化。
-     这里再裁一次，防止任何溢出传到文档级 —— 一旦文档被撑宽，
-     position: absolute / width:100% 的抽屉会跟着变宽（实测）。 */
+  /* 兜底裁切。真正让表格能横向滚动的是 critical.css 里 .main-content 的
+     `min-inline-size: 0`（body 是 flex，main 默认被 min-content 撑到 640px）；
+     这里只是防止任何残余溢出传到文档级，连带把抽屉撑宽。 */
   overflow-x: clip;
+  min-inline-size: 0;
 }
 
 .compare-page {
