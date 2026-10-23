@@ -314,13 +314,22 @@
       }
     }
 
+    /**
+     * 每组一个 data-url-<group> 属性（组名含连字符，dataset 驼峰化会撞名，
+     * 故用 getAttribute 原样取），data-groups 列出实际有对比页的组。
+     * Liquid 侧因此不需要拼 JSON 字符串——手拼引号是最容易出错的一环。
+     */
     parseUrls() {
-      try {
-        const parsed = JSON.parse(this.dataset.urls || '{}');
-        return parsed && typeof parsed === 'object' ? parsed : {};
-      } catch {
-        return {};
-      }
+      const urls = {};
+      const groups = (this.dataset.groups || '')
+        .split(',')
+        .map((key) => key.trim())
+        .filter(Boolean);
+      groups.forEach((key) => {
+        const value = this.getAttribute(`data-url-${key}`);
+        if (value) urls[key] = value;
+      });
+      return urls;
     }
 
     /** 清单非空取首项的分组，空清单落到默认组（服务端给的第一个有对比页的组） */
