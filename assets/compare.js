@@ -834,12 +834,14 @@
     if (!data || !Array.isArray(data.rows) || !Array.isArray(data.items)) return;
 
     const group = root.dataset.compareGroup || data.group;
-    /* 服务端默认表也可能是溢出的，先装一次导航 */
-    const navWrap = root.querySelector('[data-compare-table-wrap]');
-    if (navWrap) initColumnNav(navWrap);
-
+    const empty = root.querySelector('[data-compare-empty]');
     const list = readList().filter((item) => item.g === group);
-    if (list.length === 0) return; /* 没有本组选择 → 不动默认表，也不 JSON.parse 后续 */
+
+    /* 没有本组选择：什么都不渲染，让服务端的空状态留着（对比页已无默认表） */
+    if (list.length === 0) {
+      if (empty) empty.hidden = false;
+      return;
+    }
 
     const rows = data.rows;
     const byHandle = new Map(data.items.map((item) => [item.h, item]));
@@ -1002,6 +1004,8 @@
 
     wrap.textContent = '';
     wrap.appendChild(table);
+    wrap.setAttribute('data-ready', '');
+    if (empty) empty.hidden = true;
     initColumnNav(wrap); /* 表格换了，导航要按新的列数重装 */
 
     /* 表头 × 移除该列（委托挂在 wrap 上，列是动态生成的） */

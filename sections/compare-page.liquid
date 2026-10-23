@@ -230,8 +230,14 @@
    再用纯 CSS 渐显：JS 快 → 用户看到的是重建后的表在渐入；JS 慢 → 顶多晚 0.4s 出现。
    **纯 CSS 不依赖 JS 回调**：即使 compare.js 加载失败，动画照样跑完并停在 opacity 1，
    不会把内容永久藏起来。无 JS 时 html 没有 .js，直接按不透明渲染。 */
-html.js [data-compare-table-wrap] {
-  animation: compare-table-reveal 0.3s ease 0.12s both;
+/* 表格完全由 JS 构建：未就绪前不显示（也就不会有「默认表 → 清单表」的突变） */
+[data-compare-table-wrap]:not([data-ready]) {
+  display: none;
+}
+
+/* 就绪后短促淡入一次，只为别「啪」地跳出来 */
+html.js [data-compare-table-wrap][data-ready] {
+  animation: compare-table-reveal 0.22s ease both;
 }
 
 @keyframes compare-table-reveal {
@@ -247,6 +253,26 @@ html.js [data-compare-table-wrap] {
   html.js [data-compare-table-wrap] {
     animation: none;
   }
+}
+
+/* 空状态：没选过商品 / 无 JS。服务端默认渲染这一块，JS 有选择时把它藏起来。 */
+.compare-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding-block: clamp(3rem, 8vw, 6rem);
+  text-align: center;
+  color: var(--color-foreground);
+}
+
+.compare-empty[hidden] {
+  display: none;
+}
+
+/* 无 JS 时藏掉「还没选商品」这句，只留 noscript 里的说明 */
+html:not(.js) .compare-empty__js {
+  display: none;
 }
 
 .compare-page__header {
