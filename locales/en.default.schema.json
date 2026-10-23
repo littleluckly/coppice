@@ -299,7 +299,7 @@
     "compare_page_indexing": "Allow search engines to index comparison pages",
     "compare_page_indexing_info": "Turn off if comparison pages should not appear in search results.",
     "compare_collections": "Comparison collections",
-    "compare_collections_info": "One collection per comparison group. Each collection must declare its group: set the collection metafield \"compare_group\" (namespace: custom) to the group key (for example \"chainsaw\"), or name the collection handle exactly after the group key."
+    "compare_collections_info": "One collection per comparison group. Each collection must say which group it belongs to: set the collection metafield \"compare_group\" to the GROUP KEY -- for example \"chainsaw\", NOT \"chainsaw-compare\". If the metafield is empty, the collection handle is used instead."
   },
   "options": {
     "alignment": {

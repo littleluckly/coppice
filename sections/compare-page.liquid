@@ -54,6 +54,7 @@
     if declared == blank
       assign declared = candidate.handle
     endif
+    assign declared = declared | strip | downcase | remove: '-compare'
     if declared == compare_group
       assign compare_collection = candidate
       break
