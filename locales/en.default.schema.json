@@ -212,6 +212,22 @@
       "presets": {
         "default": "Collection"
       }
+    },
+    "compare_page": {
+      "name": "Compare page",
+      "settings": {
+        "heading": {
+          "label": "Heading",
+          "info": "Leave empty to use the page title."
+        },
+        "intro": {
+          "label": "Choosing guide",
+          "info": "Two or three sentences on how to choose within this group."
+        }
+      },
+      "presets": {
+        "name": "Compare page"
+      }
     }
   },
   "labels": {

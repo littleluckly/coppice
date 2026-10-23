@@ -206,7 +206,8 @@
       "loaded": "Loaded {{ count }} product(s) from your comparison list",
       "group_missing": "This page is not linked to a comparison group.",
       "collection_missing": "No product collection is linked to this comparison group yet.",
-      "no_rows": "The comparison table for this group is not defined."
+      "no_rows": "The comparison table for this group is not defined.",
+      "missing": "No data"
     },
     "rows": {
       "power_source": "Power source",

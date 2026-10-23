@@ -1,0 +1,244 @@
+{% doc %}
+  compare-page — 对比页主体（SDD §6.2）。挂在 `templates/page.compare.json` 上。
+
+  ## 为什么是一个 section 而不是三个
+  SDD/pages-ui 原设想拆 compare-intro / compare-data / compare-table。实现时合并，
+  原因是三者必须共享**同一份商品列表**：
+  · 拆开 → 每个 section 各查一次集合，数据库开销翻倍；
+  · 合并 → 一次查询同时产出默认表与数据岛，且两者天然同源，不可能不一致。
+  数据岛仍然放在 DOM 末尾、只序列化当前分组的白名单字段、列式编码，位置闸与
+  字段闸不变；唯一变化是数据岛与表头缩略图共享同一次查询（原纪律「数据岛模板
+  只碰 metafield」是为分离模板服务的，合并后不再适用）。
+
+  ## 分组从哪来
+  `page.handle` 必须以 `-compare` 结尾，去掉后缀即分组键（§6.2.1）。
+  例：标题「Chainsaw Compare」→ handle `chainsaw-compare` → 分组 `chainsaw`。
+
+  ## 商品从哪来
+  Liquid **无法按 metafield 查询商品**，只能走集合。所以每个分组需要一个集合：
+  商家在主题设置 `compare_collections` 里选，集合用 metafield `custom.compare_group`
+  声明归属（未声明则退回「集合 handle 等于分组键」）。
+  集合缺失 → 显示配置提示，不渲染空表骨架（§6.2.2 空状态）。
+
+  ## 编排
+  ① 界内：标题 + 选型文案 + 服务端默认表（可索引、无 JS 可读）
+  ② 界外末尾：`<script type="application/json" id="cmp-data">` 数据岛
+  JS 有有效选择时用同一标记结构重建表格并替换（§6.2.4）。
+
+  @param {string} [heading] — 覆盖 h1（默认用页面标题）
+{% enddoc %}
+
+{%- liquid
+  assign compare_group = ''
+  assign compare_handle = page.handle | default: ''
+
+  assign tail = compare_handle | slice: -8, 8
+  if tail == '-compare'
+    assign compare_group = compare_handle | remove: '-compare'
+  endif
+
+  assign row_keys = ''
+  case compare_group
+    when 'walk-behind-mower', 'riding-mower'
+      assign row_keys = 'power_source,operation_type,drive_type,area_coverage,duty_level,cutting_width_mm,power,weight_kg,noise_db,warranty_months' | split: ','
+    when 'chainsaw'
+      assign row_keys = 'power_source,operation_type,area_coverage,duty_level,bar_length_mm,power,weight_kg,noise_db,warranty_months' | split: ','
+    when 'string-trimmer'
+      assign row_keys = 'power_source,operation_type,area_coverage,duty_level,cutting_width_mm,power,weight_kg,noise_db,warranty_months' | split: ','
+    else
+      assign row_keys = 'power_source,operation_type,area_coverage,duty_level,power,weight_kg,noise_db,warranty_months' | split: ','
+  endcase
+
+  assign compare_collection = blank
+  for candidate in settings.compare_collections
+    assign declared = candidate.metafields.custom.compare_group.value
+    if declared == blank
+      assign declared = candidate.handle
+    endif
+    if declared == compare_group
+      assign compare_collection = candidate
+      break
+    endif
+  endfor
+
+  assign compare_products = compare_collection.products
+  assign compare_total = 0
+  if compare_collection != blank
+    assign compare_total = compare_products.size
+  endif
+
+  assign default_columns = settings.compare_default_columns | default: 3
+  assign over_limit = false
+  if compare_total > 50
+    assign over_limit = true
+  endif
+
+  assign datasheet_limit = 50
+-%}
+
+{%- if compare_group == blank -%}
+
+  <div class="compare-page__notice">
+    <p>{{ 'compare.page.group_missing' | t }}</p>
+  </div>
+
+{%- elsif compare_collection == blank -%}
+
+  <div class="compare-page__notice">
+    <p>{{ 'compare.page.collection_missing' | t }}</p>
+    <a class="compare-page__back" href="{{ routes.all_products_collection_url }}">
+      {{- 'compare.page.back' | t -}}
+    </a>
+  </div>
+
+{%- elsif compare_total < 2 -%}
+
+  <div class="compare-page__notice">
+    <p>{{ 'compare.page.empty_group' | t }}</p>
+    <a class="compare-page__back" href="{{ routes.all_products_collection_url }}">
+      {{- 'compare.page.back' | t -}}
+    </a>
+  </div>
+
+{%- else -%}
+
+  <section class="compare-page" data-compare-page data-compare-group="{{ compare_group }}">
+    <header class="compare-page__header">
+      <h1 class="compare-page__title">
+        {{ heading | default: page.title | default: 'compare.page.default_title' | t }}
+      </h1>
+      {%- if section.settings.intro != blank -%}
+        <div class="compare-page__intro">{{ section.settings.intro }}</div>
+      {%- endif -%}
+    </header>
+
+    {%- comment -%}
+      服务端默认表：爬虫、无 JS、JS 报错时页面仍有实质内容。
+      JS 接管后会用同一标记结构重建（class 名与 compare.js 里的构建函数保持一致）。
+    {%- endcomment -%}
+    <div class="compare-table-wrap" data-compare-table-wrap>
+      <table class="compare-table">
+        <caption class="visually-hidden">
+          {{ 'compare.heading' | t }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="compare-table__corner">
+              <span class="visually-hidden">{{ 'compare.rows.power_source' | t }}</span>
+            </th>
+            {%- for product in compare_products limit: default_columns -%}
+              <th scope="col" class="compare-table__col">
+                <a class="compare-table__product" href="{{ product.url }}">
+                  {%- if product.featured_image -%}
+                    {{
+                      product.featured_image
+                      | image_url: width: 200
+                      | image_tag:
+                        widths: '100, 200',
+                        sizes: '(min-width: 768px) 180px, 45vw',
+                        width: product.featured_image.width,
+                        height: product.featured_image.height,
+                        loading: 'lazy',
+                        alt: product.featured_image.alt
+                    }}
+                  {%- endif -%}
+                  <span class="compare-table__product-title">{{ product.title | escape }}</span>
+                </a>
+                {%- assign variance_note = product.metafields.spec.spec_variance_note.value -%}
+                {%- if variance_note != blank -%}
+                  <details class="compare-table__note">
+                    <summary aria-label="{{ 'compare.page.variant_note' | t: title: product.title }}">
+                      <span aria-hidden="true">i</span>
+                    </summary>
+                    <p>{{ variance_note }}</p>
+                  </details>
+                {%- endif -%}
+              </th>
+            {%- endfor -%}
+          </tr>
+        </thead>
+        <tbody>
+          {%- for row_key in row_keys -%}
+            <tr>
+              <th scope="row" class="compare-table__row-label">
+                {{- 'compare.rows.' | append: row_key | t -}}
+              </th>
+              {%- for product in compare_products limit: default_columns -%}
+                <td class="compare-table__cell">
+                  {%- render 'compare-cell', product: product, row_key: row_key -%}
+                </td>
+              {%- endfor -%}
+            </tr>
+          {%- endfor -%}
+        </tbody>
+      </table>
+    </div>
+
+    {%- if over_limit -%}
+      <p class="compare-page__limit">
+        {{ 'compare.page.over_limit' | t: count: compare_total, limit: 50 }}
+      </p>
+    {%- endif -%}
+  </section>
+
+  {%- comment -%}
+    数据岛（§6.2.1）：DOM 末尾、列式编码、只装当前分组的白名单字段。
+    不含价格 / 图片 / 库存 —— JS 侧缩略图取自 localStorage 里加入时存下的 120px 派生图。
+  {%- endcomment -%}
+  {%- capture compare_rows_json -%}
+    {%- for row_key in row_keys -%}
+      {%- if forloop.index > 1 -%},{%- endif -%}
+      {"k":{{ row_key | json }},"l":{{ 'compare.rows.' | append: row_key | t | json }}}
+    {%- endfor -%}
+  {%- endcapture -%}
+
+  {%- capture compare_items_json -%}
+    {%- for product in compare_products limit: datasheet_limit -%}
+      {%- if forloop.index > 1 -%},{%- endif -%}
+      {"h":{{ product.handle | json }},"t":{{ product.title | json }},"u":{{ product.url | json }},"n":{{ product.metafields.spec.spec_variance_note.value | json }},"v":[
+      {%- for row_key in row_keys -%}
+        {%- if forloop.index > 1 -%},{%- endif -%}
+        {%- capture cell_text -%}{%- render 'compare-cell', product: product, row_key: row_key, as_text: true -%}{%- endcapture -%}
+        {{ cell_text | strip | json }}
+      {%- endfor -%}
+      ]}
+    {%- endfor -%}
+  {%- endcapture -%}
+
+  <script
+    type="application/json"
+    id="cmp-data"
+    data-default-columns="{{ default_columns }}"
+    data-max="{{ 4 }}"
+  >
+    {"group":{{ compare_group | json }},"rows":[{{ compare_rows_json }}],"items":[{{ compare_items_json }}]}
+  </script>
+
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.compare_page.name",
+  "tag": "div",
+  "class": "compare-page-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:sections.compare_page.settings.heading.label",
+      "info": "t:sections.compare_page.settings.heading.info"
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "t:sections.compare_page.settings.intro.label",
+      "info": "t:sections.compare_page.settings.intro.info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.compare_page.presets.name"
+    }
+  ]
+}
+{% endschema %}
