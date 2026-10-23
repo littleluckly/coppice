@@ -611,6 +611,7 @@
                 cart 入口复用同一 snippet（本期为跳转链接，非按钮——见 T-1.6）；
                 show_label 参考图的行式布局：图标 + "Cart" 文字 + 计数徽标。
               {%- endcomment -%}
+              {% render 'compare-entry', class: 'compare-entry--in-drawer', show_label: true %}
               {% render 'cart-entry', class: 'cart-entry--in-drawer', show_label: true %}
             </div>
           </div>
@@ -2079,8 +2080,35 @@
     outline-offset: 2px;
   }
 
+  /* 抽屉行式：图标 + 文字 + 角标靠右，与购物车那一行对齐 */
+  .compare-entry--in-drawer {
+    display: block;
+  }
+
+  .compare-entry--in-drawer .compare-entry__link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-block-size: 48px;
+    padding: 0.75rem 1rem;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .compare-entry--in-drawer .compare-entry__label {
+    flex: 1;
+  }
+
+  /* 角标在行式里不悬浮，跟在文字后面 */
+  .compare-entry--in-drawer .compare-entry__count {
+    position: static;
+    inset: auto;
+  }
+
   @media (max-width: 767px) {
-    compare-entry[data-empty] {
+    /* 只藏页头那份：移动端页头宽度不够，抽屉里那份常驻 */
+    compare-entry[data-empty]:not(.compare-entry--in-drawer) {
       display: none;
     }
   }

@@ -11,6 +11,7 @@
   · 页面探测每页只跑一次（4 次 `pages[handle]`，实测 2.6 μs/次），不进商品循环。
 
   @param {string} [class] - 追加到根元素的 class
+  @param {boolean} [show_label] - true → 行式（抽屉里用）：图标 + 文字 + 角标
 {% enddoc %}
 
 <compare-entry
@@ -24,6 +25,9 @@
 >
   <a class="compare-entry__link" href="#" aria-label="{{ 'compare.entry_label_empty' | t }}">
     {{ 'icon-compare.svg' | inline_asset_content }}
+    {%- if show_label -%}
+      <span class="compare-entry__label">{{ 'compare.heading' | t }}</span>
+    {%- endif -%}
     <span class="compare-entry__count" data-compare-count hidden aria-hidden="true"></span>
   </a>
 </compare-entry>
