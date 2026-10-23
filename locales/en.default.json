@@ -203,7 +203,23 @@
       "over_limit": "This group has {{ count }} products. The table covers the first {{ limit }}.",
       "not_in_scope": "This product is outside the data range of this page.",
       "variant_note": "Specs vary by variant",
-      "loaded": "Loaded {{ count }} product(s) from your comparison list"
+      "loaded": "Loaded {{ count }} product(s) from your comparison list",
+      "group_missing": "This page is not linked to a comparison group.",
+      "collection_missing": "No product collection is linked to this comparison group yet.",
+      "no_rows": "The comparison table for this group is not defined."
+    },
+    "rows": {
+      "power_source": "Power source",
+      "operation_type": "Operation type",
+      "drive_type": "Drive type",
+      "area_coverage": "Area coverage",
+      "duty_level": "Duty level",
+      "cutting_width": "Cutting width",
+      "bar_length": "Bar length",
+      "power": "Displacement / power",
+      "weight": "Weight",
+      "noise": "Noise level",
+      "warranty": "Warranty"
     }
   }
 }

@@ -158,6 +158,13 @@
         "content": "t:general.compare_page_header"
       },
       {
+        "type": "collection_list",
+        "id": "compare_collections",
+        "label": "t:labels.compare_collections",
+        "info": "t:labels.compare_collections_info",
+        "limit": 12
+      },
+      {
         "type": "range",
         "id": "compare_default_columns",
         "min": 2,

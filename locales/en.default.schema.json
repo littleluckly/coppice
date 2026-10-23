@@ -281,7 +281,9 @@
     "compare_default_columns": "Products in the default table",
     "compare_default_columns_info": "How many products the server-rendered comparison table shows before the visitor picks their own.",
     "compare_page_indexing": "Allow search engines to index comparison pages",
-    "compare_page_indexing_info": "Turn off if comparison pages should not appear in search results."
+    "compare_page_indexing_info": "Turn off if comparison pages should not appear in search results.",
+    "compare_collections": "Comparison collections",
+    "compare_collections_info": "One collection per comparison group. Each collection must declare its group: set the collection metafield \"compare_group\" (namespace: custom) to the group key (for example \"chainsaw\"), or name the collection handle exactly after the group key."
   },
   "options": {
     "alignment": {
