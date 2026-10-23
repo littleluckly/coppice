@@ -36,17 +36,13 @@
     assign compare_group = compare_handle | remove: '-compare'
   endif
 
-  assign row_keys = ''
-  case compare_group
-    when 'walk-behind-mower', 'riding-mower'
-      assign row_keys = 'power_source,operation_type,drive_type,area_coverage,duty_level,cutting_width_mm,power,weight_kg,noise_db,warranty_months' | split: ','
-    when 'chainsaw'
-      assign row_keys = 'power_source,operation_type,area_coverage,duty_level,bar_length_mm,power,weight_kg,noise_db,warranty_months' | split: ','
-    when 'string-trimmer'
-      assign row_keys = 'power_source,operation_type,area_coverage,duty_level,cutting_width_mm,power,weight_kg,noise_db,warranty_months' | split: ','
-    else
-      assign row_keys = 'power_source,operation_type,area_coverage,duty_level,power,weight_kg,noise_db,warranty_months' | split: ','
-  endcase
+  assign compare_row_keys_captured = ''
+-%}
+
+{%- capture compare_row_keys_captured -%}{%- render 'compare-row-keys', group: compare_group -%}{%- endcapture -%}
+
+{%- liquid
+  assign row_keys = compare_row_keys_captured | strip | split: ','
 
   assign compare_collection = blank
   for candidate in settings.compare_collections

@@ -228,6 +228,9 @@
       "presets": {
         "name": "Compare page"
       }
+    },
+    "compare_lookup": {
+      "name": "Compare lookup"
     }
   },
   "labels": {
