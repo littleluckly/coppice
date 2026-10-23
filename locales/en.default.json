@@ -187,7 +187,9 @@
     "bar": {
       "added": "Added to compare",
       "progress": "{{ count }} of {{ max }}",
-      "close": "Close comparison bar"
+      "close": "Close comparison bar",
+      "collapse": "Collapse comparison bar",
+      "expand": "Show comparison bar"
     },
     "announce": {
       "added": "Added 1 product, {{ count }} in total",
