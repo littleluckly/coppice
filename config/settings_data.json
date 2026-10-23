@@ -10,13 +10,6 @@
 {
   "current": {
     "max_page_width": "90rem",
-    "compare_collections": [
-      "walk-behind-mower",
-      "chainsaw",
-      "string-trimmer",
-      "riding-mower-compare"
-    ],
-    "compare_page_indexing": false,
     "content_for_index": [],
     "blocks": {
       "14060646107696862457": {
@@ -24,7 +17,14 @@
         "disabled": false,
         "settings": {}
       }
-    }
+    },
+    "compare_collections": [
+      "walk-behind-mower",
+      "chainsaw",
+      "string-trimmer",
+      "riding-mower-compare"
+    ],
+    "compare_page_indexing": false
   },
   "presets": {
     "Coppice": {
