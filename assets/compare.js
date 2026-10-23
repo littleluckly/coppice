@@ -504,12 +504,8 @@
     }
 
     resolveUrl(group) {
-      try {
-        const urls = JSON.parse(this.dataset.urls || '{}');
-        return urls[group] || '';
-      } catch {
-        return '';
-      }
+      if (!group) return '';
+      return this.getAttribute(`data-url-${group}`) || '';
     }
   }
 

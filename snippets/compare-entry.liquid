@@ -1,0 +1,64 @@
+{% doc %}
+  compare-entry — 页头对比入口（SDD §6.2.8）。
+
+  · 持久状态入口：图标 + 角标（清单款数 1–4），点击跳当前组的对比页。
+  · **只在至少一个分组存在对比页时渲染**：分组键 `<group>` 对应页面
+    `<group>-compare`，用 `pages[handle]` 探测（单次约 2.6 μs，§3.7 A4 实测）。
+    未配置的组不输出入口，避免页面上出现会 404 的链接（§6.2.1）。
+  · 移动端页头宽度已被 ☰/logo/搜索/账号/购物车占满 → 仅角标 > 0 时显示，
+    由 CSS `:has()` 判断（无需 JS 监听视口）。
+  · 无 JS 时图标仍可见、可点：href 指向默认组对比页，那里有服务端默认表。
+
+  @param {string} [class] - 追加到根元素的 class
+{% enddoc %}
+
+{%- liquid
+  assign compare_groups_raw = settings.compare_groups
+  if compare_groups_raw == blank
+    assign compare_groups_raw = 'walk-behind-mower,riding-mower,chainsaw,string-trimmer'
+  endif
+  assign compare_groups = compare_groups_raw | split: ','
+
+  assign compare_found = ''
+  assign compare_default = ''
+
+  for item in compare_groups
+    assign compare_key = item | strip
+    if compare_key != blank
+      assign compare_handle = compare_key | append: '-compare'
+      if pages[compare_handle]
+        assign compare_found = compare_found | append: compare_key | append: ','
+        if compare_default == blank
+          assign compare_default = compare_key
+        endif
+      endif
+    endif
+    assign compare_handle = blank
+  endfor
+
+  assign compare_found = compare_found | split: ',' | compact
+-%}
+
+{%- if compare_found.size > 0 -%}
+  <compare-entry
+    class="compare-entry{% if class != blank %} {{ class }}{% endif %}"
+    data-groups="{{ compare_found | join: ',' }}"
+    data-default-group="{{ compare_default }}"
+    data-max="4"
+    data-label-empty="{{ 'compare.entry_label_empty' | t }}"
+    data-label-count="{{ 'compare.entry_label' | t: count: '[count]' }}"
+    {%- for key in compare_found -%}
+      {%- assign key_handle = key | append: '-compare' -%}
+      {%- if pages[key_handle] %} data-url-{{ key }}="{{ routes.root_url }}pages/{{ key_handle }}"{% endif -%}
+    {%- endfor -%}
+  >
+    <a
+      class="compare-entry__link"
+      href="{% if compare_default != blank %}{{ routes.root_url }}pages/{{ compare_default }}-compare{% else %}{{ routes.root_url }}{% endif %}"
+      aria-label="{{ 'compare.entry_label_empty' | t }}"
+    >
+      {{ 'icon-compare.svg' | inline_asset_content }}
+      <span class="compare-entry__count" data-compare-count hidden aria-hidden="true"></span>
+    </a>
+  </compare-entry>
+{%- endif -%}
