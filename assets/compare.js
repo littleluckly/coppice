@@ -21,7 +21,6 @@
   'use strict';
 
   const STORAGE_KEY = 'ib:compare:v1';
-  const BAR_DISMISS_KEY = 'ib:compare-bar-dismissed';
   const DEFAULT_MAX = 4;
 
   // ---------------------------------------------------------------- 状态层
@@ -386,7 +385,7 @@
       this.max = clampMax(this);
       this.built = false;
 
-      document.addEventListener('compare:added', () => this.reveal(), { signal });
+      document.addEventListener('compare:added', (event) => this.announce(event), { signal });
       document.addEventListener('compare:updated', () => this.sync(), { signal });
 
       this.sync();
@@ -413,8 +412,11 @@
       this.view = this.querySelector('[data-compare-view]');
       this.status = this.querySelector('[data-compare-status]');
 
-      const closeBtn = this.querySelector('[data-compare-close]');
-      if (closeBtn) closeBtn.addEventListener('click', () => this.dismiss());
+      const collapseBtn = this.querySelector('[data-compare-collapse]');
+      if (collapseBtn) collapseBtn.addEventListener('click', () => this.setCollapsed(true));
+
+      const expandBtn = this.querySelector('[data-compare-expand]');
+      if (expandBtn) expandBtn.addEventListener('click', () => this.setCollapsed(false));
 
       /* 单项移除用事件委托：条目是动态生成的，委托在容器上而非 document */
       if (this.list) {
@@ -428,41 +430,40 @@
       }
     }
 
-    isDismissed() {
-      try {
-        return sessionStorage.getItem(BAR_DISMISS_KEY) === '1';
-      } catch {
-        return false;
-      }
+    /**
+     * 收起 / 展开。底部条是常驻的（有对比项就在），收起只是让开内容，
+     * 不持久化——刷新后回到展开态，避免用户「明明有对比项却找不到入口」。
+     */
+    setCollapsed(collapsed) {
+      this.toggleAttribute('data-collapsed', collapsed);
+      const target = this.querySelector(
+        collapsed ? '[data-compare-expand]' : '[data-compare-collapse]',
+      );
+      if (target) target.focus();
     }
 
-    /** 只在「刚加入一款」时冒头；用户关过后本次会话不再自动弹 */
-    reveal() {
-      if (this.isDismissed()) return;
-      this.build();
-      this.hidden = false;
-      this.sync();
-    }
-
-    dismiss() {
-      this.hidden = true;
-      try {
-        sessionStorage.setItem(BAR_DISMISS_KEY, '1');
-      } catch {
-        /* 忽略 */
-      }
-      /* 焦点交还给页面主内容区，避免落到 body */
-      const main = document.getElementById('MainContent');
-      if (main) main.focus({ preventScroll: true });
+    /** 加入后只做播报，显隐交给 sync（常驻） */
+    announce(event) {
+      const label = this.dataset.labelAdded || '';
+      if (!label || !this.status) return;
+      const count = (event.detail && event.detail.count) || readList().length;
+      this.status.textContent = label.replace('[count]', String(count));
     }
 
     sync() {
       const list = readList();
       if (list.length === 0) {
         this.hidden = true;
+        this.removeAttribute('data-collapsed');
         return;
       }
+
+      this.build();
       if (!this.built) return;
+      this.hidden = false;
+
+      const pillCount = this.querySelector('[data-compare-pill-count]');
+      if (pillCount) pillCount.textContent = String(list.length);
 
       this.list.textContent = '';
       list.forEach((item) => {

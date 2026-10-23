@@ -146,3 +146,52 @@ compare-bar[hidden] {
     flex-basis: 100%;
   }
 }
+
+/* ===== 收起态（2026-10-22 刘工改：底部条常驻，可收起但不再是「关闭」） =====
+   收起后容器变成右下角的一个胶囊，不再横贯整行、不挡下方内容；
+   空白区域 pointer-events: none，只有胶囊本身可点。 */
+
+.compare-bar__pill {
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+  min-block-size: 44px;
+  padding: 0 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+  border-radius: 999px;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--color-foreground) 16%, transparent);
+  cursor: pointer;
+}
+
+.compare-bar__pill svg {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+}
+
+.compare-bar__pill-count {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+compare-bar[data-collapsed] {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+compare-bar[data-collapsed] .compare-bar__inner {
+  display: none;
+}
+
+compare-bar[data-collapsed] .compare-bar__pill {
+  display: inline-flex;
+  pointer-events: auto;
+}
+
+.compare-bar__pill:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
