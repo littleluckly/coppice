@@ -700,6 +700,19 @@
     paint();
   }
 
+  /**
+   * 把清单里存的缩略图地址升到 480px 宽。
+   *
+   * 早期版本只存 120px 派生图，铺到表头（~400px）会糊；这里在渲染时统一改写
+   * `width=` 参数，**已经加入过的旧条目也能变清晰**，不必让用户重新加一遍。
+   */
+  function upgradeImageWidth(url, width) {
+    if (!url) return '';
+    const target = String(width || 480);
+    if (/[?&]width=\d+/.test(url)) return url.replace(/([?&])width=\d+/, `$1width=${target}`);
+    return url + (url.includes('?') ? '&' : '?') + `width=${target}`;
+  }
+
   /** 把补拉回来的值填进某一列（就地改单元格，不重建表格以免闪烁） */
   function fillColumn(tbody, index, values) {
     tbody.querySelectorAll('tr').forEach((tr, rowIndex) => {
@@ -853,7 +866,8 @@
 
     const columns = list.map((entry) => {
       const found = byHandle.get(entry.h);
-      if (found) return { ...found, image: entry.i, outOfScope: false };
+      const image = upgradeImageWidth(entry.i, 480);
+      if (found) return { ...found, image, outOfScope: false };
       /* 超出数据岛范围的 handle：显式降级，不静默丢列（§6.2.6） */
       return {
         h: entry.h,
@@ -861,7 +875,7 @@
         u: entry.u || '',
         n: null,
         v: [],
-        image: entry.i,
+        image,
         outOfScope: true,
       };
     });
