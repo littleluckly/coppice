@@ -1,0 +1,42 @@
+{% doc %}
+  compare-bar — 底部临时确认条（SDD §6.2.8）。
+
+  **与页头图标的分工**：页头图标是持久状态（有几款在比），这里只在「刚加入一款」
+  时冒头，告诉用户刚做了什么、并提供移除/查看的快捷方式。
+
+  · **不设自动消失计时**（WCAG 2.2.1 时限可调）：由用户点关闭；关闭后本次会话
+    不再自动弹出（sessionStorage `ib:compare-bar-dismissed`），页头角标不受影响。
+  · DOM 惰性构建：内容放在 `<template>` 里，首次需要时才实例化。
+  · 没有分组配置对比页时不渲染（`compare-page-urls` 输出 hidden 时无从跳转）。
+  · 关闭后焦点交还 `#MainContent`，不落回 body。
+
+  @param {string} [class] - 追加到根元素的 class
+{% enddoc %}
+
+<compare-bar
+  class="compare-bar{% if class != blank %} {{ class }}{% endif %}"
+  {% render 'compare-page-urls' %}
+  data-max="4"
+  data-label-progress="{{ 'compare.bar.progress' | t }}"
+  data-label-remove="{{ 'compare.remove' | t }}"
+  data-label-view="{{ 'compare.view' | t }}"
+  data-label-added="{{ 'compare.announce.added' | t: count: '[count]' }}"
+  hidden
+>
+  <template>
+    <div class="compare-bar__inner" data-compare-inner>
+      <p class="compare-bar__progress" data-compare-progress></p>
+      <ul class="compare-bar__items" role="list" data-compare-items></ul>
+      <a class="compare-bar__view" href="#" data-compare-view>{{ 'compare.view' | t }}</a>
+      <button
+        type="button"
+        class="compare-bar__close"
+        data-compare-close
+        aria-label="{{ 'compare.bar.close' | t }}"
+      >
+        {{ 'icon-close.svg' | inline_asset_content }}
+      </button>
+    </div>
+    <p class="visually-hidden" role="status" aria-live="polite" data-compare-status></p>
+  </template>
+</compare-bar>
