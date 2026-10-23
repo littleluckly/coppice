@@ -216,6 +216,172 @@
 
 {%- endif -%}
 
+{% stylesheet %}
+/* ===== 对比页（SDD §6.2）=====
+   颜色一律由主题令牌派生；表格用 caption + th scope 支撑屏读顺序。
+   移动端横滚 + 首列与表头 sticky（§6.2.4）。 */
+
+.compare-page-section {
+  --compare-border: color-mix(in srgb, var(--color-foreground) 14%, transparent);
+  --compare-muted: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+}
+
+.compare-page {
+  max-inline-size: 1400px;
+  margin-inline: auto;
+  padding-block: clamp(2rem, 5vw, 4rem);
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
+}
+
+.compare-page__header {
+  margin-block-end: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.compare-page__title {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1.15;
+}
+
+.compare-page__intro {
+  max-inline-size: 62ch;
+  color: var(--color-foreground);
+}
+
+.compare-page__notice {
+  max-inline-size: 62ch;
+  margin-inline: auto;
+  padding-block: clamp(3rem, 8vw, 6rem);
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
+  text-align: center;
+}
+
+.compare-page__back {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  margin-block-start: 1rem;
+  padding-inline: 1.25rem;
+  border: 1px solid var(--color-foreground);
+  border-radius: 4px;
+  color: var(--color-foreground);
+  text-decoration: none;
+}
+
+.compare-page__limit {
+  margin-block-start: 1rem;
+  font-size: 0.85rem;
+  color: var(--compare-muted);
+}
+
+.compare-table-wrap {
+  overflow-x: auto;
+}
+
+.compare-table {
+  inline-size: 100%;
+  min-inline-size: 640px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 0.75rem 0.85rem;
+  border-block-end: 1px solid var(--compare-border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.compare-table thead th {
+  border-block-end-width: 2px;
+  font-weight: 400;
+}
+
+.compare-table__corner {
+  inline-size: 10rem;
+}
+
+.compare-table__col {
+  min-inline-size: 11rem;
+}
+
+.compare-table__product {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.compare-table__product img {
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--color-foreground) 4%, var(--color-background));
+}
+
+.compare-table__product-title {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.compare-table__row-label {
+  font-weight: 500;
+  color: var(--compare-muted);
+  white-space: nowrap;
+}
+
+.compare-table__value--missing {
+  color: var(--compare-muted);
+}
+
+/* 变体差异提示：原生 details，自带展开状态与键盘支持（§6.2.4） */
+.compare-table__note {
+  margin-block-start: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.compare-table__note summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 20px;
+  block-size: 20px;
+  border: 1px solid var(--compare-border);
+  border-radius: 50%;
+  cursor: pointer;
+  list-style: none;
+}
+
+.compare-table__note summary::-webkit-details-marker {
+  display: none;
+}
+
+.compare-table__note p {
+  margin: 0.4rem 0 0;
+  color: var(--compare-muted);
+}
+
+@media (max-width: 767px) {
+  .compare-table thead th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background-color: var(--color-background);
+  }
+
+  .compare-table__row-label {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    background-color: var(--color-background);
+  }
+}
+{% endstylesheet %}
+
 {% schema %}
 {
   "name": "t:sections.compare_page.name",
