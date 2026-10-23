@@ -24,6 +24,8 @@
 
     {% # Load and preload the critical CSS %}
     {{ 'critical.css' | asset_url | stylesheet_tag: preload: true }}
+    {% # 对比浮层样式：不参与首屏，不 preload %}
+    {{ 'compare.css' | asset_url | stylesheet_tag }}
 
     {% # Social, title, etc. %}
     {% render 'meta-tags' %}
@@ -73,5 +75,11 @@
     </main>
 
     {% sections 'footer-group' %}
+
+    {% comment %}
+      底部对比确认条（SDD §6.2.8）：全站唯一的浮层，挂 layout 而非某个 section ——
+      商品卡在首页 / 集合页 / 搜索结果都会出现，浮层不能跟着哪个 section 走。
+    {% endcomment %}
+    {% render 'compare-bar' %}
   </body>
 </html>
