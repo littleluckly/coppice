@@ -225,6 +225,11 @@
   margin-inline: auto;
   padding-block: clamp(2rem, 5vw, 4rem);
   padding-inline: clamp(1rem, 4vw, 2.5rem);
+  /* ⚠️ 这一条不能省：Shopify 的 section 包裹 div 是 display: grid，
+     本元素是 grid item，默认 min-inline-size: auto ⇒ 被表格 640px 撑到 675px
+     （= 640 + 两侧 padding），于是表格容器与内容同宽、横向滚动永不触发。
+     2026-10-22 祖先链实测：SECTION.compare-page w=675 minW=auto。 */
+  min-inline-size: 0;
 }
 
 /* ===== 表格渐显（2026-10-22）=====
