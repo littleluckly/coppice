@@ -211,6 +211,12 @@
       const { productOut, textStart, textOut, textStagger, bgDelay, bgOut, nextIn, nextAdvance, enterOffset } =
         this.#readParams();
 
+      /* 方向：由「往哪边翻」决定；回绕（如 3 → 0 即 nextIndex=4）仍算 forward。
+         移动端是横向推拉、桌面是纵向卷动，两套 keyframes 在 CSS 里按媒体条件换名，
+         这里只负责给出方向与初始位移。断点必须与 section 里的 989px 一致。 */
+      const forward = nextIndex > this.current;
+      const horizontal = window.matchMedia('(max-width: 989px)').matches;
+
       const currentSlide = this.slides[this.current];
       const nextSlide = this.slides[target];
       const product = currentSlide.querySelector('.hero-slideshow__product');

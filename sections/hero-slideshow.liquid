@@ -788,6 +788,72 @@
     .hero-slideshow__arrow {
       display: none;
     }
+
+    /* ===== 移动端切换改横向（2026-10-25）=====
+       手机上「手往左划、画面往上卷」两套方向语言，观感是割裂的；横向推拉与手势同向。
+       桌面保留纵向胶片卷动（那是这个 hero 的签名动作，且鼠标端没有横向手势预期）。
+       ⚠️ 无缝前提与纵向完全一致：卷出与顶入**同长、同曲线、同距离**（都是自身 100%）。
+       纵向那六组 keyframes 不动，这里只按媒体条件换 animation-name。
+       方向由 JS 写在根元素的 data-hero-dir 上（next / prev），
+       prev 用 -rev 一套镜像 —— 否则往回滑时画面会朝反方向走。 */
+    .hero-slideshow__bg.is-out { animation-name: hero-bg-out-x; }
+    .hero-slideshow__slide.is-next-in { animation-name: hero-next-in-x; }
+    .hero-slideshow__product.is-out { animation-name: hero-product-out-x; }
+    .hero-slideshow__line.is-out { animation-name: hero-text-out-x; }
+    .hero-slideshow__line.is-in { animation-name: hero-text-in-x; }
+    .hero-slideshow__product.is-in { animation-name: hero-product-in-x; }
+
+    [data-hero-dir='prev'] .hero-slideshow__bg.is-out { animation-name: hero-bg-out-x-rev; }
+    [data-hero-dir='prev'] .hero-slideshow__slide.is-next-in { animation-name: hero-next-in-x-rev; }
+    [data-hero-dir='prev'] .hero-slideshow__product.is-out { animation-name: hero-product-out-x-rev; }
+    [data-hero-dir='prev'] .hero-slideshow__line.is-out { animation-name: hero-text-out-x-rev; }
+    [data-hero-dir='prev'] .hero-slideshow__line.is-in { animation-name: hero-text-in-x-rev; }
+    [data-hero-dir='prev'] .hero-slideshow__product.is-in { animation-name: hero-product-in-x-rev; }
+
+    @keyframes hero-bg-out-x {
+      to { transform: translateX(-100%); }
+    }
+    @keyframes hero-bg-out-x-rev {
+      to { transform: translateX(100%); }
+    }
+    @keyframes hero-next-in-x {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+    @keyframes hero-next-in-x-rev {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(0); }
+    }
+    /* 图文退场/入场：横向位移量取 48px（约等于一个字宽），比纵向的 60/80px 收敛，
+       因为横向位移在窄屏上更容易「晃眼」。 */
+    @keyframes hero-product-out-x {
+      to { transform: translateX(-56px); opacity: 0; }
+    }
+    @keyframes hero-product-out-x-rev {
+      to { transform: translateX(56px); opacity: 0; }
+    }
+    @keyframes hero-text-out-x {
+      to { transform: translateX(-48px); opacity: 0; }
+    }
+    @keyframes hero-text-out-x-rev {
+      to { transform: translateX(48px); opacity: 0; }
+    }
+    @keyframes hero-text-in-x {
+      from { transform: translateX(48px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes hero-text-in-x-rev {
+      from { transform: translateX(-48px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes hero-product-in-x {
+      from { transform: translateX(56px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes hero-product-in-x-rev {
+      from { transform: translateX(-56px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
   }
 {% endstylesheet %}
 
