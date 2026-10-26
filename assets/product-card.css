@@ -195,7 +195,9 @@
      卡片文字行数不一时，Compare 与 Add to cart 的位置在各卡之间保持齐平。
      2026-10-25 刘工：原来只在 :last-child 时 auto，有加购区的卡就不贴底了。 */
   margin-block-start: auto;
-  padding: 10px 0;
+  /* 恒定内边距 + 负外边距：冲突时加底色不产生位移，视觉位置与常态一致 */
+  padding: 10px 0.5rem;
+  margin-inline: -0.5rem;
   min-height: 44px;
   border: none;
   background: none;
@@ -302,18 +304,21 @@ html:not(.js) compare-toggle {
 }
 
 /* ===== 跨组冲突反馈（2026-10-25）=====
-   点了对比却加不上时，把按钮和它的勾选框一起转红并晃 0.5s，
-   把视线拉回「为什么没反应」——只闪一下，不残留红态。
-   红色走 --color-error 令牌（不跟随品牌色，否则与品牌绿区分不开）。 */
+   点了对比却加不上时，按钮底与勾选框一起转成警告黄并晃 0.5s，
+   把视线拉回「为什么没反应」——只闪一下，不残留告警态。
+   颜色走 --color-warning 令牌（不跟随品牌色，否则与品牌绿区分不开）；
+   **黄色只做底色，不做文字色**——白底上约 1.5:1，等于看不见。 */
 
 .product-card__compare.is-conflict {
-  color: var(--color-error);
+  /* 黄色**不用于文字**：白底上对比度约 1.5:1，等于看不见。
+     改成淡黄底 + 保持原文字色，既醒目又不牺牲可读性。 */
+  background-color: color-mix(in srgb, var(--color-warning) 22%, transparent);
   animation: product-card-compare-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
 .product-card__compare.is-conflict::before {
-  border-color: var(--color-error);
-  background-color: color-mix(in srgb, var(--color-error) 16%, transparent);
+  border-color: var(--color-warning);
+  background-color: color-mix(in srgb, var(--color-warning) 55%, transparent);
   box-shadow: none;
 }
 
