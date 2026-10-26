@@ -77,7 +77,9 @@
             "image_mobile": "Mobile image (portrait, optional)",
             "image_mobile_info": "Recommended 3:4. When empty, the landscape image is cropped on mobile.",
             "product_image": "Product image (transparent cutout)",
-            "product_image_info": "PNG or WebP with transparency. Floats above the background with a soft shadow; leave empty to skip."
+            "product_image_info": "PNG or WebP with transparency. Floats above the background with a soft shadow; leave empty to skip.",
+            "product_image_mobile": "Mobile product image (optional)",
+            "product_image_mobile_info": "Square or portrait cutout works best on phones. When empty, the image above is used, scaled down to fit."
           },
           "defaults": {
             "eyebrow": "New · 40V battery series",
