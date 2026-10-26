@@ -23,9 +23,12 @@
        别再往 60% 以下走（Lighthouse color-contrast 会挂）。 */
     --color-foreground-muted: color-mix(in srgb, var(--color-foreground) 70%, transparent);
 
-    /* 语义色：冲突/错误。**不跟随 preset 品牌色**——警告必须与品牌绿区分开，
-       否则「红了」这件事读不出来。在浅底(#FFF)与深底(#0F1012)上都过 4.5:1。 */
-    --color-error: #D93B3B;
+    /* 语义色：警告。**不跟随 preset 品牌色** —— 警告必须与品牌绿区分开。
+       拆成两个是因为黄色有硬约束：
+       · --color-warning      纯黄，**只能当底色**（白底上做文字色对比度约 1.5:1，等于看不见）
+       · --color-warning-ink  压黄底上的深色文字（黄底总够亮，固定深色在两种 preset 下都过 7:1） */
+    --color-warning: #E8A33D;
+    --color-warning-ink: #2A1E00;
 
     /* 浅品牌绿（2026-10-17）：hover 光晕等场合用。oklch from 只取品牌色相，
        亮度/饱和度独立定值——商家换任何深浅的品牌绿，算出来的浅绿都够亮
