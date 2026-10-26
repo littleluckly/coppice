@@ -809,6 +809,44 @@
     [data-hero-dir='prev'] .hero-slideshow__line.is-in { animation-name: hero-text-in-x-rev; }
     [data-hero-dir='prev'] .hero-slideshow__product.is-in { animation-name: hero-product-in-x-rev; }
 
+    /* ---- 底部遮罩必须「原地不动」----
+       .hero-slideshow__fade 在 bg / slide 内部，会跟着父级横向平移；而它的左右边缘
+       是同色硬边（垂直方向白→透明，水平方向没有过渡）。一旦平移，那条硬边就进画，
+       观感是一块白幕横扫过去 —— 实测截图里能直接看到。
+       这里让 fade 反向抵消父级位移：父 +100% ↔ 子 -100%，且两者共用同一条缓动、
+       同一时长，所以合成位移恒为 0，肉眼完全静止。
+       注意两处的起点不同：
+         · 旧屏的 fade 在 .is-out 的 bg 里，父从 0 → -100%，子要 0 → +100%；
+         · 新屏的 fade 在 .is-next-in 的 slide 里，父从 +100% → 0，子要 -100% → 0。 */
+    .hero-slideshow__bg.is-out .hero-slideshow__fade {
+      animation: hero-fade-hold-out var(--hero-bg-out-dur, 600ms)
+        var(--hero-roll-ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
+    }
+    .hero-slideshow__slide.is-next-in .hero-slideshow__fade {
+      animation: hero-fade-hold-in var(--hero-next-in-dur, 600ms)
+        var(--hero-roll-ease, cubic-bezier(0.4, 0, 0.2, 1)) both;
+    }
+    [data-hero-dir='prev'] .hero-slideshow__bg.is-out .hero-slideshow__fade {
+      animation-name: hero-fade-hold-out-rev;
+    }
+    [data-hero-dir='prev'] .hero-slideshow__slide.is-next-in .hero-slideshow__fade {
+      animation-name: hero-fade-hold-in-rev;
+    }
+    @keyframes hero-fade-hold-out {
+      to { transform: translateX(100%); }
+    }
+    @keyframes hero-fade-hold-out-rev {
+      to { transform: translateX(-100%); }
+    }
+    @keyframes hero-fade-hold-in {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(0); }
+    }
+    @keyframes hero-fade-hold-in-rev {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+
     @keyframes hero-bg-out-x {
       to { transform: translateX(-100%); }
     }
