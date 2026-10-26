@@ -85,57 +85,7 @@
     return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX;
   }
 
-  // ------------------------------------------------------------ compare-toggle
-
-  class CompareToggle extends HTMLElement {
-    connectedCallback() {
-      if (this.controller) return;
-      this.button = this.querySelector('button');
-      if (!this.button) return;
-
-      this.max = clampMax(this);
-      this.controller = new AbortController();
-      const { signal } = this.controller;
-
-      this.onClick = this.onClick.bind(this);
-      this.button.addEventListener('click', this.onClick, { signal });
-      document.addEventListener('compare:updated', () => this.sync(), { signal });
-
-      this.sync();
-    }
-
-    disconnectedCallback() {
-      if (this.controller) {
-        this.controller.abort();
-        this.controller = null;
-      }
-    }
-
-    get group() {
-      return (this.dataset.group || '').trim();
-    }
-
-    get handle() {
-      return (this.dataset.handle || '').trim();
-    }
-
-    /** aria-pressed 跟随清单状态（样式靠 [aria-pressed='true'] 命中） */
-    sync() {
-      if (!this.button) return;
-      const inList = readList().some((item) => item.h === this.handle);
-      this.button.setAttribute('aria-pressed', inList ? 'true' : 'false');
-      this.toggleAttribute('data-in-list', inList);
-    }
-
-    onClick() {
-      const handle = this.handle;
-      const group = this.group;
-      if (!handle || !group) return;
-
-      const list = readList();
-      const existing = list.find((item) => item.h === handle);
-
-      if (existing) {  // --------------------------------------------------------- 全局冲突提示
+// --------------------------------------------------------- 全局冲突提示
 
   /** 取页面里唯一的 <compare-toast>，把内容推给它 */
   function showToast(options) {
@@ -223,6 +173,58 @@
       if (restoreFocus && target && target.isConnected) target.focus();
     }
   }
+
+  // ------------------------------------------------------------ compare-toggle
+
+  class CompareToggle extends HTMLElement {
+    connectedCallback() {
+      if (this.controller) return;
+      this.button = this.querySelector('button');
+      if (!this.button) return;
+
+      this.max = clampMax(this);
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.onClick = this.onClick.bind(this);
+      this.button.addEventListener('click', this.onClick, { signal });
+      document.addEventListener('compare:updated', () => this.sync(), { signal });
+
+      this.sync();
+    }
+
+    disconnectedCallback() {
+      if (this.controller) {
+        this.controller.abort();
+        this.controller = null;
+      }
+    }
+
+    get group() {
+      return (this.dataset.group || '').trim();
+    }
+
+    get handle() {
+      return (this.dataset.handle || '').trim();
+    }
+
+    /** aria-pressed 跟随清单状态（样式靠 [aria-pressed='true'] 命中） */
+    sync() {
+      if (!this.button) return;
+      const inList = readList().some((item) => item.h === this.handle);
+      this.button.setAttribute('aria-pressed', inList ? 'true' : 'false');
+      this.toggleAttribute('data-in-list', inList);
+    }
+
+    onClick() {
+      const handle = this.handle;
+      const group = this.group;
+      if (!handle || !group) return;
+
+      const list = readList();
+      const existing = list.find((item) => item.h === handle);
+
+      if (existing) {
 
 
         this.remove(handle);
