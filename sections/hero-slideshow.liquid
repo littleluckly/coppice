@@ -712,26 +712,28 @@
     }
     /* 移动端是「产品在上、文字在下」的竖排，水平居中固定 50%，
        因此桌面端的自定义位置设置在这里不生效（设置项的 info 里已写明）。
-       ⚠️ 两处与旧版不同，都是为了「整张产品图必须看得见」：
+       ⚠️ 三处与旧版不同，都是为了让「整张产品图完整可见、且不压住文字」：
        ① translate 的 Y 从 -50% 改成 0 —— 让 top 表达**顶边**而不是中心。
-          旧版 top:30% + 中心对齐，图片高过 60% 视口就直接溢出上沿（实测溢出 20px+，
-          割草机手柄整段被裁）。
-       ② 加 max-height 48% + img 的 max-* 约束 —— 商家传 3:4 竖图时按高度反推宽度，
-          不再靠宽度一个维度硬撑。 */
+          旧版 top:30% + 中心对齐，图片高过 60% 视口就直接溢出上沿（实测溢 20px+，
+          割草机手柄整段被裁掉）。
+       ② 容器改成**明确高度** height:44%，img 用 object-fit: contain。
+          不能只写 max-height：父高是 auto 时百分比 max-height 在 img 上无法解析，
+          图片会按宽度撑开（实测容器 184 高、图片 313 高，照样压出界）。
+       ③ 产品图底部对齐（object-position: bottom）—— 抠图上方常有大片透明，
+          居中会让「看得见的机身」整体上浮，底边对不齐就很难控位置。 */
     .hero-slideshow__product {
       top: 0;
       left: 50%;
       translate: -50% 0;
       width: 62%;
+      height: 44%;
       max-width: none;
-      max-height: 48%;
     }
     .hero-slideshow__product-img {
-      width: auto;
-      max-width: 100%;
-      max-height: 100%;
-      margin-inline: auto;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
+      object-position: center bottom;
     }
     .hero-slideshow__content {
       top: auto;
@@ -740,21 +742,18 @@
       transform: translate(-50%, 0);
       text-align: center;
     }
-    /* 文字精简（刘工 2026-10-25「移动端文字太多」）：副标题压到 2 行、
-       字号降一档、行距与块间距收紧。窄屏上 4 行文案 + 按钮必然把首屏吃掉一半。 */
+    /* 文字精简（刘工 2026-10-25「移动端文字太多」）：
+       移动端**不显示副标题**。竖屏 384px 高里塞「产品图 + 眉标 + 标题 + 副标题 + 按钮」，
+       任何一项都不可能在保住产品图完整的前提下共存（实测内容块 184px，
+       产品图占 44% = 169px，只剩 15px 余量）。副标题在窄屏本来就是三行碎句，
+       信息密度最低 —— 取舍掉它，保留眉标/标题/按钮这条主链路。
+       桌面端副标题照常显示，不受影响。 */
+    .hero-slideshow__subheading {
+      display: none;
+    }
     .hero-slideshow__eyebrow {
       margin-bottom: 0.5rem;
       letter-spacing: 0.08em;
-    }
-    .hero-slideshow__subheading {
-      margin: 0.75rem auto 0;
-      font-size: 0.9375rem;
-      line-height: 1.45;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      line-clamp: 2;
-      overflow: hidden;
     }
     .hero-slideshow__cta-row {
       justify-content: center;
