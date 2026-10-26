@@ -1,0 +1,39 @@
+{% comment %}
+  compare-toast — 全局冲突提示（2026-10-25 刘工改）。
+
+  原来「只能比同类型商品 / 最多 4 款」的提示是在商品卡内就地展开的：
+  卡片窄、提示挤、撑高卡片还把下面的卡挤动。改为全局 toast，从屏幕上缘滑入，
+  不改变任何卡片的高度。
+
+  · 只承载**需要用户做决定**的提示（跨组冲突、已达上限），不做普通成功反馈
+    —— 成功用的是底部确认条，两套职责不重叠。
+  · 3 秒后自动关闭；但**鼠标悬停或键盘聚焦时暂停计时**（WCAG 2.2.1 要求时限可延长）。
+    Esc、关闭按钮、或选完主操作也可关。
+  · 显示时焦点移到主按钮，关闭后回到触发它的那个按钮。
+
+  壳由 Liquid 渲染，内容全由 JS 填（文案从触发元素的 data-* 读取，前端不硬编码）。
+{% endcomment %}
+
+<compare-toast hidden>
+  <div class="compare-toast__inner">
+    <span class="compare-toast__icon" aria-hidden="true">!</span>
+    <p class="compare-toast__message" id="compare-toast-message" data-compare-toast-message></p>
+    <button
+      type="button"
+      class="compare-toast__close"
+      data-compare-toast-close
+      aria-label="{{ 'compare.toast.close' | t }}"
+    >
+      {{ 'icon-close.svg' | inline_asset_content }}
+    </button>
+    <div class="compare-toast__actions">
+      <button
+        type="button"
+        class="compare-toast__primary"
+        data-compare-toast-primary
+        aria-describedby="compare-toast-message"
+        hidden
+      ></button>
+    </div>
+  </div>
+</compare-toast>

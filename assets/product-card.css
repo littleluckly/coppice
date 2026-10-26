@@ -141,7 +141,9 @@
    取 var(--color-brand) 而非硬编码色值，未来换 preset 自动跟随。 */
 .product-card__quick-add {
   display: block;
-  margin-block-start: auto; /* 文字行数不一也把按钮统一压到卡底（卡本身 height:100% + 纵向 flex） */
+  /* 不再自持 auto：由上方 .product-card__compare 吃掉剩余空间，把「Compare + 加购」
+     作为一组压到卡底。两者都写 auto 会平分剩余空间，Compare 就浮在中间了。 */
+  margin-block-start: 0;
 }
 .product-card__quick-add form {
   display: block;
@@ -189,8 +191,13 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  margin-block-start: 0;
-  padding: 10px 0;
+  /* 始终吃掉剩余空间，把自己连同下方的加购区一起压到卡底 ——
+     卡片文字行数不一时，Compare 与 Add to cart 的位置在各卡之间保持齐平。
+     2026-10-25 刘工：原来只在 :last-child 时 auto，有加购区的卡就不贴底了。 */
+  margin-block-start: auto;
+  /* 恒定内边距 + 负外边距：冲突时加底色不产生位移，视觉位置与常态一致 */
+  padding: 10px 0.5rem;
+  margin-inline: -0.5rem;
   min-height: 44px;
   border: none;
   background: none;
@@ -198,9 +205,6 @@
   font-size: 0.85rem;
   color: inherit;
   cursor: pointer;
-}
-.product-card__compare:last-child {
-  margin-block-start: auto;
 }
 .product-card__compare::before {
   content: '';
@@ -211,7 +215,10 @@
   background-color: var(--color-background);
 }
 .product-card__compare[aria-pressed='true']::before {
-  background-color: var(--color-foreground);
+  /* 选中态用品牌色，与下方「Add to cart」同色系 —— 一张卡上的两个主操作
+     视觉上是一套的。未选中态保持中性灰边：那才是「还没激活」的正确信号。 */
+  border-color: var(--color-brand);
+  background-color: var(--color-brand);
   box-shadow: inset 0 0 0 2.5px var(--color-background);
 }
 
@@ -282,5 +289,67 @@
   .product-card__media img,
   .product-card__media::before {
     transition: none;
+  }
+}
+
+/* ===== 对比入口外壳（2026-10-22，SDD §6.2.8）=====
+   <compare-toggle> 只是行为容器，display:contents 让它不生成盒子：
+   内部原生 button 仍直接参与卡片 flex 布局，原有 margin-top:auto 等规则不受影响。
+   颜色走令牌派生，不硬编码。 */
+compare-toggle {
+  display: contents;
+}
+
+/* 无 JS 时按钮点了不会有任何反应 → 整块不渲染（SDD §6.2.5「勾选入口优雅不出现」）。
+   .js 由 layout/theme.liquid 的 head 内联脚本加在 <html> 上。 */
+html:not(.js) compare-toggle {
+  display: none;
+}
+
+/* ===== 跨组冲突反馈（2026-10-25）=====
+   点了对比却加不上时，按钮底与勾选框一起转成警告黄并晃 0.5s，
+   把视线拉回「为什么没反应」——只闪一下，不残留告警态。
+   颜色走 --color-warning 令牌（不跟随品牌色，否则与品牌绿区分不开）；
+   **黄色只做底色，不做文字色**——白底上约 1.5:1，等于看不见。 */
+
+.product-card__compare.is-conflict {
+  /* 黄色**不用于文字**：白底上对比度约 1.5:1，等于看不见。
+     改成淡黄底 + 保持原文字色，既醒目又不牺牲可读性。 */
+  background-color: color-mix(in srgb, var(--color-warning) 22%, transparent);
+  animation: product-card-compare-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.product-card__compare.is-conflict::before {
+  border-color: var(--color-warning);
+  background-color: color-mix(in srgb, var(--color-warning) 55%, transparent);
+  box-shadow: none;
+}
+
+@keyframes product-card-compare-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-4px);
+  }
+  35% {
+    transform: translateX(4px);
+  }
+  55% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+  90% {
+    transform: translateX(-1px);
+  }
+}
+
+/* 关掉动效时仍保留变色（只是不晃），并延长显示时间让人看清 */
+@media (prefers-reduced-motion: reduce) {
+  .product-card__compare.is-conflict {
+    animation: none;
   }
 }

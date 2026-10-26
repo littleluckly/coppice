@@ -138,5 +138,39 @@
         "default": 4
       }
     ]
+  },
+  {
+    "name": "t:general.compare",
+    "settings": [
+      {
+        "type": "header",
+        "content": "t:general.compare_groups_header"
+      },
+      {
+        "type": "text",
+        "id": "compare_groups",
+        "label": "t:labels.compare_groups",
+        "info": "t:labels.compare_groups_info",
+        "default": "walk-behind-mower,riding-mower,chainsaw,string-trimmer"
+      },
+      {
+        "type": "header",
+        "content": "t:general.compare_page_header"
+      },
+      {
+        "type": "collection_list",
+        "id": "compare_collections",
+        "label": "t:labels.compare_collections",
+        "info": "t:labels.compare_collections_info",
+        "limit": 12
+      },
+      {
+        "type": "checkbox",
+        "id": "compare_page_indexing",
+        "label": "t:labels.compare_page_indexing",
+        "info": "t:labels.compare_page_indexing_info",
+        "default": true
+      }
+    ]
   }
 ]

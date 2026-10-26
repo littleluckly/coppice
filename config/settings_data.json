@@ -17,7 +17,14 @@
         "disabled": false,
         "settings": {}
       }
-    }
+    },
+    "compare_collections": [
+      "walk-behind-mower",
+      "chainsaw",
+      "string-trimmer",
+      "riding-mower-compare"
+    ],
+    "compare_page_indexing": false
   },
   "presets": {
     "Coppice": {
@@ -32,7 +39,8 @@
       "skeleton_background_color": "",
       "skeleton_foreground_color": "",
       "skeleton_accent_color": "",
-      "input_corner_radius": 4
+      "input_corner_radius": 4,
+      "compare_page_indexing": true
     },
     "Coppice Noir": {
       "type_primary_font": "work_sans_n4",
@@ -46,7 +54,8 @@
       "input_corner_radius": 4,
       "skeleton_background_color": "#0F1012",
       "skeleton_foreground_color": "#E9E9EC",
-      "skeleton_accent_color": "#A3E635"
+      "skeleton_accent_color": "#A3E635",
+      "compare_page_indexing": true
     }
   }
 }

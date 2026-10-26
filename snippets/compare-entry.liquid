@@ -1,0 +1,33 @@
+{% doc %}
+  compare-entry — 页头对比入口（SDD §6.2.8）。
+
+  · 持久状态入口：图标 + 角标（清单款数 1–4），点击跳当前组的对比页。
+  · URL 映射来自 `compare-page-urls`：**没有任何分组存在对比页时该 snippet 输出
+    `hidden`**，整个入口因此不可见 —— 不会出现指向 404 的链接（§6.2.1）。
+  · `data-pending` 让入口在 JS 接管前保持 visibility:hidden：保留布局空间，
+    避免图标突然出现推动相邻元素（CLS）；无 JS 时永久隐藏（「无 JS 优雅不出现」）。
+  · 移动端页头已被 ☰/logo/搜索/账号/购物车占满 → 仅角标 > 0 时显示，
+    由 `data-empty` + CSS 控制，不监听视口。
+  · 页面探测每页只跑一次（4 次 `pages[handle]`，实测 2.6 μs/次），不进商品循环。
+
+  @param {string} [class] - 追加到根元素的 class
+  @param {boolean} [show_label] - true → 行式（抽屉里用）：图标 + 文字 + 角标
+{% enddoc %}
+
+<compare-entry
+  class="compare-entry{% if class != blank %} {{ class }}{% endif %}"
+  {% render 'compare-page-urls' %}
+  data-max="4"
+  data-empty
+  data-pending
+  data-label-empty="{{ 'compare.entry_label_empty' | t }}"
+  data-label-count="{{ 'compare.entry_label' | t: count: '[count]' }}"
+>
+  <a class="compare-entry__link" href="#" aria-label="{{ 'compare.entry_label_empty' | t }}">
+    {{ 'icon-compare.svg' | inline_asset_content }}
+    {%- if show_label -%}
+      <span class="compare-entry__label">{{ 'compare.heading' | t }}</span>
+    {%- endif -%}
+    <span class="compare-entry__count" data-compare-count hidden aria-hidden="true"></span>
+  </a>
+</compare-entry>

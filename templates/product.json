@@ -13,6 +13,9 @@
       "type": "product",
       "settings": {}
     },
+    "compare-lookup": {
+      "type": "compare-lookup"
+    },
     "1791511954cea426ef": {
       "type": "apps",
       "blocks": {
@@ -34,6 +37,7 @@
   },
   "order": [
     "main",
+    "compare-lookup",
     "1791511954cea426ef"
   ]
 }

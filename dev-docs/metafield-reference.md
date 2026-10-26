@@ -148,4 +148,5 @@ Consumables (product.metafields.acc.consumables)
 Fitment note (product.metafields.acc.fitment_note)
 ```
 
-> 实际导入样例见 `dev-docs/mower-import/mower-products-import.csv`（割草机 22 列版，无 bar_length_mm）与配套 `sources-and-notes.md`。
+> 实际导入样例见 `dev-docs/mower-import/mower-products-import.csv`（**23 列全量版 = 51 列**，21 款主机覆盖 4 个对比分组：走步/骑乘/打草机/链锯）与配套 `sources-and-notes.md`。
+> `cutting_width_mm` 与 `bar_length_mm` 互斥：割草机与打草机填前者，链锯填后者，生成脚本 `build_mower_csv.py` 的 `validate()` 强制。

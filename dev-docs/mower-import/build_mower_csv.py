@@ -1,19 +1,31 @@
 #!/usr/bin/env python3
 """
-build_mower_csv.py — 生成割草机产品导入 CSV（Coppice SDD §5.9 口径）
+build_mower_csv.py — 生成产品导入 CSV（Coppice SDD §5.9 口径）
+
+商品构成（2026-10-26 扩充，覆盖 SDD 全部 4 个对比分组）：
+    割草机 11 款（走步 7 + 骑乘 4）
+  + 打草机  5 款（汽油 3 + 40V + 60V）
+  + 链锯    5 款（汽油 3 + 40V + 80V）
+  = 21 款，全部单变体。
 
 列结构 = 官方 product_template.csv 的核心子集（28 列，列头逐字取自模板）
-       + 22 个割草机适用 metafield 列（SDD §5.3；链锯专用 bar_length_mm 除外）= 50 列。
+       + 23 个 metafield 列（SDD §5.3 全量，含链锯专用 bar_length_mm）= 51 列。
 
-数据来源：2026-09-29 网络核实（官方产品页 / 零售商页），来源清单见 sources-and-notes.md。
-纪律：查不到的值留空（noise_db / power_w 全部留空，官方未公布，不编数）。
+数据来源：2026-09-29 / 2026-10-26 网络核实（官方产品页 / 授权经销商页），
+来源清单见 sources-and-notes.md。
+纪律：查不到的值留空（不编数）；跨来源冲突的值留空并在来源文档记明。
 """
 
 import csv
 import os
 import sys
 
-TEMPLATE_PATH = "/Users/xiongweiliu/Downloads/product_template (1).csv"
+# 官方 product_template.csv 只用于「列名逐字校验」。该文件不在版本库内，
+# 换机后可能不存在 —— 缺失时降级为「跳过逐字校验」，不阻断生成。
+TEMPLATE_PATH = os.environ.get(
+    "PRODUCT_TEMPLATE_CSV",
+    "/Users/mac/Downloads/product_template.csv",
+)
 OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mower-products-import.csv")
 
 # ---------------------------------------------------------------- 列定义
@@ -50,7 +62,8 @@ OFFICIAL_KEEP = [
     "Image alt text",
 ]
 
-# 割草机适用的 metafield 22 列（SDD §5.3；bar_length_mm 为链锯专用，不进本文件）
+# metafield 23 列（SDD §5.3 全量）。bar_length_mm 只给链锯；cutting_width_mm
+# 给割草机（割台幅宽）与打草机（切割幅度），二者互斥，由 validate() 强制。
 METAFIELD_COLS = [
     ("Power source", "product.metafields.spec.power_source"),
     ("Operation type", "product.metafields.spec.operation_type"),
@@ -63,6 +76,7 @@ METAFIELD_COLS = [
     ("Displacement (cc)", "product.metafields.spec.displacement_cc"),
     ("Power (W)", "product.metafields.spec.power_w"),
     ("Cutting width (mm)", "product.metafields.spec.cutting_width_mm"),
+    ("Bar length (mm)", "product.metafields.spec.bar_length_mm"),
     ("Weight (kg)", "product.metafields.spec.weight_kg"),
     ("Noise (dB A)", "product.metafields.spec.noise_db"),
     ("Area coverage (sq ft)", "product.metafields.spec.area_coverage_sqft"),
@@ -156,6 +170,49 @@ IMAGES = {
         "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42tc-1-main_webp.webp?v=1791447564", "Northbark NB-42TC 42-inch riding lawn mower with 7-speed CVT, three-quarter view"),
         "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42tc-2-controls_webp.webp?v=1791447564", "Northbark NB-42TC gear shift detail"),
     },
+    # ---- 2026-10-26 新增 10 款（打草机 5 + 链锯 5）
+    # 图已于 2026-10-26 上传 Shopify Files；文件名 = <品类>-<型号>-<序>-<内容>_rmbg_webp.webp，
+    # _rmbg_ 表示已去背景（透明底）。URL 与 alt 台账见 docs/demo-store/asset-provenance.md §4b。
+    "northbark-nb-t21": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t21-1-main_rmbg_webp.webp?v=1793006084", "Northbark NB-T21 21.2 cc gas straight-shaft string trimmer, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t21-2-gearhead_rmbg_webp.webp?v=1793006084", "Northbark NB-T21 straight-shaft trimmer gear head and shield detail"),
+    },
+    "northbark-nb-t27": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t27-1-main_rmbg_webp.webp?v=1793006084", "Northbark NB-T27 27.2 cc gas straight-shaft string trimmer, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t27-2-handle_rmbg_webp.webp?v=1793006084", "Northbark NB-T27 loop handle and control handle detail"),
+    },
+    "northbark-nb-t28": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t28-1-main_rmbg_webp.webp?v=1793006084", "Northbark NB-T28 28 cc gas straight-shaft string trimmer, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t28-2-coupling_rmbg_webp.webp?v=1793006084", "Northbark NB-T28 detachable shaft coupling detail"),
+    },
+    "northbark-nb-t40b": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t40b-1-main_rmbg_webp.webp?v=1793006084", "Northbark NB-T40B 40V brushless cordless string trimmer kit, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t40b-2-kit_rmbg_webp.webp?v=1793006084", "Northbark NB-T40B kit with 4.0 Ah battery and charger"),
+    },
+    "northbark-nb-t60b": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t60b-1-main_rmbg_webp.webp?v=1793006084", "Northbark NB-T60B 60V brushless cordless string trimmer kit, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-string-trimmer-nb-t60b-2-kit_rmbg_webp.webp?v=1793006084", "Northbark NB-T60B kit with 2.5 Ah battery and charger"),
+    },
+    "northbark-nb-c16g": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c16g-1-main_rmbg_webp.webp?v=1793006069", "Northbark NB-C16G 16-inch 30.1 cc gas chainsaw, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c16g-2-bar_rmbg_webp.webp?v=1793006069", "Northbark NB-C16G guide bar, chain and chain brake detail"),
+    },
+    "northbark-nb-c18g": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c18g-1-main_rmbg_webp.webp?v=1793006069", "Northbark NB-C18G 18-inch 40.2 cc gas chainsaw, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c18g-2-filter_rmbg_webp.webp?v=1793006069", "Northbark NB-C18G air filter cover and oiler adjustment detail"),
+    },
+    "northbark-nb-c20g": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c20g-1-main_rmbg_webp.webp?v=1793006069", "Northbark NB-C20G 20-inch 59.8 cc gas chainsaw, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c20g-2-wrapper_rmbg_webp.webp?v=1793006069", "Northbark NB-C20G wrap handle and side-access chain tensioner detail"),
+    },
+    "northbark-nb-c40b": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c40b-1-main_rmbg_webp.webp?v=1793006069", "Northbark NB-C40B 40V brushless cordless chainsaw with 16-inch bar, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c40b-2-battery_rmbg_webp.webp?v=1793006069", "Northbark NB-C40B battery bay and on-board tensioning tool detail"),
+    },
+    "northbark-nb-c80b": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c80b-1-main_rmbg_webp.webp?v=1793006069", "Northbark NB-C80B 80V brushless cordless chainsaw with 18-inch bar, three-quarter view"),
+        "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c80b-2-kit_rmbg_webp.webp?v=1793006069", "Northbark NB-C80B kit with 4.0 Ah battery and charger"),
+    },
 }
 
 # ---------------------------------------------------------------- 产品数据
@@ -171,9 +228,26 @@ IMAGES = {
 #       power_source, operation, drive, area, compare_group, battery_platform,
 #       cc, cut_mm, weight_kg, warranty_mo, shipping_class, liftgate, assembly, lead,
 #       desc
+# 可选字段（缺省即为空）：duty（默认 Residential）/ bar_mm / power_w / noise / spec_note
 
-TAXO_LAWN_MOWER = "Home & Garden > Lawn & Garden > Outdoor Power Equipment > Lawn Mowers"
+# 分类法路径逐字取自 Shopify Standard Product Taxonomy（dist/en/categories.txt，
+# 2026-10-26 拉取核对，节点 ID 见括号）：
+#   Lawn Mowers    hg-12-3-5（Riding Mowers 为 hg-12-3-5-1）
+#   Chainsaws      hg-12-3-1
+#   Weed Trimmers  hg-12-3-15  ← 平台命名是 Weed Trimmers，不是 "String Trimmers"
+TAXO_OPEQ = "Home & Garden > Lawn & Garden > Outdoor Power Equipment"
+TAXO_LAWN_MOWER = TAXO_OPEQ + " > Lawn Mowers"
 TAXO_RIDING = TAXO_LAWN_MOWER + " > Riding Mowers"
+TAXO_CHAINSAW = TAXO_OPEQ + " > Chainsaws"
+TAXO_TRIMMER = TAXO_OPEQ + " > Weed Trimmers"
+
+# 分类 → 应属对比分组（跨类型校验的权威判据，SDD §5.3 C）
+CATEGORY_GROUP = {
+    TAXO_LAWN_MOWER: "walk-behind-mower",
+    TAXO_RIDING: "riding-mower",
+    TAXO_CHAINSAW: "chainsaw",
+    TAXO_TRIMMER: "string-trimmer",
+}
 
 PRODUCTS = [
     dict(
@@ -377,11 +451,210 @@ PRODUCTS = [
              "7-speed CVT transmission. Weight 420 lb (190.5 kg). 3-year "
              "limited residential warranty. Oversize freight item.</p>",
     ),
+    # ================= 2026-10-26 新增：打草机 5 款 =================
+    # 参数取自 2026-10-26 核实的官方产品页（下表机型为参数基线，来源见 sources-and-notes.md §3b）。
+    # 文案去商标：Easy2Start / Smart Start / i-30 / Speed-Feed / Reel-Easy / LOAD N' GO 全部泛化。
+    # area_coverage 一律 N/A —— 打草机与链锯没有厂商口径的"适用面积"，不编分段；
+    # 代价：这两组不进面积筛选、对比表"适用面积"行显示 —（见 sources-and-notes.md §2）。
+    dict(
+        title="Northbark NB-T21 21.2 cc Gas Straight-Shaft String Trimmer",
+        handle="northbark-nb-t21",
+        vendor="Northbark",
+        category=TAXO_TRIMMER,
+        ptype="String trimmer",
+        tags="trimmers, gas, straight-shaft",
+        sku="NB-T21",
+        price="279.99",
+        weight_lb=11.5,
+        power_source="Gasoline", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="string-trimmer",
+        battery_platform="", cc=21.2, cut_mm=432, weight_kg=5.22, warranty_mo=60,
+        shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>A 21.2 cc two-stroke engine on a 59 in. straight shaft, with a "
+             "17 in. cutting swath and a speed-load trimmer head. Dry weight 11.5 lb "
+             "(5.22 kg) including the cutting head, harness excluded. 5-year consumer "
+             "warranty.</p>",
+    ),
+    dict(
+        title="Northbark NB-T27 27.2 cc Gas Straight-Shaft String Trimmer",
+        handle="northbark-nb-t27",
+        vendor="Northbark",
+        category=TAXO_TRIMMER,
+        ptype="String trimmer",
+        tags="trimmers, gas, straight-shaft",
+        sku="NB-T27",
+        price="229.99",
+        weight_lb=10.6,
+        power_source="Gasoline", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="string-trimmer",
+        battery_platform="", cc=27.2, cut_mm=420, weight_kg=4.81, warranty_mo=24,
+        shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>27.2 cc two-stroke engine with spring-assisted starting and a loop "
+             "handle for trimming between beds and fences. Cutting circle 16.5 in. "
+             "(420 mm); 10.6 lb (4.81 kg) without fuel. 2-year consumer warranty.</p>",
+    ),
+    dict(
+        title="Northbark NB-T28 28 cc Gas Straight-Shaft String Trimmer (Detachable Shaft)",
+        handle="northbark-nb-t28",
+        vendor="Northbark",
+        category=TAXO_TRIMMER,
+        ptype="String trimmer",
+        tags="trimmers, gas, straight-shaft",
+        sku="NB-T28",
+        price="239.99",
+        weight_lb=12.7,
+        power_source="Gasoline", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="string-trimmer",
+        battery_platform="", cc=28, cut_mm=432, weight_kg=5.76, warranty_mo=24,
+        noise=95, shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>A 28 cc two-stroke engine on a detachable straight shaft, with "
+             "air-purge starting and a 17 in. cutting swath. Weight 12.7 lb (5.76 kg) "
+             "excluding cutting equipment; 95 dB(A) at the operator's ear. 2-year "
+             "consumer warranty.</p>",
+    ),
+    dict(
+        title="Northbark NB-T40B 40V Brushless Cordless String Trimmer (4.0 Ah Kit)",
+        handle="northbark-nb-t40b",
+        vendor="Northbark",
+        category=TAXO_TRIMMER,
+        ptype="String trimmer",
+        tags="trimmers, battery, 40v",
+        sku="NB-T40B",
+        price="249.00",
+        weight_lb=11.6,
+        power_source="Battery", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="string-trimmer",
+        battery_platform="40V", cc="", cut_mm=381, weight_kg=5.26, warranty_mo=60,
+        shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>40V brushless trimmer with an adjustable 13–15 in. swath, a two-speed "
+             "trigger and an attachment-capable shaft, kitted with a 4.0 Ah battery and "
+             "charger. Weight 11.6 lb (5.26 kg) including the battery. 5-year tool "
+             "warranty.</p>",
+    ),
+    dict(
+        title="Northbark NB-T60B 60V Brushless Cordless String Trimmer (2.5 Ah Kit)",
+        handle="northbark-nb-t60b",
+        vendor="Northbark",
+        category=TAXO_TRIMMER,
+        ptype="String trimmer",
+        tags="trimmers, battery, 60v",
+        sku="NB-T60B",
+        price="199.99",
+        weight_lb=7.9,
+        power_source="Battery", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="string-trimmer",
+        battery_platform="60V", cc="", cut_mm=406, weight_kg=3.58, warranty_mo=48,
+        shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>60V brushless trimmer with a 16 in. cutting path and two-speed "
+             "control, supplied as a kit with a 2.5 Ah battery and charger. Weight "
+             "7.9 lb (3.58 kg) without battery. 4-year tool and battery warranty.</p>",
+    ),
+    # ================= 2026-10-26 新增：链锯 5 款 =================
+    # 只有链锯填 bar_length_mm；cutting_width_mm 一律留空（validate 强制）。
+    dict(
+        title="Northbark NB-C16G 16 in. 30.1 cc Gas Chainsaw",
+        handle="northbark-nb-c16g",
+        vendor="Northbark",
+        category=TAXO_CHAINSAW,
+        ptype="Chainsaw",
+        tags="chainsaws, gas, 16-inch",
+        sku="NB-C16G",
+        price="199.99",
+        weight_lb=8.6,
+        power_source="Gasoline", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="chainsaw",
+        battery_platform="", cc=30.1, bar_mm=406, weight_kg=3.90, warranty_mo=24,
+        shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>Entry saw: 30.1 cc two-stroke engine, 16 in. (406 mm) bar, inertia "
+             "chain brake and tool-less fuel and oil caps. Powerhead weight 8.6 lb "
+             "(3.90 kg), bar and chain excluded. 2-year consumer warranty.</p>",
+    ),
+    dict(
+        title="Northbark NB-C18G 18 in. 40.2 cc Gas Chainsaw",
+        handle="northbark-nb-c18g",
+        vendor="Northbark",
+        category=TAXO_CHAINSAW,
+        ptype="Chainsaw",
+        tags="chainsaws, gas, 18-inch",
+        sku="NB-C18G",
+        price="399.99",
+        weight_lb=10.1,
+        power_source="Gasoline", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="chainsaw",
+        battery_platform="", cc=40.2, bar_mm=457, weight_kg=4.58, warranty_mo=60,
+        shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>A 40.2 cc two-stroke engine with an 18 in. (457 mm) bar, automatic "
+             "adjustable oiler and a pre-cleaner air filter for longer service "
+             "intervals. Dry weight 10.1 lb (4.58 kg) without bar and chain. 5-year "
+             "consumer warranty.</p>",
+    ),
+    dict(
+        title="Northbark NB-C20G 20 in. 59.8 cc Gas Chainsaw (Farm & Ranch)",
+        handle="northbark-nb-c20g",
+        vendor="Northbark",
+        category=TAXO_CHAINSAW,
+        ptype="Chainsaw",
+        tags="chainsaws, gas, 20-inch",
+        sku="NB-C20G",
+        price="729.95",
+        weight_lb=13.2,
+        power_source="Gasoline", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="chainsaw",
+        battery_platform="", cc=59.8, bar_mm=508, weight_kg=5.99, warranty_mo=60,
+        duty="Semi-pro", shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>Farm and ranch saw: 59.8 cc two-stroke engine on a 20 in. (508 mm) "
+             "bar with a side-access chain tensioner and a wrap-around handle. Dry "
+             "weight 13.2 lb (5.99 kg) without bar and chain. 5-year consumer "
+             "warranty.</p>",
+    ),
+    dict(
+        title="Northbark NB-C40B 40V Brushless Cordless Chainsaw (16 in. Bar)",
+        handle="northbark-nb-c40b",
+        vendor="Northbark",
+        category=TAXO_CHAINSAW,
+        ptype="Chainsaw",
+        tags="chainsaws, battery, 40v",
+        sku="NB-C40B",
+        price="279.00",
+        weight_lb=11.2,
+        power_source="Battery", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="chainsaw",
+        battery_platform="40V", cc="", bar_mm=406, weight_kg=5.08, warranty_mo=60,
+        shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>40V brushless saw with a 16 in. (406 mm) bar, automatic oiler, "
+             "mechanical chain brake and an on-board tensioning tool. Weight 11.2 lb "
+             "(5.08 kg), bare tool — the operating figure with a battery pack is "
+             "published separately. 5-year tool warranty.</p>",
+    ),
+    dict(
+        title="Northbark NB-C80B 80V Brushless Cordless Chainsaw (18 in. Bar, 4.0 Ah Kit)",
+        handle="northbark-nb-c80b",
+        vendor="Northbark",
+        category=TAXO_CHAINSAW,
+        ptype="Chainsaw",
+        tags="chainsaws, battery, 80v",
+        sku="NB-C80B",
+        price="429.99",
+        weight_lb=9.5,
+        power_source="Battery", operation="Handheld", drive="N/A",
+        area="N/A", compare_group="chainsaw",
+        battery_platform="80V", cc="", bar_mm=457, power_w=2500, weight_kg=4.31,
+        warranty_mo=48, shipping_class="Parcel", liftgate="", assembly="", lead=3,
+        desc="<p>80V brushless saw rated 2.5 kW, with an 18 in. (457 mm) bar and "
+             "tool-less chain tensioning, kitted with a 4.0 Ah battery and charger. "
+             "Bare tool weight 9.5 lb (4.31 kg), battery excluded. 4-year tool and "
+             "battery warranty.</p>",
+    ),
 ]
 
 
 def lb_to_g(lb: float) -> int:
     return round(lb * 453.592)
+
+
+def _num(v) -> str:
+    """可选数字字段：缺省（None）→ 空字符串，绝不能落成 'None' 或 0。"""
+    return "" if v is None or v == "" else str(v)
 
 
 def build_rows():
@@ -422,12 +695,19 @@ def build_rows():
             "Operation type (product.metafields.spec.operation_type)": p["operation"],
             "Drive type (product.metafields.spec.drive_type)": p["drive"],
             "Area coverage (product.metafields.spec.area_coverage)": p["area"],
-            "Duty level (product.metafields.spec.duty_level)": "Residential",
+            # duty 缺省 Residential；Semi-pro / Commercial 由产品显式声明
+            "Duty level (product.metafields.spec.duty_level)": p.get("duty", "Residential"),
             "Compare group (product.metafields.spec.compare_group)": p["compare_group"],
-            "Displacement (cc) (product.metafields.spec.displacement_cc)": str(p["cc"]),
-            "Cutting width (mm) (product.metafields.spec.cutting_width_mm)": str(p["cut_mm"]),
+            "Displacement (cc) (product.metafields.spec.displacement_cc)": _num(p.get("cc")),
+            "Power (W) (product.metafields.spec.power_w)": _num(p.get("power_w")),
+            "Cutting width (mm) (product.metafields.spec.cutting_width_mm)": _num(p.get("cut_mm")),
+            "Bar length (mm) (product.metafields.spec.bar_length_mm)": _num(p.get("bar_mm")),
             "Weight (kg) (product.metafields.spec.weight_kg)": f"{p['weight_kg']}",
-            "Area coverage (sq ft) (product.metafields.spec.area_coverage_sqft)": str(AREA_SQFT[p["area"]]),
+            "Noise (dB A) (product.metafields.spec.noise_db)": _num(p.get("noise")),
+            # 面积分段 N/A（打草机 / 链锯）→ 数字版必须真空，不能落 0
+            "Area coverage (sq ft) (product.metafields.spec.area_coverage_sqft)":
+                str(AREA_SQFT[p["area"]]) if p["area"] in AREA_SQFT else "",
+            "Spec variance note (product.metafields.spec.spec_variance_note)": p.get("spec_note", ""),
             "Warranty (months) (product.metafields.spec.warranty_months)": str(p["warranty_mo"]),
             "Battery platform (product.metafields.platform.battery_platform)": p["battery_platform"],
             "Shipping class (product.metafields.logistics.shipping_class)": p["shipping_class"],
@@ -524,8 +804,11 @@ def validate(rows):
         # 数字列不得含单位字符
         for col in [
             "Displacement (cc) (product.metafields.spec.displacement_cc)",
+            "Power (W) (product.metafields.spec.power_w)",
             "Cutting width (mm) (product.metafields.spec.cutting_width_mm)",
+            "Bar length (mm) (product.metafields.spec.bar_length_mm)",
             "Weight (kg) (product.metafields.spec.weight_kg)",
+            "Noise (dB A) (product.metafields.spec.noise_db)",
             "Area coverage (sq ft) (product.metafields.spec.area_coverage_sqft)",
             "Warranty (months) (product.metafields.spec.warranty_months)",
             "Lead time (days) (product.metafields.logistics.lead_time_days)",
@@ -533,36 +816,60 @@ def validate(rows):
             v = row[col]
             if v and not v.replace(".", "").isdigit():
                 errors.append(f"行 {i+1}: {col} 含非数字字符: '{v}'")
-        # 面积分段与数字版一致性
+        # 面积分段与数字版一致性；N/A 必须配空数字（不能落 0 —— 0 会被排序与对比当成真值）
         area = row["Area coverage (product.metafields.spec.area_coverage)"]
         sqft = row["Area coverage (sq ft) (product.metafields.spec.area_coverage_sqft)"]
-        if area and sqft and AREA_SQFT[area] != int(sqft):
-            errors.append(f"行 {i+1}: area_coverage '{area}' 与 sqft {sqft} 不一致")
+        if area in AREA_SQFT:
+            if sqft and AREA_SQFT[area] != int(sqft):
+                errors.append(f"行 {i+1}: area_coverage '{area}' 与 sqft {sqft} 不一致")
+            if not sqft:
+                errors.append(f"行 {i+1}: area_coverage '{area}' 必须有 sqft 数字版")
+        elif area == "N/A" and sqft:
+            errors.append(f"行 {i+1}: area_coverage = N/A 但 sqft 有值 {sqft}（应为空）")
+        # 切割尺寸互斥：割草机/打草机填 cutting_width，链锯填 bar_length，二者不得同时出现
+        cw = row["Cutting width (mm) (product.metafields.spec.cutting_width_mm)"]
+        bl = row["Bar length (mm) (product.metafields.spec.bar_length_mm)"]
+        if cw and bl:
+            errors.append(f"行 {i+1}: cutting_width 与 bar_length 同时有值（互斥）")
+        if row["Product category"] == TAXO_CHAINSAW and not bl:
+            errors.append(f"行 {i+1}: 链锯必须填 bar_length_mm")
+        if row["Product category"] in (TAXO_LAWN_MOWER, TAXO_RIDING, TAXO_TRIMMER) and not cw:
+            errors.append(f"行 {i+1}: 割草机/打草机必须填 cutting_width_mm")
+        if row["Product category"] != TAXO_CHAINSAW and bl:
+            errors.append(f"行 {i+1}: 非链锯填了 bar_length_mm（SDD §5.3：只给链锯）")
         # 重量一致性（metafield kg vs 变体克重，±0.3 kg 容差，电池款克重含电池另计）
         kg = float(row["Weight (kg) (product.metafields.spec.weight_kg)"])
         g = int(row["Weight value (grams)"]) / 1000.0
         if abs(kg - g) > 0.3:
             infos.append(f"行 {i+1}: metafield 重量 {kg} kg 与变体重量 {g} kg 差异超容差（若为电池款含/不含电池差异则属预期）")
-        # compare_group 跨类型检查（判据：Product category 父级）
-        if row["Product category"] == TAXO_RIDING and row["Compare group (product.metafields.spec.compare_group)"] != "riding-mower":
-            errors.append(f"行 {i+1}: 骑乘式分类但 compare_group 不是 riding-mower")
-        if row["Product category"] == TAXO_LAWN_MOWER and row["Compare group (product.metafields.spec.compare_group)"] != "walk-behind-mower":
-            errors.append(f"行 {i+1}: 走步式分类但 compare_group 不是 walk-behind-mower")
+        # compare_group 跨类型检查（判据：Product category 受控词表，不用自由文本 Type）
+        cat = row["Product category"]
+        group = row["Compare group (product.metafields.spec.compare_group)"]
+        expected = CATEGORY_GROUP.get(cat)
+        if expected is None:
+            errors.append(f"行 {i+1}: Product category 不在本文件允许的分类法节点内: {cat}")
+        elif group != expected:
+            errors.append(f"行 {i+1}: 分类 '{cat.split(' > ')[-1]}' 应属 {expected}，实为 '{group}'")
 
     return errors, warnings, infos
 
 
 def main():
-    # 1) 读取官方模板列头，逐字校验保留列名
-    with open(TEMPLATE_PATH, newline="", encoding="utf-8-sig") as f:
-        template_header = next(csv.reader(f))
-    template_header = [h.strip() for h in template_header]
-    missing = [c for c in OFFICIAL_KEEP if c not in template_header]
-    if missing:
-        print("✗ 以下列名在官方模板中不存在（请逐字核对）：")
-        for c in missing:
-            print("   -", repr(c))
-        sys.exit(1)
+    # 1) 若官方模板在本地，逐字校验保留列名；不在则降级为提示（换机/CI 环境常见）
+    template_note = "已逐字校验"
+    if os.path.exists(TEMPLATE_PATH):
+        with open(TEMPLATE_PATH, newline="", encoding="utf-8-sig") as f:
+            template_header = next(csv.reader(f))
+        template_header = [h.strip() for h in template_header]
+        missing = [c for c in OFFICIAL_KEEP if c not in template_header]
+        if missing:
+            print("✗ 以下列名在官方模板中不存在（请逐字核对）：")
+            for c in missing:
+                print("   -", repr(c))
+            sys.exit(1)
+    else:
+        template_note = f"未找到官方模板（{TEMPLATE_PATH}），跳过逐字校验 —— 列名沿用既有产物"
+        print(f"! {template_note}")
 
     # 2) 组装
     rows = build_rows()
@@ -578,9 +885,13 @@ def main():
 
     # 4) 报告
     print(f"✓ 已写出 {OUT_PATH}")
-    print(f"  列数 = {len(header)}（官方 {len(OFFICIAL_KEEP)} + metafield {len(META_HEADER)}）")
+    print(f"  列数 = {len(header)}（官方 {len(OFFICIAL_KEEP)} + metafield {len(META_HEADER)}）｜{template_note}")
     print(f"  商品数 = {len(PRODUCTS)}（全部单变体）；总行数 = {len(rows)}"
           f"（主行 {len(PRODUCTS)} + 第二图行 {len(rows) - len(PRODUCTS)}）")
+    by_group = {}
+    for p in PRODUCTS:
+        by_group[p["compare_group"]] = by_group.get(p["compare_group"], 0) + 1
+    print("  分组覆盖：" + " / ".join(f"{g} {n}" for g, n in sorted(by_group.items())))
     print(f"  校验：0 错误 / {len(warnings)} 警告 / {len(infos)} 信息" if not errors
           else f"✗ 校验失败：{len(errors)} 错误")
     for e in errors:

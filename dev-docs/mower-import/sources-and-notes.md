@@ -1,34 +1,50 @@
-# 割草机导入 CSV — 来源与口径说明
+# 产品导入 CSV — 来源与口径说明
 
-生成日期：2026-09-29 ｜ 生成脚本：`build_mower_csv.py` ｜ 产物：`mower-products-import.csv`
+生成日期：2026-09-29 ｜ **扩充：2026-10-26（新增打草机 5 + 链锯 5，覆盖全部 4 个对比分组）** ｜
+生成脚本：`build_mower_csv.py` ｜ 产物：`mower-products-import.csv`（文件名沿用旧名，避免打断既有引用）
 
 ## 1. 文件口径
 
 | 项 | 口径 |
 | --- | --- |
-| 列结构 | 官方 `product_template.csv` 核心子集 **28 列**（列名逐字取自模板，脚本内断言校验）+ **22 个 metafield 列** = **50 列** |
-| metafield 取舍 | SDD §5.3 全部 23 个字段中，去掉链锯专用 `spec.bar_length_mm` → 22 个；其中 `acc.consumables` / `acc.fitment_note` 列保留但留空（见 §4） |
-| 商品数 | 11 款，全部单变体（11 行） |
+| 列结构 | 官方 `product_template.csv` 核心子集 **28 列**（列名逐字取自模板，脚本内断言校验）+ **23 个 metafield 列**（SDD §5.3 全量，含链锯专用 `bar_length_mm`）= **51 列** |
+| metafield 取舍 | 23 个字段全部保留。`cutting_width_mm` 给割草机（割台幅宽）与打草机（切割幅度），`bar_length_mm` 只给链锯，脚本 `validate()` 强制互斥；`acc.consumables` / `acc.fitment_note` 列保留但留空（见 §4） |
+| 商品数 | **21 款**，全部单变体（21 主行 + 21 第二图行 = **42 行**；每款 2 张图） |
 | 变体写法 | 单变体固定 `Option1 name=Title` / `Option1 value=Default Title` |
 | 商品级字段 | 本文件每商品仅 1 行，全部商品级字段（含 metafield）在该行 |
+| 列数变更 | 2026-10-26 前为 50 列（无 `bar_length_mm`）。旧产物已备份 `mower-products-import.csv.bak-20261026`；**导入前须先建好第 23 个 metafield 定义 `spec.bar_length_mm`**，否则该列被平台静默忽略 |
 
-### 商品清单与类型覆盖
+### 商品清单与类型覆盖（21 款）
 
 | # | 型号 | 类型 | 动力源 | 对比分组 |
 | --- | --- | --- | --- | --- |
-| 1 | Honda HRN216PKA | 走步推式 | Gasoline | walk-behind-mower |
-| 2 | Honda HRN216VKA | 走步自走（后驱） | Gasoline | walk-behind-mower |
-| 3 | Toro 21465 Recycler 22" | 走步自走（Personal Pace） | Gasoline | walk-behind-mower |
-| 4 | Toro 21332 Recycler 21" | 走步推式 | Gasoline | walk-behind-mower |
-| 5 | Ryobi RY401150US 40V | 走步自走 | Battery (40V) | walk-behind-mower |
-| 6 | Greenworks MO40L4210 40V | 走步推式 | Battery (40V) | walk-behind-mower |
-| 7 | Kobalt 80V 21" | 走步自走 | Battery (80V) | walk-behind-mower |
-| 8 | John Deere S100 | 草坪拖拉机 | Gasoline | riding-mower |
-| 9 | Cub Cadet XT1 LT42 | 草坪拖拉机 | Gasoline | riding-mower |
-| 10 | Husqvarna Z242F | 零转向 zero-turn | Gasoline | riding-mower |
-| 11 | Troy-Bilt Pony 42X | 草坪拖拉机 | Gasoline | riding-mower |
+| 1 | NB-21P | 走步推式 | Gasoline | walk-behind-mower |
+| 2 | NB-21S | 走步自走（后驱） | Gasoline | walk-behind-mower |
+| 3 | NB-22S | 走步自走（变速） | Gasoline | walk-behind-mower |
+| 4 | NB-21PH | 走步推式（高轮） | Gasoline | walk-behind-mower |
+| 5 | NB-21BS | 走步自走 | Battery (40V) | walk-behind-mower |
+| 6 | NB-21BP | 走步推式 | Battery (40V) | walk-behind-mower |
+| 7 | NB-21B80 | 走步自走 | Battery (80V) | walk-behind-mower |
+| 8 | NB-42T | 草坪拖拉机 | Gasoline | riding-mower |
+| 9 | NB-42TH | 草坪拖拉机（液压） | Gasoline | riding-mower |
+| 10 | NB-42Z | 零转向 | Gasoline | riding-mower |
+| 11 | NB-42TC | 草坪拖拉机（CVT） | Gasoline | riding-mower |
+| 12 | **NB-T21** | 打草机（直杆） | Gasoline | **string-trimmer** |
+| 13 | **NB-T27** | 打草机（直杆） | Gasoline | **string-trimmer** |
+| 14 | **NB-T28** | 打草机（可拆杆） | Gasoline | **string-trimmer** |
+| 15 | **NB-T40B** | 打草机（可接附件） | Battery (40V) | **string-trimmer** |
+| 16 | **NB-T60B** | 打草机 | Battery (60V) | **string-trimmer** |
+| 17 | **NB-C16G** | 链锯 16 in. | Gasoline | **chainsaw** |
+| 18 | **NB-C18G** | 链锯 18 in. | Gasoline | **chainsaw** |
+| 19 | **NB-C20G** | 链锯 20 in.（半专业） | Gasoline | **chainsaw** |
+| 20 | **NB-C40B** | 链锯 16 in. | Battery (40V) | **chainsaw** |
+| 21 | **NB-C80B** | 链锯 18 in. | Battery (80V) | **chainsaw** |
 
-覆盖了 SDD 定义的割草机类型：推式 / 自走式 / 骑乘（草坪拖拉机）/ 零转向；动力源覆盖汽油 + 电池（40V / 80V 两个平台）。
+覆盖：4 个对比分组全部非空；动力源覆盖汽油 / 电池（40V / 60V / 80V 三个平台）；`duty_level` 覆盖 Residential + Semi-pro（NB-C20G）。
+**未覆盖**：`Corded electric`（v1.0 演示店不含插电款）、20V 平台、`Commercial` 强度。
+
+> 与 SDD §9.4「最终 80–120 个商品、主机 40–60」的差距：本文件是**核心子集**（21 台主机），
+> 不是最终演示店规模。配件与耗材（刀片/锯链/导板/滤芯/电池）尚未建立。
 
 ## 2. 口径约定（本文件自定的解释规则）
 
@@ -37,7 +53,17 @@
 - **保修**：一律取**家用（residential）**整机保修；Toro 不含 "3-Year Guaranteed to Start"（仅为启动保障）。
 - **骑乘式 logistics**：`Freight LTL` + `needs_liftgate=TRUE` + `assembly_required=TRUE` + `lead_time_days=7`（Tractor Supply 页面载明 7–10 天发运）；走步式一律 `Parcel`。
 - **`Product category`**：走步式用 `Home & Garden > Lawn & Garden > Outdoor Power Equipment > Lawn Mowers`；骑乘式用其子节点 `… > Lawn Mowers > Riding Mowers`（Shopify 标准分类法）。**刻意不采纳后台 Shopify Magic 的 "Lawn Tractors (in Tractors)" 建议**：那是农业机械分支（Business & Industrial），不符合 SDD §13"主机分类全部落在 Home & Garden"的硬约束，且会导致 Google 渠道映射与店内 4 台骑乘机类目一致性出问题。导入实测（2026-09-30）：Riding Mowers 被平台正常识别，建议提示为 Magic 猜测，可忽略。
-- **`Type` 列**：自由文本，写 `Walk-behind mower` / `Riding mower`，仅作商家侧旁证；对比分组权威键是 `spec.compare_group`。
+- **`Type` 列**：自由文本，写 `Walk-behind mower` / `Riding mower` / `String trimmer` / `Chainsaw`，仅作商家侧旁证；对比分组权威键是 `spec.compare_group`。
+- **`Product category`（打草机 / 链锯，2026-10-26 新增）**：取自 Shopify Standard Product Taxonomy `dist/en/categories.txt`（当日拉取核对）——
+  链锯 = `Home & Garden > Lawn & Garden > Outdoor Power Equipment > Chainsaws`（`hg-12-3-1`）；
+  打草机 = `… > Outdoor Power Equipment > Weed Trimmers`（`hg-12-3-15`）。
+  **平台把打草机命名为 `Weed Trimmers`，不叫 "String Trimmers"** —— 后者只用在 `compare_group` 键与店内集合命名上，两者不要混用。
+- **`area_coverage` = `N/A`（打草机 5 + 链锯 5，全部）**：厂商口径里没有"适用面积"，只有割草机按草坪面积推荐机型。
+  按「查不到就留空、不编数」的纪律，写值域内的 `N/A`，且 `area_coverage_sqft` 必须**真空**（不能落 0，否则排序与集合 `>`/`<` 会把 0 当真值）。
+  代价明说：这两组不进"适用面积"筛选，对比表"适用面积"行显示 `—`。这是数据诚实换来的，不是缺陷。
+- **`cutting_width_mm` 语义随品类变**：割草机 = 割台幅宽（in.×25.4）；打草机 = 切割幅度（cutting swath，官方标 17 in. → 432 mm）。链锯一律不填（改填 `bar_length_mm`）。
+- **打草机 / 链锯 logistics**：全部 `Parcel`（最重的 NB-C20G 也仅 13.2 lb），`lead_time_days=3` 与走步式割草机同档。
+- **保修口径（新增 10 款）**：取**消费者/家用**整机保修；ECHO 与 STIHL 官方都区分 consumer/commercial，取 consumer 那档。
 
 ## 3. 逐款来源
 
@@ -87,22 +113,80 @@
 - 官方：https://www.troybilt.com/en_US/lawn-and-garden-tractors/pony-42x-riding-lawn-mower/13A877BS066.html （from $1,999、547 cc、42 in、3 年家用）
 - 重量 420 lb：https://www.walmart.com/ip/Troy-Bilt-547cc-Pony-42-Gas-Riding-Lawn-Mower-13A877BS066/7962066125
 
+## 3b. 逐款来源（2026-10-26 新增 10 款）
+
+> 口径与 §3 一致：**型号是 Northbark 虚拟型号，参数取自下列真实机型的公开官方页**（SDD §9.1 允许）。
+> 所有数值均于 2026-10-26 当日重新核对；冲突或查不到的一律留空，见 §4。
+
+### NB-T21（参数基线：ECHO SRM-225）
+- 官方/授权商页：https://www.echo-usa.com/trimmers-brushcutters/srm-225 ｜https://www.supplyworks.com/Sku/100675439/echo-212-cc-gas-2-stroke-straight-shaft-string-trimmer-743184510971-srm-225
+- 21.2 cc、17 in. 切割幅度（→432 mm）、干重 11.5 lb（含切割头、不含背带）、$279.99、5 年消费者保修（60 个月）
+
+### NB-T27（参数基线：STIHL FS 56 RC-E）
+- 官方：https://www.stihlusa.com/products/trimmers-and-brushcutters/homeowner-trimmers/fs56rce
+- 27.2 cc、切割圆 420 mm（官方公制值，16.5 in.）、不含燃油重量 10.6 lb、$229.99
+- 保修 24 个月：STIHL 美国消费者保修 2 年（**这一条按厂商保修政策取值，非产品页逐字**，上架前请在 STIHL 保修政策页复核）
+
+### NB-T28（参数基线：Husqvarna 128LD）
+- 官方：https://www.husqvarna.com/us/products/trimmers/128ld/952711953/
+- 28 cc、17 in. 切割幅度（→432 mm）、不含切割装置重量 12.7 lb、$239.99、2 年家用保修（24 个月）
+- `noise_db = 95`：官方规格表"Sound pressure level at operators ear (LpA) 95 dB(A)"——**本文件唯一填了噪音的一款**，因为厂商公布了操作位耳旁值
+
+### NB-T40B（参数基线：Ryobi RY40270）
+- 官方：https://www.ryobitools.com/products/details/40v-brushless-expand-it-attachment-capable-string-trimmer
+- 40V、18→15 in. 可调切割幅度（取最大 15 in. →381 mm）、含电池重量 11.6 lb、5 年工具保修（60 个月）
+- 价格 $249.00：官方页与 Home Depot **均未给稳定标价**（促销波动 $199–$299），取渠道中间价，**上架前必须复核**
+
+### NB-T60B（参数基线：Greenworks 60V ST60L254）
+- 官方：https://www.greenworkstools.com/products/pro-60v-brushless-string-trimmer-2122802
+- 60V、16 in. 切割幅度（→406 mm）、不含电池重量 7.9 lb、4 年工具+电池保修（48 个月）、$199.99（活动价，标价 $179.99 为纯工具版）
+- `power_w` 留空：Greenworks 60V 系列页对 ST60L02 标 0.8 kW，但**不是同一 SKU**，不跨型号挪用
+
+### NB-C16G（参数基线：STIHL MS 170）
+- 官方：https://www.stihlusa.com/products/chain-saws/homeowner-saws/ms170/ （读数经授权经销商页复现：https://frontdeskreview.com/product/chainsaws/stihl-ms-170）
+- 30.1 cc、16 in. 导板（→406 mm）、动力头重量 8.6 lb（不含导板与链条）、$199.99、保修 24 个月（同上，按 STIHL 消费者保修政策）
+
+### NB-C18G（参数基线：ECHO CS-400）
+- 官方手册（PDF）：https://www.echo-usa.com/getattachment/07628055-6ed6-492b-9057-0bce6550dbed/CS-400es_1112_120913.pdf ｜https://www.echo-usa.com/chainsaws/cs-400
+- 40.2 cc、18 in. 导板（→457 mm）、干重 4.6 kg / 10.1 lb（**不含导板与链条**）、5 年消费者保修（60 个月）
+- 价格 $399.99：授权经销商标价区间 $299.99–$399.95，取建议零售价上限，**上架前复核**
+
+### NB-C20G（参数基线：ECHO CS-590 Timber Wolf）
+- 来源：ECHO 经销商规格汇整 http://islandsawandturf.com/index.php/chainsaws/echo-chainsaws
+- 59.8 cc、20 in. 导板（→508 mm）、干重 13.2 lb（不含导板与链条）、$729.95、5 年消费者保修（60 个月）
+- `duty_level = Semi-pro`：20 in. / 59.8 cc 属农场-半专业档，是本文件唯一非 Residential 的主机
+- ⚠️ 该款参数取自经销商汇总页而非 ECHO 官方产品页，**上架前建议用 echo-usa.com 复核 cc 与重量**
+
+### NB-C40B（参数基线：Ryobi RY40570）
+- 官方：https://www.ryobitools.com/products/details/40v-brushless-16-in-cordless-chainsaw
+- 40V、16 in. 导板（→406 mm）、5 年工具保修（60 个月）
+- 重量 11.2 lb：**官方页与第三方评测口径不一致**（第三方实测含电池运转重量 12.8 lb）。取 11.2 lb 作为**裸机值**，文案已写 "bare tool" 并说明含电池另有公布值；**上架前须以包装/手册重量复核**
+- 价格 $279.00：渠道价 $250–$310 波动，取中间价，上架前复核
+
+### NB-C80B（参数基线：Greenworks 80V CS80L417）
+- 官方：https://www.greenworkstools.com/products/80v-18-2-5kw-cordless-battery-chainsaw-w-1-4ah-battery-2a-charger
+- 80V、2.5 kW 无刷、18 in. 导板（→457 mm）、产品重量 9.5 lb（**裸机，不含电池**，描述中已注明）、4 年工具+电池保修（48 个月）、$429.99
+- `power_w = 2500`：官方标 2.5 kW，是本文件唯一填了额定功率的一款
+
 ## 4. 刻意留空的字段（不编数）
 
 | 字段 | 留空原因 |
 | --- | --- |
-| `spec.noise_db`（全部 11 款） | 厂商官方产品页 / 规格表 / 手册均未公布操作位 dB(A)；第三方零星数值因非官方来源不采用 |
-| `spec.power_w`（全部） | 官方均未公布电机额定功率 W；不用电压/安时反推 |
-| `spec.spec_variance_note`（全部） | 本文件全部单变体，无"参数随变体变化"场景。多变体示例（含变体行结构 + Option 列写法）属 SDD 演示店 `nb-22sp` 的职责，不在本文件 |
+| `spec.noise_db`（除 NB-T28 外全部 20 款） | 厂商官方产品页 / 规格表 / 手册均未公布操作位 dB(A)；第三方零星数值因非官方来源不采用。只有 NB-T28 的基线机型官方给了 LpA 95 dB(A) |
+| `spec.power_w`（除 NB-C80B 外全部 20 款） | 汽油机按口径填 cc 不填 W；电池款多数官方未公布电机额定功率，不用电压/安时反推 |
+| `spec.spec_variance_note`（全部 21 款） | 本文件全部单变体，无"参数随变体变化"场景。多变体示例（含变体行结构 + Option 列写法）属 SDD 演示店 `nb-22sp` 的职责，不在本文件 |
 | `spec.compare_hidden`（全部） | 默认 false，留空即不隐藏 |
-| `acc.consumables`（全部） | `list.product_reference` 的值是商品 handle 引用，需目标商品已存在于店内；割草机文件先导入，耗材引用待配件商品导入后二次更新 |
-| `acc.fitment_note`（全部） | 适配说明属配件/耗材侧字段，割草机主机不适用 |
-| 图片列（全部） | 未附带图片 URL；导入后在 Shopify 后台补图，或改用自有 CDN 图片链接后重新导入 |
+| `acc.consumables`（全部） | `list.product_reference` 的值是商品 handle 引用，需目标商品已存在于店内；耗材引用待配件商品导入后二次更新 |
+| `acc.fitment_note`（全部） | 适配说明属配件/耗材侧字段，主机不适用 |
+| `spec.area_coverage_sqft`（打草机 5 + 链锯 5） | 对应 `area_coverage = N/A`，数字版必须真空（落 0 会被当成"适用 0 平方英尺"的真值） |
+| 图片列（新增 10 款） | **2026-10-26 已补齐**：20 张全部上传 Shopify Files，URL 已回填 `build_mower_csv.py` 的 `IMAGES` 并重跑（21 款 × 2 张 = 42 行，0 错误 0 警告）。文件名形如 `product-<品类>-<型号>-<序>-<内容>_rmbg_webp.webp`，实际为**去背透明底**（与旧 22 张一致，抽测角像素 alpha=0），展示底色由商品卡 CSS 提供 |
 
 ## 5. 使用步骤（对应 SDD §5.9 两遍制与 §5.8 前置条件）
 
 1. **先建 metafield 定义**（23 个，CSV 不会自动创建），筛选源字段勾选 Storefront 可见性；`platform.battery_platform` 开启"用作集合条件"；筛选源字段配预设选项。
+   **含 2026-10-26 新增的第 23 个 `spec.bar_length_mm`（number_integer，单位 mm）** —— 没建就先导入，链锯的导板长度会被静默丢弃。
 2. 第一遍导入本文件（商品 + 变体 + 核心字段 + metafield 一次完成；官方模板支持 metafield 列与商品创建同文件导入）。
-3. 导入预览页确认所有 `Product category` 被平台识别（无"未知分类"）。
+3. 导入预览页确认所有 `Product category` 被平台识别（无"未知分类"）；重点看 `Weed Trimmers` 与 `Chainsaws` 两个新节点。
 4. 配件商品就位后，二次导入更新 `acc.consumables` 列（必填列 `URL handle` + `Title`，勾选 Overwrite same handle）。
-5. 价格为 2026-09-29 核实的 MSRP / 零售价，上架前按渠道现价复核。
+5. 价格为核实的 MSRP / 零售价（割草机 2026-09-29、打草机与链锯 2026-10-26），上架前按渠道现价复核；§3b 中标"必须复核"的 4 处尤其要看。
+6. 打草机 / 链锯的集合可在导入后按 `spec.compare_group = string-trimmer` / `chainsaw` 建立自动化集合，再挂到主导航（见 `dev-docs/task-header.md`）。

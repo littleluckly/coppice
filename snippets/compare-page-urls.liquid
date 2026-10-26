@@ -1,0 +1,47 @@
+{% doc %}
+  compare-page-urls — 输出对比页的 URL 映射属性（供 <compare-entry> / <compare-bar> 共用）。
+
+  为什么需要它：主题包带不了页面（SDD §3.6），分组键 `<key>` 对应的对比页
+  是商家自建的 `<key>-compare`。这里用 `pages[handle]` 探测（实测 2.6 μs/次，
+  §3.7 A4），**只输出真实存在的组** —— 未配置的组不产生入口，也就不会 404。
+
+  输出（无任何组存在时输出空字符串，调用方据此决定是否渲染整个组件）：
+    data-groups="chainsaw,string-trimmer" data-default-group="chainsaw"
+    data-url-chainsaw="/pages/chainsaw-compare" data-url-string-trimmer="..."
+
+  组名含连字符，故用 `data-url-<group>` 原属性而非 JSON——手拼 JSON 引号是
+  Liquid 里最容易出错的一环，且 dataset 驼峰化会撞名。
+
+  实现要点：**在同一个 for 循环里完成探测与拼接**，避免为了拼属性再查一次
+  `pages`。循环只跑分组个数次（默认 4 次），不进任何商品列表。
+{% enddoc %}
+
+{%- liquid
+  assign compare_groups_raw = settings.compare_groups
+  if compare_groups_raw == blank
+    assign compare_groups_raw = 'walk-behind-mower,riding-mower,chainsaw,string-trimmer'
+  endif
+  assign compare_groups = compare_groups_raw | split: ','
+
+  assign compare_keys = ''
+  assign compare_default = ''
+  assign compare_url_attrs = ''
+
+  for item in compare_groups
+    assign key = item | strip
+    if key != blank
+      assign handle = key | append: '-compare'
+      if pages[handle].title != blank
+        assign compare_keys = compare_keys | append: key | append: ','
+        if compare_default == blank
+          assign compare_default = key
+        endif
+        assign compare_url_attrs = compare_url_attrs | append: ' data-url-' | append: key | append: '="' | append: routes.root_url | append: 'pages/' | append: handle | append: '"'
+      endif
+      assign handle = blank
+    endif
+  endfor
+
+  assign compare_keys = compare_keys | split: ',' | compact
+-%}
+{%- if compare_keys.size > 0 -%}data-groups="{{ compare_keys | join: ',' }}" data-default-group="{{ compare_default }}"{{ compare_url_attrs }}{%- else -%}hidden{%- endif -%}

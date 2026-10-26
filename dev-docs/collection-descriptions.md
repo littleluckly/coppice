@@ -27,17 +27,20 @@
 | 集合 | 状态 | 描述文案 | 含义依据 |
 | --- | --- | --- | --- |
 | 20V Battery | 空集合，建而暂不挂（含菜单项同理） | Compact 20V power for light yard work — trimming, edging, and quick cleanups around the house. | 入门电压档，轻量单电池 |
-| 40V Battery | 非空，必建（2 款） | One 40V battery runs the whole lineup — swap the same pack from trimmer to self-propelled mower and charge once. | 主力电压档，家用中大草坪，兼容工具最多 |
-| 60V Battery | 空集合，建而暂不挂 | Mid-to-high voltage power for bigger yards, sitting between our 40V and 80V platforms. | 中高电压档，较大作业面 |
-| 80V Battery | 非空，必建（1 款） | Our highest-voltage battery line. Gas-like power and extended runtime for large lawns — no fuel, no fumes, no pull cords. | 高压旗舰档，接近汽油机动力 |
-| Gas Series | 非空，必建（7 款，条件 `power_source = Gasoline`） | Gasoline engines for long run times and heavy work — no charging, ready for large properties and all-day jobs. | 汽油机线，长时间大作业 |
+| 40V Battery | 非空，必建（4 款：BS/BP/T40B/C40B） | One 40V battery runs the whole lineup — swap the same pack from trimmer to self-propelled mower and charge once. | 主力电压档，家用中大草坪，兼容工具最多 |
+| 60V Battery | 非空（1 款：NB-T60B），建且可挂 | Mid-to-high voltage power for bigger yards, sitting between our 40V and 80V platforms. | 中高电压档，较大作业面 |
+| 80V Battery | 非空，必建（2 款：21B80/C80B） | Our highest-voltage battery line. Gas-like power and extended runtime for large lawns — no fuel, no fumes, no pull cords. | 高压旗舰档，接近汽油机动力 |
+| Gas Series | 非空，必建（13 款，条件 `power_source = Gasoline`：割草机 7 + 打草机 3 + 链锯 3） | Gasoline engines for long run times and heavy work — no charging, ready for large properties and all-day jobs. | 汽油机线，长时间大作业 |
 
-## 品类集合（建集合暂不挂菜单，SDD §9.4 防空页）
+> **计数口径**：以上数字对应 `dev-docs/mower-import/mower-products-import.csv`（2026-10-26 版，21 款主机）。
+> 新增商品只要填好 metafield，自动集合的计数自己会变——**本表数字是核对用的，不是配置项**。
+
+## 品类集合（2026-10-26 起 Chainsaws / String Trimmers 非空，可挂菜单；其余仍建而暂不挂）
 
 | 集合 | 状态 | 描述文案 | 含义依据 |
 | --- | --- | --- | --- |
-| Chainsaws | 建集合暂不挂 | Gas and battery chainsaws for felling, limbing, and storm cleanup — matched by bar length and power class. | 伐木、砍枝、清理倒木与堆料 |
-| String Trimmers | 建集合暂不挂 | Trim and edge where the mower can't reach — lightweight shafts built for fences, beds, and slopes. | 修边、割灌木，细窄轻量 |
+| Chainsaws | **非空（5 款），可挂菜单** — 挂之前先给集合填 metafield `custom.compare_group = chainsaw` | Gas and battery chainsaws for felling, limbing, and storm cleanup — matched by bar length and power class. | 伐木、砍枝、清理倒木与堆料 |
+| String Trimmers | **非空（5 款），可挂菜单** — 挂之前先给集合填 metafield `custom.compare_group = string-trimmer` | Trim and edge where the mower can't reach — lightweight shafts built for fences, beds, and slopes. | 修边、割灌木，细窄轻量 |
 | Accessories: Blades & Bars | 建集合暂不挂 | Wear parts that keep you cutting — mower blades, chainsaw bars, and chains sized to fit your model. | 磨损件：割草刀、锯条，最常复购 |
 | Accessories: Filters | 建集合暂不挂 | Air and oil filters on a replacement schedule — pick by model to keep your engine breathing clean. | 保养件：空气/机油滤芯，按周期更换 |
 | Accessories: Batteries & Chargers | 建集合暂不挂 | Extra packs and chargers for every Northbark platform — keep one charged while the other works. | 平台配件：同电池跨工具复用 |

@@ -1,0 +1,85 @@
+{% doc %}
+  compare-cell — 对比表某一行在某商品上的显示值（服务端默认表用）。
+
+  单位换算与格式化**一律经 spec-value**（AGENTS §4 红线：换算逻辑不许散落）；
+  本 snippet 只负责「把两三个 metafield 拼成一行」和「缺值显示 —」。
+
+  缺值规则（SDD §6.2.2）：**显示 —，永不显示 0 或空白**。
+  'N/A' 视同缺值（CSV 导入的占位值，见 spec-value 的调用约定）。
+
+  @param {product} product - 商品对象
+  @param {string} row_key - 行键：power_source | operation_type | drive_type |
+    area_coverage | duty_level | cutting_width_mm | bar_length_mm | power |
+    weight_kg | noise_db | warranty_months
+  @param {boolean} [as_text] - true → 只输出纯文本（给数据岛用）；缺值输出空串
+{% enddoc %}
+
+{%- liquid
+  assign mf = product.metafields.spec
+  assign cell = ''
+
+  case row_key
+    when 'power_source'
+      assign cell = mf.power_source.value
+    when 'operation_type'
+      assign cell = mf.operation_type.value
+    when 'drive_type'
+      assign cell = mf.drive_type.value
+    when 'area_coverage'
+      assign cell = mf.area_coverage.value
+    when 'duty_level'
+      assign cell = mf.duty_level.value
+    when 'cutting_width_mm'
+      capture cell
+        render 'spec-value', value: mf.cutting_width_mm.value, unit_type: 'length_mm'
+      endcapture
+    when 'bar_length_mm'
+      capture cell
+        render 'spec-value', value: mf.bar_length_mm.value, unit_type: 'length_mm'
+      endcapture
+    when 'weight_kg'
+      capture cell
+        render 'spec-value', value: mf.weight_kg.value, unit_type: 'weight_kg'
+      endcapture
+    when 'noise_db'
+      assign noise = mf.noise_db.value
+      if noise != blank and noise != 0
+        assign cell = noise | append: ' dB'
+      endif
+    when 'warranty_months'
+      assign months = mf.warranty_months.value
+      if months != blank and months != 0
+        assign cell = months | append: ' mo'
+      endif
+    when 'power'
+      assign cc = mf.displacement_cc.value
+      assign watts = mf.power_w.value
+      if cc != blank and cc != 0
+        assign cell = cc | append: ' cc'
+      endif
+      if watts != blank and watts != 0
+        if cell != blank
+          assign cell = cell | append: ' / ' | append: watts | append: ' W'
+        else
+          assign cell = watts | append: ' W'
+        endif
+      endif
+  endcase
+
+  assign cell = cell | strip
+  if cell == 'N/A'
+    assign cell = ''
+  endif
+-%}
+{%- if as_text -%}
+  {%- comment -%}
+    必须 strip_html：长度/重量走 spec-value，它的返回值本身带
+    <span class="spec-value"> 包装，直接塞进 JSON 会变成值里的 HTML 标签
+    （同时把数据岛体积撑大约一倍）。
+  {%- endcomment -%}
+  {{- cell | strip_html -}}
+{%- elsif cell != blank -%}
+  <span class="compare-table__value">{{ cell }}</span>
+{%- else -%}
+  <span class="compare-table__value compare-table__value--missing" aria-label="{{ 'compare.page.missing' | t }}">&mdash;</span>
+{%- endif -%}

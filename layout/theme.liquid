@@ -24,6 +24,8 @@
 
     {% # Load and preload the critical CSS %}
     {{ 'critical.css' | asset_url | stylesheet_tag: preload: true }}
+    {% # 对比浮层样式：不参与首屏，不 preload %}
+    {{ 'compare.css' | asset_url | stylesheet_tag }}
 
     {% # Social, title, etc. %}
     {% render 'meta-tags' %}
@@ -55,6 +57,12 @@
     <script src="{{ 'fly-to-cart.js' | asset_url }}" defer></script>
 
     {% comment %}
+      产品对比（SDD §6.2）：状态层 + 三个自定义元素 + 飞入动画，单文件全局引入。
+      页头图标与底部确认条都是全站元素，故挂 layout；商品卡只负责输出 data-* 。
+    {% endcomment %}
+    <script src="{{ 'compare.js' | asset_url }}" defer></script>
+
+    {% comment %}
       Main landmark — the skip link target. The id here and the href in
       snippets/skip-link.liquid must stay in sync.
 
@@ -67,5 +75,12 @@
     </main>
 
     {% sections 'footer-group' %}
+
+    {% comment %}
+      底部对比确认条（SDD §6.2.8）：全站唯一的浮层，挂 layout 而非某个 section ——
+      商品卡在首页 / 集合页 / 搜索结果都会出现，浮层不能跟着哪个 section 走。
+    {% endcomment %}
+    {% render 'compare-bar' %}
+    {% render 'compare-toast' %}
   </body>
 </html>

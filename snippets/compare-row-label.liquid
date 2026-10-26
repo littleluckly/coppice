@@ -1,0 +1,22 @@
+{% doc %}
+  compare-row-label — 对比表行标题（字面量 t: 键）。
+
+  为什么单独一个 snippet：`{{ 'compare.rows.' | append: row_key | t }}` 这种动态
+  拼键写法 theme check 无法静态解析，会报 TranslationKeyExists（键其实存在）。
+  这里改成 case + 字面量键，检查器与译者都能看见全部键。
+
+  @param {string} row_key - 行键
+{% enddoc %}
+{%- case row_key -%}
+  {%- when 'power_source' -%}{{ 'compare.rows.power_source' | t }}
+  {%- when 'operation_type' -%}{{ 'compare.rows.operation_type' | t }}
+  {%- when 'drive_type' -%}{{ 'compare.rows.drive_type' | t }}
+  {%- when 'area_coverage' -%}{{ 'compare.rows.area_coverage' | t }}
+  {%- when 'duty_level' -%}{{ 'compare.rows.duty_level' | t }}
+  {%- when 'cutting_width_mm' -%}{{ 'compare.rows.cutting_width' | t }}
+  {%- when 'bar_length_mm' -%}{{ 'compare.rows.bar_length' | t }}
+  {%- when 'power' -%}{{ 'compare.rows.power' | t }}
+  {%- when 'weight_kg' -%}{{ 'compare.rows.weight' | t }}
+  {%- when 'noise_db' -%}{{ 'compare.rows.noise' | t }}
+  {%- when 'warranty_months' -%}{{ 'compare.rows.warranty' | t }}
+{%- endcase -%}

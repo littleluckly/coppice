@@ -41,8 +41,8 @@
 ┌────────────────────────────────────┐  ┌──────────────────┐
 │ 公告栏：物流政策横幅（可关闭）        │  │ 公告栏（可关闭）   │
 ├────────────────────────────────────┤  ├──────────────────┤
-│ LOGO | Shop ▾  Platform ▾  Support ▾│  │☰  LOGO  🔍 👤 □购物│
-│        搜索框(预测联想)   👤 账号 □购物│  └──────────────────┘
+│ LOGO | Shop ▾  Platform ▾  Support ▾│  │☰ LOGO 🔍 ⚖ 👤 □购物│
+│        搜索框(预测联想)  ⚖对比 👤 账号 □购物│  └──────────────────┘
 └────────────────────────────────────┘  点击☰ → 抽屉导航
 ```
 
@@ -53,9 +53,10 @@
 | main-nav | 三级以内下拉；`Shop by Platform` 指向 battery_platform 自动化集合（§4.3/§6.5） | 菜单项 | 菜单选择、下拉样式 | `linklists.main-menu` |
 | header-search | 预测搜索输入（#16 Search + predictive） | — | 展开样式 | `/search/suggest`（Section Rendering API + `section_id`，返回渲染好的 HTML 片段） |
 | account | `<shopify-account>` 原生组件，**桌面与移动均可见**（#22） | — | 登录态样式 | 平台组件 |
+| compare-entry | **页头对比入口**：图标 + 角标（清单款数）。桌面常驻；**移动端仅在角标 > 0 时渲染**（页头宽度约束）。点击跳当前组对比页，目标页探测失败则不渲染（SDD §6.2.1/§6.2.8） | — | 无（分组来自 `page.handle`） | `localStorage` + `pages` 探测 |
 | cart-entry | 购物车入口 + 计数（本期仅跳 `routes.cart_url`，**不做抽屉交互**，后续另立清单） | — | 本期无 | `cart` 对象 |
 
-**状态要点**：移动端 ☰ 抽屉用原生 `<dialog>` + `showModal()`（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`，**不手写焦点陷阱**）；搜索联想为 combobox + listbox（**非模态**：DOM 焦点始终留在输入框，靠 `aria-activedescendant` 移动；禁用 `<dialog>`）；对比栏不在此（见 §7 对比页与商品卡）。
+**状态要点**：移动端 ☰ 抽屉用原生 `<dialog>` + `showModal()`（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`，**不手写焦点陷阱**）；搜索联想为 combobox + listbox（**非模态**：DOM 焦点始终留在输入框，靠 `aria-activedescendant` 移动；禁用 `<dialog>`）；**页头对比图标在此（compare-entry），底部对比栏是全局浮层、不属页头组**（见 §7）。
 
 #### 1.1.1 主导航菜单树（SDD §4.3 逐项展开）
 
@@ -287,7 +288,9 @@
 
 ## 7. `page.compare.json` — 对比页（核心差异化）
 
-**用途**（§6.2）：每组一页（`/pages/compare-<group-key>`，路由映射在主题设置），服务端渲染默认表 + 数据岛，客户端按 localStorage 接管。**URL 全程无参数；canonical 服务端静态输出。**
+**用途**（§6.2）：每组一页（`/pages/<group-key>-compare`，由 `page.handle` 去掉 `-compare` 后缀反推分组，**无映射设置项**），服务端渲染默认表 + 数据岛，客户端按 localStorage 接管。**URL 全程无参数；canonical 服务端静态输出；页面不存在时入口不渲染（§6.2.1，探测必须判 `pages[h].title != blank`）。**
+
+> **与初版工单的差异**：原设想拆 compare-intro / compare-data / compare-table 三个 section。实现时合并为一个 `compare-page` —— 三者必须共享同一份商品列表，拆开会让集合查询翻倍，且数据岛与默认表可能不同源。数据岛仍置 DOM 末尾、仍只装当前分组白名单字段、仍列式编码。
 
 ```
 桌面                                            移动（横滚 + sticky 表头）
@@ -309,15 +312,14 @@
 │ └────────────────────────────────────────┘│
 │ [G] footer                                │  │ [G] footer         │
 └─────────────────────────────────────────┘  └────────────────────┘
-  底部悬浮对比栏（勾选后出现）：[缩略图][×]… [Compare (3)]
+  底部对比栏（**仅"刚加入一款"时出现的临时确认条**，不自动消失）：
+  [缩略图] 已加入 3/4   [查看对比] [移除] [×]
 ```
 
 | section | 职责 | 关键设置 | 数据源 |
 | --- | --- | --- | --- |
-| compare-intro | 组标题 + 选型文案 | 文案、默认款数 2–4 | settings |
-| compare-data（§6.2.1） | `<script type="application/json" id="cmp-data">`：**只装本组白名单字段（walk/riding=11，chainsaw/trimmer=10）+ 列式编码 + ≤50 款 + 置于 DOM 末尾；只访问 metafield** | group→page 映射 | `spec.*` |
-| compare-table | 服务端默认 3 款静态表（可索引、无 JS 可读）；JS 有有效选择时用**同一 snippet** 重建替换 | 默认款数 | 数据岛 + `localStorage ib:compare:v1` |
-| compare-bar | 悬浮条：缩略图/移除/Compare(n)/可折叠 | — | localStorage |
+| **compare-page**（单 section） | 标题 + 选型文案 + 服务端默认表 + 数据岛，一次集合查询同时产出两者 | 标题覆盖、选型文案 | `compare_collections` 里的集合 → `spec.*`；数据岛 `#cmp-data` |
+| compare-bar | 临时确认条（全站浮层，**不属本页**）：缩略图 + `已加入 n/4` + 「查看对比」/「移除」/关闭。**不设自动消失计时**；关闭后本次会话不再自动弹出（SDD §6.2.8） | — | `localStorage` |
 
 **状态要点（本页最密集）**：
 

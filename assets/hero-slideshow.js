@@ -211,6 +211,12 @@
       const { productOut, textStart, textOut, textStagger, bgDelay, bgOut, nextIn, nextAdvance, enterOffset } =
         this.#readParams();
 
+      /* 方向：由「往哪边翻」决定；回绕（如 3 → 0 即 nextIndex=4）仍算 forward。
+         移动端是横向推拉、桌面是纵向卷动，两套 keyframes 在 CSS 里按媒体条件换名，
+         这里只负责给出方向与初始位移。断点必须与 section 里的 989px 一致。 */
+      const forward = nextIndex > this.current;
+      const horizontal = window.matchMedia('(max-width: 989px)').matches;
+
       const currentSlide = this.slides[this.current];
       const nextSlide = this.slides[target];
       const product = currentSlide.querySelector('.hero-slideshow__product');
@@ -224,11 +230,21 @@
       this.locked = true;
       this.#setControlsDisabled(true);
 
-      // 下一屏预置到屏幕下方并显示（仍在当前屏之下，被其盖住不露面）
+      // 下一屏预置到屏幕外并显示（仍在当前屏之下，被其盖住不露面）
+      // 移动端横向：从手势/按钮的方向那一侧进来；桌面纵向：一律从下方顶入
       nextSlide.hidden = false;
-      nextSlide.style.transform = 'translateY(100%)';
+      nextSlide.style.transform = horizontal
+        ? `translateX(${forward ? 100 : -100}%)`
+        : 'translateY(100%)';
       nextSlide.style.zIndex = '1';
       currentSlide.style.zIndex = '2';
+
+      // 供 CSS 选 prev 那套镜像 keyframes（只在横向时有意义）
+      if (horizontal) {
+        this.dataset.heroDir = forward ? 'next' : 'prev';
+      } else {
+        delete this.dataset.heroDir;
+      }
 
       // 时间轴：三条线并行，互不等待。
       //   产品岛  0ms 起退场
@@ -280,6 +296,7 @@
         nextProduct?.classList.remove('is-in');
         nextSlide.style.transform = '';
         nextSlide.style.zIndex = '';
+        delete this.dataset.heroDir;
 
         this.current = target;
         this.#sync();

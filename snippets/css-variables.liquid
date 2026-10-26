@@ -23,6 +23,15 @@
        别再往 60% 以下走（Lighthouse color-contrast 会挂）。 */
     --color-foreground-muted: color-mix(in srgb, var(--color-foreground) 70%, transparent);
 
+    /* 语义色：警告。**不跟随 preset 品牌色** —— 警告必须与品牌绿区分开。
+       配色的两条硬约束：
+       1) 这组黄**不许配白字**：#FBBF24 + #FFF 约 1.9:1，连非文本图形的 3:1 都不到；
+       2) 压在上面的字**也不用纯黑**：黑与黄是互补跳色，观感生硬。
+          用同色系压暗的深黄棕 #5C3D00 —— 对比度 5.92:1，视觉连续。
+       固定值不跟 preset（深底 preset 下若取 background 会变成深色、反而贴同色调）。 */
+    --color-warning: #FBBF24;
+    --color-warning-on: #5C3D00;
+
     /* 浅品牌绿（2026-10-17）：hover 光晕等场合用。oklch from 只取品牌色相，
        亮度/饱和度独立定值——商家换任何深浅的品牌绿，算出来的浅绿都够亮
        （当前 Coppice 品牌色下 ≈ #74C4A7；Noir 同色）。

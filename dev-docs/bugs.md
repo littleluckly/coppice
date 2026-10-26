@@ -326,6 +326,34 @@
 - **修复**：恢复态选择器全部改为复合类 `.template-collection.immersive-header.site-header--solid ...`（5 组，含 nav 根部/桌面行/品牌字/链接字/logo 反白）；同时修正 JS 注释里的错误前提。
 - **预防**：**状态类的"挂载元素"变了，必须逐条回读引用它的每个选择器，核对组合子（空格=后代、无空格=复合）与实际 DOM 层级**。可执行做法：改完挂载点后 `grep -n "<类名>" assets/ critical.css`，对每条选择器在心里数一次"这个类在目标元素上，还是在它的祖先上"；再用一个最小对照页（同一份 body 类，两条选择器各写一遍）截图验一次，比读代码可靠。**CSS 静默失效不会报错**，theme check 也查不出——只能靠这类对照实验。
 
+### BUG-047 · `{% if pages[handle] %}` 对不存在的页面也返回真，四个对比入口全渲染成 404 链接
+- **日期**：2026-10-22 ｜ **状态**：Fixed（真实店铺推送后实测）
+- **现象**：对比功能首次推送到开发店，页头对比图标按设计「无对比页就该隐藏」却出现了；`data-groups` 列出全部 4 个分组、`data-url-*` 指向四个 URL，而 `/pages/chainsaw-compare` 等**实际全是 404**。若上线，顾客点入口就撞 404 —— 正是 SDD §6.2.5 验收条要防的那个问题。
+- **根因**：`pages['不存在的handle']` 返回的是**空 drop（truthy）**，`{% if pages[handle] %}` 判真。而 `| default` 过滤器对 empty 同样生效，所以 A4 探针里 `{{ probe | default: 'nil' }}` 输出 `nil` 让人误以为它是 falsy——**两条证据看着一致，其实是两个不同语义**（truthiness vs default 过滤的替换规则）。设计阶段只验证了「访问成本」，从没验证过「不存在的 handle 在 `if` 里是真是假」。
+- **修复**：存在性判断统一改为 `{% if pages[handle].title != blank %}`（空 drop 的 title 为 blank）。全站只有一处探测入口：`snippets/compare-page-urls.liquid`。修复后同一页面实测 `compare-entry` 正确输出 `hidden`，入口消失。
+- **预防**：**判「资源是否存在」一律用具体属性判空（`.title != blank` / `.handle != blank`），不用裸对象真值判断。** 可执行做法：新增任何「探测资源存在性」的代码后，必须在真实店铺用一个**确定不存在**的 handle 打印两个结果并对照——`{% if pages[h] %}` 与 `{{ pages[h] | default: 'nil' }}`——两者不一致就说明真值判断不可用。Liquid 的空对象不报错、不警告，theme check 也查不出。
+
+### BUG-048 · 商家把集合 metafield 填成页面 handle（`chainsaw-compare`），对比页报「未链接集合」
+- **日期**：2026-10-22 ｜ **状态**：Fixed（代码容错 + 文档重写）
+- **现象**：商家按文档配完三步，`/pages/riding-mower-compare` 仍显示 `No product collection is linked to this comparison group yet.`；集合元字段实际填的是 `riding-mower-compare`，主题要比对的却是分组键 `riding-mower`。
+- **根因**：**文档自己给了错误示范**。`docs/merchant-compare-setup.md` 第二步的表格列的是页面标题与 handle（`Riding Mower Compare` → `riding-mower-compare`），第三步却说"填和商品一样的分组键"。同一个概念在一篇文档里出现两种写法、且没有并排对照，商家照着上面那张表抄是最自然的动作。主题侧也只认精确相等，没有任何容错。
+- **修复**：① 代码容错——`declared | strip | downcase | remove: '-compare'` 后再比对，填「分组键」或「页面 handle」都能识别；② 文档 3b 改成并排两列表（✅ `chainsaw` / ❌ `chainsaw-compare`）并写明填错的症状原文；③ 主题设置的 info 文案同步强调 "the GROUP KEY -- NOT chainsaw-compare"；④ 排错表补第三条原因。
+- **预防**：**同一概念在一份文档里只允许出现一种"正确写法"，另一种必须显式标 ❌ 并排展示**。可执行做法：写完面向用户/商家的文档后，把文档里出现过的所有标识符（handle、key、slug）列一遍，逐个回答"这个字符串应该被复制到哪里"——只要有一个字符串会被复制到错误的位置，就补一列对照。另外：任何"用户在两个相近字符串之间二选一"的配置点，代码侧都应对两种写法都容错，而不是靠文档讲清楚。
+
+### BUG-049 · hero 切换后顶部残留一条白色遮罩约 0.5s
+- **日期**：2026-10-25 ｜ **状态**：Fixed
+- **现象**：移动端 hero 触发切换后，画面顶部有一条半透明白色遮罩停留约 0.5s 才消失（残留时长 = 切换时长 600ms）。
+- **根因**：`.hero-slideshow__fade` 是「底部（移动端）/左侧（桌面）渐隐遮罩」，它被**装进 `.hero-slideshow__bg` 里随背景一起卷动**。早期为了不让弧形边缘露在视口内，写的是 `top:-10%; height:120%`（移动端 `bottom:-10%; height:75%`）——元素底边比 slide 底边多出 10%。卷动 `translateY(-100%)` 之后，这多出来的 10% 正好停在视口最上沿，也就是那块白条。它压在当前屏（z-index 2）之上、下一屏之上，所以两屏都看得见。
+- **修复**：① fade 尺寸收进 slide 内部（桌面 `top:0; height:100%`，移动端 `bottom:0`），卷出后完全离开视口；② 移动端切换改横向后，fade 还需要反向抵消父级位移（见 CSS 里 `hero-fade-hold-*` 四组 keyframes），否则它的左右边缘（同色硬边）会横扫出一条白幕。
+- **预防**：**凡是"跟着父级一起做位移动画"的遮罩/渐变层，尺寸必须严格落在父级盒内**——元素一旦有 `top:-10% / height:120%` 这类越界，就要把「父级移动 100% 后它落在哪」算一遍。可执行做法：给会平移的层加越界偏移前，先在静态页里 `getBoundingClientRect()` 打印它相对 slide 的 top/bottom，要求 `bottom - slide.bottom == 0`。
+
+### BUG-050 · 移动端产品图被顶出 slide 上沿，割草机手柄整段不可见
+- **日期**：2026-10-25 ｜ **状态**：Fixed
+- **现象**：移动端 hero 里 `hero-slideshow__product` 溢出 slide 顶部，产品图上沿（手柄、导向杆）被裁掉一段。
+- **根因**：两层叠加。① 定位用 `top:30%` + `translate:-50% -50%`（中心对齐），图片高度一旦超过 60% 视口，上沿必然为负；② 只给了 `width:66%` 一个维度，图片高度完全由宽高比决定，商家传的图越"高"溢出越多。后来试图用 `max-height` 兜，同样无效——**父元素高度是 auto 时，子元素上的百分比 `max-height` 无法解析**，实测容器被算成 184px、图片仍是 313px。
+- **修复**：移动端容器改成**明确高度** `height:44%` + `img { width:100%; height:100%; object-fit:contain; object-position:center bottom }`；`top` 表达顶边（`translate:-50% 0`）。同时新增 `product_image_mobile` 设置（block 级，`<source media="(max-width: 989px)">`），商家可给手机单独传一张方图。
+- **预防**：**在 auto 高度的父元素上，不要用百分比 `max-height` 约束子图片**，改用父级定高 + 子级 `object-fit`。可执行做法：新增任何"图片按容器缩放"的布局后，用一张 **1:1 与一张 3:4** 的图各测一次 `getBoundingClientRect()`，确认 `img.bottom/right <= 容器.bottom/right`。
+
 ## 记录模板（追加新 bug 用）
 
 ```

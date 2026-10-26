@@ -1,30 +1,3 @@
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file are auto-generated.
- *
- * This file may be updated by the Shopify admin language editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file is auto-generated.
- *
- * This file may be updated by the Shopify admin language editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file is auto-generated.
- *
- * This file may be updated by the Shopify admin language editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
 {
   "general": {
     "404": "Not found",
@@ -66,7 +39,10 @@
     "text": "Text",
     "theme": "Theme",
     "typography": "Typography",
-    "utility_bar": "Utility bar"
+    "utility_bar": "Utility bar",
+    "compare": "Compare",
+    "compare_groups_header": "Comparison groups",
+    "compare_page_header": "Comparison page"
   },
   "sections": {
     "hero_slideshow": {
@@ -92,7 +68,9 @@
             "image_mobile": "Mobile image (portrait, optional)",
             "image_mobile_info": "Recommended 3:4. When empty, the landscape image is cropped on mobile.",
             "product_image": "Product image (transparent cutout)",
-            "product_image_info": "PNG or WebP with transparency. Floats above the background with a soft shadow; leave empty to skip."
+            "product_image_info": "PNG or WebP with transparency. Floats above the background with a soft shadow; leave empty to skip.",
+            "product_image_mobile": "Mobile product image (optional)",
+            "product_image_mobile_info": "Square or portrait cutout works best on phones. When empty, the image above is used, scaled down to fit."
           },
           "defaults": {
             "eyebrow": "New · 40V battery series",
@@ -227,6 +205,25 @@
       "presets": {
         "default": "Collection"
       }
+    },
+    "compare_page": {
+      "name": "Compare page",
+      "settings": {
+        "heading": {
+          "label": "Heading",
+          "info": "Leave empty to use the page title."
+        },
+        "intro": {
+          "label": "Choosing guide",
+          "info": "Two or three sentences on how to choose within this group."
+        }
+      },
+      "presets": {
+        "name": "Compare page"
+      }
+    },
+    "compare_lookup": {
+      "name": "Compare lookup"
     }
   },
   "labels": {
@@ -290,7 +287,13 @@
     "skeleton_foreground": "Header & footer text",
     "skeleton_foreground_info": "Leave empty to follow the global Foreground color above. Must stay readable on the header/footer background chosen above.",
     "skeleton_accent": "Header & footer accent",
-    "skeleton_accent_info": "Leave empty to follow the global Brand color above. Drives the announcement bar fill and the brand name in the header."
+    "skeleton_accent_info": "Leave empty to follow the global Brand color above. Drives the announcement bar fill and the brand name in the header.",
+    "compare_groups": "Comparison group keys",
+    "compare_groups_info": "Comma-separated list. Each key needs a page whose title is \"<Group name> Compare\" -- for example key \"chainsaw\" needs a page titled \"Chainsaw Compare\". Comparison entry points only appear for keys that have a matching page.",
+    "compare_page_indexing": "Allow search engines to index comparison pages",
+    "compare_page_indexing_info": "Turn off if comparison pages should not appear in search results.",
+    "compare_collections": "Comparison collections",
+    "compare_collections_info": "One collection per comparison group. Each collection must say which group it belongs to: set the collection metafield \"compare_group\" to the GROUP KEY -- for example \"chainsaw\", NOT \"chainsaw-compare\". If the metafield is empty, the collection handle is used instead."
   },
   "options": {
     "alignment": {
