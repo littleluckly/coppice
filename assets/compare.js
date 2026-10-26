@@ -85,60 +85,6 @@
     return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX;
   }
 
-  // ------------------------------------------------------- 冲突提示（就地）
-
-  const CONFLICT_CLASS = 'compare-conflict';
-
-  /**
-   * 在 host 内渲染一条冲突提示。三类冲突共用同一骨架，只换文案与主动作。
-   * @returns {{destroy: () => void}} 便于调用方在取消/成功后回收
-   */
-  function renderConflict(host, { message, primaryLabel, onPrimary, cancelLabel, onCancel }) {
-    const box = document.createElement('div');
-    box.className = CONFLICT_CLASS;
-    box.setAttribute('role', 'group');
-
-    const text = document.createElement('p');
-    text.className = `${CONFLICT_CLASS}__text`;
-    text.textContent = message;
-    box.appendChild(text);
-
-    const actions = document.createElement('div');
-    actions.className = `${CONFLICT_CLASS}__actions`;
-
-    const controller = new AbortController();
-    const { signal } = controller;
-
-    const primary = document.createElement('button');
-    primary.type = 'button';
-    primary.className = `${CONFLICT_CLASS}__primary`;
-    primary.textContent = primaryLabel;
-    primary.addEventListener('click', () => onPrimary(), { signal });
-    actions.appendChild(primary);
-
-    if (cancelLabel) {
-      const cancel = document.createElement('button');
-      cancel.type = 'button';
-      cancel.className = `${CONFLICT_CLASS}__cancel`;
-      cancel.textContent = cancelLabel;
-      cancel.addEventListener('click', () => onCancel(), { signal });
-      actions.appendChild(cancel);
-    }
-
-    box.appendChild(actions);
-    host.appendChild(box);
-
-    /* 焦点移到主动作：提示是用户操作触发的，键盘用户不能停在原地猜发生了什么 */
-    primary.focus();
-
-    return {
-      destroy() {
-        controller.abort();
-        box.remove();
-      },
-    };
-  }
-
   // ------------------------------------------------------------ compare-toggle
 
   class CompareToggle extends HTMLElement {
@@ -148,7 +94,6 @@
       if (!this.button) return;
 
       this.max = clampMax(this);
-      this.conflict = null;
       this.controller = new AbortController();
       const { signal } = this.controller;
 
@@ -160,10 +105,6 @@
     }
 
     disconnectedCallback() {
-      if (this.conflict) {
-        this.conflict.destroy();
-        this.conflict = null;
-      }
       if (this.controller) {
         this.controller.abort();
         this.controller = null;
@@ -191,12 +132,99 @@
       const group = this.group;
       if (!handle || !group) return;
 
-      this.clearConflict();
-
       const list = readList();
       const existing = list.find((item) => item.h === handle);
 
-      if (existing) {
+      if (existing) {  // --------------------------------------------------------- 全局冲突提示
+
+  /** 取页面里唯一的 <compare-toast>，把内容推给它 */
+  function showToast(options) {
+    const toast = document.querySelector('compare-toast');
+    if (!toast || typeof toast.show !== 'function') return;
+    toast.show(options);
+  }
+
+  /**
+   * 冲突提示的宿主（2026-10-25 刘工改）。
+   *
+   * 原来提示就地在商品卡内展开：卡窄、文字挤、还把卡片撑高推动下面的卡。
+   * 现在改成从屏幕上缘滑入的全局条 —— 卡片高度不变，提示也更醒目。
+   * 只承载需要用户决定的事（跨组冲突 / 已达上限），不承担成功反馈
+   * （那是底部确认条的职责）。
+   */
+  class CompareToast extends HTMLElement {
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+
+      this.message = this.querySelector('[data-compare-toast-message]');
+      this.primary = this.querySelector('[data-compare-toast-primary]');
+      this.close = this.querySelector('[data-compare-toast-close]');
+      this.onPrimary = null;
+      this.returnFocus = null;
+
+      if (this.primary) {
+        this.primary.addEventListener(
+          'click',
+          () => {
+            const action = this.onPrimary;
+            this.hide(false);
+            if (action) action();
+          },
+          { signal },
+        );
+      }
+
+      if (this.close) {
+        this.close.addEventListener('click', () => this.hide(true), { signal });
+      }
+
+      document.addEventListener(
+        'keydown',
+        (event) => {
+          if (event.key === 'Escape' && !this.hidden) this.hide(true);
+        },
+        { signal },
+      );
+    }
+
+    disconnectedCallback() {
+      if (this.controller) {
+        this.controller.abort();
+        this.controller = null;
+      }
+    }
+
+    show({ message, primaryLabel, onPrimary, returnFocus }) {
+      if (this.message) this.message.textContent = message || '';
+
+      if (this.primary) {
+        const hasAction = Boolean(primaryLabel);
+        this.primary.textContent = hasAction ? primaryLabel : '';
+        this.primary.hidden = !hasAction;
+      }
+
+      this.onPrimary = onPrimary || null;
+      this.returnFocus = returnFocus || null;
+      this.hidden = false;
+
+      /* 有主操作就把焦点交给它（屏读会先读 aria-describedby 指的提示文案）；
+         没有主操作则落在关闭键上，键盘用户不会卡在一个没法响应的提示里 */
+      const focusTarget = this.primary && !this.primary.hidden ? this.primary : this.close;
+      if (focusTarget) focusTarget.focus();
+    }
+
+    hide(restoreFocus) {
+      this.hidden = true;
+      this.onPrimary = null;
+      const target = this.returnFocus;
+      this.returnFocus = null;
+      if (restoreFocus && target && target.isConnected) target.focus();
+    }
+  }
+
+
         this.remove(handle);
         return;
       }
@@ -212,7 +240,7 @@
       }
 
       if (list.length >= this.max) {
-        this.showFullConflict(list);
+        this.showFullConflict();
         return;
       }
 
@@ -243,36 +271,24 @@
     }
 
     /** 跨组：清空是安全的，那几款本来就不能与新品同组比较 */
-    showCrossGroupConflict(list) {
-      this.conflict = renderConflict(this, {
+    showCrossGroupConflict() {
+      showToast({
         message: this.t('conflict_cross_group'),
         primaryLabel: this.t('conflict_clear_and_add'),
-        cancelLabel: this.t('conflict_cancel'),
+        returnFocus: this.button,
         onPrimary: () => {
-          this.clearConflict();
           commit(() => []);
           this.add();
         },
-        onCancel: () => this.clearConflict(),
       });
     }
 
     /** 已满：不给一键替换 —— 牺牲哪一款是用户的判断，替用户猜是越权 */
     showFullConflict() {
-      this.conflict = renderConflict(this, {
+      showToast({
         message: this.t('conflict_full'),
-        primaryLabel: this.t('conflict_cancel'),
-        onPrimary: () => this.clearConflict(),
-        onCancel: null,
+        returnFocus: this.button,
       });
-    }
-
-    clearConflict() {
-      if (this.conflict) {
-        this.conflict.destroy();
-        this.conflict = null;
-        this.button.focus();
-      }
     }
 
     /** 文案由 Liquid 通过 data-* 下发，前端不硬编码 */
@@ -1071,6 +1087,7 @@
   customElements.define('compare-toggle', CompareToggle);
   customElements.define('compare-entry', CompareEntry);
   customElements.define('compare-bar', CompareBar);
+  customElements.define('compare-toast', CompareToast);
 
   /**
    * 浏览器「回退」命中 bfcache 时不会重新执行脚本，DOM 停在旧快照上 ——
