@@ -223,12 +223,11 @@ compare-bar[data-collapsed] .compare-bar__pill {
   }
 }
 
-/* ===== 全局冲突提示（2026-10-25）=====
-   原来「只能比同类型商品 / 最多 4 款」是塞进商品卡里就地展开的：
-   卡窄、文字挤、还把卡片撑高挤动下面的卡。改成从屏幕上缘滑入的全局条。
+/* ===== 全局冲突提示（2026-10-25 改）=====
+   布局用 grid 而不是 flex：图标 / 文案 / 关闭钉成一行（关闭始终在右上角），
+   主按钮单独占第二行居中。flex + wrap 时窄屏会把图标和文案拆到两行（实测）。
 
-   为什么放顶部而不是底部：底部已经被对比确认条占了（常驻），
-   toast 叠上去会打架；而且顶部距离「页头/网格视线」更近，不挡大拇指操作。 */
+   关闭条放屏幕上方：底部已被常驻对比条占用，叠上去会打架。 */
 
 compare-toast {
   position: fixed;
@@ -247,11 +246,15 @@ compare-toast[hidden] {
 
 .compare-toast__inner {
   pointer-events: auto;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.7rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'icon message close'
+    'action action action';
+  align-items: start;
+  gap: 0.45rem 0.6rem;
   inline-size: min(34rem, 100%);
-  padding: 0.7rem 0.7rem 0.7rem 0.9rem;
+  padding: 0.7rem 0.7rem 0.75rem 0.9rem;
   border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
   border-radius: 10px;
   background-color: var(--color-background);
@@ -278,12 +281,13 @@ compare-toast[hidden] {
 
 /* 感叹号圆点：走品牌色令牌，不硬编码警告橙（AGENTS §4） */
 .compare-toast__icon {
-  flex: none;
+  grid-area: icon;
   display: flex;
   align-items: center;
   justify-content: center;
   inline-size: 22px;
   block-size: 22px;
+  /* 与文案首行视觉对齐（文案 0.87rem / line-height 1.45 ≈ 20px 行盒） */
   margin-block-start: 1px;
   border-radius: 50%;
   background-color: var(--color-brand);
@@ -294,29 +298,60 @@ compare-toast[hidden] {
 }
 
 .compare-toast__message {
-  flex: 1 1 auto;
+  grid-area: message;
+  /* minmax(0,1fr) + 这一条：长单词不允许把网格撑破 */
+  min-inline-size: 0;
   margin: 0;
   font-size: 0.87rem;
   line-height: 1.45;
   color: var(--color-foreground);
 }
 
-.compare-toast__actions {
-  flex: none;
+.compare-toast__close {
+  grid-area: close;
+  justify-self: end;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  margin-block-start: -4px;
+  margin-inline-end: -4px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: color-mix(in srgb, var(--color-foreground) 65%, transparent);
+  cursor: pointer;
+}
+
+.compare-toast__close svg {
+  inline-size: 0.8rem;
+  block-size: 0.8rem;
+}
+
+/* 主操作单独一行、居中（2026-10-25 刘工：PC 也这么放，两端一致） */
+.compare-toast__actions {
+  grid-area: action;
+  display: flex;
+  justify-content: center;
+  padding-block-start: 0.15rem;
+}
+
+/* 没有主操作（如「已达上限」只有关闭）时整行塌陷 */
+.compare-toast__actions[hidden] {
+  display: none;
 }
 
 .compare-toast__primary {
-  min-block-size: 36px;
-  padding: 0 0.8rem;
+  min-block-size: 40px;
+  padding: 0 1.1rem;
   border: 1px solid var(--color-foreground);
   border-radius: 6px;
   background-color: var(--color-foreground);
   color: var(--color-background);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   cursor: pointer;
 }
 
@@ -324,38 +359,8 @@ compare-toast[hidden] {
   display: none;
 }
 
-.compare-toast__close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  inline-size: 36px;
-  block-size: 36px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: none;
-  color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
-  cursor: pointer;
-}
-
-.compare-toast__close svg {
-  inline-size: 0.85rem;
-  block-size: 0.85rem;
-}
-
 .compare-toast__primary:focus-visible,
 .compare-toast__close:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
-}
-
-@media (max-width: 767px) {
-  .compare-toast__inner {
-    flex-wrap: wrap;
-  }
-
-  .compare-toast__actions {
-    inline-size: 100%;
-    justify-content: flex-end;
-  }
 }
