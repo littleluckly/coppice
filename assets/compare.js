@@ -250,6 +250,10 @@
     }
 
     disconnectedCallback() {
+      if (this.conflictTimer) {
+        clearTimeout(this.conflictTimer);
+        this.conflictTimer = null;
+      }
       if (this.controller) {
         this.controller.abort();
         this.controller = null;
@@ -327,7 +331,23 @@
     }
 
     /** 跨组：清空是安全的，那几款本来就不能与新品同组比较 */
+    /**
+     * 跨组冲突：按钮（连勾选框）转红并晃 0.5s。
+     * toast 在屏幕顶部，而用户眼睛停在刚点的卡片上 —— 先给本地反馈，
+     * 再让顶部提示说明原因，视线不用来回找。
+     */
+    flashConflict() {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.button.classList.add('is-conflict');
+      clearTimeout(this.conflictTimer);
+      this.conflictTimer = setTimeout(
+        () => this.button.classList.remove('is-conflict'),
+        reduce ? 1200 : 500,
+      );
+    }
+
     showCrossGroupConflict() {
+      this.flashConflict();
       showToast({
         message: this.t('conflict_cross_group'),
         primaryLabel: this.t('conflict_clear_and_add'),
