@@ -455,8 +455,13 @@
     outline-offset: 2px;
   }
 
-  /* ===== 切换控件：一条居中的毛玻璃胶囊，箭头在两侧、圆点在中间 =====
-     居中用独立属性 translate（不用 transform），与全站「动画会覆写 transform」的
+  /* ===== 切换控件：去容器的极简指示器 =====
+     旧版是一条居中的白色毛玻璃胶囊（72% 底 + blur + 投影），里面塞两个箭头 + 一排圆点。
+     问题：压在照片上它就是一块实心亮斑，视觉重量与 CTA 按钮同级；窄屏上「按钮 + 白胶囊」
+     上下叠成两层白块，视线被拽向页面底边而不是首屏内容 —— 喧宾夺主。
+     现改为**不设容器**：无底色、无模糊、无阴影、无内边距，只剩「细点 + 活动短横」。
+     箭头仅在桌面显示（触屏上滑动手势已覆盖，箭头是重复能力）。
+     居中仍用独立属性 translate（不用 transform），与全站「动画会覆写 transform」的
      约定一致：这层以后若加动效也不会被居中值绊住。 */
   .hero-slideshow__controls {
     position: absolute;
@@ -467,21 +472,14 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.375rem;
-    border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-background) 72%, transparent);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: 0 6px 24px rgb(0 0 0 / 12%);
   }
   .hero-slideshow__dots {
     display: flex;
     align-items: center;
     gap: 0.125rem;
-    padding-inline: 0.25rem;
   }
-  /* 圆点本体 8px，但按钮做成 24px 见方保证可点中（视觉尺寸不变，热区变大）。
-     装饰圆点走 ::after，缩放不撑大热区。 */
+  /* 圆点本体 7px，但按钮仍做 24px 见方保证可点中（视觉尺寸不变，热区不变）。
+     装饰圆点走 ::after —— 按钮宽度固定，所以激活短横左右扩展时相邻点不会位移。 */
   .hero-slideshow__dot {
     display: grid;
     place-items: center;
@@ -492,17 +490,27 @@
     background: none;
     cursor: pointer;
   }
+  /* 未激活点：前景色 72%。旧版是 32% —— 那时有白色胶囊垫底，淡也看得见；
+     去掉容器后点直接压在照片上（本主题移动端 hero 底部是草地，不是白底），
+     32% / 55% 实测在 390px 手机上几乎消失，最终定在 72%（#4D4D4D 一级），
+     对亮草绿约 3:1、对底部的白色渐隐层 8:1，两种背景都成立。
+     点径 7px（原 8px）：容器没了，单颗点就是全部视觉重量，再小认不出是分页。 */
   .hero-slideshow__dot::after {
     content: "";
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
-    background-color: color-mix(in srgb, var(--color-foreground) 32%, transparent);
-    transition: background-color 0.2s ease, scale 0.2s ease;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 72%, transparent);
+    transition:
+      width 0.28s var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)),
+      background-color 0.28s ease;
   }
+  /* 激活态拉成 18px 短横：用「长度」而不只是「深浅」表达当前页，
+     同时换成品牌色 —— 浅色 preset（深绿）与 Noir（亮 lime）两端都拉得开差距。
+     用 width 而非 scaleX：scaleX 会把 999px 圆角一起拉伸，端头会尖。 */
   .hero-slideshow__dot.is-active::after {
+    width: 1.125rem;
     background-color: var(--color-brand);
-    scale: 1.4;
   }
   .hero-slideshow__dot:focus-visible {
     outline: 2px solid var(--color-brand-accent);
@@ -518,23 +526,25 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background-color: transparent;
-    /* 图标色跟随前景色；hover 反转时用背景色作前景——
-       这样浅色 preset（白底）与 Noir（深底 + lime 品牌色）两端都不会出现
-       白字压亮绿那种读不出来的组合。 */
+    /* 桌面保留一枚很淡的圆底（55% 背景色），不是装饰而是可读性兜底：
+       箭头是深灰线性图标，压在深色照片上会糊掉。两个独立小圆不构成「盒子」，
+       所以不会把胶囊那层视觉重量带回来。移动端这一层整体 display:none。 */
+    background-color: color-mix(in srgb, var(--color-background) 55%, transparent);
     color: var(--color-foreground);
     cursor: pointer;
     transition: background-color 0.25s ease, color 0.25s ease;
   }
-  .hero-slideshow__arrow:hover {
-    background-color: var(--color-brand);
-    color: var(--color-background);
+  .hero-slideshow__arrow:hover,
+  .hero-slideshow__arrow:focus-visible {
+    /* hover 加深到 82% 而不是换成实心品牌色：实心块会重新长出一个「白/绿盒子」，
+       正是这次要去掉的东西。 */
+    background-color: color-mix(in srgb, var(--color-background) 82%, transparent);
+    color: var(--color-brand);
   }
   .hero-slideshow__arrow:focus-visible {
     outline: 2px solid var(--color-brand-accent);
     outline-offset: -2px;
-  }
-  .hero-slideshow__arrow svg {
+  }  .hero-slideshow__arrow svg {
     width: 0.75rem;
     height: 0.75rem;
   }
@@ -706,10 +716,18 @@
         transparent 80%
       );
     }
-    /* 移动端控件仍居中，只是贴近底边 */
+    /* 移动端控件仍居中，只是贴近底边。
+       底距取 0.5rem（而非原来的 0.875rem）：指示器去掉胶囊后整体只有 24px 高，
+       若仍停在 14px，它的顶边（38px）会顶到 CTA 底边（12% ≈ 42px）下方仅 4px 处；
+       下移到 8px 顶边变 32px，与按钮之间留出约 10px。
+       箭头在触屏上隐藏：滑动切屏 + 直接点圆点已覆盖，它是重复能力；
+       而且两个 34px 圆钮正是旧版胶囊被撑到近半屏宽的主因。 */
     .hero-slideshow__controls {
-      bottom: 0.875rem;
+      bottom: 0.5rem;
       gap: 0;
+    }
+    .hero-slideshow__arrow {
+      display: none;
     }
   }
 {% endstylesheet %}
