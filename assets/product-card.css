@@ -215,7 +215,10 @@
   background-color: var(--color-background);
 }
 .product-card__compare[aria-pressed='true']::before {
-  background-color: var(--color-foreground);
+  /* 选中态用品牌色，与下方「Add to cart」同色系 —— 一张卡上的两个主操作
+     视觉上是一套的。未选中态保持中性灰边：那才是「还没激活」的正确信号。 */
+  border-color: var(--color-brand);
+  background-color: var(--color-brand);
   box-shadow: inset 0 0 0 2.5px var(--color-background);
 }
 
