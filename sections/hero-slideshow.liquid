@@ -138,7 +138,27 @@
               {%- unless hero_island_img contains ' alt=' -%}
                 {%- assign hero_island_img = hero_island_img | replace: '<img ', '<img alt="" ' -%}
               {%- endunless -%}
-              {{ hero_island_img }}
+
+              {%- comment -%}
+                移动端专用产品图（2026-10-25 加）。竖版 hero 里横放一张 16:9 抠图，
+                主体会被裁得只剩一半；给商家一个「手机用哪张」的入口，空则回落主图。
+                断点用 989px —— 与 .hero-slideshow 的移动端布局断点一致（不是底图的 749px：
+                底图按 749 切是因为平板竖屏仍用横图构图，产品岛则 989 以下就换竖排了）。
+              {%- endcomment -%}
+              {%- if block.settings.product_image_mobile != blank -%}
+                <picture>
+                  <source
+                    media="(max-width: 989px)"
+                    srcset="{{ block.settings.product_image_mobile | image_url: width: 600 }} 600w, {{ block.settings.product_image_mobile | image_url: width: 900 }} 900w"
+                    sizes="62vw"
+                    width="{{ block.settings.product_image_mobile.width }}"
+                    height="{{ block.settings.product_image_mobile.height }}"
+                  >
+                  {{ hero_island_img }}
+                </picture>
+              {%- else -%}
+                {{ hero_island_img }}
+              {%- endif -%}
             </div>
           {%- endif -%}
 
@@ -808,6 +828,12 @@
           "id": "product_image",
           "label": "t:sections.hero_slideshow.blocks.slide.labels.product_image",
           "info": "t:sections.hero_slideshow.blocks.slide.labels.product_image_info"
+        },
+        {
+          "type": "image_picker",
+          "id": "product_image_mobile",
+          "label": "t:sections.hero_slideshow.blocks.slide.labels.product_image_mobile",
+          "info": "t:sections.hero_slideshow.blocks.slide.labels.product_image_mobile_info"
         },
         {
           "type": "text",
