@@ -22,6 +22,7 @@
 
   const STORAGE_KEY = 'ib:compare:v1';
   const DEFAULT_MAX = 4;
+  const TOAST_AUTO_HIDE_MS = 3000;
 
   // ---------------------------------------------------------------- 状态层
 
@@ -110,9 +111,43 @@
 
       this.message = this.querySelector('[data-compare-toast-message]');
       this.primary = this.querySelector('[data-compare-toast-primary]');
+      this.actions = this.querySelector('.compare-toast__actions');
       this.close = this.querySelector('[data-compare-toast-close]');
       this.onPrimary = null;
       this.returnFocus = null;
+      this.timer = null;
+      this.skipFocusPause = false;
+
+      /* 3 秒自动收起。但鼠标停上来、或键盘把焦点移进来时暂停计时 ——
+         WCAG 2.2.1 要求时限可延长；何况这是「需要你决定」的提示，
+         正在读/正要点的瞬间被抽走最恼人。 */
+      this.addEventListener('mouseenter', () => this.clearTimer(), { signal });
+      this.addEventListener(
+        'mouseleave',
+        () => {
+          if (!this.hidden) this.startTimer();
+        },
+        { signal },
+      );
+      this.addEventListener(
+        'focusin',
+        () => {
+          /* 打开时我们把焦点主动放到按钮上，这一次不算「用户进来了」 */
+          if (this.skipFocusPause) return;
+          this.clearTimer();
+        },
+        { signal },
+      );
+      this.addEventListener(
+        'focusout',
+        () => {
+          requestAnimationFrame(() => {
+            if (this.hidden || this.contains(document.activeElement)) return;
+            this.startTimer();
+          });
+        },
+        { signal },
+      );
 
       if (this.primary) {
         this.primary.addEventListener(
@@ -140,20 +175,36 @@
     }
 
     disconnectedCallback() {
+      this.clearTimer();
       if (this.controller) {
         this.controller.abort();
         this.controller = null;
       }
     }
 
+    startTimer() {
+      this.clearTimer();
+      this.timer = setTimeout(() => this.hide(true), TOAST_AUTO_HIDE_MS);
+    }
+
+    clearTimer() {
+      if (this.timer) {
+        clearTimeout(this.timer);
+        this.timer = null;
+      }
+    }
+
     show({ message, primaryLabel, onPrimary, returnFocus }) {
       if (this.message) this.message.textContent = message || '';
 
+      const hasAction = Boolean(primaryLabel);
+
       if (this.primary) {
-        const hasAction = Boolean(primaryLabel);
         this.primary.textContent = hasAction ? primaryLabel : '';
         this.primary.hidden = !hasAction;
       }
+      /* 没有主操作时整行塌陷，别留一条空白带 */
+      if (this.actions) this.actions.hidden = !hasAction;
 
       this.onPrimary = onPrimary || null;
       this.returnFocus = returnFocus || null;
@@ -162,10 +213,15 @@
       /* 有主操作就把焦点交给它（屏读会先读 aria-describedby 指的提示文案）；
          没有主操作则落在关闭键上，键盘用户不会卡在一个没法响应的提示里 */
       const focusTarget = this.primary && !this.primary.hidden ? this.primary : this.close;
+      this.skipFocusPause = true;
       if (focusTarget) focusTarget.focus();
+      this.skipFocusPause = false;
+
+      this.startTimer();
     }
 
     hide(restoreFocus) {
+      this.clearTimer();
       this.hidden = true;
       this.onPrimary = null;
       const target = this.returnFocus;
