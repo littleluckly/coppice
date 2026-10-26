@@ -101,7 +101,9 @@ compare-bar[hidden] {
   min-block-size: 44px;
   padding: 0 1rem;
   border-radius: 4px;
-  background-color: var(--color-foreground);
+  /* 主操作走品牌色，与商品卡「Add to cart」、勾选框选中态同一套
+     （原来用 foreground 深色，像一条工具条而不是「去看对比」的行动点） */
+  background-color: var(--color-brand);
   color: var(--color-background);
   font-size: 0.8rem;
   text-decoration: none;
