@@ -759,6 +759,11 @@
       justify-content: center;
       margin-block-start: 1rem;
     }
+    /* 按钮压在照片上，必须自己「站得住」：品牌深绿实心一旦压在深绿机身上就没了边界
+       （投影是配色纪律里的合法例外，永远黑）。只加到移动端，桌面按钮在浅底上不需要。 */
+    .hero-slideshow__cta {
+      box-shadow: 0 8px 20px rgb(0 0 0 / 22%);
+    }
     /* 标题改白。这是「压在照片上」的元素 —— 配色纪律里的合法硬编码例外，不跟
        --color-foreground 走：变量在 Noir preset 下是浅灰、浅色 preset 下是深灰，
        而照片不随 preset 变，用变量会在深色照片上变成黑字读不出来。
