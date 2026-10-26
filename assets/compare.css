@@ -290,9 +290,9 @@ compare-toast[hidden] {
   /* 与文案首行视觉对齐（文案 0.87rem / line-height 1.45 ≈ 20px 行盒） */
   margin-block-start: 1px;
   border-radius: 50%;
-  /* 黄底 + 深色叹号：黄做文字色不可读，做底色配深字才够 7:1 */
+  /* 深琥珀底 + 白字（4.96:1）；亮黄配白只有 2:1，不达标 */
   background-color: var(--color-warning);
-  color: var(--color-warning-ink);
+  color: var(--color-warning-on);
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1;
@@ -350,7 +350,7 @@ compare-toast[hidden] {
   border: 1px solid var(--color-warning);
   border-radius: 6px;
   background-color: var(--color-warning);
-  color: var(--color-warning-ink);
+  color: var(--color-warning-on);
   font: inherit;
   font-size: 0.82rem;
   cursor: pointer;
