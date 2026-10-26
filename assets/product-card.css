@@ -141,7 +141,9 @@
    取 var(--color-brand) 而非硬编码色值，未来换 preset 自动跟随。 */
 .product-card__quick-add {
   display: block;
-  margin-block-start: auto; /* 文字行数不一也把按钮统一压到卡底（卡本身 height:100% + 纵向 flex） */
+  /* 不再自持 auto：由上方 .product-card__compare 吃掉剩余空间，把「Compare + 加购」
+     作为一组压到卡底。两者都写 auto 会平分剩余空间，Compare 就浮在中间了。 */
+  margin-block-start: 0;
 }
 .product-card__quick-add form {
   display: block;
@@ -189,7 +191,10 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  margin-block-start: 0;
+  /* 始终吃掉剩余空间，把自己连同下方的加购区一起压到卡底 ——
+     卡片文字行数不一时，Compare 与 Add to cart 的位置在各卡之间保持齐平。
+     2026-10-25 刘工：原来只在 :last-child 时 auto，有加购区的卡就不贴底了。 */
+  margin-block-start: auto;
   padding: 10px 0;
   min-height: 44px;
   border: none;
@@ -198,9 +203,6 @@
   font-size: 0.85rem;
   color: inherit;
   cursor: pointer;
-}
-.product-card__compare:last-child {
-  margin-block-start: auto;
 }
 .product-card__compare::before {
   content: '';
