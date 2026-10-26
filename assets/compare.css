@@ -290,7 +290,7 @@ compare-toast[hidden] {
   /* 与文案首行视觉对齐（文案 0.87rem / line-height 1.45 ≈ 20px 行盒） */
   margin-block-start: 1px;
   border-radius: 50%;
-  /* 深琥珀底 + 白字（4.96:1）；亮黄配白只有 2:1，不达标 */
+  /* 亮黄底 + 深字（7.9:1）；这个黄配白字只有 2.07:1，不达标 */
   background-color: var(--color-warning);
   color: var(--color-warning-on);
   font-size: 0.78rem;

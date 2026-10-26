@@ -24,12 +24,13 @@
     --color-foreground-muted: color-mix(in srgb, var(--color-foreground) 70%, transparent);
 
     /* 语义色：警告。**不跟随 preset 品牌色** —— 警告必须与品牌绿区分开。
-       选深琥珀而不是亮黄，是为了让**白色文字**压在上面仍然达标：
-       · #B45309 + #FFF = 4.96:1（过 WCAG AA 4.5:1）
-       · 亮黄 #E8A33D + #FFF 只有约 2:1，不可用；而亮黄配深字又与「浅色文字」的视觉意图相反
-       --color-warning-on 固定为白，不跟随 preset（深底 preset 下若用 background 会变成黑字） */
-    --color-warning: #B45309;
-    --color-warning-on: #FFFFFF;
+       这组黄的硬约束是「不许配白字」：
+       · #F8A136 + #FFF      = 2.07:1  ✗（连非文本图形的 3:1 都不到）
+       · #F8A136 + #2A1E00   = 7.90:1  ✓
+       所以 --color-warning-on 必须是深色；同时固定值，不跟随 preset
+       （深底 preset 下若用 background 会变成深色、反而贴同色调） */
+    --color-warning: #F8A136;
+    --color-warning-on: #2A1E00;
 
     /* 浅品牌绿（2026-10-17）：hover 光晕等场合用。oklch from 只取品牌色相，
        亮度/饱和度独立定值——商家换任何深浅的品牌绿，算出来的浅绿都够亮
