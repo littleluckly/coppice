@@ -55,7 +55,7 @@
           "settings": {
             "menu_item": "Trimmers",
             "icon": "trimmer",
-            "popular_collection": "self-propelled"
+            "popular_collection": "string-trimmer"
           }
         },
         "mega_category_icon_8Jt6np": {
@@ -63,7 +63,7 @@
           "settings": {
             "menu_item": "Chainsaws",
             "icon": "chainsaw",
-            "popular_collection": "chainsaw-popular"
+            "popular_collection": "chainsaw"
           }
         },
         "mega_category_icon_mgPtg6": {
