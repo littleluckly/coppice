@@ -230,6 +230,9 @@
       "weight": "Weight",
       "noise": "Noise level",
       "warranty": "Warranty"
+    },
+    "toast": {
+      "close": "Dismiss"
     }
   }
 }
