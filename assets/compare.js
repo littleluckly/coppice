@@ -225,8 +225,6 @@
       const existing = list.find((item) => item.h === handle);
 
       if (existing) {
-
-
         this.remove(handle);
         return;
       }
