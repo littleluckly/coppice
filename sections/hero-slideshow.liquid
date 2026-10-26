@@ -742,30 +742,39 @@
       transform: translate(-50%, 0);
       text-align: center;
     }
-    /* 文字精简（刘工 2026-10-25「移动端文字太多」）：
-       移动端**不显示副标题**。竖屏 384px 高里塞「产品图 + 眉标 + 标题 + 副标题 + 按钮」，
-       任何一项都不可能在保住产品图完整的前提下共存（实测内容块 184px，
-       产品图占 44% = 169px，只剩 15px 余量）。副标题在窄屏本来就是三行碎句，
-       信息密度最低 —— 取舍掉它，保留眉标/标题/按钮这条主链路。
-       桌面端副标题照常显示，不受影响。 */
-    .hero-slideshow__subheading {
+    /* 极简（刘工 2026-10-25 定）：移动端只留标题一行。
+       眉标 / 副标题 / 按钮全部不显示 —— 首屏要的是「一张图 + 一句话」；
+       转化入口在 hero 下方（平台卡、商品网格）已经足够，不必在首屏再放一次。
+       桌面端四件套照常，不受影响。 */
+    .hero-slideshow__eyebrow,
+    .hero-slideshow__subheading,
+    .hero-slideshow__cta-row {
       display: none;
     }
-    .hero-slideshow__eyebrow {
-      margin-bottom: 0.5rem;
-      letter-spacing: 0.08em;
+    /* 标题改白。这是「压在照片上」的元素 —— 配色纪律里的合法硬编码例外，不跟
+       --color-foreground 走：变量在 Noir preset 下是浅灰、浅色 preset 下是深灰，
+       而照片不随 preset 变，用变量会在深色照片上变成黑字读不出来。
+       投影同为合法例外（永远黑）：白色大字压浅色草地时对比度只有约 2:1，
+       达不到大字 AA 的 3:1，一层很淡的投影把它抬回可读区间，且不产生"描边感"。 */
+    .hero-slideshow__heading {
+      color: #fff;
+      text-shadow: 0 1px 14px rgb(0 0 0 / 32%);
     }
-    .hero-slideshow__cta-row {
-      justify-content: center;
-      margin-block-start: 1.25rem;
+    /* 只留一行标题后，内容块整体上移：旧位置（bottom 12%）会把它推进底部白色
+       渐隐里 —— 白字压白底等于没有字。改成 bottom 32%，标题落在图片本色区，
+       下沿刚好接住渐隐的起点。 */
+    .hero-slideshow__content {
+      bottom: 32%;
     }
+    /* 底部渐隐同步收薄：75% 的高度会让大半张图蒙白，只留标题时既没必要也毁图。
+       40% 只在最底部做「图 → 页面白底」的过渡。 */
     .hero-slideshow__fade {
       top: auto;
       left: 0;
       /* 底边贴 slide 底边（旧版 bottom:-10% 会在卷出后留 10% 白条在顶部） */
       bottom: 0;
       width: 100%;
-      height: 75%;
+      height: 40%;
       border-radius: 0;
       background: linear-gradient(
         to top,
