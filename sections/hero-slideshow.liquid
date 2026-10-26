@@ -745,14 +745,19 @@
       transform: translate(-50%, 0);
       text-align: center;
     }
-    /* 极简（刘工 2026-10-25 定）：移动端只留标题一行。
-       眉标 / 副标题 / 按钮全部不显示 —— 首屏要的是「一张图 + 一句话」；
-       转化入口在 hero 下方（平台卡、商品网格）已经足够，不必在首屏再放一次。
+    /* 极简（刘工 2026-10-25 定）：移动端只留「标题 + 按钮」。
+       眉标与副标题不显示 —— 首屏要的是「一张图 + 一句话 + 一个入口」。
+       按钮**保留**（2026-10-25 二次确认）：它是首屏唯一的转化入口，
+       靠下方平台卡承接会让首屏变成纯装饰。
        桌面端四件套照常，不受影响。 */
     .hero-slideshow__eyebrow,
-    .hero-slideshow__subheading,
-    .hero-slideshow__cta-row {
+    .hero-slideshow__subheading {
       display: none;
+    }
+    /* 按钮组：与标题之间收得比桌面端紧（1rem vs 1.75rem），窄屏每一像素都算数。 */
+    .hero-slideshow__cta-row {
+      justify-content: center;
+      margin-block-start: 1rem;
     }
     /* 标题改白。这是「压在照片上」的元素 —— 配色纪律里的合法硬编码例外，不跟
        --color-foreground 走：变量在 Noir preset 下是浅灰、浅色 preset 下是深灰，
