@@ -703,16 +703,35 @@
     }
   }
 
-  /* ===== 移动端（<990px）：产品岛上移居中、文字沉底居中、遮罩转底部渐隐 ===== */
+  /* ===== 移动端（<990px）：产品岛在上、文字沉底居中、遮罩转底部渐隐、切换改横向 ===== */
   @media screen and (max-width: 989px) {
+    /* 手机竖屏的高度给得太抠，产品图 + 三行文字 + 按钮挤不进 22rem，
+       结果就是「产品图被顶出画外」+「文字压成一团」。抬到 24rem。 */
+    .hero-slideshow__viewport {
+      min-height: 24rem;
+    }
     /* 移动端是「产品在上、文字在下」的竖排，水平居中固定 50%，
        因此桌面端的自定义位置设置在这里不生效（设置项的 info 里已写明）。
-       居中仍靠独立属性 translate，不写 margin，transform 保持干净。 */
+       ⚠️ 两处与旧版不同，都是为了「整张产品图必须看得见」：
+       ① translate 的 Y 从 -50% 改成 0 —— 让 top 表达**顶边**而不是中心。
+          旧版 top:30% + 中心对齐，图片高过 60% 视口就直接溢出上沿（实测溢出 20px+，
+          割草机手柄整段被裁）。
+       ② 加 max-height 48% + img 的 max-* 约束 —— 商家传 3:4 竖图时按高度反推宽度，
+          不再靠宽度一个维度硬撑。 */
     .hero-slideshow__product {
-      top: 30%;
+      top: 0;
       left: 50%;
-      width: 66%;
+      translate: -50% 0;
+      width: 62%;
       max-width: none;
+      max-height: 48%;
+    }
+    .hero-slideshow__product-img {
+      width: auto;
+      max-width: 100%;
+      max-height: 100%;
+      margin-inline: auto;
+      object-fit: contain;
     }
     .hero-slideshow__content {
       top: auto;
@@ -721,16 +740,31 @@
       transform: translate(-50%, 0);
       text-align: center;
     }
+    /* 文字精简（刘工 2026-10-25「移动端文字太多」）：副标题压到 2 行、
+       字号降一档、行距与块间距收紧。窄屏上 4 行文案 + 按钮必然把首屏吃掉一半。 */
+    .hero-slideshow__eyebrow {
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.08em;
+    }
     .hero-slideshow__subheading {
-      margin-inline: auto;
+      margin: 0.75rem auto 0;
+      font-size: 0.9375rem;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
     }
     .hero-slideshow__cta-row {
       justify-content: center;
+      margin-block-start: 1.25rem;
     }
     .hero-slideshow__fade {
       top: auto;
       left: 0;
-      bottom: -10%;
+      /* 底边贴 slide 底边（旧版 bottom:-10% 会在卷出后留 10% 白条在顶部） */
+      bottom: 0;
       width: 100%;
       height: 75%;
       border-radius: 0;
