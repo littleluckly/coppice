@@ -222,3 +222,140 @@ compare-bar[data-collapsed] .compare-bar__pill {
     pointer-events: auto;
   }
 }
+
+/* ===== 全局冲突提示（2026-10-25）=====
+   原来「只能比同类型商品 / 最多 4 款」是塞进商品卡里就地展开的：
+   卡窄、文字挤、还把卡片撑高挤动下面的卡。改成从屏幕上缘滑入的全局条。
+
+   为什么放顶部而不是底部：底部已经被对比确认条占了（常驻），
+   toast 叠上去会打架；而且顶部距离「页头/网格视线」更近，不挡大拇指操作。 */
+
+compare-toast {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 60; /* 高于页头(50)与对比条(40) */
+  display: flex;
+  justify-content: center;
+  padding: 0.9rem 1rem calc(0.9rem + env(safe-area-inset-top));
+  pointer-events: none;
+}
+
+compare-toast[hidden] {
+  display: none;
+}
+
+.compare-toast__inner {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  inline-size: min(34rem, 100%);
+  padding: 0.7rem 0.7rem 0.7rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  border-radius: 10px;
+  background-color: var(--color-background);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--color-foreground) 18%, transparent);
+  animation: compare-toast-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes compare-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-100% - 1.5rem));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compare-toast__inner {
+    animation: none;
+  }
+}
+
+/* 感叹号圆点：走品牌色令牌，不硬编码警告橙（AGENTS §4） */
+.compare-toast__icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 22px;
+  block-size: 22px;
+  margin-block-start: 1px;
+  border-radius: 50%;
+  background-color: var(--color-brand);
+  color: var(--color-background);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.compare-toast__message {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 0.87rem;
+  line-height: 1.45;
+  color: var(--color-foreground);
+}
+
+.compare-toast__actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.compare-toast__primary {
+  min-block-size: 36px;
+  padding: 0 0.8rem;
+  border: 1px solid var(--color-foreground);
+  border-radius: 6px;
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.compare-toast__primary[hidden] {
+  display: none;
+}
+
+.compare-toast__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
+  cursor: pointer;
+}
+
+.compare-toast__close svg {
+  inline-size: 0.85rem;
+  block-size: 0.85rem;
+}
+
+.compare-toast__primary:focus-visible,
+.compare-toast__close:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .compare-toast__inner {
+    flex-wrap: wrap;
+  }
+
+  .compare-toast__actions {
+    inline-size: 100%;
+    justify-content: flex-end;
+  }
+}
