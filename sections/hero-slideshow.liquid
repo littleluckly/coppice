@@ -330,13 +330,18 @@
     object-fit: cover;
   }
 
-  /* ===== 第 2 层：弧形渐隐遮罩（页面底色派生，Noir 自动翻转） ===== */
+  /* ===== 第 2 层：弧形渐隐遮罩（页面底色派生，Noir 自动翻转） =====
+     ⚠️ 尺寸必须严格落在 slide 内部（top 0 + height 100%），不能像早期那样
+     `top:-10%; height:120%`：这一层是跟着 .hero-slideshow__bg 一起卷动的，
+     底部多出来的那 10% 在卷出 100% 之后会停在视口最上沿 —— 就是「切换后顶部
+     残留一条白色遮罩约 0.5s」的真因（卷动时长 = 残留时长）。
+     现在底边正好等于 slide 底边，卷出后完全离开视口。 */
   .hero-slideshow__fade {
     position: absolute;
-    top: -10%;
+    top: 0;
     left: -5%;
     width: 55%;
-    height: 120%;
+    height: 100%;
     z-index: 1;
     pointer-events: none;
     background: linear-gradient(
