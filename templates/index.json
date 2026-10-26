@@ -16,7 +16,7 @@
           "type": "slide",
           "settings": {
             "image": "shopify://shop_images/banner-bg.png",
-            "image_mobile": "shopify://shop_images/mower-small-yard-ride-on-mobile-3x4_webp.webp",
+            "image_mobile": "shopify://shop_images/banner-bg_webp.webp",
             "product_image": "shopify://shop_images/banner-island-push-mower_rmbg_webp.webp",
             "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",
@@ -31,7 +31,7 @@
           "type": "slide",
           "settings": {
             "image": "shopify://shop_images/banner-bg-2_webp.webp",
-            "image_mobile": "shopify://shop_images/mower-small-yard-push-mobile-3x4_webp.webp",
+            "image_mobile": "shopify://shop_images/banner-bg-3_webp.webp",
             "product_image": "shopify://shop_images/banner-island-riding-mower_rmbg_webp.webp",
             "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",
@@ -46,7 +46,7 @@
           "type": "slide",
           "settings": {
             "image": "shopify://shop_images/banner-bg-chainsaw_webp.webp",
-            "image_mobile": "shopify://shop_images/mower-large-lawn-ride-on-mobile-3x4_webp.webp",
+            "image_mobile": "shopify://shop_images/banner-bg-chainsaw_webp.webp",
             "product_image": "shopify://shop_images/banner-island-chainsaw_rmbg_webp.webp",
             "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",
@@ -61,7 +61,7 @@
           "type": "slide",
           "settings": {
             "image": "shopify://shop_images/banner-bg-4_webp.webp",
-            "image_mobile": "shopify://shop_images/mower-large-lawn-push-mobile-3x4_webp.webp",
+            "image_mobile": "shopify://shop_images/banner-bg-4_webp.webp",
             "product_image": "shopify://shop_images/banner-island-string-trimmer_rmbg_webp.webp",
             "eyebrow": "New · 40V battery series",
             "heading": "Mowing season starts here",

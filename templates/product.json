@@ -14,7 +14,8 @@
       "settings": {}
     },
     "compare-lookup": {
-      "type": "compare-lookup"
+      "type": "compare-lookup",
+      "settings": {}
     },
     "1791511954cea426ef": {
       "type": "apps",

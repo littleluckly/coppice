@@ -39,10 +39,6 @@
         "autoplay_interval": 5
       }
     },
-    "utility-bar": {
-      "type": "utility-bar",
-      "settings": {}
-    },
     "main-nav": {
       "type": "main-nav",
       "blocks": {
@@ -59,7 +55,7 @@
           "settings": {
             "menu_item": "Trimmers",
             "icon": "trimmer",
-            "popular_collection": "self-propelled"
+            "popular_collection": "string-trimmer"
           }
         },
         "mega_category_icon_8Jt6np": {
@@ -67,7 +63,7 @@
           "settings": {
             "menu_item": "Chainsaws",
             "icon": "chainsaw",
-            "popular_collection": "chainsaw-popular"
+            "popular_collection": "chainsaw"
           }
         },
         "mega_category_icon_mgPtg6": {
@@ -97,7 +93,6 @@
   },
   "order": [
     "announcement-bar",
-    "utility-bar",
     "main-nav"
   ]
 }
