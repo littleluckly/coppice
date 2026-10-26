@@ -735,9 +735,12 @@
       object-fit: contain;
       object-position: center bottom;
     }
+    /* 只留一行标题后，内容块整体上移：旧位置（bottom 12%）会把它推进底部白色
+       渐隐里 —— 白字压白底等于没有字。25% 让标题正好压在产品图的下沿
+       （产品图 0~75%，标题落在机身那一带，白字底下是深色，读得清）。 */
     .hero-slideshow__content {
       top: auto;
-      bottom: 12%;
+      bottom: 25%;
       left: 50%;
       transform: translate(-50%, 0);
       text-align: center;
@@ -760,21 +763,16 @@
       color: #fff;
       text-shadow: 0 1px 14px rgb(0 0 0 / 32%);
     }
-    /* 只留一行标题后，内容块整体上移：旧位置（bottom 12%）会把它推进底部白色
-       渐隐里 —— 白字压白底等于没有字。改成 bottom 32%，标题落在图片本色区，
-       下沿刚好接住渐隐的起点。 */
-    .hero-slideshow__content {
-      bottom: 32%;
-    }
-    /* 底部渐隐同步收薄：75% 的高度会让大半张图蒙白，只留标题时既没必要也毁图。
-       40% 只在最底部做「图 → 页面白底」的过渡。 */
+    /* 底部渐隐收薄到 25%：原来 75% 会让大半张图蒙白，而产品图现在占 75%、标题又是
+       白字 —— 渐隐一旦盖到标题就是「白压白」。25% 只在最底部做
+       「图 → 页面白底」的过渡，标题区完全在它之上。 */
     .hero-slideshow__fade {
       top: auto;
       left: 0;
       /* 底边贴 slide 底边（旧版 bottom:-10% 会在卷出后留 10% 白条在顶部） */
       bottom: 0;
       width: 100%;
-      height: 40%;
+      height: 25%;
       border-radius: 0;
       background: linear-gradient(
         to top,
