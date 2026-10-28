@@ -1100,6 +1100,8 @@
     display: flex;
     flex-direction: column;
     align-self: stretch;
+    /* 滑动药丸 .main-nav__mega-pill 的定位父级（2026-10-27） */
+    position: relative;
   }
 
   .main-nav__mega-label {
@@ -1131,8 +1133,11 @@
     gap: 0.625rem;
     width: 100%;
     min-height: 44px;
-    /* 触控目标 ≥44（AGENTS §8）；行高由 min-height 保证 */
-    /* hover 出品牌色药丸 + 文字反色，呼应顶部导航（2026-10-27） */
+    /* 文字层抬到滑动药丸之上（2026-10-27） */
+    position: relative;
+    z-index: 1;
+    /* hover 文字反色（背景由 .main-nav__mega-pill 滑动提供，与顶部导航同机制：
+       JS 接管后链接自身不出底色）；降级时自身出背景见下方 :not(.nav-mega-tabs--ready) */
     padding-inline: 0.75rem;
     border-radius: 999px;
     color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
@@ -1145,18 +1150,48 @@
     white-space: nowrap;
   }
 
-  /* hover / 键盘聚焦：品牌色药丸 + 文字反色（与顶部导航一致，2026-10-27）。
-     特异性高于 --current / --active，确保选中态 hover 时文字也反色、可读。 */
+  /* hover / 键盘聚焦：文字反色（背景由 .main-nav__mega-pill 滑动药丸提供，
+     与顶部导航同机制：JS 接管后链接自身不出底色）。特异性高于 --current / --active，
+     确保选中态 hover 时文字也反色、可读。 */
   .main-nav__mega-cats .main-nav__mega-cat-link:hover,
   .main-nav__mega-cats .main-nav__mega-cat-link:focus-visible {
     color: var(--color-background);
+  }
+
+  /* 无 JS 降级：custom element 未升级（无 nav-mega-tabs--ready）时，
+     hover / 焦点项自身显品牌色药丸（无滑动），功能不丢——与顶部导航
+     :not(.nav-pill--ready) 兜底同源。 */
+  .main-nav__list-wrap:not(.nav-mega-tabs--ready) .main-nav__mega-cat-link:hover,
+  .main-nav__list-wrap:not(.nav-mega-tabs--ready) .main-nav__mega-cat-link:focus-visible {
     background-color: var(--color-brand);
   }
 
-  /* 左列激活分类（第九轮补，JS 切换）：深色加粗，对齐 demo 默认选中项 */
-  .main-nav__mega-cat-link--active {
-    color: var(--color-foreground);
+  /* 左列激活分类（JS 切换）：品牌色药丸垫底 + 文字反色，常驻高亮（2026-10-27）。
+     药丸停在激活项即"常驻"指示；特异性高于 --current，确保同时激活+当前页时
+     药丸与反色文字生效、可读。 */
+  .main-nav__mega-cats .main-nav__mega-cat-link--active {
+    color: var(--color-background);
     font-weight: 700;
+  }
+
+  /* mega 左列滑动药丸（2026-10-27，复用 nav-pill.js 测量/滑动算法，纵向套用）：
+     垫在分类项下方，hover 跟手滑动、松手停在激活项做常驻高亮；
+     文字反色由 .main-nav__cat-link 的 :hover / --active 配合（与顶部导航同机制）。
+     无 JS 时本元素不存在（由 JS 创建），无无效 DOM。 */
+  .main-nav__mega-pill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    border-radius: 999px;
+    background-color: var(--color-brand);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.25s ease, width 0.25s ease, height 0.25s ease, opacity 0.15s ease;
+  }
+
+  .main-nav__mega-pill--on {
+    opacity: 1;
   }
 
   .main-nav__mega-cat-link--current {
