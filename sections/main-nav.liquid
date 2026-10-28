@@ -198,12 +198,13 @@
                             if child.type == 'collection_link' and child.object != blank
                               assign mega_collection = child.object
                             endif
-                            assign mega_products = blank
-                            if mega_collection != blank
-                              assign mega_products = mega_collection.products
-                            endif
                           -%}
-                          {%- if mega_products.size > 0 -%}
+                          {%- comment -%}
+                            存在性用 all_products_count 判（计数随 collection 对象返回，不加载商品）；
+                            勿用 collection.products.size——那会为每个集合型二级项拉满整页商品，
+                            导航是全局组件，这条开销每次开面板都要付。
+                          {%- endcomment -%}
+                          {%- if mega_collection != blank and mega_collection.all_products_count > 0 -%}
                             {%- comment -%}
                               产品卡阵列（2026-10-28 改）：集合直接取该二级菜单项
                               指向的集合（link.object），零配置、无 block 映射。
@@ -226,7 +227,7 @@
                                 </a>
                               </div>
                               <ul class="main-nav__mega-cards" role="list">
-                                {%- for product in mega_products limit: 3 -%}
+                                {%- for product in mega_collection.products limit: 3 -%}
                                   <li class="main-nav__mega-card">
                                     <a
                                       class="main-nav__mega-card-link"
