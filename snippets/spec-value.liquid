@@ -52,6 +52,15 @@
           assign converted = value | times: 0.092903 | round
           assign output = converted | append: ' m2'
         endif
+      when 'displacement_cc'
+        assign output = value | append: ' cc'
+      when 'power_w'
+        if unit_system == 'imperial'
+          assign converted = value | times: 0.00134102 | round: 1
+          assign output = converted | append: ' hp'
+        else
+          assign output = value | append: ' W'
+        endif
     endcase
   endif
 -%}
