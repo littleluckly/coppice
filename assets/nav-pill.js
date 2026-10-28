@@ -270,11 +270,13 @@ class NavPill extends HTMLElement {
     }, this._MEGA_HOVER_DELAY);
   }
 
-  /* 找到元素所属的 mega 面板作用域（元素不在任何面板内时返回 null） */
+  /* 找到元素所属的 mega 面板作用域（不属于任何面板时返回 null）。
+     两个方向都认：调用点既有面板内部元素（tab / panel 本身），
+     也有面板的祖先（一级项 li，如 _openGroup(item)）。 */
   _scopeOf(el) {
     if (!el) return null;
     for (const scope of this._scopes) {
-      if (scope.inner.contains(el)) return scope;
+      if (scope.inner.contains(el) || el.contains(scope.inner)) return scope;
     }
     return null;
   }
