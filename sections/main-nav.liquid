@@ -952,14 +952,14 @@
   }
 
   /* ---- 滑动药丸指示器（2026-10-12 第二轮，配 assets/nav-pill.js） ----
-     深色药丸滑动跟随 hover / 键盘焦点，鼠标离开整个导航区即隐藏还原。
+     品牌色（主题色）药丸滑动跟随 hover / 键盘焦点，鼠标离开整个导航区即隐藏还原。
      JS（nav-pill--ready）接管时链接自身不出底色，文字反色由下方规则处理。 */
   .main-nav__pill {
     position: absolute;
     top: 0;
     left: 0;
     border-radius: 999px;
-    background-color: var(--color-foreground);
+    background-color: var(--color-brand);
     opacity: 0;
     transition: transform 0.25s ease, width 0.25s ease, height 0.25s ease, opacity 0.15s ease;
     pointer-events: none;
@@ -969,19 +969,19 @@
     opacity: 1;
   }
 
-  /* JS 接管后：悬浮 / 焦点项文字反色（药丸垫底）。
-     深灰底白字 12.63:1（T-2.2 实测值），品牌色文字项同样被覆盖反色。 */
+  /* JS 接管后：悬浮 / 焦点项文字反色（品牌色药丸垫底）。
+     文字反色到页面底色，覆盖在品牌色药丸之上。 */
   .nav-pill--ready .main-nav__item:hover > .main-nav__link,
   .nav-pill--ready .main-nav__item:focus-within > .main-nav__link {
     color: var(--color-background);
   }
 
-  /* 无 JS 降级：custom element 未升级时，hover/focus 项自身显深色药丸（无滑动），
+  /* 无 JS 降级：custom element 未升级时，hover/focus 项自身显品牌色药丸（无滑动），
      mega 面板展开不受影响。 */
   .main-nav__list-wrap:not(.nav-pill--ready) .main-nav__item:hover > .main-nav__link,
   .main-nav__list-wrap:not(.nav-pill--ready) .main-nav__item:focus-within > .main-nav__link {
     color: var(--color-background);
-    background-color: var(--color-foreground);
+    background-color: var(--color-brand);
     border-radius: 999px;
   }
 
