@@ -85,8 +85,7 @@ class NavPill extends HTMLElement {
       (event) => {
         const tab = event.target.closest('[data-mega-tab]');
         if (tab && this.contains(tab)) {
-          this._switchTabs(tab.dataset.megaTab);
-          this._moveMega(tab, true);
+          this._scheduleMegaHover(tab);
         }
         const item = event.target.closest('.main-nav__item');
         if (item && this.contains(item)) {
