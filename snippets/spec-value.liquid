@@ -63,6 +63,10 @@
         endif
     endcase
   endif
+
+  # 去掉整数上的多余小数位：round:1 会把 21 变成 21.0，展示成 "21.0 in" 很业余，
+  # 166.0 cc 同理。只清理 ".0 " 这个完整片段，10.5 / 1.3 这类真小数不受影响。
+  assign output = output | replace: '.0 ', ' '
 -%}
 {%- if output != blank -%}
   <span class="spec-value{% if spec_class %} spec-value--{{ spec_class }}{% endif %}" data-unit-system="{{ unit_system }}">{{ output }}</span>
