@@ -122,7 +122,6 @@
                 if link.child_current or link.child_active
                   assign in_branch = true
                 endif
-                assign link_title = link.title | strip
               -%}
 
               <li
@@ -143,7 +142,8 @@
                     Mega 面板（2026-10-13 第八轮，参考 demo 截图三段式）：
                     左列 = 二级分类导航（映射走 mega_category block 配置，
                     商家可配可删）；中区 = 二级分组的集合卡组（图 + 标题 +
-                    真实产品数，数据走 link.object，不伪造）；右列 = promo 卡。
+                    真实产品数，数据走 link.object，不伪造）；右列 = 二级集合卡
+                    网格（自动取菜单里指向集合的二级项，零配置）。
                     叶子二级项只在左列出链接，中区不输出空壳组。
                   {%- endcomment -%}
                   <div class="main-nav__mega">
