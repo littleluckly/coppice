@@ -411,11 +411,13 @@ class NavPill extends HTMLElement {
     }
     item.classList.add('is-open');
     if (!wasOpen) {
-      /* 首次打开面板：把左列滑动药丸定位到默认激活项（常驻高亮首帧不闪）。
-         加 is-open 后面板已 display:block，坐标可测；用 _defaultPanelIndex
-         （一组刚展开时激活面板即默认第一项），不用过期的 _activePanelIndex。
-         修复"首次打开无默认选中高亮"：初始化时面板不可见无法定位。 */
-      this._moveMegaToIndex(this._defaultPanelIndex, false);
+      /* 首次打开面板：把该面板左列滑动药丸定位到默认激活项（常驻高亮首帧不闪）。
+         加 is-open 后面板已 display:block，坐标可测；用 scope.defaultIndex
+         （一组刚展开时激活面板即默认第一项），不用过期的 activeIndex。
+         修复"首次打开无默认选中高亮"：初始化时面板不可见无法定位。
+         2026-10-28：按 item 找所属面板，不再用全局第一个面板的序号。 */
+      const scope = this._scopeOf(item);
+      if (scope) this._moveMegaToIndex(scope.defaultIndex, scope, false);
     }
   }
 }
