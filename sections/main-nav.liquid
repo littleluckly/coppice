@@ -242,17 +242,35 @@
                             {%- endcomment -%}
                             <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
                               <div class="main-nav__mega-group-head">
-                                <span class="main-nav__mega-group-title">{{ child.title }}</span>
-                                <a
-                                  class="main-nav__mega-group-all"
-                                  href="{{ mega_collection.url }}"
-                                >
-                                  {%- if mega_collection.title != child_title -%}
+                                {%- if mega_collection.title == child_title -%}
+                                  {%- comment -%}
+                                    同名组（最常见）：集合名与菜单项名一致时，让组标题
+                                    本身承担入口职责，不再另起一个 All 链接——否则组头是
+                                    "Mowers  Mowers (11) →"，同一信息出现两次。
+                                    也不能只留 "（11) →"：那样链接的可访问名只剩数字，
+                                    视觉上更是一个孤零零的计数（2026-10-28 刘工指出）。
+                                  {%- endcomment -%}
+                                  <a
+                                    class="main-nav__mega-group-all main-nav__mega-group-all--merged"
+                                    href="{{ mega_collection.url }}"
+                                  >
+                                    {{ child.title }}
+                                    <span class="main-nav__mega-group-count">
+                                      ({{ mega_collection.all_products_count }})
+                                    </span>
+                                    <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
+                                  </a>
+                                {%- else -%}
+                                  <span class="main-nav__mega-group-title">{{ child.title }}</span>
+                                  <a
+                                    class="main-nav__mega-group-all"
+                                    href="{{ mega_collection.url }}"
+                                  >
                                     {{ mega_collection.title }}
-                                  {%- endif -%}
-                                  ({{ mega_collection.all_products_count }})
-                                  <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
-                                </a>
+                                    ({{ mega_collection.all_products_count }})
+                                    <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
+                                  </a>
+                                {%- endif -%}
                               </div>
                               <ul class="main-nav__mega-cards" role="list">
                                 {%- for product in mega_collection.products limit: 3 -%}
@@ -1474,6 +1492,22 @@
 
   .main-nav__mega-group-all:hover {
     color: var(--color-brand);
+  }
+
+  /* 同名组：组标题本身即集合入口（模板里 --merged 那一支）。
+     字号/字重取组标题规格——它现在承担标题职责；计数退回次级样式，
+     避免整个组头都跟着变粗。hover 变品牌色由上面的 :hover 规则接管
+     （class + pseudo-class 特异性高于本行的 class）。 */
+  .main-nav__mega-group-all--merged {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-foreground);
+  }
+
+  .main-nav__mega-group-count {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
   }
 
   .main-nav__mega-group-all-arrow {
