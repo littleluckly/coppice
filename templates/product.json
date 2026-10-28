@@ -10,13 +10,62 @@
 {
   "sections": {
     "main": {
-      "type": "product",
-      "settings": {}
+      "type": "main-product",
+      "blocks": {
+        "spec_bullets": {
+          "type": "spec_bullets",
+          "settings": {}
+        },
+        "trust_warranty": {
+          "type": "trust_warranty",
+          "settings": {}
+        },
+        "trust_shipping": {
+          "type": "trust_item",
+          "settings": {
+            "icon": "shipping",
+            "text": "Free shipping on orders over $99"
+          }
+        },
+        "trust_returns": {
+          "type": "trust_item",
+          "settings": {
+            "icon": "returns",
+            "text": "30-day returns"
+          }
+        },
+        "compare": {
+          "type": "compare",
+          "settings": {}
+        },
+        "pickup": {
+          "type": "pickup",
+          "settings": {}
+        }
+      },
+      "block_order": [
+        "spec_bullets",
+        "trust_warranty",
+        "trust_shipping",
+        "trust_returns",
+        "compare",
+        "pickup"
+      ],
+      "settings": {
+        "show_breadcrumb": true,
+        "show_description": true,
+        "description_words": 40,
+        "show_accelerated_checkout": true,
+        "show_payment_terms": true
+      }
     },
     "compare-lookup": {
       "type": "compare-lookup",
       "settings": {}
     }
   },
-  "order": ["main", "compare-lookup"]
+  "order": [
+    "main",
+    "compare-lookup"
+  ]
 }

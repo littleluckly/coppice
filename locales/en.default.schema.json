@@ -231,6 +231,45 @@
     },
     "compare_lookup": {
       "name": "Compare lookup"
+    },
+    "main_product": {
+      "name": "Product information",
+      "labels": {
+        "show_breadcrumb": "Show breadcrumb",
+        "show_description": "Show description excerpt",
+        "description_words": "Description length (words)",
+        "show_accelerated_checkout": "Show accelerated checkout",
+        "accelerated_info": "Requires an accelerated checkout method such as Shop Pay. The button styling is controlled by the payment provider and must not be restyled.",
+        "show_payment_terms": "Show payment terms (Shop Pay Installments)"
+      },
+      "headers": {
+        "checkout": "Checkout"
+      },
+      "blocks": {
+        "spec_bullets": {
+          "name": "Spec highlights"
+        },
+        "trust_warranty": {
+          "name": "Warranty badge (from metafield)"
+        },
+        "trust_item": {
+          "name": "Trust badge",
+          "icon": "Icon",
+          "text": "Text",
+          "text_info": "Leave blank to hide this badge. Store policies are the merchant's to state — nothing is written in for you.",
+          "icons": {
+            "shipping": "Shipping",
+            "returns": "Returns",
+            "warranty": "Warranty"
+          }
+        },
+        "pickup": {
+          "name": "Pickup availability"
+        },
+        "compare": {
+          "name": "Add to compare"
+        }
+      }
     }
   },
   "labels": {
