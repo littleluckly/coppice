@@ -1,13 +1,16 @@
 {% doc %}
   spec-bullets — 买盒里的三条决策参数（task-product T-1.3，拍板 10）。
 
-  **只吃必填字段，不新增 metafield**——这样 21 款主机永远不缺行：
+  **只吃已有字段，不新增 metafield**：
     1. 切割宽度 `spec.cutting_width_mm`；链锯没有切割宽度 → 自动改用导板长度
        `spec.bar_length_mm`（同一条 bullet 位，图标与文案随之切换）
-    2. 动力：`power_source = Battery` → `spec.power_w`（W→hp）；其余 → `spec.displacement_cc`
-    3. 驱动方式 `spec.drive_type`；值为 `N/A` 或空（链锯/打草机）→ 该条不出现
+    2. 动力：汽油机取 `spec.displacement_cc`；电池机优先取 `spec.power_w`，
+       缺值时退回 `platform.battery_platform`（如 "40V battery"）——**演示店 7 款
+       电池机里 6 款没填 power_w**，不退回就会整条消失，白白少一项决策信息
+    3. 驱动方式 `spec.drive_type`；值为 `N/A` 或空（链锯/打草机）→ 该条不出现；
+       **值本身含 "drive" 时不再加 "drive" 标签**（否则出现 "Rear-wheel drive drive"）
 
-  缺值/0 → 该条不出现，三条全空 → 整个列表不渲染（SDD §5.7：不留空壳、不显示 0）。
+  缺值/0 → 该条不出现，全空 → 整个列表不渲染（SDD §5.7：不留空壳、不显示 0）。
   单位换算全部走 `snippets/spec-value.liquid`，本文件不碰系数（AGENTS.md §4 红线）。
 
   **注意**：metafield 一律写全路径（`product.metafields.spec.xxx.value`），
@@ -29,12 +32,21 @@
     assign b1_label = 'products.product.spec_bar_length' | t
   endif
 
+  assign b2_is_text = false
+  assign b2_value = ''
   assign b2_unit = 'displacement_cc'
   assign b2_label = 'products.product.spec_engine' | t
+
   if product.metafields.spec.power_source.value == 'Battery'
-    assign b2_value = product.metafields.spec.power_w.value
-    assign b2_unit = 'power_w'
     assign b2_label = 'products.product.spec_power' | t
+    if product.metafields.spec.power_w.value != blank
+      assign b2_value = product.metafields.spec.power_w.value
+      assign b2_unit = 'power_w'
+    elsif product.metafields.platform.battery_platform.value != blank
+      assign b2_is_text = true
+      assign b2_value = product.metafields.platform.battery_platform.value
+      assign b2_label = 'products.product.spec_battery' | t
+    endif
   else
     assign b2_value = product.metafields.spec.displacement_cc.value
   endif
@@ -42,6 +54,11 @@
   assign b3_value = product.metafields.spec.drive_type.value
   if b3_value == 'N/A'
     assign b3_value = ''
+  endif
+  assign b3_show_label = true
+  assign b3_lower = b3_value | downcase
+  if b3_lower contains 'drive'
+    assign b3_show_label = false
   endif
 -%}
 
@@ -61,7 +78,11 @@
       <li class="spec-bullets__item">
         <span class="spec-bullets__icon" aria-hidden="true">{{ 'icon-spec-engine.svg' | inline_asset_content }}</span>
         <span class="spec-bullets__text">
-          {%- render 'spec-value', value: b2_value, unit_type: b2_unit %}
+          {%- if b2_is_text -%}
+            <span class="spec-bullets__value">{{ b2_value }}</span>
+          {%- else -%}
+            {%- render 'spec-value', value: b2_value, unit_type: b2_unit %}
+          {%- endif -%}
           <span class="spec-bullets__label">{{ b2_label }}</span>
         </span>
       </li>
@@ -72,7 +93,9 @@
         <span class="spec-bullets__icon" aria-hidden="true">{{ 'icon-spec-drive.svg' | inline_asset_content }}</span>
         <span class="spec-bullets__text">
           <span class="spec-bullets__value">{{ b3_value }}</span>
-          <span class="spec-bullets__label">{{ 'products.product.spec_drive' | t }}</span>
+          {%- if b3_show_label %}
+            <span class="spec-bullets__label">{{ 'products.product.spec_drive' | t }}</span>
+          {%- endif -%}
         </span>
       </li>
     {%- endif -%}

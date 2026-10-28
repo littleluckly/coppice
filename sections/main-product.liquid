@@ -229,7 +229,7 @@
 
       {%- comment -%}
         副标题：不新增字段，由 spec 拼装（拍板 10）——切割宽度/导板 · 操作方式 · 排量/功率。
-        缺值自动跳项；全空则不输出这一行。
+        分隔符**前置**（第一项之前为空）——后置写法会在末项缺值时留下一个孤零零的「·」。
       {%- endcomment -%}
       {%- capture subtitle -%}
         {%- assign sub_width = product.metafields.spec.cutting_width_mm.value -%}
@@ -238,24 +238,46 @@
         {%- if product.metafields.spec.power_source.value == 'Battery' -%}
           {%- assign sub_power = product.metafields.spec.power_w.value -%}
           {%- assign sub_power_unit = 'power_w' -%}
+          {%- if sub_power == blank -%}
+            {%- assign sub_power = product.metafields.platform.battery_platform.value -%}
+            {%- assign sub_power_unit = 'raw' -%}
+          {%- endif -%}
         {%- else -%}
           {%- assign sub_power = product.metafields.spec.displacement_cc.value -%}
           {%- assign sub_power_unit = 'displacement_cc' -%}
         {%- endif -%}
+
+        {%- assign sub_sep = '' -%}
+        {%- assign sub_out = '' -%}
+
         {%- if sub_width != blank -%}
-          {%- render 'spec-value', value: sub_width, unit_type: 'length_mm' %}<span class="main-product__sep" aria-hidden="true">·</span>
+          {%- capture sub_part -%}{%- render 'spec-value', value: sub_width, unit_type: 'length_mm' -%}{%- endcapture -%}
         {%- elsif sub_bar != blank -%}
-          {%- render 'spec-value', value: sub_bar, unit_type: 'length_mm' %}<span class="main-product__sep" aria-hidden="true">·</span>
+          {%- capture sub_part -%}{%- render 'spec-value', value: sub_bar, unit_type: 'length_mm' -%}{%- endcapture -%}
         {%- endif -%}
+        {%- if sub_part != blank -%}
+          {%- assign sub_out = sub_out | append: sub_sep | append: sub_part -%}
+          {%- assign sub_sep = ' · ' -%}
+          {%- assign sub_part = '' -%}
+        {%- endif -%}
+
         {%- if sub_op != blank and sub_op != 'N/A' -%}
-          {{ sub_op }}<span class="main-product__sep" aria-hidden="true">·</span>
+          {%- assign sub_out = sub_out | append: sub_sep | append: sub_op -%}
+          {%- assign sub_sep = ' · ' -%}
         {%- endif -%}
+
         {%- if sub_power != blank -%}
-          {%- render 'spec-value', value: sub_power, unit_type: sub_power_unit -%}
+          {%- if sub_power_unit == 'raw' -%}
+            {%- assign sub_out = sub_out | append: sub_sep | append: sub_power -%}
+          {%- else -%}
+            {%- capture sub_power_part -%}{%- render 'spec-value', value: sub_power, unit_type: sub_power_unit -%}{%- endcapture -%}
+            {%- assign sub_out = sub_out | append: sub_sep | append: sub_power_part -%}
+          {%- endif -%}
         {%- endif -%}
+        {{- sub_out -}}
       {%- endcapture -%}
       {%- assign subtitle_text = subtitle | strip_html | strip -%}
-      {%- if subtitle_text != '·' and subtitle_text != blank -%}
+      {%- if subtitle_text != blank -%}
         <p class="main-product__subtitle">{{ subtitle }}</p>
       {%- endif -%}
 
