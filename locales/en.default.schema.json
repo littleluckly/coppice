@@ -308,21 +308,24 @@
             "warranty": "Warranty"
           }
         }
+      },
+      "quickview": {
+        "default_heading": "Key specifications"
       }
     },
     "product_supplies": {
       "name": "Recommended supplies",
-      "default_heading": "Recommended supplies",
+      "default_heading": "Supplies",
       "fallback": "Fall back to complementary recommendations",
       "fallback_info": "Used only when the product has no consumables attached. Configure complementary products in the Search & Discovery app."
     },
     "product_spec_table": {
       "name": "Full specifications",
-      "default_heading": "Full specifications"
+      "default_heading": "Specifications"
     },
     "product_description": {
       "name": "Description",
-      "default_heading": "Built for a cleaner, healthier lawn",
+      "default_heading": "Overview",
       "image": "Side image"
     },
     "product_recommendations": {

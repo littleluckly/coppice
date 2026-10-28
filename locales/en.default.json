@@ -216,17 +216,17 @@
       }
     },
     "product_supplies": {
-      "default_heading": "Recommended supplies",
+      "default_heading": "Supplies",
       "bundle_add": "Add all {{ count }} items",
       "bundle_adding": "Adding…",
       "bundle_added": "Added all items"
     },
     "product_spec_table": {
-      "default_heading": "Full specifications",
+      "default_heading": "Specifications",
       "variance_label": "Why specs can vary"
     },
     "product_description": {
-      "default_heading": "Built for a cleaner, healthier lawn"
+      "default_heading": "Overview"
     },
     "product_recommendations": {
       "default_heading": "Similar mowers"
