@@ -357,16 +357,23 @@ class NavPill extends HTMLElement {
      避免从 A 划到 B 时 A 残留展开。键盘路径（focusin）不调用本方法——
      键盘展开由 :focus-within 独立维持，否则 focusout 不会撤 is-open 致面板卡开。 */
   _openGroup(item) {
+    /* 先记"展开前是否已 open"：仅首次展开该组时做药丸初始定位，
+       同组内后续 mouseover 不再重钉——否则会覆盖当前 hover 的即时跟手
+       （_moveMega(tab) 已在 handler 里执行），导致高亮停在上一格
+       （回归：2026-10-27 把定位塞进本方法引入，mega 面板是 group 的后代，
+       mouseover 冒泡使本方法每次悬停分类都被调用）。 */
+    const wasOpen = item.classList.contains('is-open');
     for (const g of this._groups) {
       if (g !== item) g.classList.remove('is-open');
     }
     item.classList.add('is-open');
-    /* 首次打开面板：把左列滑动药丸定位到当前激活项（常驻高亮）。
-       加 is-open 后面板已 display:block，同步读取坐标可测；
-       _moveMegaToIndex(animate=false) 无动画定位 + 同步 --lit 反色，
-       保证面板展开首帧激活项即高亮，不闪、不漏
-       （修复"首次打开无默认选中高亮"：初始化时面板不可见无法定位）。 */
-    this._moveMegaToIndex(this._activePanelIndex, false);
+    if (!wasOpen) {
+      /* 首次打开面板：把左列滑动药丸定位到默认激活项（常驻高亮首帧不闪）。
+         加 is-open 后面板已 display:block，坐标可测；用 _defaultPanelIndex
+         （一组刚展开时激活面板即默认第一项），不用过期的 _activePanelIndex。
+         修复"首次打开无默认选中高亮"：初始化时面板不可见无法定位。 */
+      this._moveMegaToIndex(this._defaultPanelIndex, false);
+    }
   }
 }
 
