@@ -140,10 +140,10 @@
 
                   {%- comment -%}
                     Mega 面板（2026-10-13 第八轮，参考 demo 截图三段式）：
-                    左列 = 二级分类导航（映射走 mega_category block 配置，
-                    商家可配可删）；中区 = 二级分组的集合卡组（图 + 标题 +
-                    真实产品数，数据走 link.object，不伪造）；右列 = 二级集合卡
-                    网格（自动取菜单里指向集合的二级项，零配置）。
+                    左列 = 二级分类导航（直接取菜单二级项，无 block 配置）；
+                    中区 = 二级集合项的产品卡组（集合直接取自该菜单项指向的集合，
+                    零配置；图/价/产品数均走真实对象，不伪造）；右列 = 二级集合卡
+                    网格（同样自动取菜单里指向集合的二级项，零配置）。
                     叶子二级项只在左列出链接，中区不输出空壳组。
                   {%- endcomment -%}
                   <div class="main-nav__mega">
@@ -194,20 +194,21 @@
                         {%- for child in link.links -%}
                           {%- liquid
                             assign child_title = child.title | strip
-                            assign popular_collection = blank
-                            for block in section.blocks
-                              if block.type == 'mega_category' and popular_collection == blank
-                                assign wanted = block.settings.menu_item | strip
-                                if wanted == child_title
-                                  assign popular_collection = block.settings.popular_collection
-                                endif
-                              endif
-                            endfor
+                            assign mega_collection = blank
+                            if child.type == 'collection_link' and child.object != blank
+                              assign mega_collection = child.object
+                            endif
+                            assign mega_products = blank
+                            if mega_collection != blank
+                              assign mega_products = mega_collection.products
+                            endif
                           -%}
-                          {%- if popular_collection != blank and popular_collection.products.size > 0 -%}
+                          {%- if mega_products.size > 0 -%}
                             {%- comment -%}
-                              产品卡阵列（2026-10-13 刘工）：popular 集合前 3 个产品，
-                              组头带 "All {集合名} (n) →" 出口（View All 型链接，箭头合规）。
+                              产品卡阵列（2026-10-28 改）：集合直接取该二级菜单项
+                              指向的集合（link.object），零配置、无 block 映射。
+                              组头带 "集合名 (n) →" 出口（View All 型链接，箭头合规）；
+                              集合名与菜单项同名时不重复输出，只留计数。
                               三级链接收进组底小链接行，导航功能不丢。
                             {%- endcomment -%}
                             <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
@@ -215,15 +216,17 @@
                                 <span class="main-nav__mega-group-title">{{ child.title }}</span>
                                 <a
                                   class="main-nav__mega-group-all"
-                                  href="{{ popular_collection.url }}"
+                                  href="{{ mega_collection.url }}"
                                 >
-                                  {{ popular_collection.title }}
-                                  ({{ popular_collection.all_products_count }})
+                                  {%- if mega_collection.title != child_title -%}
+                                    {{ mega_collection.title }}
+                                  {%- endif -%}
+                                  ({{ mega_collection.all_products_count }})
                                   <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
                                 </a>
                               </div>
                               <ul class="main-nav__mega-cards" role="list">
-                                {%- for product in popular_collection.products limit: 3 -%}
+                                {%- for product in mega_products limit: 3 -%}
                                   <li class="main-nav__mega-card">
                                     <a
                                       class="main-nav__mega-card-link"
@@ -280,8 +283,9 @@
                             </div>
                           {%- elsif child.links.size > 0 -%}
                             {%- comment -%}
-                              回退：未配 popular 集合的分组二级项 → 三级集合卡组
-                              （第八轮逻辑，保证没配 block 也体面）
+                              回退：二级项自身不是集合链接（指向页面/商品/无链接）
+                              但有三级子项时 → 把三级项渲染成集合卡组，
+                              保证任何菜单结构都有体面呈现，不留空壳。
                             {%- endcomment -%}
                             <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
                               <span class="main-nav__mega-group-title">{{ child.title }}</span>
