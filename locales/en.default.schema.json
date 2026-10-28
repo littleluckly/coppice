@@ -270,6 +270,68 @@
           "name": "Add to compare"
         }
       }
+    },
+    "product_highlights": {
+      "name": "Product highlights",
+      "blocks": {
+        "platform": {
+          "name": "Battery platform compatibility",
+          "collection": "Link to collection",
+          "collection_info": "Leave blank to link by voltage automatically (40V → collection handle 40v-battery). No matching collection means no link."
+        },
+        "logistics": {
+          "name": "Shipping & delivery",
+          "text_parcel": "Parcel text",
+          "text_oversized": "Oversized text",
+          "text_freight": "Freight text"
+        },
+        "quickview": {
+          "name": "Key specifications",
+          "default_heading": "Key specifications",
+          "row_1": "Row 1",
+          "row_2": "Row 2",
+          "row_3": "Row 3",
+          "row_4": "Row 4",
+          "row_5": "Row 5",
+          "options": {
+            "none": "None",
+            "cutting_width": "Cutting width",
+            "bar_length": "Bar length",
+            "power": "Power (cc / W)",
+            "weight": "Weight",
+            "power_source": "Power source",
+            "operation_type": "Operation type",
+            "drive_type": "Drive type",
+            "area_coverage": "Lawn area",
+            "duty_level": "Duty rating",
+            "noise": "Noise",
+            "warranty": "Warranty"
+          }
+        }
+      }
+    },
+    "product_supplies": {
+      "name": "Recommended supplies",
+      "default_heading": "Recommended supplies",
+      "fallback": "Fall back to complementary recommendations",
+      "fallback_info": "Used only when the product has no consumables attached. Configure complementary products in the Search & Discovery app."
+    },
+    "product_spec_table": {
+      "name": "Full specifications",
+      "default_heading": "Full specifications"
+    },
+    "product_description": {
+      "name": "Description",
+      "default_heading": "Built for a cleaner, healthier lawn",
+      "image": "Side image"
+    },
+    "product_recommendations": {
+      "name": "Similar products",
+      "default_heading": "Similar mowers",
+      "limit": "Number of products"
+    },
+    "product_anchor_nav": {
+      "name": "Section anchor bar"
     }
   },
   "labels": {

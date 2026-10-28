@@ -138,7 +138,8 @@
       "spec_engine": "engine",
       "spec_power": "power",
       "spec_battery": "battery",
-      "spec_drive": "drive"
+      "spec_drive": "drive",
+      "add": "Add"
     },
     "product_card": {
       "add_to_compare": "Compare",
@@ -194,6 +195,47 @@
     },
     "utility_bar": {
       "label": "Service information"
+    },
+    "product_highlights": {
+      "heading": "Product highlights",
+      "platform": {
+        "title": "Compatible with {{ platform }} Platform",
+        "text": "Runs on the {{ platform }} battery platform, so packs are shared across tools.",
+        "cta": "View compatible tools"
+      },
+      "logistics": {
+        "title": "Shipping & delivery",
+        "lead_same_day": "Usually ships the same day",
+        "lead_time": "Ships in {{ days }} business days",
+        "liftgate": "Liftgate delivery required",
+        "assembly": "Assembly required",
+        "note": "Reference only — final rates and dates are confirmed at checkout."
+      },
+      "quickview": {
+        "default_heading": "Key specifications"
+      }
+    },
+    "product_supplies": {
+      "default_heading": "Recommended supplies",
+      "bundle_add": "Add all {{ count }} items",
+      "bundle_adding": "Adding…",
+      "bundle_added": "Added all items"
+    },
+    "product_spec_table": {
+      "default_heading": "Full specifications",
+      "variance_label": "Why specs can vary"
+    },
+    "product_description": {
+      "default_heading": "Built for a cleaner, healthier lawn"
+    },
+    "product_recommendations": {
+      "default_heading": "Similar mowers"
+    },
+    "product_anchor_nav": {
+      "label": "Product sections",
+      "overview": "Overview",
+      "specs": "Specifications",
+      "supplies": "Supplies"
     }
   },
   "compare": {
