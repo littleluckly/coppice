@@ -1,0 +1,80 @@
+{% doc %}
+  spec-bullets — 买盒里的三条决策参数（task-product T-1.3，拍板 10）。
+
+  **只吃必填字段，不新增 metafield**——这样 21 款主机永远不缺行：
+    1. 切割宽度 `spec.cutting_width_mm`；链锯没有切割宽度 → 自动改用导板长度
+       `spec.bar_length_mm`（同一条 bullet 位，图标与文案随之切换）
+    2. 动力：`power_source = Battery` → `spec.power_w`（W→hp）；其余 → `spec.displacement_cc`
+    3. 驱动方式 `spec.drive_type`；值为 `N/A` 或空（链锯/打草机）→ 该条不出现
+
+  缺值/0 → 该条不出现，三条全空 → 整个列表不渲染（SDD §5.7：不留空壳、不显示 0）。
+  单位换算全部走 `snippets/spec-value.liquid`，本文件不碰系数（AGENTS.md §4 红线）。
+
+  **样式归属**：样式由调用方 section 的 `{% stylesheet %}` 提供（snippet 不写样式块）。
+
+  @param {product} product - product 对象（必填）
+{% enddoc %}
+
+{%- liquid
+  assign mf = product.metafields.spec
+
+  assign b1_value = mf.cutting_width_mm.value
+  assign b1_unit = 'length_mm'
+  assign b1_icon = 'icon-spec-width.svg'
+  assign b1_label = 'products.product.spec_cutting_width' | t
+  if b1_value == blank
+    assign b1_value = mf.bar_length_mm.value
+    assign b1_icon = 'icon-spec-bar.svg'
+    assign b1_label = 'products.product.spec_bar_length' | t
+  endif
+
+  assign b2_value = ''
+  assign b2_unit = 'displacement_cc'
+  assign b2_label = 'products.product.spec_engine' | t
+  if mf.power_source.value == 'Battery'
+    assign b2_value = mf.power_w.value
+    assign b2_unit = 'power_w'
+    assign b2_label = 'products.product.spec_power' | t
+  else
+    assign b2_value = mf.displacement_cc.value
+  endif
+
+  assign b3_value = mf.drive_type.value
+  if b3_value == 'N/A'
+    assign b3_value = ''
+  endif
+-%}
+
+{%- if b1_value != blank or b2_value != blank or b3_value != blank -%}
+  <ul class="spec-bullets" role="list">
+    {%- if b1_value != blank -%}
+      <li class="spec-bullets__item">
+        <span class="spec-bullets__icon" aria-hidden="true">{{ b1_icon | inline_asset_content }}</span>
+        <span class="spec-bullets__text">
+          {%- render 'spec-value', value: b1_value, unit_type: b1_unit %}
+          <span class="spec-bullets__label">{{ b1_label }}</span>
+        </span>
+      </li>
+    {%- endif -%}
+
+    {%- if b2_value != blank -%}
+      <li class="spec-bullets__item">
+        <span class="spec-bullets__icon" aria-hidden="true">{{ 'icon-spec-engine.svg' | inline_asset_content }}</span>
+        <span class="spec-bullets__text">
+          {%- render 'spec-value', value: b2_value, unit_type: b2_unit %}
+          <span class="spec-bullets__label">{{ b2_label }}</span>
+        </span>
+      </li>
+    {%- endif -%}
+
+    {%- if b3_value != blank -%}
+      <li class="spec-bullets__item">
+        <span class="spec-bullets__icon" aria-hidden="true">{{ 'icon-spec-drive.svg' | inline_asset_content }}</span>
+        <span class="spec-bullets__text">
+          <span class="spec-bullets__value">{{ b3_value }}</span>
+          <span class="spec-bullets__label">{{ 'products.product.spec_drive' | t }}</span>
+        </span>
+      </li>
+    {%- endif -%}
+  </ul>
+{%- endif -%}
