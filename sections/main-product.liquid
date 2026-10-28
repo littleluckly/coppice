@@ -59,7 +59,11 @@
   ></script>
 {%- endif -%}
 
-<section class="main-product" data-section-id="{{ section.id }}">
+<section
+  class="main-product"
+  data-section-id="{{ section.id }}"
+  data-save-template="{{ 'products.product.save_percent' | t: percent: '[percent]' }}"
+>
   {%- if section.settings.show_breadcrumb -%}
     <nav class="main-product__breadcrumb" aria-label="{{ 'general.breadcrumb' | t }}">
       <ol class="main-product__breadcrumb-list" role="list">
@@ -461,7 +465,7 @@
             {%- endif -%}
 
           {%- when 'pickup' -%}
-            <div class="main-product__block" data-pickup-block {{ block.shopify_attributes }}>
+            <div class="main-product__block" data-pickup-block aria-live="polite" {{ block.shopify_attributes }}>
               <pickup-availability
                 class="pickup"
                 data-variant-id="{{ current_variant.id }}"
