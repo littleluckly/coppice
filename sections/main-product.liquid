@@ -436,7 +436,8 @@
                   <span class="trust-item__text">
                     {%- assign warranty_rest = warranty | modulo: 12 -%}
                     {%- if warranty_rest == 0 -%}
-                      {{- 'products.product.warranty_years' | t: years: warranty | divided_by: 12 -}}
+                      {%- assign warranty_years = warranty | divided_by: 12 -%}
+                      {{- 'products.product.warranty_years' | t: years: warranty_years -}}
                     {%- else -%}
                       {{- 'products.product.warranty_months' | t: months: warranty -}}
                     {%- endif -%}
