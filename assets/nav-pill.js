@@ -5,7 +5,8 @@
  * - 深色药丸（视觉由 main-nav.liquid 的 .main-nav__pill 控制）默认隐藏；
  *   鼠标悬浮 / 键盘焦点进入某个一级导航项时，药丸滑动到该项下方，
  *   该项文字同步反色（CSS :hover / :focus-within 配合）。
- * - 鼠标离开整个列表 / 焦点全部移出列表时，药丸隐藏，还原默认状态。
+ * - 鼠标离开整个列表 / 焦点全部移出列表时，药丸隐藏、面板延迟 200ms 关闭
+ *   （飞越间隙保护：200ms 内鼠标回到导航 / 面板即取消关闭，避免半路塌）。
  * - 当前页（aria-current）另有静态的品牌色文字指示（SDD §8.2 不能只靠
  *   悬浮态表达"你在哪"），本组件只负责交互反馈。
  *
@@ -32,6 +33,13 @@ class NavPill extends HTMLElement {
     this._megaSwitchTimer = null;
     this._MEGA_HOVER_DELAY = 150;
 
+    /* 面板延迟关闭（2026-10-27 刘工）：从一级导航"飞越间隙"移到 mega 面板途中，
+       鼠标会短暂离开 .main-nav__list 的盒（面板 abs 定位在其外）→ 触发
+       mouseleave。若立即关闭就半路塌了。延迟 _MEGA_CLOSE_DELAY 才撤 is-open，
+       期间鼠标进入面板（mouseover 冒泡到 list）即取消关闭。 */
+    this._closeTimer = null;
+    this._MEGA_CLOSE_DELAY = 200;
+
     /* 显式锚点（第五轮，刘工）：[data-nav-pill-anchor] 是药丸与 mega 面板
        约定的定位父级（main-nav.liquid 里该元素同时持有 position: relative，
        即 CSS 包含块）。量测基准优先认它；若它不是 positioned、或药丸的
@@ -45,6 +53,8 @@ class NavPill extends HTMLElement {
        鼠标离开面板回默认组。 */
     this._tabs = Array.from(this.querySelectorAll('[data-mega-tab]'));
     this._panels = Array.from(this.querySelectorAll('[data-mega-panel]'));
+    /* 一级 group 项集合：鼠标路径延迟关闭时维护其 is-open 展开态 */
+    this._groups = Array.from(this.querySelectorAll('.main-nav__item--group'));
     this._defaultPanelIndex = this._panels.length
       ? this._panels[0].dataset.megaPanel
       : null;
@@ -90,6 +100,7 @@ class NavPill extends HTMLElement {
         }
         const item = event.target.closest('.main-nav__item');
         if (item && this.contains(item)) {
+          this._cancelClose(); /* 鼠标回到导航内，取消延迟关闭 */
           this._move(item);
           /* 鼠标重新压上一级 trigger 时重置为默认组；
              面板内部移动不触发（面板内元素不在 .main-nav__link 里） */
@@ -99,20 +110,19 @@ class NavPill extends HTMLElement {
           ) {
             this._switchTabs(this._defaultPanelIndex);
           }
+          /* 鼠标进入某一级 group → 展开该组（is-open 拖尾由 _close 延时撤除），
+             清掉其它组的 is-open，避免从 A 划到 B 时 A 残留展开 */
+          if (item.classList.contains('main-nav__item--group')) {
+            this._openGroup(item);
+          }
         }
       },
       { signal }
     );
 
     list.addEventListener('mouseleave', () => {
-      this._hide(); /* 顶部药丸隐藏 */
-      /* 取消可能待执行的左列面板切换（快速划出时不该迟到触发） */
-      if (this._megaSwitchTimer) {
-        clearTimeout(this._megaSwitchTimer);
-        this._megaSwitchTimer = null;
-      }
-      /* mega 药丸停在激活项（常驻高亮，不隐藏） */
-      this._moveMegaToIndex(this._activePanelIndex, true);
+      /* 不立即关：延迟关闭，给鼠标"飞越间隙"进入面板留余地（2026-10-27 刘工） */
+      this._scheduleClose();
     }, { signal });
 
     list.addEventListener(
@@ -134,11 +144,8 @@ class NavPill extends HTMLElement {
     const megaInner = this.querySelector('.main-nav__mega-inner');
     if (megaInner) {
       megaInner.addEventListener('mouseleave', () => {
-        if (this._megaSwitchTimer) {
-          clearTimeout(this._megaSwitchTimer);
-          this._megaSwitchTimer = null;
-        }
-        this._moveMegaToIndex(this._activePanelIndex, true);
+        /* 离开面板也延迟关，给"回一级项 / 回面板"留余地（2026-10-27 刘工） */
+        this._scheduleClose();
       }, { signal });
     }
 
@@ -166,6 +173,7 @@ class NavPill extends HTMLElement {
   disconnectedCallback() {
     if (this._controller) this._controller.abort();
     if (this._megaSwitchTimer) clearTimeout(this._megaSwitchTimer);
+    if (this._closeTimer) clearTimeout(this._closeTimer);
     if (this._pill) this._pill.remove();
     if (this._megaPill) this._megaPill.remove();
     this._current = null;
@@ -309,6 +317,49 @@ class NavPill extends HTMLElement {
         tab.dataset.megaTab === index
       );
     }
+  }
+
+  /* —— 面板延迟关闭（飞越间隙保护，2026-10-27 刘工）—— */
+
+  /* 取消待执行的延迟关闭（鼠标回到导航 / 面板时调用） */
+  _cancelClose() {
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
+  }
+
+  /* 离开一级导航或离开面板时，不立即关——延迟 _MEGA_CLOSE_DELAY 再关，
+     给鼠标"飞越间隙"进入面板留余地。延迟期间鼠标回到导航 / 面板，
+     mouseover 冒泡会 _cancelClose 取消；真正离开才关。 */
+  _scheduleClose() {
+    this._cancelClose();
+    this._closeTimer = setTimeout(() => {
+      this._closeTimer = null;
+      this._close();
+    }, this._MEGA_CLOSE_DELAY);
+  }
+
+  /* 真正关闭：撤除所有 group 的 is-open 拖尾（:hover 维持的项不受影响），
+     顶部药丸隐藏、取消待切换、左列药丸回激活项常驻高亮。 */
+  _close() {
+    for (const g of this._groups) g.classList.remove('is-open');
+    if (this._megaSwitchTimer) {
+      clearTimeout(this._megaSwitchTimer);
+      this._megaSwitchTimer = null;
+    }
+    this._hide();
+    this._moveMegaToIndex(this._activePanelIndex, true);
+  }
+
+  /* 鼠标进入某一级 group：展开该组（is-open），清掉其它组的拖尾 is-open，
+     避免从 A 划到 B 时 A 残留展开。键盘路径（focusin）不调用本方法——
+     键盘展开由 :focus-within 独立维持，否则 focusout 不会撤 is-open 致面板卡开。 */
+  _openGroup(item) {
+    for (const g of this._groups) {
+      if (g !== item) g.classList.remove('is-open');
+    }
+    item.classList.add('is-open');
   }
 }
 

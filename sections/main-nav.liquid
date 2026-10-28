@@ -1028,7 +1028,9 @@
   }
 
   .main-nav__item--group:hover > .main-nav__mega,
-  .main-nav__item--group:focus-within > .main-nav__mega {
+  .main-nav__item--group:focus-within > .main-nav__mega,
+  /* is-open：鼠标路径延迟关闭时由 JS 维持展开（飞越间隙保护，2026-10-27 刘工） */
+  .main-nav__item--group.is-open > .main-nav__mega {
     display: block;
     clip-path: inset(0 0 -3rem 0);
   }
@@ -1057,7 +1059,8 @@
   }
 
   .main-nav__item--group:hover > .main-nav__mega .main-nav__mega-inner,
-  .main-nav__item--group:focus-within > .main-nav__mega .main-nav__mega-inner {
+  .main-nav__item--group:focus-within > .main-nav__mega .main-nav__mega-inner,
+  .main-nav__item--group.is-open > .main-nav__mega .main-nav__mega-inner {
     translate: 0 0;
   }
 
@@ -1088,7 +1091,8 @@
   }
 
   .main-nav__desktop:has(.main-nav__item--group:hover)::after,
-  .main-nav__desktop:has(.main-nav__item--group:focus-within)::after {
+  .main-nav__desktop:has(.main-nav__item--group:focus-within)::after,
+  .main-nav__desktop:has(.main-nav__item--group.is-open)::after {
     opacity: 1;
     visibility: visible;
   }
