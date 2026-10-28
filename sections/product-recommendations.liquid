@@ -1,0 +1,117 @@
+{% comment %}
+  product-recommendations — Similar Mowers（task-product T-2.6，强制项 #13 related）。
+
+  效果图把四张整机推荐也标成 "Frequently Bought Together"，与耗材区重名。
+  这里改成 Similar Mowers：整机与整机是「同类替代」，不是「买了还买」——
+  名称必须和推荐意图一致（related，不是 complementary）。
+
+  实现：`/recommendations/products?intent=related` + Section Rendering API。
+  首次服务端渲染时 `recommendations` 不存在 → 容器为空，由 JS 拉取后填充；
+  拉回仍为空 → JS 整块隐藏（含标题），不留空标题。无 JS → 本区块不出现（可接受的降级）。
+
+  卡片复用 snippets/product-card.liquid（对比勾选、快加逻辑随卡片一起继承）。
+{% endcomment %}
+
+{%- liquid
+  assign heading = section.settings.heading
+  if heading == blank
+    assign heading = 'sections.product_recommendations.default_heading' | t
+  endif
+  assign limit = section.settings.limit | default: 4
+-%}
+
+<section class="product-recommendations" id="product-similar" data-section-id="{{ section.id }}">
+  <script src="{{ 'product-recommendations.js' | asset_url }}" defer></script>
+  <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+  <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
+  {{ 'product-card.css' | asset_url | stylesheet_tag }}
+
+  <product-recommendations
+    data-intent="related"
+    data-url="{{ routes.product_recommendations_url }}?section_id={{ section.id }}&product_id={{ product.id }}&limit={{ limit }}&intent=related"
+  >
+    <div class="product-recommendations__inner" data-recommendations-container>
+      {%- if recommendations.performed and recommendations.products_count > 0 -%}
+        <h2 class="product-recommendations__heading">{{ heading }}</h2>
+        <ul class="product-recommendations__grid" role="list">
+          {%- for item in recommendations.products limit: limit -%}
+            <li>
+              {% render 'product-card',
+                product: item,
+                lazy: true,
+                quick_add: true,
+                show_width: true,
+                show_cc: false,
+                show_power: false,
+                show_weight: false,
+                sizes: '(min-width: 1100px) 20vw, 45vw'
+              %}
+            </li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </div>
+  </product-recommendations>
+</section>
+
+{% stylesheet %}
+  .product-recommendations {
+    max-width: var(--page-width);
+    margin-inline: auto;
+    padding-inline: var(--page-margin);
+    padding-block: 2rem;
+  }
+  .product-recommendations__heading {
+    margin: 0 0 1rem;
+    font-size: 1.15rem;
+    font-weight: 500;
+  }
+  .product-recommendations__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 750px) {
+    .product-recommendations__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1100px) {
+    .product-recommendations__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.product_recommendations.name",
+  "tag": "div",
+  "class": "product-recommendations-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "t:sections.product_recommendations.default_heading"
+    },
+    {
+      "type": "range",
+      "id": "limit",
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "label": "t:sections.product_recommendations.limit",
+      "default": 4
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.product_recommendations.name"
+    }
+  ]
+}
+{% endschema %}
