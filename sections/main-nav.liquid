@@ -150,14 +150,16 @@
                 {%- if has_children -%}
                   {%- comment -%}
                     分组项：只出 <span>，不输出 <a>（BUG-023）。
-                    面板锚定在 .main-nav__desktop 上（整行宽、内容列对齐），
-                    所以 li 自身不能创建定位上下文。
+                    "li 自身不能创建定位上下文"仅针对 mega 项——mega 面板锚定在
+                    .main-nav__desktop 上（整行宽、内容列对齐）；普通下拉反过来
+                    锚在 li 上，所以只有 --dropdown 那一支给 li 加 position: relative。
                     不带下拉箭头（2026-10-12 刘工）：选中态交给滑动药丸指示器。
                   {%- endcomment -%}
                   <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
                     {{ link.title }}
                   </span>
 
+                  {%- if has_mega_content -%}
                   {%- comment -%}
                     Mega 面板（2026-10-13 第八轮，参考 demo 截图三段式）：
                     左列 = 二级分类导航（直接取菜单二级项，无 block 配置）；
@@ -373,6 +375,32 @@
 
                     </div>
                   </div>
+                  {%- else -%}
+                    {%- comment -%}
+                      普通下拉（2026-10-28）：子项全是页面/博客等非集合链接时，
+                      不出 mega 三栏（中区会一片空白），改成贴在项下方的小面板。
+                      纯 CSS :hover / :focus-within 驱动——面板是 li 的后代，
+                      鼠标移进面板时 li 的 hover 链不断，不需要 JS 拖尾。
+                      不带 --group 类，故不进 JS 的 _groups，不触左列药丸与 tab 切换。
+                    {%- endcomment -%}
+                    <div class="main-nav__dropdown">
+                      <ul class="main-nav__dropdown-list" role="list">
+                        {%- for child in link.links -%}
+                          <li>
+                            <a
+                              class="main-nav__dropdown-link{% if child.current %} main-nav__dropdown-link--current{% endif %}"
+                              href="{{ child.url }}"
+                              {% if child.current %}
+                                aria-current="page"
+                              {% endif %}
+                            >
+                              {{ child.title }}
+                            </a>
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+                    </div>
+                  {%- endif -%}
                 {%- else -%}
                   {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
                   <a
@@ -997,6 +1025,64 @@
     .main-nav__item--group:focus-within > .main-nav__mega {
       clip-path: inset(0 0 100% 0);
     }
+  }
+
+  /* ---- 普通下拉（2026-10-28）：一级项的子项全是页面/博客等非集合链接时，
+     用它替代 mega 三栏面板。锚在 li 上——本主题里唯一给 li 加
+     position: relative 的一支（mega 项仍锚在 .main-nav__desktop，
+     见上方 BUG-034 注释），两者互不干扰：mega 项没有 dropdown 子元素。 ---- */
+  .main-nav__item--dropdown {
+    position: relative;
+  }
+
+  .main-nav__dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    z-index: 10;
+    min-inline-size: 15rem;
+    padding: 0.5rem;
+    background-color: var(--color-background);
+    border-radius: 0 0 12px 12px;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    /* 投影用 drop-shadow（与 mega 面板同款，"压商品图/投影"是颜色规范的合法例外） */
+    filter: drop-shadow(0 18px 32px rgb(0 0 0 / 16%));
+    /* 导航行的 nowrap 约定不外溢到面板文字 */
+    white-space: normal;
+  }
+
+  /* 纯 CSS 开合：面板是 li 的后代，鼠标移进面板时 li 的 :hover 链不断，
+     所以不需要 mega 那套 JS 延迟关闭（is-open 拖尾）。 */
+  .main-nav__item--dropdown:hover > .main-nav__dropdown,
+  .main-nav__item--dropdown:focus-within > .main-nav__dropdown {
+    display: block;
+  }
+
+  .main-nav__dropdown-list {
+    display: grid;
+    gap: 0.125rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-nav__dropdown-link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9375rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .main-nav__dropdown-link:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+
+  .main-nav__dropdown-link--current {
+    color: var(--color-brand);
+    font-weight: 600;
   }
 
   /* 内容区：只管对齐内容列，视觉（底色/投影/圆角）全在通栏面板上。
