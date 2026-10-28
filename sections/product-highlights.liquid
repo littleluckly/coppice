@@ -34,7 +34,20 @@
           {%- when 'platform_compat' -%}
             {%- liquid
               assign platform = product.metafields.platform.battery_platform.value
-              assign platform_collection = block.settings.collection
+              # 链接目标：优先 block 选定的集合；没选就按电压推导同平台集合
+              # （40V → 40v-battery，演示店四个平台集合都按这个命名建好了）。
+              # 集合不存在时 `.title` 为空 —— 绝不用 `if collections[handle]` 判存在，
+              # 不存在的 handle 返回的是 truthy 空 drop（BUG 台账已记）。
+              assign platform_url = ''
+              if block.settings.collection != blank
+                assign platform_url = block.settings.collection.url
+              else
+                assign derived_handle = platform | downcase | append: '-battery'
+                assign derived_collection = collections[derived_handle]
+                if derived_collection.title != blank
+                  assign platform_url = derived_collection.url
+                endif
+              endif
             -%}
             {%- if platform != blank and platform != 'N/A' -%}
               <li class="product-highlights__card" {{ block.shopify_attributes }}>
@@ -47,11 +60,8 @@
                 <p class="product-highlights__text">
                   {{- 'sections.product_highlights.platform.text' | t: platform: platform -}}
                 </p>
-                {%- if platform_collection != blank -%}
-                  <a
-                    class="product-highlights__link"
-                    href="{{ platform_collection.url }}"
-                  >
+                {%- if platform_url != blank -%}
+                  <a class="product-highlights__link" href="{{ platform_url }}">
                     {{- 'sections.product_highlights.platform.cta' | t -}}
                   </a>
                 {%- endif -%}
