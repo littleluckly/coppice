@@ -219,8 +219,7 @@
       "default_heading": "Supplies",
       "bundle_add": "Add all {{ count }} items",
       "bundle_adding": "Adding…",
-      "bundle_added": "Added all items",
-      "complementary_heading": "Pairs well with"
+      "bundle_added": "Added all items"
     },
     "product_spec_table": {
       "default_heading": "Specifications",
@@ -237,6 +236,9 @@
       "overview": "Overview",
       "specs": "Specifications",
       "supplies": "Supplies"
+    },
+    "product_complementary": {
+      "default_heading": "Pairs well with"
     }
   },
   "compare": {

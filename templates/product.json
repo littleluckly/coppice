@@ -88,9 +88,7 @@
     },
     "product-supplies": {
       "type": "product-supplies",
-      "settings": {
-        "fallback_to_complementary": true
-      }
+      "settings": {}
     },
     "product-spec-table": {
       "type": "product-spec-table",
@@ -103,14 +101,19 @@
     "compare-lookup": {
       "type": "compare-lookup",
       "settings": {}
+    },
+    "product-complementary": {
+      "type": "product-complementary",
+      "settings": {}
     }
   },
   "order": [
     "main",
     "product-highlights",
+    "product-complementary",
     "product-description",
-    "product-supplies",
     "product-spec-table",
+    "product-supplies",
     "product-recommendations",
     "compare-lookup"
   ]

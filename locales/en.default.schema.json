@@ -315,10 +315,7 @@
     },
     "product_supplies": {
       "name": "Recommended supplies",
-      "default_heading": "Supplies",
-      "fallback": "Fall back to complementary recommendations",
-      "fallback_info": "Used only when the product has no consumables attached. Configure complementary products in the Search & Discovery app.",
-      "complementary_heading": "Pairs well with"
+      "default_heading": "Supplies"
     },
     "product_spec_table": {
       "name": "Full specifications",
@@ -336,6 +333,11 @@
     },
     "product_anchor_nav": {
       "name": "Section anchor bar"
+    },
+    "product_complementary": {
+      "name": "Pairs well with",
+      "default_heading": "Pairs well with",
+      "limit": "Number of products"
     }
   },
   "labels": {
