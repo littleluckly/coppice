@@ -15,7 +15,12 @@
 {%- liquid
   assign heading = section.settings.heading
   if heading == blank
+    # 标题跟着品类走：主机叫 "Similar mowers"，配件/电池推到的是刀片锯链，
+    # 挂 "Similar mowers" 会驴唇不对马嘴（2026-10-28 实测发现）
     assign heading = 'sections.product_recommendations.default_heading' | t
+    if product.metafields.spec.compare_group.value == blank
+      assign heading = 'sections.product_recommendations.default_heading_generic' | t
+    endif
   endif
   assign limit = section.settings.limit | default: 4
 -%}
@@ -97,7 +102,7 @@
       "type": "text",
       "id": "heading",
       "label": "t:labels.heading",
-      "default": "t:sections.product_recommendations.default_heading"
+      "info": "t:sections.product_recommendations.heading_info"
     },
     {
       "type": "range",

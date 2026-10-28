@@ -229,7 +229,8 @@
       "default_heading": "Overview"
     },
     "product_recommendations": {
-      "default_heading": "Similar mowers"
+      "default_heading": "Similar mowers",
+      "default_heading_generic": "You may also like"
     },
     "product_anchor_nav": {
       "label": "Product sections",
