@@ -76,8 +76,9 @@ class NavPill extends HTMLElement {
       mp.setAttribute('aria-hidden', 'true');
       megaNav.appendChild(mp);
       this._megaPill = mp;
-      /* 初始：药丸停在默认激活项（常驻高亮，无动画定位） */
-      this._moveMegaToIndex(this._defaultPanelIndex, false);
+      /* 药丸元素建好，但默认激活项的定位推迟到首次 _openGroup：
+         此刻面板 display:none（无 is-open），offsetParent 为 null 无法
+         量测；面板真正展开（is-open → display:block）时坐标才可测。 */
     }
 
     const pill = document.createElement('span');
@@ -360,6 +361,12 @@ class NavPill extends HTMLElement {
       if (g !== item) g.classList.remove('is-open');
     }
     item.classList.add('is-open');
+    /* 首次打开面板：把左列滑动药丸定位到当前激活项（常驻高亮）。
+       加 is-open 后面板已 display:block，同步读取坐标可测；
+       _moveMegaToIndex(animate=false) 无动画定位 + 同步 --lit 反色，
+       保证面板展开首帧激活项即高亮，不闪、不漏
+       （修复"首次打开无默认选中高亮"：初始化时面板不可见无法定位）。 */
+    this._moveMegaToIndex(this._activePanelIndex, false);
   }
 }
 
