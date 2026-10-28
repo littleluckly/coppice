@@ -274,10 +274,10 @@
                                         <span class="main-nav__mega-card-media">
                                           {{
                                             card_image
-                                            | image_url: width: 480
+                                            | image_url: width: 640
                                             | image_tag:
-                                              widths: '160, 240, 360, 480',
-                                              sizes: '13rem',
+                                              widths: '240, 360, 480, 640',
+                                              sizes: '20rem',
                                               loading: 'lazy',
                                               alt: '',
                                               class: 'main-nav__mega-card-img'
@@ -348,10 +348,10 @@
                                           <span class="main-nav__mega-card-media">
                                             {{
                                               card_image
-                                              | image_url: width: 480
+                                              | image_url: width: 640
                                               | image_tag:
-                                                widths: '160, 240, 360, 480',
-                                                sizes: '13rem',
+                                                widths: '240, 360, 480, 640',
+                                                sizes: '20rem',
                                                 loading: 'lazy',
                                                 alt: '',
                                                 class: 'main-nav__mega-card-img'
@@ -1305,9 +1305,20 @@
     padding: 0;
     list-style: none;
     display: grid;
-    /* 12rem 下限（2026-10-13 刘工：仍紧凑压抑——卡更宽、间距更大），
-       每行少一张卡换呼吸感 */
-    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    /* 固定 3 列（2026-10-28 第三版，两次踩坑后的定论）。
+       ⚠️ 踩过的两个坑，别再绕回去：
+       ① repeat(auto-fill, minmax(12rem, 1fr)) 在中区 1088px 里算出 5 列，
+          3 张卡只坐满 3 列、右边空掉约 450px（这就是最初"面板太空"）。
+       ② repeat(auto-fit, minmax(12rem, 20rem)) 的 20rem 上限会把**列数**
+          也压掉：CSS Grid 规范里 max 是固定长度时轨道数按 max 算，
+          1130 视口算成 floor(802/344)=2 列 —— 想防卡太大，结果卡更大还换行。
+       所以列数只由下限决定，上限一律不写进 minmax。
+       这里直接写死 3 列：模板里每组卡固定 `limit: 3` 张，最多就是 3 张，
+       写死比让 auto-fit 去猜更可预期——**某组只有 2 张卡时（80V Battery）
+       不会把仅有的两张拉成 532px 大块**，右侧留白是数据决定的，不是布局错。
+       ⚠️ 若以后把模板的 `limit: 3` 改大，这里的 3 必须同步。
+       实测：990 → 3×197；1130 → 3×243；1440 → 3×347（图 323，接近 300 目标）。 */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.5rem;
   }
 
