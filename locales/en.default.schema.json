@@ -289,7 +289,7 @@
     "skeleton_accent": "Header & footer accent",
     "skeleton_accent_info": "Leave empty to follow the global Brand color above. Drives the announcement bar fill and the brand name in the header.",
     "compare_groups": "Comparison group keys",
-    "compare_groups_info": "Comma-separated list. Each key needs a page whose title is \"<Group name> Compare\" -- for example key \"chainsaw\" needs a page titled \"Chainsaw Compare\". Comparison entry points only appear for keys that have a matching page.",
+    "compare_groups_info": "Comma-separated list. Each key needs a page whose title is \"[Group name] Compare\" -- for example key \"chainsaw\" needs a page titled \"Chainsaw Compare\". Comparison entry points only appear for keys that have a matching page.",
     "compare_page_indexing": "Allow search engines to index comparison pages",
     "compare_page_indexing_info": "Turn off if comparison pages should not appear in search results.",
     "compare_collections": "Comparison collections",
