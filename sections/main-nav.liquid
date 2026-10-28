@@ -122,10 +122,30 @@
                 if link.child_current or link.child_active
                   assign in_branch = true
                 endif
+
+                comment
+                  面板形态判定（2026-10-28）：子项撑得起 mega 三栏面板才走 mega——
+                  即存在「指向有商品集合的二级项」或「带三级子项的二级项」。
+                  子项全是页面/博客链接时（如 Support）走普通下拉，
+                  避免 mega 中区一片空白、左列孤零零挂在通栏白底左边。
+                endcomment
+                assign has_mega_content = false
+                if has_children
+                  for sub in link.links
+                    if sub.links.size > 0
+                      assign has_mega_content = true
+                      break
+                    endif
+                    if sub.type == 'collection_link' and sub.object != blank and sub.object.all_products_count > 0
+                      assign has_mega_content = true
+                      break
+                    endif
+                  endfor
+                endif
               -%}
 
               <li
-                class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}{% if has_children %} main-nav__item--group{% endif %}"
+                class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}{% if has_children %}{% if has_mega_content %} main-nav__item--group{% else %} main-nav__item--dropdown{% endif %}{% endif %}"
               >
                 {%- if has_children -%}
                   {%- comment -%}
