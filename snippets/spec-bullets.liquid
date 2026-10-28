@@ -10,36 +10,36 @@
   缺值/0 → 该条不出现，三条全空 → 整个列表不渲染（SDD §5.7：不留空壳、不显示 0）。
   单位换算全部走 `snippets/spec-value.liquid`，本文件不碰系数（AGENTS.md §4 红线）。
 
+  **注意**：metafield 一律写全路径（`product.metafields.spec.xxx.value`），
+  不 `assign` namespace 对象——Shopify 未把 namespace 当可赋值 drop，写全路径是唯一稳的写法。
+
   **样式归属**：样式由调用方 section 的 `{% stylesheet %}` 提供（snippet 不写样式块）。
 
   @param {product} product - product 对象（必填）
 {% enddoc %}
 
 {%- liquid
-  assign mf = product.metafields.spec
-
-  assign b1_value = mf.cutting_width_mm.value
+  assign b1_value = product.metafields.spec.cutting_width_mm.value
   assign b1_unit = 'length_mm'
   assign b1_icon = 'icon-spec-width.svg'
   assign b1_label = 'products.product.spec_cutting_width' | t
   if b1_value == blank
-    assign b1_value = mf.bar_length_mm.value
+    assign b1_value = product.metafields.spec.bar_length_mm.value
     assign b1_icon = 'icon-spec-bar.svg'
     assign b1_label = 'products.product.spec_bar_length' | t
   endif
 
-  assign b2_value = ''
   assign b2_unit = 'displacement_cc'
   assign b2_label = 'products.product.spec_engine' | t
-  if mf.power_source.value == 'Battery'
-    assign b2_value = mf.power_w.value
+  if product.metafields.spec.power_source.value == 'Battery'
+    assign b2_value = product.metafields.spec.power_w.value
     assign b2_unit = 'power_w'
     assign b2_label = 'products.product.spec_power' | t
   else
-    assign b2_value = mf.displacement_cc.value
+    assign b2_value = product.metafields.spec.displacement_cc.value
   endif
 
-  assign b3_value = mf.drive_type.value
+  assign b3_value = product.metafields.spec.drive_type.value
   if b3_value == 'N/A'
     assign b3_value = ''
   endif
