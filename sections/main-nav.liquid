@@ -15,10 +15,10 @@
     narrow dropdown with a flyout. The panel spans the whole viewport width (anchored
     against the desktop row), while its inner content stays aligned to the content
     column. It slides in and out (display transition with allow-discrete, graceful
-    degradation to instant hide on older browsers). Optional conversion card: a
-    mega_promo section block whose "menu item" setting matches the top-level item
-    title renders inside that panel. Promo text sits BELOW the image, never overlaid
-    — contrast on merchant-picked imagery cannot be guaranteed (SDD §8.2).
+    degradation to instant hide on older browsers). Right column: auto-derived
+    collection grid. Every second-level menu item that points to a collection
+    renders as a card (cover image + title), no section block or merchant config
+    required. The column is omitted when the top-level item has no collection links.
   - 2026-10-12 second round (刘工): no dropdown chevrons on desktop. A dark sliding
     pill (assets/nav-pill.js, custom element nav-pill) follows hover/keyboard focus
     across the top-level items and hides when the pointer leaves the nav. aria-current
