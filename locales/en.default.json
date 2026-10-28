@@ -137,6 +137,7 @@
       "spec_bar_length": "bar length",
       "spec_engine": "engine",
       "spec_power": "power",
+      "spec_battery": "battery",
       "spec_drive": "drive"
     },
     "product_card": {
