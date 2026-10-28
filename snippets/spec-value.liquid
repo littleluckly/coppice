@@ -13,9 +13,14 @@
     - 1 in = 25.4 mm
     - 1 kg = 2.20462 lb
     - 1 sq ft = 0.092903 ㎡
+    - 1 W = 0.00134102 hp
+    - **排量（cc）不换算**：北美 OPE 行业与厂商规格表一律用 cc（"166 cc OHV"），
+      cu in 从来不出现在割草机/链锯的选购语境里。换算成 cu in 只会让买家困惑，
+      故 `displacement_cc` 在两种单位制下都输出 cc。原 `metafield-reference.md`
+      写的 "cc → cu in" 属纸面推演，2026-10-28 按行业口径改为此规则。
 
   @param {number} value - 数值（number_integer / number_decimal metafield 的 .value）
-  @param {string} unit_type - 'length_mm' | 'weight_kg' | 'area_sqft' 之一
+  @param {string} unit_type - 'length_mm' | 'weight_kg' | 'area_sqft' | 'displacement_cc' | 'power_w' 之一
   @param {string} [spec_class] - 外层 span 的修饰类名（可选）
 {% enddoc %}
 
