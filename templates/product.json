@@ -82,10 +82,6 @@
       ],
       "settings": {}
     },
-    "product-description": {
-      "type": "product-description",
-      "settings": {}
-    },
     "product-supplies": {
       "type": "product-supplies",
       "settings": {}
@@ -111,7 +107,6 @@
     "main",
     "product-highlights",
     "product-complementary",
-    "product-description",
     "product-spec-table",
     "product-supplies",
     "product-recommendations",
