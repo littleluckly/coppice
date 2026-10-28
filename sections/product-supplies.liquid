@@ -137,7 +137,13 @@
     >
       <div class="product-supplies__fallback" data-recommendations-container>
         {%- if recommendations.performed and recommendations.products_count > 0 -%}
-          <h2 class="product-supplies__heading">{{ heading }}</h2>
+          {%- comment -%}
+            互补路径的标题必须与耗材路径不同：这里推的是整机（割草机/链锯），
+            叫 "Supplies" 会让顾客以为下面还是刀片锯链（2026-10-28 实测发现）。
+          {%- endcomment -%}
+          <h2 class="product-supplies__heading">
+            {{- 'sections.product_supplies.complementary_heading' | t -}}
+          </h2>
           <ul class="product-supplies__grid product-supplies__grid--cards" role="list">
             {%- for item in recommendations.products limit: 4 -%}
               <li>

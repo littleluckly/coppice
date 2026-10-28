@@ -317,7 +317,8 @@
       "name": "Recommended supplies",
       "default_heading": "Supplies",
       "fallback": "Fall back to complementary recommendations",
-      "fallback_info": "Used only when the product has no consumables attached. Configure complementary products in the Search & Discovery app."
+      "fallback_info": "Used only when the product has no consumables attached. Configure complementary products in the Search & Discovery app.",
+      "complementary_heading": "Pairs well with"
     },
     "product_spec_table": {
       "name": "Full specifications",
