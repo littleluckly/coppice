@@ -70,8 +70,8 @@
 |  | Chainsaws 链锯 | — | 集合 | 伐木、砍枝、清理倒木与堆料 | `compare_group = chainsaw` 或 `Product category` 条件 |
 |  | Trimmers 打草机 | — | 集合 | 修边、割灌木丛与篱笆边缘（细窄、轻量） | `compare_group = string-trimmer` |
 |  | **Accessories 配件与耗材** | Blades & Bars | 集合 | **磨损件**：割草刀、链锯锯条。最常复购，单价低、消耗快 | Product category 条件（刀片/导板类） |
-|  |  | Filters | 集合 | **保养件**：空气滤芯／机油滤芯。按周期更换 | Product category（滤清器无叶子节点 → 降级类目，SDD §3.5） |
-|  |  | Batteries & Chargers | 集合 | **平台配件**：同平台通用——一块电池可跨多款工具复用，是电池生态的复购入口 | `… > Power Tool Chargers`（Hardware 分支） |
+|  |  | Filters | 集合 | **保养件**：空气滤芯／机油滤芯。按周期更换 | **空集合，暂不做商品**——滤清器在 Lawn & Garden 无叶子节点，降级类目已否决（2026-10-27） |
+|  |  | Batteries | 集合 | **平台配件**：同平台通用——一块电池可跨多款工具复用，是电池生态的复购入口 | `… > Outdoor Power Equipment Accessories > Outdoor Power Equipment Batteries` |
 | **Shop by Platform**（按动力平台进） | 20V Battery | — | 集合 | **入门电压档**：轻量、单电池续航，适合小体量工具 | `platform.battery_platform = 20V`（空则暂不挂菜单项） |
 |  | 40V Battery | — | 集合 | **主力电压档**：家用中大草坪主力平台，兼容工具最多 | `= 40V` |
 |  | 60V Battery | — | 集合 | **中高电压档**：更强功率，面向较大作业面 | `= 60V`（空则暂不挂） |

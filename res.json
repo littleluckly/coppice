@@ -1,98 +1,343 @@
-{
-  "product": {
-    "id": 15410268438571,
-    "title": "Northbark NB-42TH 42 in. Riding Lawn Mower (Hydrostatic)",
-    "body_html": "<p>A 547 cc engine paired with a 42 in. stamped deck, hydrostatic transmission, cruise control and a sunshade canopy. Listed weight 410 lb (186.0 kg) is an aggregated reference for the line. 3-year unlimited-hour residential warranty.</p>",
-    "vendor": "Northbark",
-    "product_type": "Riding mower",
-    "created_at": "2026-10-08T04:51:14-04:00",
-    "handle": "northbark-nb-42th",
-    "updated_at": "2026-10-23T03:57:15-04:00",
-    "published_at": "2026-10-08T04:51:14-04:00",
-    "template_suffix": null,
-    "published_scope": "global",
-    "tags": "gasoline, lawn tractor, mowers, riding",
-    "variants": [
-      {
-        "id": 67791085207595,
-        "product_id": 15410268438571,
-        "title": "Default Title",
-        "price": "2399.00",
-        "sku": "NB-42TH",
-        "position": 1,
-        "compare_at_price": "",
-        "fulfillment_service": "manual",
-        "inventory_management": "shopify",
-        "option1": "Default Title",
-        "option2": null,
-        "option3": null,
-        "created_at": "2026-10-08T04:51:15-04:00",
-        "updated_at": "2026-10-23T03:57:15-04:00",
-        "taxable": true,
-        "barcode": null,
-        "grams": 185973,
-        "image_id": null,
-        "weight": 410.0003,
-        "weight_unit": "lb",
-        "requires_shipping": true,
-        "quantity_rule": {
-          "min": 1,
-          "max": null,
-          "increment": 1
+[
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMjM5NjA3NSwibGFzdF92YWx1ZSI6IjQ2NzQwNTMyMzk2MDc1In0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740532396075",
+      "path": "public/accessory/product-accessory-nb-bl21-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:41Z",
+      "updatedAt": "2026-10-28T07:28:35Z",
+      "displayName": "product-accessory-nb-bl21-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740532396075",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl21-1-main_rmbg_webp.webp?v=1793172282",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl21-1-main_rmbg_webp_800x800.webp?v=1793172282",
+          "__typename": "Image"
         },
-        "price_currency": "USD",
-        "compare_at_price_currency": "",
-        "quantity_price_breaks": []
-      }
-    ],
-    "options": [
-      {
-        "id": 17875478872107,
-        "product_id": 15410268438571,
-        "name": "Title",
-        "position": 1,
-        "values": [
-          "Default Title"
-        ]
-      }
-    ],
-    "images": [
-      {
-        "id": 39118590869547,
-        "product_id": 15410268438571,
-        "position": 1,
-        "created_at": "2026-10-08T04:19:22-04:00",
-        "updated_at": "2026-10-17T04:01:11-04:00",
-        "alt": "Northbark NB-42TH 42-inch riding lawn mower with hydrostatic transmission and sunshade canopy, three-quarter view",
-        "width": 1536,
-        "height": 1536,
-        "src": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42th-1-main_webp.webp?v=1792224071",
-        "variant_ids": []
+        "__typename": "MediaPreviewImage"
       },
-      {
-        "id": 39118589329451,
-        "product_id": 15410268438571,
-        "position": 2,
-        "created_at": "2026-10-08T04:19:18-04:00",
-        "updated_at": "2026-10-17T04:01:50-04:00",
-        "alt": "Northbark NB-42TH sunshade canopy detail",
-        "width": 1536,
-        "height": 1536,
-        "src": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42th-2-controls_webp.webp?v=1792224110",
-        "variant_ids": []
-      }
-    ],
-    "image": {
-      "id": 39118590869547,
-      "product_id": 15410268438571,
-      "position": 1,
-      "created_at": "2026-10-08T04:19:22-04:00",
-      "updated_at": "2026-10-17T04:01:11-04:00",
-      "alt": "Northbark NB-42TH 42-inch riding lawn mower with hydrostatic transmission and sunshade canopy, three-quarter view",
-      "width": 1536,
-      "height": 1536,
-      "src": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-nb-42th-1-main_webp.webp?v=1792224071",
-      "variant_ids": []
-    }
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 78950
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMjQ2MTYxMSwibGFzdF92YWx1ZSI6IjQ2NzQwNTMyNDYxNjExIn0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740532461611",
+      "path": "public/accessory/product-accessory-nb-b40-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:41Z",
+      "updatedAt": "2026-10-28T07:26:41Z",
+      "displayName": "product-accessory-nb-b40-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740532461611",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-b40-1-main_rmbg_webp.webp?v=1793172282",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-b40-1-main_rmbg_webp_800x800.webp?v=1793172282",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 146512
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMjQ5NDM3OSwibGFzdF92YWx1ZSI6IjQ2NzQwNTMyNDk0Mzc5In0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740532494379",
+      "path": "public/accessory/product-accessory-nb-bl42-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:41Z",
+      "updatedAt": "2026-10-28T07:24:43Z",
+      "displayName": "product-accessory-nb-bl42-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740532494379",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl42-1-main_rmbg_webp.webp?v=1793172282",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl42-1-main_rmbg_webp_800x800.webp?v=1793172282",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 127322
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMjUyNzE0NywibGFzdF92YWx1ZSI6IjQ2NzQwNTMyNTI3MTQ3In0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740532527147",
+      "path": "public/accessory/product-accessory-nb-tl095-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:41Z",
+      "updatedAt": "2026-10-28T07:27:25Z",
+      "displayName": "product-accessory-nb-tl095-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740532527147",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-tl095-1-main_rmbg_webp.webp?v=1793172282",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-tl095-1-main_rmbg_webp_800x800.webp?v=1793172282",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 161888
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMjU1OTkxNSwibGFzdF92YWx1ZSI6IjQ2NzQwNTMyNTU5OTE1In0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740532559915",
+      "path": "public/accessory/product-accessory-nb-ch20-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:41Z",
+      "updatedAt": "2026-10-28T07:24:43Z",
+      "displayName": "product-accessory-nb-ch20-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740532559915",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch20-1-main_rmbg_webp.webp?v=1793172282",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch20-1-main_rmbg_webp_800x800.webp?v=1793172282",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 190828
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMjU5MjY4MywibGFzdF92YWx1ZSI6IjQ2NzQwNTMyNTkyNjgzIn0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740532592683",
+      "path": "public/accessory/product-accessory-nb-bar16-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:41Z",
+      "updatedAt": "2026-10-28T07:24:43Z",
+      "displayName": "product-accessory-nb-bar16-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740532592683",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar16-1-main_rmbg_webp.webp?v=1793172282",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar16-1-main_rmbg_webp_800x800.webp?v=1793172282",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 150524
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMjYyNTQ1MSwibGFzdF92YWx1ZSI6IjQ2NzQwNTMyNjI1NDUxIn0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740532625451",
+      "path": "public/accessory/product-accessory-nb-bar20-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:41Z",
+      "updatedAt": "2026-10-28T07:24:43Z",
+      "displayName": "product-accessory-nb-bar20-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740532625451",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar20-1-main_rmbg_webp.webp?v=1793172282",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar20-1-main_rmbg_webp_800x800.webp?v=1793172282",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 148554
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMjY1ODIxOSwibGFzdF92YWx1ZSI6IjQ2NzQwNTMyNjU4MjE5In0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740532658219",
+      "path": "public/accessory/product-accessory-nb-ch18-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:41Z",
+      "updatedAt": "2026-10-28T07:27:26Z",
+      "displayName": "product-accessory-nb-ch18-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740532658219",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch18-1-main_rmbg_webp.webp?v=1793172283",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch18-1-main_rmbg_webp_800x800.webp?v=1793172283",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 318620
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMjY5MDk4NywibGFzdF92YWx1ZSI6IjQ2NzQwNTMyNjkwOTg3In0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740532690987",
+      "path": "public/accessory/product-accessory-nb-bar18-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:41Z",
+      "updatedAt": "2026-10-28T07:28:10Z",
+      "displayName": "product-accessory-nb-bar18-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740532690987",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar18-1-main_rmbg_webp.webp?v=1793172282",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar18-1-main_rmbg_webp_800x800.webp?v=1793172282",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 182102
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMzAxODY2NywibGFzdF92YWx1ZSI6IjQ2NzQwNTMzMDE4NjY3In0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740533018667",
+      "path": "public/accessory/product-accessory-nb-bl22-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:42Z",
+      "updatedAt": "2026-10-28T07:24:43Z",
+      "displayName": "product-accessory-nb-bl22-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740533018667",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl22-1-main_rmbg_webp.webp?v=1793172283",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl22-1-main_rmbg_webp_800x800.webp?v=1793172283",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 99766
+    },
+    "__typename": "FileEdge"
+  },
+  {
+    "cursor": "eyJsYXN0X2lkIjo0Njc0MDUzMzA1MTQzNSwibGFzdF92YWx1ZSI6IjQ2NzQwNTMzMDUxNDM1In0=",
+    "node": {
+      "id": "gid://shopify/MediaImage/46740533051435",
+      "path": "public/accessory/product-accessory-nb-ch16-1-main_rmbg_webp.webp",
+      "createdAt": "2026-10-28T07:24:42Z",
+      "updatedAt": "2026-10-28T07:28:00Z",
+      "displayName": "product-accessory-nb-ch16-1-main_rmbg_webp.webp",
+      "alt": "",
+      "__typename": "MediaImage",
+      "preview": {
+        "status": "READY",
+        "image": {
+          "id": "gid://shopify/ImageSource/46740533051435",
+          "width": 2048,
+          "height": 2048,
+          "url": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch16-1-main_rmbg_webp.webp?v=1793172283",
+          "transformedSrc": "https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch16-1-main_rmbg_webp_800x800.webp?v=1793172283",
+          "__typename": "Image"
+        },
+        "__typename": "MediaPreviewImage"
+      },
+      "connectedResourcesCount": 0,
+      "connectedResourceInfos": {
+        "nodes": [],
+        "__typename": "FileConnectableResourceInfoConnection"
+      },
+      "originalFileSize": 362146
+    },
+    "__typename": "FileEdge"
   }
-}
+]

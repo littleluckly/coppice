@@ -15,10 +15,10 @@
     narrow dropdown with a flyout. The panel spans the whole viewport width (anchored
     against the desktop row), while its inner content stays aligned to the content
     column. It slides in and out (display transition with allow-discrete, graceful
-    degradation to instant hide on older browsers). Optional conversion card: a
-    mega_promo section block whose "menu item" setting matches the top-level item
-    title renders inside that panel. Promo text sits BELOW the image, never overlaid
-    — contrast on merchant-picked imagery cannot be guaranteed (SDD §8.2).
+    degradation to instant hide on older browsers). Right column: auto-derived
+    collection grid. Every second-level menu item that points to a collection
+    renders as a card (cover image + title), no section block or merchant config
+    required. The column is omitted when the top-level item has no collection links.
   - 2026-10-12 second round (刘工): no dropdown chevrons on desktop. A dark sliding
     pill (assets/nav-pill.js, custom element nav-pill) follows hover/keyboard focus
     across the top-level items and hides when the pointer leaves the nav. aria-current
@@ -122,28 +122,56 @@
                 if link.child_current or link.child_active
                   assign in_branch = true
                 endif
-                assign link_title = link.title | strip
+
+                comment
+                  面板形态判定（2026-10-28）：子项撑得起 mega 三栏面板才走 mega——
+                  即存在「指向有商品集合的二级项」或「带三级子项的二级项」。
+                  子项全是页面/博客链接时（如 Support）走普通下拉，
+                  避免 mega 中区一片空白、左列孤零零挂在通栏白底左边。
+                endcomment
+                assign has_mega_content = false
+                if has_children
+                  for sub in link.links
+                    if sub.links.size > 0
+                      assign has_mega_content = true
+                      break
+                    endif
+                    if sub.type == 'collection_link' and sub.object != blank and sub.object.all_products_count > 0
+                      assign has_mega_content = true
+                      break
+                    endif
+                  endfor
+                endif
               -%}
 
               <li
-                class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}{% if has_children %} main-nav__item--group{% endif %}"
+                class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}{% if has_children %}{% if has_mega_content %} main-nav__item--group{% else %} main-nav__item--dropdown{% endif %}{% endif %}"
               >
                 {%- if has_children -%}
                   {%- comment -%}
                     分组项：只出 <span>，不输出 <a>（BUG-023）。
-                    面板锚定在 .main-nav__desktop 上（整行宽、内容列对齐），
-                    所以 li 自身不能创建定位上下文。
+                    "li 自身不能创建定位上下文"仅针对 mega 项——mega 面板锚定在
+                    .main-nav__desktop 上（整行宽、内容列对齐）；普通下拉反过来
+                    锚在 li 上，所以只有 --dropdown 那一支给 li 加 position: relative。
                     不带下拉箭头（2026-10-12 刘工）：选中态交给滑动药丸指示器。
                   {%- endcomment -%}
-                  <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                  {%- comment -%}
+                    键盘可达性（2026-10-28）：span 必须可聚焦，否则 :focus-within
+                    永不成立、Tab 键根本打不开面板（WCAG 2.1 AA 键盘可操作）。
+                    面板展开由 CSS :hover / :focus-within 驱动，不需要 JS 响应
+                    Enter/Space，故不设 role="button"（那是"按下即动作"的语义，
+                    与这里"聚焦即展开"不符）。focus-visible 轮廓已有全局规则。
+                  {%- endcomment -%}
+                  <span class="main-nav__link main-nav__link--group" aria-haspopup="true" tabindex="0">
                     {{ link.title }}
                   </span>
 
+                  {%- if has_mega_content -%}
                   {%- comment -%}
                     Mega 面板（2026-10-13 第八轮，参考 demo 截图三段式）：
-                    左列 = 二级分类导航（图标走 mega_category_icon block 配置，
-                    商家可配可删）；中区 = 二级分组的集合卡组（图 + 标题 +
-                    真实产品数，数据走 link.object，不伪造）；右列 = promo 卡。
+                    左列 = 二级分类导航（直接取菜单二级项，无 block 配置）；
+                    中区 = 二级集合项的产品卡组（集合直接取自该菜单项指向的集合，
+                    零配置；图/价/产品数均走真实对象，不伪造）。
                     叶子二级项只在左列出链接，中区不输出空壳组。
                   {%- endcomment -%}
                   <div class="main-nav__mega">
@@ -152,18 +180,6 @@
                         <span class="main-nav__mega-label">{{ link.title }}</span>
                         <ul class="main-nav__mega-cats" role="list">
                           {%- for child in link.links -%}
-                            {%- liquid
-                              assign child_title = child.title | strip
-                              assign icon_kind = ''
-                              for block in section.blocks
-                                if block.type == 'mega_category_icon' and icon_kind == ''
-                                  assign wanted = block.settings.menu_item | strip
-                                  if wanted == child_title
-                                    assign icon_kind = block.settings.icon
-                                  endif
-                                endif
-                              endfor
-                            -%}
                             <li class="main-nav__mega-cat">
                               {%- if child.links.size > 0 -%}
                                 <span
@@ -171,12 +187,6 @@
                                   tabindex="0"
                                   data-mega-tab="{{ forloop.index }}"
                                 >
-                                  {%- if icon_kind != blank -%}
-                                    {%- assign icon_file = icon_kind | prepend: 'icon-' | append: '.svg' -%}
-                                    <span class="main-nav__mega-cat-icon" aria-hidden="true">
-                                      {{ icon_file | inline_asset_content }}
-                                    </span>
-                                  {%- endif -%}
                                   {{ child.title }}
                                 </span>
                               {%- else -%}
@@ -189,12 +199,6 @@
                                     aria-current="page"
                                   {% endif %}
                                 >
-                                  {%- if icon_kind != blank -%}
-                                    {%- assign icon_file = icon_kind | prepend: 'icon-' | append: '.svg' -%}
-                                    <span class="main-nav__mega-cat-icon" aria-hidden="true">
-                                      {{ icon_file | inline_asset_content }}
-                                    </span>
-                                  {%- endif -%}
                                   {{ child.title }}
                                 </a>
                               {%- endif -%}
@@ -218,20 +222,22 @@
                         {%- for child in link.links -%}
                           {%- liquid
                             assign child_title = child.title | strip
-                            assign popular_collection = blank
-                            for block in section.blocks
-                              if block.type == 'mega_category_icon' and popular_collection == blank
-                                assign wanted = block.settings.menu_item | strip
-                                if wanted == child_title
-                                  assign popular_collection = block.settings.popular_collection
-                                endif
-                              endif
-                            endfor
+                            assign mega_collection = blank
+                            if child.type == 'collection_link' and child.object != blank
+                              assign mega_collection = child.object
+                            endif
                           -%}
-                          {%- if popular_collection != blank and popular_collection.products.size > 0 -%}
+                          {%- comment -%}
+                            存在性用 all_products_count 判（计数随 collection 对象返回，不加载商品）；
+                            勿用 collection.products.size——那会为每个集合型二级项拉满整页商品，
+                            导航是全局组件，这条开销每次开面板都要付。
+                          {%- endcomment -%}
+                          {%- if mega_collection != blank and mega_collection.all_products_count > 0 -%}
                             {%- comment -%}
-                              产品卡阵列（2026-10-13 刘工）：popular 集合前 3 个产品，
-                              组头带 "All {集合名} (n) →" 出口（View All 型链接，箭头合规）。
+                              产品卡阵列（2026-10-28 改）：集合直接取该二级菜单项
+                              指向的集合（link.object），零配置、无 block 映射。
+                              组头带 "集合名 (n) →" 出口（View All 型链接，箭头合规）；
+                              集合名与菜单项同名时不重复输出，只留计数。
                               三级链接收进组底小链接行，导航功能不丢。
                             {%- endcomment -%}
                             <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
@@ -239,15 +245,17 @@
                                 <span class="main-nav__mega-group-title">{{ child.title }}</span>
                                 <a
                                   class="main-nav__mega-group-all"
-                                  href="{{ popular_collection.url }}"
+                                  href="{{ mega_collection.url }}"
                                 >
-                                  {{ popular_collection.title }}
-                                  ({{ popular_collection.all_products_count }})
+                                  {%- if mega_collection.title != child_title -%}
+                                    {{ mega_collection.title }}
+                                  {%- endif -%}
+                                  ({{ mega_collection.all_products_count }})
                                   <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
                                 </a>
                               </div>
                               <ul class="main-nav__mega-cards" role="list">
-                                {%- for product in popular_collection.products limit: 3 -%}
+                                {%- for product in mega_collection.products limit: 3 -%}
                                   <li class="main-nav__mega-card">
                                     <a
                                       class="main-nav__mega-card-link"
@@ -304,8 +312,9 @@
                             </div>
                           {%- elsif child.links.size > 0 -%}
                             {%- comment -%}
-                              回退：未配 popular 集合的分组二级项 → 三级集合卡组
-                              （第八轮逻辑，保证没配 block 也体面）
+                              回退：二级项自身不是集合链接（指向页面/商品/无链接）
+                              但有三级子项时 → 把三级项渲染成集合卡组，
+                              保证任何菜单结构都有体面呈现，不留空壳。
                             {%- endcomment -%}
                             <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
                               <span class="main-nav__mega-group-title">{{ child.title }}</span>
@@ -370,52 +379,34 @@
                         {%- endfor -%}
                       </div>
 
-                      {%- comment -%}
-                        转化位：mega_promo block，按 menu_item 设置与一级项标题精确匹配。
-                        只渲染第一个命中的 block；图与链接必填，缺一不渲染（不留空壳）。
-                        文字在图下方——不叠图，对比度不赌商家自选图（SDD §8.2）。
-                      {%- endcomment -%}
-                      {%- assign promo_rendered = false -%}
-                      {%- for block in section.blocks -%}
-                        {%- if promo_rendered -%}
-                          {%- continue -%}
-                        {%- endif -%}
-                        {%- assign wanted = block.settings.menu_item | strip -%}
-                        {%- if block.type == 'mega_promo'
-                          and wanted == link_title
-                          and block.settings.image != blank
-                          and block.settings.link != blank
-                        -%}
-                          {%- assign promo_rendered = true -%}
-                          <a
-                            class="main-nav__mega-promo"
-                            href="{{ block.settings.link }}"
-                            {{ block.shopify_attributes }}
-                          >
-                            {{
-                              block.settings.image
-                              | image_url: width: 600
-                              | image_tag:
-                                widths: '240, 360, 480, 600',
-                                sizes: '15rem',
-                                loading: 'lazy',
-                                class: 'main-nav__mega-promo-img'
-                            }}
-                            {%- if block.settings.heading != blank or block.settings.subheading != blank -%}
-                              <span class="main-nav__mega-promo-body">
-                                {%- if block.settings.heading != blank -%}
-                                  <span class="main-nav__mega-promo-heading">{{ block.settings.heading }}</span>
-                                {%- endif -%}
-                                {%- if block.settings.subheading != blank -%}
-                                  <span class="main-nav__mega-promo-subheading">{{ block.settings.subheading }}</span>
-                                {%- endif -%}
-                              </span>
-                            {%- endif -%}
-                          </a>
-                        {%- endif -%}
-                      {%- endfor -%}
                     </div>
                   </div>
+                  {%- else -%}
+                    {%- comment -%}
+                      普通下拉（2026-10-28）：子项全是页面/博客等非集合链接时，
+                      不出 mega 三栏（中区会一片空白），改成贴在项下方的小面板。
+                      纯 CSS :hover / :focus-within 驱动——面板是 li 的后代，
+                      鼠标移进面板时 li 的 hover 链不断，不需要 JS 拖尾。
+                      不带 --group 类，故不进 JS 的 _groups，不触左列药丸与 tab 切换。
+                    {%- endcomment -%}
+                    <div class="main-nav__dropdown">
+                      <ul class="main-nav__dropdown-list" role="list">
+                        {%- for child in link.links -%}
+                          <li>
+                            <a
+                              class="main-nav__dropdown-link{% if child.current %} main-nav__dropdown-link--current{% endif %}"
+                              href="{{ child.url }}"
+                              {% if child.current %}
+                                aria-current="page"
+                              {% endif %}
+                            >
+                              {{ child.title }}
+                            </a>
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+                    </div>
+                  {%- endif -%}
                 {%- else -%}
                   {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
                   <a
@@ -1042,6 +1033,64 @@
     }
   }
 
+  /* ---- 普通下拉（2026-10-28）：一级项的子项全是页面/博客等非集合链接时，
+     用它替代 mega 三栏面板。锚在 li 上——本主题里唯一给 li 加
+     position: relative 的一支（mega 项仍锚在 .main-nav__desktop，
+     见上方 BUG-034 注释），两者互不干扰：mega 项没有 dropdown 子元素。 ---- */
+  .main-nav__item--dropdown {
+    position: relative;
+  }
+
+  .main-nav__dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    z-index: 10;
+    min-inline-size: 15rem;
+    padding: 0.5rem;
+    background-color: var(--color-background);
+    border-radius: 0 0 12px 12px;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    /* 投影用 drop-shadow（与 mega 面板同款，"压商品图/投影"是颜色规范的合法例外） */
+    filter: drop-shadow(0 18px 32px rgb(0 0 0 / 16%));
+    /* 导航行的 nowrap 约定不外溢到面板文字 */
+    white-space: normal;
+  }
+
+  /* 纯 CSS 开合：面板是 li 的后代，鼠标移进面板时 li 的 :hover 链不断，
+     所以不需要 mega 那套 JS 延迟关闭（is-open 拖尾）。 */
+  .main-nav__item--dropdown:hover > .main-nav__dropdown,
+  .main-nav__item--dropdown:focus-within > .main-nav__dropdown {
+    display: block;
+  }
+
+  .main-nav__dropdown-list {
+    display: grid;
+    gap: 0.125rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-nav__dropdown-link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9375rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .main-nav__dropdown-link:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+
+  .main-nav__dropdown-link--current {
+    color: var(--color-brand);
+    font-weight: 600;
+  }
+
   /* 内容区：只管对齐内容列，视觉（底色/投影/圆角）全在通栏面板上。
      位移与面板揭示同步：从 -0.75rem 滑到 0，"抽出"的动感主要来自这里。 */
   .main-nav__mega-inner {
@@ -1097,7 +1146,7 @@
     visibility: visible;
   }
 
-  /* ---- 面板三段（2026-10-13 第八轮，参考 demo）：分类列 / 内容区 / promo ---- */
+  /* ---- 面板三段（2026-10-13 第八轮，参考 demo）：分类列 / 内容区 / 二级集合网格 ---- */
   .main-nav__mega-nav {
     flex: 0 0 12rem;
     /* 左列纵向排布：分类列表在上，View all 出口压到底部 */
@@ -1225,28 +1274,6 @@
       opacity: 0;
       translate: 0 0.5rem;
     }
-  }
-
-  /* 图标线框随文字色走（svg 内 stroke=currentColor，尺寸由 CSS 控制） */
-  .main-nav__mega-cat-icon {
-    display: flex;
-    color: inherit;
-  }
-
-  .main-nav__mega-cat-icon svg {
-    /* 图标比文字大一点（2026-10-13 刘工）：文字 0.9375rem，图标 1.75rem */
-    inline-size: 1.75rem;
-    block-size: 1.75rem;
-  }
-
-  /* 线宽（2026-10-13 刘工）：图标已规范化为 24 网格 + stroke-width 1.5
-     （与 header 图标同规格）。1.75rem 显示时属性线宽 ≈1.75px，
-     non-scaling-stroke 锁定精确 1.5px 并防止任何缩放导致的模糊；
-     颜色仍由 currentColor 跟随文字态（默认灰 / hover 深 / 激活品牌色）。 */
-  .main-nav__mega-cat-icon svg,
-  .main-nav__mega-cat-icon svg * {
-    vector-effect: non-scaling-stroke;
-    stroke-width: 1.5px;
   }
 
   /* 中区：二级分组的集合卡组，纵向堆叠（无切换依赖，无 JS 可用） */
@@ -1482,7 +1509,7 @@
     margin-block-start: 0.25rem;
   }
 
-  /* 组底三级小链接行：popular 阵列模式下三级入口不丢 */
+  /* 组底三级小链接行：产品卡阵列模式下三级入口不丢 */
   .main-nav__mega-sublinks {
     margin: 0.75rem 0 0;
     padding: 0;
@@ -1513,49 +1540,11 @@
 
   .main-nav__mega-cat-link:focus-visible,
   .main-nav__mega-card-link:focus-visible,
-  .main-nav__mega-promo:focus-visible {
+  .main-nav__dropdown-link:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
     border-radius: 4px;
   }
-
-  /* 转化位卡片：图上文下（不叠图——商家自选图上无法保证文字对比度） */
-  .main-nav__mega-promo {
-    flex: 0 0 15rem;
-    display: flex;
-    flex-direction: column;
-    border-radius: 10px;
-    overflow: hidden;
-    background-color: var(--color-background);
-    text-decoration: none;
-  }
-
-  .main-nav__mega-promo-img {
-    inline-size: 100%;
-    block-size: auto;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    display: block;
-  }
-
-  .main-nav__mega-promo-body {
-    display: grid;
-    gap: 0.25rem;
-    padding: 0.75rem 1rem 1rem;
-  }
-
-  .main-nav__mega-promo-heading {
-    font-weight: 700;
-    color: var(--color-foreground);
-  }
-
-  .main-nav__mega-promo-subheading {
-    font-size: 0.8125rem;
-    line-height: 1.4;
-    color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
-  }
-
-  /* promo 定宽在先（flex 0 0 15rem），中区吃剩余空间（flex 1 1 auto 已保证） */
 
   /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
      必须有实底——否则吸顶时页面内容会透过菜单透出来。
@@ -2452,89 +2441,6 @@
       "default": 10
     }
   ],
-  "blocks": [
-    {
-      "type": "mega_category_icon",
-      "name": "t:general.mega_category_icon",
-      "limit": 10,
-      "settings": [
-        {
-          "type": "text",
-          "id": "menu_item",
-          "label": "t:labels.mega_category_menu_item",
-          "info": "t:labels.mega_category_menu_item_info"
-        },
-        {
-          "type": "select",
-          "id": "icon",
-          "label": "t:labels.category_icon",
-          "options": [
-            {
-              "value": "none",
-              "label": "t:options.category_icon.none"
-            },
-            {
-              "value": "mower",
-              "label": "t:options.category_icon.mower"
-            },
-            {
-              "value": "chainsaw",
-              "label": "t:options.category_icon.chainsaw"
-            },
-            {
-              "value": "trimmer",
-              "label": "t:options.category_icon.trimmer"
-            },
-            {
-              "value": "accessories",
-              "label": "t:options.category_icon.accessories"
-            }
-          ],
-          "default": "none"
-        },
-        {
-          "type": "collection",
-          "id": "popular_collection",
-          "label": "t:labels.mega_popular_collection",
-          "info": "t:labels.mega_popular_collection_info"
-        }
-      ]
-    },
-    {
-      "type": "mega_promo",
-      "name": "t:general.mega_promo",
-      "limit": 3,
-      "settings": [
-        {
-          "type": "text",
-          "id": "menu_item",
-          "label": "t:labels.mega_menu_item",
-          "info": "t:labels.mega_menu_item_info"
-        },
-        {
-          "type": "image_picker",
-          "id": "image",
-          "label": "t:labels.image"
-        },
-        {
-          "type": "text",
-          "id": "heading",
-          "label": "t:labels.heading"
-        },
-        {
-          "type": "text",
-          "id": "subheading",
-          "label": "t:labels.subheading"
-        },
-        {
-          "type": "url",
-          "id": "link",
-          "label": "t:labels.link"
-        }
-      ]
-    }
-  ],
-  "max_blocks": 13,
   "presets": [
     {
       "name": "t:general.main_nav"

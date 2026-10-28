@@ -10,20 +10,21 @@
 
 ## 1. 命名规范（v1 2026-10-08 定稿；v2 2026-10-26 补品类前缀与去背标记）
 
-### 产品图（42 张 = 21 款 × 2）
+### 产品图（53 张 = 主机 21 款 × 2 + 配件 11 款 × 1）
 
 **两代命名并存，以 Files 里的实际文件名为准：**
 
 ```
-v1（割草机 22 张，历史）      product-<nb-model>-<seq>-<variant>_webp.webp
-v2（打草机 + 链锯 20 张，现行）product-<category>-<nb-model>-<seq>-<variant>_rmbg_webp.webp
+v1（割草机 22 张，历史）        product-<nb-model>-<seq>-<variant>_webp.webp
+v2（打草机 + 链锯 20 张，现行） product-<category>-<nb-model>-<seq>-<variant>.png
+v3（配件 11 张，现行）          product-accessory-<nb-model>-1-main.png
 ```
 
 | 段        | 取值                                                                                                                                                                                                                              | 说明                                     |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| category | `string-trimmer` / `chainsaw`（v2 起加，便于在 Files 里按品类筛）                                                                                                                                                                          | 与 CSV handle 的品类前缀一致                   |
+| category | `string-trimmer` / `chainsaw` / `accessory`（v2 起加，便于在 Files 里按品类筛）                                                                                                                                                        | 与 CSV handle 的品类前缀一致                   |
 | nb-model | 割草机 `nb-21p` `nb-21ph` `nb-21s` `nb-22s` `nb-21bp` `nb-21bs` `nb-21b80` `nb-42t` `nb-42th` `nb-42tc` `nb-42z`<br />打草机 `nb-t21` `nb-t27` `nb-t28` `nb-t40b` `nb-t60b`<br />链锯 `nb-c16g` `nb-c18g` `nb-c20g` `nb-c40b` `nb-c80b` | 型号小写，与 CSV handle 去掉 `northbark-` 前缀一致 |
-| seq      | `1` 主图（左前 45° 棚拍） / `2` 次图（细节/全家福）                                                                                                                                                                                              | 位置对应 CSV Image Position                |
+| seq      | `1` 主图（左前 45° 棚拍） / `2` 次图（细节/全家福）。**配件只出 seq 1** |                                                                                                                                                                                              | 位置对应 CSV Image Position                |
 | variant  | 见各款清单                                                                                                                                                                                                                           | 自解释的内容词                                |
 
 示例（v2）：`product-chainsaw-nb-c16g-1-main_rmbg_webp.webp`、`product-string-trimmer-nb-t40b-2-kit_rmbg_webp.webp`
@@ -167,6 +168,41 @@ mower-<scene>-<machine>-<device>_webp.webp
 >
 > **仍需人工过一遍**：逐张复核图文一致（尤其"电池款无排气管/无油箱盖/无拉绳启动器"这条，模型最容易照抄汽油机），
 > 以及型号与规格是否对得上（如 NB-C20G 是 20 in. 长导板、NB-T28 有可拆联接节）。图对不上就单独重出该张，再回填 URL 重跑脚本。
+
+---
+
+---
+
+## 4c. 配件图台账（2026-10-27 新增 11 款，状态：✅ 已上传并回填 CSV）
+
+**为什么配件只配 1 张图**：配件本身就是"细节"，再出细节图的边际价值低，而图量会翻倍。
+真要补，按 §4 的"参考图模式"以该配件主图作参考图再出。
+
+**共同口径**：无缝纯白影棚背景、柔和均匀布光、1:1、无人物；**重点防「文字翻车」**——
+刀片上的规格刻字、电池上的参数标签、包装上的型号，模型最爱乱写，提示词里统一加"表面无刻字无标签"。
+**造型语言**：刀片绿漆（与主机同色系）/ 导板深灰钢 / 锯链金属本色 / 电池灰黑。
+**已取消**：空气滤芯与火花塞两款商品 2026-10-27 删除（分类法缺叶子、降级类目被否），对应两张图不再需要。
+
+| # | 文件名 | Files URL | 提示词（即梦·直接复制） | alt（已写入 CSV） | 状态 |
+| -- | ------ | --------- | ---------------------- | ---------------- | ---- |
+| 43 | product-accessory-nb-bl21-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl21-1-main_rmbg_webp.webp?v=1793172282> | 电商产品摄影，一片绿色烤漆的21英寸割草机替换刀片，中央安装孔与两端上扬刃口清晰，表面无刻字无标签，正面俯视角度，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 21-inch replacement mower blade, top view | ✅ 2026-10-28 已上传 |
+| 44 | product-accessory-nb-bl22-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl22-1-main_rmbg_webp.webp?v=1793172283> | 电商产品摄影，一片绿色烤漆的22英寸割草机替换刀片，比21英寸款略长，中央安装孔与两端上扬刃口清晰，表面无刻字无标签，正面俯视角度，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 22-inch replacement mower blade, top view | ✅ 2026-10-28 已上传 |
+| 45 | product-accessory-nb-bl42-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl42-1-main_rmbg_webp.webp?v=1793172282> | 电商产品摄影，两片同款绿色烤漆割草机刀片并排平放构成刀组，刀片长度与40英寸割台匹配，表面无刻字无标签，正面俯视角度，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 42-inch deck blade set, two blades side by side, top view | ✅ 2026-10-28 已上传 |
+| 46 | product-accessory-nb-bar16-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar16-1-main_rmbg_webp.webp?v=1793172282> | 电商产品摄影，一根16英寸深灰色钢制链锯导板，侧视长条形态，导板槽与前部小半径导轮结构清晰，表面无刻字无标签，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 16-inch chainsaw guide bar, side profile | ✅ 2026-10-28 已上传 |
+| 47 | product-accessory-nb-bar18-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar18-1-main_rmbg_webp.webp?v=1793172282> | 电商产品摄影，一根18英寸深灰色钢制链锯导板，比16英寸款更长，导板槽与前部小半径导轮结构清晰，表面无刻字无标签，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 18-inch chainsaw guide bar, side profile | ✅ 2026-10-28 已上传 |
+| 48 | product-accessory-nb-bar20-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar20-1-main_rmbg_webp.webp?v=1793172282> | 电商产品摄影，一根20英寸深灰色钢制链锯导板，长条形，导板槽与前部小半径导轮结构清晰，表面无刻字无标签，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 20-inch chainsaw guide bar, side profile | ✅ 2026-10-28 已上传 |
+| 49 | product-accessory-nb-ch16-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch16-1-main_rmbg_webp.webp?v=1793172283> | 电商产品摄影，一圈盘起的金属色锯链，链齿朝上排列整齐，齿形为低反弹安全链，正面俯视角度，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 16-inch low-profile saw chain loop, coiled, top view | ✅ 2026-10-28 已上传 |
+| 50 | product-accessory-nb-ch18-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch18-1-main_rmbg_webp.webp?v=1793172283> | 电商产品摄影，一圈盘起的金属色锯链，链齿朝上，圈径比16英寸款略大，低反弹安全齿形，正面俯视角度，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 18-inch low-profile saw chain loop, coiled, top view | ✅ 2026-10-28 已上传 |
+| 51 | product-accessory-nb-ch20-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch20-1-main_rmbg_webp.webp?v=1793172282> | 电商产品摄影，一圈盘起的金属色锯链，链齿朝上，整圈更长，低反弹安全齿形，正面俯视角度，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 20-inch low-profile saw chain loop, coiled, top view | ✅ 2026-10-28 已上传 |
+| 52 | product-accessory-nb-tl095-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-tl095-1-main_rmbg_webp.webp?v=1793172282> | 电商产品摄影，一卷亮绿色的打草绳线轴，塑料卷盘侧面45度视角，一缕粗细均匀的尼龙线头自然伸出，盘面为纯色块无标签无文字，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 0.095-inch trimmer line spool, three-quarter view | ✅ 2026-10-28 已上传 |
+| 53 | product-accessory-nb-b40-1-main_rmbg_webp.webp | <https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-b40-1-main_rmbg_webp.webp?v=1793172282> | 电商产品摄影，一块灰黑色的滑入式锂电池包，侧面45度视角，露出金属触片与电池仓卡扣，外壳无标签无参数文字，电量指示灯为纯色块，无缝纯白影棚背景，柔和均匀布光，无任何文字，无标志，无水印，1比1方图 | Northbark 40V 4.0 Ah slide-in lithium-ion battery pack, three-quarter view | ✅ 2026-10-28 已上传 |
+
+> **已完成（2026-10-28）**：11 张全部上传 Files，URL 回填 `build_mower_csv.py` 的 `IMAGES`（11 个 main 位置，`second` 保持空串），
+> 重跑后 **32 款 / 53 行 / 0 错误 0 警告** —— 全店商品均有主图，不再有"空图卡"。
+> 实际文件名为 `product-accessory-nb-<型号>-1-main_rmbg_webp.webp`（上表已按实际名回填，原预写的 `.png` 名作废）。
+>
+> **仍需人工过一眼**：刀片上的假刻字、电池上的假参数标签是这类图最容易翻车的地方，
+> 抽检 2–3 张确认画面干净（提示词已加"表面无刻字无标签"，但模型不一定听话）。
 
 ---
 

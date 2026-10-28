@@ -35,16 +35,16 @@
 > **计数口径**：以上数字对应 `dev-docs/mower-import/mower-products-import.csv`（2026-10-26 版，21 款主机）。
 > 新增商品只要填好 metafield，自动集合的计数自己会变——**本表数字是核对用的，不是配置项**。
 
-## 品类集合（2026-10-26 起 Chainsaws / String Trimmers 非空，可挂菜单；其余仍建而暂不挂）
+## 品类集合（2026-10-27 起 Chainsaws / String Trimmers / 三个配件集合均非空；Oils & Fuel 仍为空）
 
 | 集合 | 状态 | 描述文案 | 含义依据 |
 | --- | --- | --- | --- |
 | Chainsaws | **非空（5 款），可挂菜单** — 挂之前先给集合填 metafield `custom.compare_group = chainsaw` | Gas and battery chainsaws for felling, limbing, and storm cleanup — matched by bar length and power class. | 伐木、砍枝、清理倒木与堆料 |
 | String Trimmers | **非空（5 款），可挂菜单** — 挂之前先给集合填 metafield `custom.compare_group = string-trimmer` | Trim and edge where the mower can't reach — lightweight shafts built for fences, beds, and slopes. | 修边、割灌木，细窄轻量 |
-| Accessories: Blades & Bars | 建集合暂不挂 | Wear parts that keep you cutting — mower blades, chainsaw bars, and chains sized to fit your model. | 磨损件：割草刀、锯条，最常复购 |
-| Accessories: Filters | 建集合暂不挂 | Air and oil filters on a replacement schedule — pick by model to keep your engine breathing clean. | 保养件：空气/机油滤芯，按周期更换 |
-| Accessories: Batteries & Chargers | 建集合暂不挂 | Extra packs and chargers for every Northbark platform — keep one charged while the other works. | 平台配件：同电池跨工具复用 |
-| Oils & Fuel | 已移出主导航（SDD v4.3），集合与商品照常导入 | Engine oil, bar oil, and fuel treatments matched to Northbark engines and their service intervals. | 机油与燃油，经产品页耗材关联与 footer 承载 |
+| Accessories: Blades & Bars | **非空（9 款：刀片 3 + 导板 3 + 锯链 3），可挂菜单** — 条件用 `Product category` 落在 Lawn Mower Blades / Chainsaw Bars / Chainsaw Chains 三个节点 | Wear parts that keep you cutting — mower blades, chainsaw bars, and chains sized to fit your model. | 磨损件：割草刀、锯条，最常复购 |
+| Accessories: Filters | **空集合，建而暂不挂** — 2026-10-27 起不做空气滤芯（Lawn & Garden 分支无叶子，降级到汽车类目被否，见 sources-and-notes §2） | Air filters on a replacement schedule — pick by model to keep your engine breathing clean. | 保养件：空气滤芯，按周期更换 |
+| Accessories: Batteries | **非空（1 款：40V 4.0 Ah 电池），可挂** — 2026-10-27 集合名去掉 "& Chargers"（无充电器商品，分类法也没有 OPE 充电器叶子）；条件用 `Product category = … > Outdoor Power Equipment Batteries` | Extra 40V packs — keep one charged while the other works. | 平台配件：同电池跨工具复用 |
+| Oils & Fuel | **空集合，建而暂不挂** — 2026-10-27 未做商品：机油在分类法里只落到 `Hardware > Building Consumables > Lubricants > Oil`，与园艺距离过远，宁缺不凑（见 sources-and-notes §2）。已移出主导航（SDD v4.3） | Engine oil, bar oil, and fuel treatments matched to Northbark engines and their service intervals. | 机油与燃油，经产品页耗材关联与 footer 承载 |
 
 ---
 

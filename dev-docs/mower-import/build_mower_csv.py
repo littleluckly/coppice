@@ -2,17 +2,23 @@
 """
 build_mower_csv.py — 生成产品导入 CSV（Coppice SDD §5.9 口径）
 
-商品构成（2026-10-26 扩充，覆盖 SDD 全部 4 个对比分组）：
+商品构成（2026-10-27 扩充，主机覆盖 SDD 全部 4 个对比分组 + 配件）：
     割草机 11 款（走步 7 + 骑乘 4）
   + 打草机  5 款（汽油 3 + 40V + 60V）
   + 链锯    5 款（汽油 3 + 40V + 80V）
-  = 21 款，全部单变体。
+  + 配件/耗材 11 款（刀片 3 + 导板 3 + 锯链 3 + 打草绳 1 + 40V 电池 1）
+  = 32 款，全部单变体。
+
+产物两份：
+    mower-products-import.csv                 第一遍：商品 + 变体 + 字段 + metafield（55 行）
+    mower-products-import.pass2-consumables.csv 第二遍：主机 → 耗材反挂（19 台主机）
 
 列结构 = 官方 product_template.csv 的核心子集（28 列，列头逐字取自模板）
        + 23 个 metafield 列（SDD §5.3 全量，含链锯专用 bar_length_mm）= 51 列。
 
-数据来源：2026-09-29 / 2026-10-26 网络核实（官方产品页 / 授权经销商页），
-来源清单见 sources-and-notes.md。
+数据来源：主机参数 2026-09-29 / 10-26 / 10-27 网络核实（官方产品页 / 授权经销商页），
+配件价格是**定价决策**（锚点见 sources-and-notes.md §3c），不是厂商 MSRP。
+来源清单、留空理由、两遍制步骤见 sources-and-notes.md。
 纪律：查不到的值留空（不编数）；跨来源冲突的值留空并在来源文档记明。
 """
 
@@ -213,6 +219,52 @@ IMAGES = {
         "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c80b-1-main_rmbg_webp.webp?v=1793006069", "Northbark NB-C80B 80V brushless cordless chainsaw with 18-inch bar, three-quarter view"),
         "second": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-chainsaw-nb-c80b-2-kit_rmbg_webp.webp?v=1793006069", "Northbark NB-C80B kit with 4.0 Ah battery and charger"),
     },
+    # ---- 2026-10-27 新增 11 款配件（2026-10-28 已补图）：配件只配 1 张主图，无副图行。
+    # 命名 v3：product-accessory-<型号>-1-main_rmbg_webp.webp；台账见 asset-provenance.md §4c。
+    "northbark-nb-bl21": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl21-1-main_rmbg_webp.webp?v=1793172282", "Northbark 21-inch replacement mower blade, top view"),
+        "second": ("", ""),
+    },
+    "northbark-nb-bl22": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl22-1-main_rmbg_webp.webp?v=1793172283", "Northbark 22-inch replacement mower blade, top view"),
+        "second": ("", ""),
+    },
+    "northbark-nb-bl42": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bl42-1-main_rmbg_webp.webp?v=1793172282", "Northbark 42-inch deck blade set, two blades side by side, top view"),
+        "second": ("", ""),
+    },
+    "northbark-nb-bar16": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar16-1-main_rmbg_webp.webp?v=1793172282", "Northbark 16-inch chainsaw guide bar, side profile"),
+        "second": ("", ""),
+    },
+    "northbark-nb-bar18": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar18-1-main_rmbg_webp.webp?v=1793172282", "Northbark 18-inch chainsaw guide bar, side profile"),
+        "second": ("", ""),
+    },
+    "northbark-nb-bar20": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-bar20-1-main_rmbg_webp.webp?v=1793172282", "Northbark 20-inch chainsaw guide bar, side profile"),
+        "second": ("", ""),
+    },
+    "northbark-nb-ch16": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch16-1-main_rmbg_webp.webp?v=1793172283", "Northbark 16-inch low-profile saw chain loop, coiled, top view"),
+        "second": ("", ""),
+    },
+    "northbark-nb-ch18": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch18-1-main_rmbg_webp.webp?v=1793172283", "Northbark 18-inch low-profile saw chain loop, coiled, top view"),
+        "second": ("", ""),
+    },
+    "northbark-nb-ch20": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-ch20-1-main_rmbg_webp.webp?v=1793172282", "Northbark 20-inch low-profile saw chain loop, coiled, top view"),
+        "second": ("", ""),
+    },
+    "northbark-nb-tl095": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-tl095-1-main_rmbg_webp.webp?v=1793172282", "Northbark 0.095-inch trimmer line spool, three-quarter view"),
+        "second": ("", ""),
+    },
+    "northbark-nb-b40": {
+        "main": ("https://cdn.shopify.com/s/files/1/0802/1373/7515/files/product-accessory-nb-b40-1-main_rmbg_webp.webp?v=1793172282", "Northbark 40V 4.0 Ah slide-in lithium-ion battery pack, three-quarter view"),
+        "second": ("", ""),
+    },
 }
 
 # ---------------------------------------------------------------- 产品数据
@@ -241,7 +293,25 @@ TAXO_RIDING = TAXO_LAWN_MOWER + " > Riding Mowers"
 TAXO_CHAINSAW = TAXO_OPEQ + " > Chainsaws"
 TAXO_TRIMMER = TAXO_OPEQ + " > Weed Trimmers"
 
-# 分类 → 应属对比分组（跨类型校验的权威判据，SDD §5.3 C）
+# 配件分支（hg-12-4*）。配件只填「分类 + 物流 + fitment_note」，
+# 其余 metafield 一律留空 —— 走「缺值 → 该维度下不出现」，绝不加 N/A 顶位（SDD §5.7）。
+# 注意：机油 / 滤芯 / 火花塞 在配件分支下没有叶子节点 → 本文件**不做**（降级到 Vehicles & Parts 已否决）。
+TAXO_ACC = TAXO_OPEQ.replace("Outdoor Power Equipment", "Outdoor Power Equipment Accessories")
+TAXO_ACC_BLADES = TAXO_ACC + " > Lawn Mower Accessories > Lawn Mower Blades"
+TAXO_ACC_BARS = TAXO_ACC + " > Chainsaw Accessories > Chainsaw Bars"
+TAXO_ACC_CHAINS = TAXO_ACC + " > Chainsaw Accessories > Chainsaw Chains"
+TAXO_ACC_LINE = TAXO_ACC + " > Weed Trimmer Accessories > Weed Trimmer Blades & Spools > Weed Trimmer Lines"
+TAXO_ACC_BATTERY = TAXO_ACC + " > Outdoor Power Equipment Batteries"
+# 空滤 / 火花塞原本要降级到 Vehicles & Parts（Lawn & Garden 分支确实没有这两个叶子），
+# 2026-10-27 刘工拍板：演示只留刀片 / 锯链 / 打草绳，**不做降级类目**，两款已删。
+# 结论留档：本文件所有商品的 Product category 全部落在 Home & Garden 内。
+
+ACCESSORY_CATEGORIES = {
+    TAXO_ACC_BLADES, TAXO_ACC_BARS, TAXO_ACC_CHAINS,
+    TAXO_ACC_LINE, TAXO_ACC_BATTERY,
+}
+
+# 分类 → 应属对比分组（跨类型校验的权威判据，SDD §5.3 C）。配件不在表里 = 必须无分组。
 CATEGORY_GROUP = {
     TAXO_LAWN_MOWER: "walk-behind-mower",
     TAXO_RIDING: "riding-mower",
@@ -645,6 +715,158 @@ PRODUCTS = [
              "Bare tool weight 9.5 lb (4.31 kg), battery excluded. 4-year tool and "
              "battery warranty.</p>",
     ),
+    # ================= 2026-10-27 新增：配件 / 耗材 11 款 =================
+    # 与主机的根本差异（SDD §5.7）：
+    #   · power_source / duty_level 没有 N/A 选项 ⇒ 配件留空，走「缺值→该维度不出现」；
+    #   · compare_group 留空 ⇒ 不出现在对比勾选入口（空值不兜底，这是设计要求不是漏填）；
+    #   · area / drive / operation 同样留空（配件无此属性，填 N/A 反而是假数据）；
+    #   · 只填 logistics（Parcel / lead）与 acc.fitment_note —— 后者是配件侧唯一必写字段。
+    # 重量留空：厂商普遍不公布配件重量，按「查不到就留空」处理，不编。
+    # 价格是**定价决策**不是厂商 MSRP：锚点见 sources-and-notes.md §3c，可按渠道改。
+    dict(
+        kind="acc",
+        title="Northbark 21 in. Replacement Mower Blade (NB-21 Series)",
+        handle="northbark-nb-bl21",
+        category=TAXO_ACC_BLADES,
+        ptype="Replacement blade",
+        tags="accessories, blades, mower blades",
+        sku="NB-BL21",
+        price="24.99",
+        fitment="Fits NB-21P / NB-21S / NB-21PH / NB-21BS / NB-21BP / NB-21B80 (21 in. decks)",
+        desc="<p>Hardened-steel replacement blade for 21 in. Northbark decks, "
+             "balanced and pre-sharpened. Sold individually; replace when the cut "
+             "starts tearing instead of slicing.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark 22 in. Replacement Mower Blade (NB-22S)",
+        handle="northbark-nb-bl22",
+        category=TAXO_ACC_BLADES,
+        ptype="Replacement blade",
+        tags="accessories, blades, mower blades",
+        sku="NB-BL22",
+        price="26.99",
+        fitment="Fits NB-22S (22 in. deck)",
+        desc="<p>Hardened-steel replacement blade for the 22 in. NB-22S deck. "
+             "Sold individually; check the blade bolt torque after fitting.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark 42 in. Deck Blade Set (2 Blades, NB-42 Series)",
+        handle="northbark-nb-bl42",
+        category=TAXO_ACC_BLADES,
+        ptype="Replacement blade set",
+        tags="accessories, blades, riding mower blades",
+        sku="NB-BL42",
+        price="42.99",
+        fitment="Fits NB-42T / NB-42TH / NB-42TC / NB-42Z (42 in. decks)",
+        desc="<p>Two-blade set for 42 in. riding decks. Replace as a pair so the "
+             "deck stays balanced; bolts are not included.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark 16 in. Guide Bar (NB-C16G)",
+        handle="northbark-nb-bar16",
+        category=TAXO_ACC_BARS,
+        ptype="Guide bar",
+        tags="accessories, bar and chain, chainsaw bars",
+        sku="NB-BAR16",
+        price="29.99",
+        fitment="Fits NB-C16G (16 in. bar, 3/8 in. low-profile chain)",
+        desc="<p>Replacement 16 in. (406 mm) laminated guide bar with a small-radius "
+             "nose for reduced kickback. Takes 3/8 in. low-profile chain, 56 drive links.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark 18 in. Guide Bar (NB-C18G)",
+        handle="northbark-nb-bar18",
+        category=TAXO_ACC_BARS,
+        ptype="Guide bar",
+        tags="accessories, bar and chain, chainsaw bars",
+        sku="NB-BAR18",
+        price="34.99",
+        fitment="Fits NB-C18G (18 in. bar, 3/8 in. low-profile chain)",
+        desc="<p>Replacement 18 in. (457 mm) guide bar for mid-size felling and "
+             "bucking. Takes 3/8 in. low-profile chain, 62 drive links.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark 20 in. Guide Bar (NB-C20G)",
+        handle="northbark-nb-bar20",
+        category=TAXO_ACC_BARS,
+        ptype="Guide bar",
+        tags="accessories, bar and chain, chainsaw bars",
+        sku="NB-BAR20",
+        price="39.99",
+        fitment="Fits NB-C20G (20 in. bar, 3/8 in. low-profile chain)",
+        desc="<p>Replacement 20 in. (508 mm) guide bar for the farm-and-ranch saw. "
+             "Takes 3/8 in. low-profile chain, 70 drive links.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark 16 in. Saw Chain, 3/8 in. Low Profile (56 DL)",
+        handle="northbark-nb-ch16",
+        category=TAXO_ACC_CHAINS,
+        ptype="Saw chain",
+        tags="accessories, bar and chain, saw chains",
+        sku="NB-CH16",
+        price="21.99",
+        fitment="Fits NB-C16G and NB-BAR16 (16 in. bar, 56 drive links)",
+        desc="<p>Low-kickback 3/8 in. low-profile chain, 56 drive links, pre-stretched "
+             "and ready to fit a 16 in. bar. Sharpening spec is printed on the box.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark 18 in. Saw Chain, 3/8 in. Low Profile (62 DL)",
+        handle="northbark-nb-ch18",
+        category=TAXO_ACC_CHAINS,
+        ptype="Saw chain",
+        tags="accessories, bar and chain, saw chains",
+        sku="NB-CH18",
+        price="23.99",
+        fitment="Fits NB-C18G and NB-BAR18 (18 in. bar, 62 drive links)",
+        desc="<p>Low-kickback 3/8 in. low-profile chain, 62 drive links. Swap it on "
+             "when the old chain needs more than two strokes of the file.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark 20 in. Saw Chain, 3/8 in. Low Profile (70 DL)",
+        handle="northbark-nb-ch20",
+        category=TAXO_ACC_CHAINS,
+        ptype="Saw chain",
+        tags="accessories, bar and chain, saw chains",
+        sku="NB-CH20",
+        price="26.99",
+        fitment="Fits NB-C20G and NB-BAR20 (20 in. bar, 70 drive links)",
+        desc="<p>3/8 in. low-profile chain, 70 drive links, for the 20 in. bar on the "
+             "farm-and-ranch saw. Keep a spare so a rocked chain never ends the day.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark .095 in. Trimmer Line, 1 lb Spool",
+        handle="northbark-nb-tl095",
+        category=TAXO_ACC_LINE,
+        ptype="Trimmer line",
+        tags="accessories, trimmer line",
+        sku="NB-TL095",
+        price="19.99",
+        fitment="Fits NB-T21 / NB-T27 / NB-T28 / NB-T40B / NB-T60B (.095 in. heads)",
+        desc="<p>1 lb spool (about 250 ft) of .095 in. twisted nylon line for every "
+             "Northbark trimmer head. Cuts cleaner than .080 in. line in thick growth.</p>",
+    ),
+    dict(
+        kind="acc",
+        title="Northbark 40V 4.0 Ah Lithium-Ion Battery",
+        handle="northbark-nb-b40",
+        category=TAXO_ACC_BATTERY,
+        ptype="Battery",
+        tags="accessories, batteries, 40v",
+        sku="NB-B40",
+        price="119.99",
+        fitment="Fits all Northbark 40V tools: NB-21BS / NB-21BP / NB-T40B / NB-C40B",
+        desc="<p>4.0 Ah slide-in pack for the Northbark 40V platform. Keep one on the "
+             "charger and one in the tool — same pack runs mower, trimmer and saw.</p>",
+    ),
 ]
 
 
@@ -660,14 +882,16 @@ def _num(v) -> str:
 def build_rows():
     rows = []
     for p in PRODUCTS:
-        grams = lb_to_g(p["weight_lb"])
+        is_acc = p.get("kind") == "acc"
+        # 配件不公布重量 → 变体克重留空（Shopify 允许），不用密度/估值反推
+        grams = "" if is_acc else str(lb_to_g(p["weight_lb"]))
         imgs = IMAGES[p["handle"]]
         base = {c: "" for c in OFFICIAL_KEEP}
         base.update({
             "Title": p["title"],
             "URL handle": p["handle"],
             "Description": p["desc"],
-            "Vendor": p["vendor"],
+            "Vendor": p.get("vendor", "Northbark"),
             "Product category": p["category"],
             "Type": p["ptype"],
             "Tags": p["tags"],
@@ -681,7 +905,7 @@ def build_rows():
             "Inventory tracker": "shopify",
             "Inventory quantity": "25",
             "Continue selling when out of stock": "DENY",
-            "Weight value (grams)": str(grams),
+            "Weight value (grams)": grams,
             "Weight unit for display": "lb",
             "Requires shipping": "TRUE",
             "Fulfillment service": "manual",
@@ -690,31 +914,39 @@ def build_rows():
             "Image alt text": imgs["main"][1],
         })
         meta = {h: "" for h in META_HEADER}
-        meta.update({
-            "Power source (product.metafields.spec.power_source)": p["power_source"],
-            "Operation type (product.metafields.spec.operation_type)": p["operation"],
-            "Drive type (product.metafields.spec.drive_type)": p["drive"],
-            "Area coverage (product.metafields.spec.area_coverage)": p["area"],
-            # duty 缺省 Residential；Semi-pro / Commercial 由产品显式声明
-            "Duty level (product.metafields.spec.duty_level)": p.get("duty", "Residential"),
-            "Compare group (product.metafields.spec.compare_group)": p["compare_group"],
-            "Displacement (cc) (product.metafields.spec.displacement_cc)": _num(p.get("cc")),
-            "Power (W) (product.metafields.spec.power_w)": _num(p.get("power_w")),
-            "Cutting width (mm) (product.metafields.spec.cutting_width_mm)": _num(p.get("cut_mm")),
-            "Bar length (mm) (product.metafields.spec.bar_length_mm)": _num(p.get("bar_mm")),
-            "Weight (kg) (product.metafields.spec.weight_kg)": f"{p['weight_kg']}",
-            "Noise (dB A) (product.metafields.spec.noise_db)": _num(p.get("noise")),
-            # 面积分段 N/A（打草机 / 链锯）→ 数字版必须真空，不能落 0
-            "Area coverage (sq ft) (product.metafields.spec.area_coverage_sqft)":
-                str(AREA_SQFT[p["area"]]) if p["area"] in AREA_SQFT else "",
-            "Spec variance note (product.metafields.spec.spec_variance_note)": p.get("spec_note", ""),
-            "Warranty (months) (product.metafields.spec.warranty_months)": str(p["warranty_mo"]),
-            "Battery platform (product.metafields.platform.battery_platform)": p["battery_platform"],
-            "Shipping class (product.metafields.logistics.shipping_class)": p["shipping_class"],
-            "Needs liftgate (product.metafields.logistics.needs_liftgate)": p["liftgate"],
-            "Assembly required (product.metafields.logistics.assembly_required)": p["assembly"],
-            "Lead time (days) (product.metafields.logistics.lead_time_days)": str(p["lead"]),
-        })
+        if is_acc:
+            # 配件只写三项：物流档 + 备货天数 + 适配说明。其余全部真空。
+            meta.update({
+                "Shipping class (product.metafields.logistics.shipping_class)": "Parcel",
+                "Lead time (days) (product.metafields.logistics.lead_time_days)": str(p.get("lead", 3)),
+                "Fitment note (product.metafields.acc.fitment_note)": p["fitment"],
+            })
+        else:
+            meta.update({
+                "Power source (product.metafields.spec.power_source)": p["power_source"],
+                "Operation type (product.metafields.spec.operation_type)": p["operation"],
+                "Drive type (product.metafields.spec.drive_type)": p["drive"],
+                "Area coverage (product.metafields.spec.area_coverage)": p["area"],
+                # duty 缺省 Residential；Semi-pro / Commercial 由产品显式声明
+                "Duty level (product.metafields.spec.duty_level)": p.get("duty", "Residential"),
+                "Compare group (product.metafields.spec.compare_group)": p["compare_group"],
+                "Displacement (cc) (product.metafields.spec.displacement_cc)": _num(p.get("cc")),
+                "Power (W) (product.metafields.spec.power_w)": _num(p.get("power_w")),
+                "Cutting width (mm) (product.metafields.spec.cutting_width_mm)": _num(p.get("cut_mm")),
+                "Bar length (mm) (product.metafields.spec.bar_length_mm)": _num(p.get("bar_mm")),
+                "Weight (kg) (product.metafields.spec.weight_kg)": f"{p['weight_kg']}",
+                "Noise (dB A) (product.metafields.spec.noise_db)": _num(p.get("noise")),
+                # 面积分段 N/A（打草机 / 链锯）→ 数字版必须真空，不能落 0
+                "Area coverage (sq ft) (product.metafields.spec.area_coverage_sqft)":
+                    str(AREA_SQFT[p["area"]]) if p["area"] in AREA_SQFT else "",
+                "Spec variance note (product.metafields.spec.spec_variance_note)": p.get("spec_note", ""),
+                "Warranty (months) (product.metafields.spec.warranty_months)": str(p["warranty_mo"]),
+                "Battery platform (product.metafields.platform.battery_platform)": p["battery_platform"],
+                "Shipping class (product.metafields.logistics.shipping_class)": p["shipping_class"],
+                "Needs liftgate (product.metafields.logistics.needs_liftgate)": p["liftgate"],
+                "Assembly required (product.metafields.logistics.assembly_required)": p["assembly"],
+                "Lead time (days) (product.metafields.logistics.lead_time_days)": str(p["lead"]),
+            })
         rows.append({**base, **meta})
         # 第二张图行：Shopify CSV 规范——图片行只填 handle + 图片列，其余留空
         if imgs["second"][0]:
@@ -838,20 +1070,102 @@ def validate(rows):
         if row["Product category"] != TAXO_CHAINSAW and bl:
             errors.append(f"行 {i+1}: 非链锯填了 bar_length_mm（SDD §5.3：只给链锯）")
         # 重量一致性（metafield kg vs 变体克重，±0.3 kg 容差，电池款克重含电池另计）
-        kg = float(row["Weight (kg) (product.metafields.spec.weight_kg)"])
-        g = int(row["Weight value (grams)"]) / 1000.0
-        if abs(kg - g) > 0.3:
-            infos.append(f"行 {i+1}: metafield 重量 {kg} kg 与变体重量 {g} kg 差异超容差（若为电池款含/不含电池差异则属预期）")
+        # 配件两者都空 → 跳过（不把 "空 vs 空" 当成一致，也不要求配件必须有重量）
+        kg_raw = row["Weight (kg) (product.metafields.spec.weight_kg)"]
+        g_raw = row["Weight value (grams)"]
+        if kg_raw and g_raw:
+            kg = float(kg_raw)
+            g = int(g_raw) / 1000.0
+            if abs(kg - g) > 0.3:
+                infos.append(f"行 {i+1}: metafield 重量 {kg} kg 与变体重量 {g} kg 差异超容差（若为电池款含/不含电池差异则属预期）")
         # compare_group 跨类型检查（判据：Product category 受控词表，不用自由文本 Type）
         cat = row["Product category"]
         group = row["Compare group (product.metafields.spec.compare_group)"]
-        expected = CATEGORY_GROUP.get(cat)
-        if expected is None:
-            errors.append(f"行 {i+1}: Product category 不在本文件允许的分类法节点内: {cat}")
-        elif group != expected:
-            errors.append(f"行 {i+1}: 分类 '{cat.split(' > ')[-1]}' 应属 {expected}，实为 '{group}'")
+        if cat in ACCESSORY_CATEGORIES:
+            # 配件必须无分组：有分组 → 商品卡出 Compare 按钮，却进不了任何对比页
+            if group:
+                errors.append(f"行 {i+1}: 配件不得填 compare_group（现为 '{group}'）")
+        else:
+            expected = CATEGORY_GROUP.get(cat)
+            if expected is None:
+                errors.append(f"行 {i+1}: Product category 不在本文件允许的分类法节点内: {cat}")
+            elif group != expected:
+                errors.append(f"行 {i+1}: 分类 '{cat.split(' > ')[-1]}' 应属 {expected}，实为 '{group}'")
 
     return errors, warnings, infos
+
+
+# ---------------------------------------------------------------- 第二遍：主机 → 耗材反挂
+# acc.consumables 的值是**目标商品的 handle**，目标必须已在店内 ⇒ 不能与商品创建同批导入。
+# 本文件即 SDD §5.9「两遍制」的第二遍：只带 URL handle + Title + 耗材列，导入时勾 Overwrite。
+# 只挂「磨损快、要复购」的：刀片 / 锯链 / 打草绳（滤芯与火花塞未做，见上）。
+# 电池不挂 —— 它属"常一起购买"，按 SDD §6.3 交给原生 complementary products，避免两套推荐打架。
+CONSUMABLES = {
+    "northbark-nb-21p": ["northbark-nb-bl21"],
+    "northbark-nb-21s": ["northbark-nb-bl21"],
+    "northbark-nb-21ph": ["northbark-nb-bl21"],
+    "northbark-nb-21bs": ["northbark-nb-bl21"],
+    "northbark-nb-21bp": ["northbark-nb-bl21"],
+    "northbark-nb-21b80": ["northbark-nb-bl21"],
+    "northbark-nb-22s": ["northbark-nb-bl22"],
+    "northbark-nb-42t": ["northbark-nb-bl42"],
+    "northbark-nb-42th": ["northbark-nb-bl42"],
+    "northbark-nb-42tc": ["northbark-nb-bl42"],
+    "northbark-nb-42z": ["northbark-nb-bl42"],
+    "northbark-nb-t21": ["northbark-nb-tl095"],
+    "northbark-nb-t27": ["northbark-nb-tl095"],
+    "northbark-nb-t28": ["northbark-nb-tl095"],
+    "northbark-nb-t40b": ["northbark-nb-tl095"],
+    "northbark-nb-t60b": ["northbark-nb-tl095"],
+    "northbark-nb-c16g": ["northbark-nb-ch16"],
+    "northbark-nb-c18g": ["northbark-nb-ch18"],
+    "northbark-nb-c20g": ["northbark-nb-ch20"],
+}
+
+CONSUMABLES_COL = "Consumables (product.metafields.acc.consumables)"
+
+
+def write_pass2():
+    """生成第二遍导入文件；返回 (路径, 行数)。
+
+    前提：配件 handle 真实存在（拼错平台静默忽略，不报错），所以这里先做一次集合校验。
+    """
+    handles = {p["handle"] for p in PRODUCTS}
+    acc_handles = {p["handle"] for p in PRODUCTS if p.get("kind") == "acc"}
+    bad = []
+    for host, accs in CONSUMABLES.items():
+        if host not in handles:
+            bad.append(f"主机 handle 不存在: {host}")
+        for a in accs:
+            if a not in acc_handles:
+                bad.append(f"耗材 handle 不存在或不是配件: {a}（挂在 {host}）")
+    if bad:
+        raise SystemExit("✗ 耗材映射有问题：\n  " + "\n  ".join(bad))
+
+    path = os.path.join(os.path.dirname(OUT_PATH), "mower-products-import.pass2-consumables.csv")
+    titles = {p["handle"]: p["title"] for p in PRODUCTS}
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f, lineterminator="\n")
+        # 必须带 Option1 name / Option1 value（2026-10-28 实测踩坑）：
+        # 官方文档 —— 更新商品时若涉及变体、却没给这两列，平台会「删掉现有变体、新建一个默认变体」，
+        # 直接报 "Product options input is required when updating variants" 整份文件拒收。
+        # 值必须与首次导入完全一致（Title / Default Title），改值同样会重建变体（variant ID 变化）。
+        # 其余列一律**不出现**：CSV 里出现但为空的列会把线上值覆盖成空，不出现的列才保持原值。
+        w.writerow(["Title", "URL handle", "Option1 name", "Option1 value", CONSUMABLES_COL])
+        for host, accs in CONSUMABLES.items():
+            w.writerow([titles[host], host, "Title", "Default Title", ",".join(accs)])
+
+    # 生成后自检（BUG-051）：Title 与 option 必须与被更新商品逐字一致，否则平台整份拒收
+    with open(OUT_PATH, newline="", encoding="utf-8") as f:
+        main_rows = {r["URL handle"]: r for r in csv.DictReader(f) if r["SKU"]}
+    with open(path, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            m = main_rows[r["URL handle"]]
+            if r["Title"] != m["Title"]:
+                raise SystemExit(f"✗ pass2 Title 与主文件不一致: {r['URL handle']}")
+            if (r["Option1 name"], r["Option1 value"]) != (m["Option1 name"], m["Option1 value"]):
+                raise SystemExit(f"✗ pass2 option 与主文件不一致: {r['URL handle']}")
+    return path, len(CONSUMABLES)
 
 
 def main():
@@ -883,15 +1197,22 @@ def main():
         for r in rows:
             w.writerow(r)
 
-    # 4) 报告
+    # 4) 第二遍：耗材反挂（目标商品必须已在店内，故单独一份）
+    pass2_path, pass2_rows = write_pass2()
+
+    # 5) 报告
+    n_host = sum(1 for p in PRODUCTS if p.get("kind") != "acc")
+    n_acc = len(PRODUCTS) - n_host
     print(f"✓ 已写出 {OUT_PATH}")
     print(f"  列数 = {len(header)}（官方 {len(OFFICIAL_KEEP)} + metafield {len(META_HEADER)}）｜{template_note}")
-    print(f"  商品数 = {len(PRODUCTS)}（全部单变体）；总行数 = {len(rows)}"
+    print(f"  商品数 = {len(PRODUCTS)}（主机 {n_host} + 配件 {n_acc}，全部单变体）；总行数 = {len(rows)}"
           f"（主行 {len(PRODUCTS)} + 第二图行 {len(rows) - len(PRODUCTS)}）")
     by_group = {}
     for p in PRODUCTS:
-        by_group[p["compare_group"]] = by_group.get(p["compare_group"], 0) + 1
+        if p.get("compare_group"):
+            by_group[p["compare_group"]] = by_group.get(p["compare_group"], 0) + 1
     print("  分组覆盖：" + " / ".join(f"{g} {n}" for g, n in sorted(by_group.items())))
+    print(f"✓ 已写出 {pass2_path}（第二遍耗材反挂：{pass2_rows} 台主机）")
     print(f"  校验：0 错误 / {len(warnings)} 警告 / {len(infos)} 信息" if not errors
           else f"✗ 校验失败：{len(errors)} 错误")
     for e in errors:

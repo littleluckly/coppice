@@ -217,7 +217,7 @@ Shop                               全店入口：按品类进入集合
 └── Accessories       配件与耗材
     ├── Blades & Bars   刀片与导板
     ├── Filters         滤芯
-    └── Batteries & Chargers  电池与充电器
+    └── Batteries  电池（2026-10-27 去掉 "& Chargers"：无充电器商品，分类法也没有 OPE 充电器叶子）
 Shop by Platform      动力平台导航：同平台电池可共用，服务存量用户
 ├── 20V Battery       指向 platform.battery_platform = 20V 的自动化集合
 ├── 40V Battery       同上，40V
@@ -490,7 +490,7 @@ Support               售后与支持
 - [ ] 「同型号多尺寸应拆分为独立产品」的判定规则已写入商家指南，并在演示店有一组真实拆分样例。
 - [ ] 含多变体且 `spec.spec_variance_note` 非空的商品，对比表表头出现可展开的提示，且该提示**不改变对比表的任何数值**。
 - [ ] 预校验脚本能对「同一分组混入不同 `product_type`」的输入给出警告。
-- [ ] **所有商品的 `Product category` 全部被平台识别**（导入预览页无「未知分类」）；空气滤清器与火花塞这两个**分类法缺叶子节点**的商品，按 `field-list.md` §4.7 的降级类目导入成功。
+- [ ] **所有商品的 `Product category` 全部被平台识别**（导入预览页无「未知分类」）；**全店分类 100% 落在 `Home & Garden` 内**——空气滤清器与火花塞因分类法缺叶子、降级到 `Vehicles & Parts` 的代价不可接受，**2026-10-27 起不纳入演示店**。
 
 ### 5.10 单位与本地化
 

@@ -354,6 +354,14 @@
 - **修复**：移动端容器改成**明确高度** `height:44%` + `img { width:100%; height:100%; object-fit:contain; object-position:center bottom }`；`top` 表达顶边（`translate:-50% 0`）。同时新增 `product_image_mobile` 设置（block 级，`<source media="(max-width: 989px)">`），商家可给手机单独传一张方图。
 - **预防**：**在 auto 高度的父元素上，不要用百分比 `max-height` 约束子图片**，改用父级定高 + 子级 `object-fit`。可执行做法：新增任何"图片按容器缩放"的布局后，用一张 **1:1 与一张 3:4** 的图各测一次 `getBoundingClientRect()`，确认 `img.bottom/right <= 容器.bottom/right`。
 
+### BUG-051 · 耗材反挂 CSV 导入被拒：`Product options input is required when updating variants`
+- **日期**：2026-10-28 ｜ **状态**：Fixed（生成脚本改列 + 一致性断言）
+- **现象**：导入 `mower-products-import.pass2-consumables.csv` 报 `There was an error importing your CSV file... Product options input is required when updating variants`，**整份文件拒收**，19 台主机一条都没更新。
+- **根因**：这份"更新型"CSV 只有 `URL handle` / `Title` / `Consumables` 三列，**没带 `Option1 name` / `Option1 value`**。我按"最少列最安全"的直觉设计，漏了官方那条硬规则：更新既有商品时，只要 CSV 触及变体相关数据，就必须同时给出 option 两列；否则平台按「删掉现有变体、新建一个默认变体」处理，验证阶段直接拒收。官方原文：*"if you update a column that is related to variants... you must also include the Option1 name and Option1 value columns. If you don't... a new default variant is created and existing variants are deleted."*
+- **修复**：`write_pass2()` 输出 5 列 —— `Title` / `URL handle` / `Option1 name=Title` / `Option1 value=Default Title` / `Consumables`（值取自主文件，逐字一致）；并新增一致性断言：每行 Title 与 option 值必须与被更新商品的对应行完全相等，否则生成阶段就报错。
+- **预防**：**任何"更新既有商品"的 CSV 必须带 `Option1 name` + `Option1 value`，且值等于首次导入时的原值**（改值同样会重建变体、换 variant ID，断掉下游引用）。可执行做法：生成任何更新型 CSV 后跑一条断言——`for row in pass2: assert row.Title == main[row.handle].Title and row.option == main[row.handle].option`；这条已写进 `build_mower_csv.py` 的 `write_pass2()`。
+  另外把两条覆盖规则写进 `sources-and-notes.md` §5：**列不出现 = 保持原值；列出现但为空 = 覆盖成空**。所以更新型 CSV 只放「要改的列 + 匹配键 + option 列」，多带一列空列就是一次静默的数据清空。
+
 ## 记录模板（追加新 bug 用）
 
 ```

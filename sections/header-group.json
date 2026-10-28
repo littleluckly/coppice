@@ -41,46 +41,6 @@
     },
     "main-nav": {
       "type": "main-nav",
-      "blocks": {
-        "mega_category_icon_bMTbBr": {
-          "type": "mega_category_icon",
-          "settings": {
-            "menu_item": "Accessories",
-            "icon": "accessories",
-            "popular_collection": "featured"
-          }
-        },
-        "mega_category_icon_X4g7yq": {
-          "type": "mega_category_icon",
-          "settings": {
-            "menu_item": "Trimmers",
-            "icon": "trimmer",
-            "popular_collection": "string-trimmer"
-          }
-        },
-        "mega_category_icon_8Jt6np": {
-          "type": "mega_category_icon",
-          "settings": {
-            "menu_item": "Chainsaws",
-            "icon": "chainsaw",
-            "popular_collection": "chainsaw"
-          }
-        },
-        "mega_category_icon_mgPtg6": {
-          "type": "mega_category_icon",
-          "settings": {
-            "menu_item": "Mowers",
-            "icon": "mower",
-            "popular_collection": "mower-popular"
-          }
-        }
-      },
-      "block_order": [
-        "mega_category_icon_bMTbBr",
-        "mega_category_icon_X4g7yq",
-        "mega_category_icon_8Jt6np",
-        "mega_category_icon_mgPtg6"
-      ],
       "settings": {
         "logo": "shopify://shop_images/logo_webp.webp",
         "brand_name": "Northbark",

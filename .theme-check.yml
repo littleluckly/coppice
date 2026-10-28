@@ -1,1 +1,13 @@
 extends: theme-check:recommended
+
+# 只检查真正的主题文件。
+# dev-docs/ 与 docs/ 里存的是实验副本和历史交接文档（含 .liquid 副本），
+# 它们不是主题的一部分（.shopifyignore 里同样已排除），但 Theme Check
+# 不会读 .shopifyignore，必须在这里再排一次——否则那些副本会被当成
+# 真 section 检查，报 StylesheetTagInWrongFile / SchemaSectionOrBlockOnly
+# 两个假 error，以及几十条 UndefinedObject（'section' 对象在非 section
+# 文件里自然不存在）。
+ignore:
+  - 'dev-docs/**'
+  - 'docs/**'
+  - 'minimal-repro/**'

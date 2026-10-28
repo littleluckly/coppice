@@ -50,35 +50,54 @@ class NavPill extends HTMLElement {
     /* mega 面板分类切换（第九轮补，刘工）：左列 [data-mega-tab] 切换
        中区 [data-mega-panel]。渐进增强——组件升级前所有面板可见
        （无 JS 底线不破）；升级后默认第一组，hover / 键盘焦点切换，
-       鼠标离开面板回默认组。 */
-    this._tabs = Array.from(this.querySelectorAll('[data-mega-tab]'));
-    this._panels = Array.from(this.querySelectorAll('[data-mega-panel]'));
-    /* 一级 group 项集合：鼠标路径延迟关闭时维护其 is-open 展开态 */
-    this._groups = Array.from(this.querySelectorAll('.main-nav__item--group'));
-    this._defaultPanelIndex = this._panels.length
-      ? this._panels[0].dataset.megaPanel
-      : null;
-    this._activePanelIndex = null;
-    if (this._panels.length && this._tabs.length) {
-      this.classList.add('nav-mega-tabs--ready');
-      /* 升级即切默认组：无 JS 时所有面板可见，接管后只留第一个 */
-      this._switchTabs(this._defaultPanelIndex);
+       鼠标离开面板回默认组。
+
+       2026-10-28 改：按 .main-nav__mega-inner 分作用域（scope）。
+       原来 _tabs / _panels 是跨面板的扁平数组、药丸只建给第一个面板——
+       导致 ① 第二个及之后的 mega 面板左列没有滑动高亮；② data-mega-panel
+       在每个面板内独立编号，_switchTabs 会跨面板命中同号面板（切 Shop 的
+       第 3 组时把 Platform 的第 3 组一起显示）。现在每个面板各持
+       tabs / panels / pill / activeIndex / defaultIndex，互不干扰。 */
+    this._scopes = Array.from(
+      this.querySelectorAll('.main-nav__mega-inner')
+    ).map((inner) => {
+      const nav = inner.querySelector('.main-nav__mega-nav');
+      const tabs = Array.from(inner.querySelectorAll('[data-mega-tab]'));
+      const panels = Array.from(inner.querySelectorAll('[data-mega-panel]'));
+      let pill = null;
+      /* mega 左列滑动药丸（2026-10-27，复用本组件测量/滑动算法，纵向套用）：
+         每个面板一个，垫在左列分类项下，hover 跟手滑动、松手停在激活项做常驻高亮。
+         与顶部 .main-nav__pill 同源但独立实例，无 JS 时不存在。
+         药丸建好但默认激活项的定位推迟到首次 _openGroup：此刻面板
+         display:none（无 is-open），offsetParent 为 null 无法量测；
+         面板真正展开（is-open → display:block）时坐标才可测。 */
+      if (nav && tabs.length) {
+        pill = document.createElement('span');
+        pill.className = 'main-nav__mega-pill';
+        pill.setAttribute('aria-hidden', 'true');
+        nav.appendChild(pill);
+      }
+      return {
+        inner,
+        nav,
+        tabs,
+        panels,
+        pill,
+        defaultIndex: panels.length ? panels[0].dataset.megaPanel : null,
+        activeIndex: null,
+      };
+    });
+
+    for (const scope of this._scopes) {
+      if (scope.tabs.length && scope.panels.length) {
+        this.classList.add('nav-mega-tabs--ready');
+        /* 升级即切默认组：无 JS 时所有面板可见，接管后每个面板只留第一组 */
+        this._switchTabs(scope.defaultIndex, scope);
+      }
     }
 
-    /* mega 左列滑动药丸（2026-10-27，复用本组件测量/滑动算法，纵向套用）：
-       一个药丸垫在左列分类项下，hover 跟手滑动，松手停在激活项做常驻高亮。
-       与顶部 .main-nav__pill 同源但独立实例（不同包含块），无 JS 时不存在。 */
-    this._megaPill = null;
-    const megaNav = this.querySelector('.main-nav__mega-nav');
-    if (megaNav && this._tabs.length) {
-      const mp = document.createElement('span');
-      mp.className = 'main-nav__mega-pill';
-      mp.setAttribute('aria-hidden', 'true');
-      megaNav.appendChild(mp);
-      this._megaPill = mp;
-      /* 初始：药丸停在默认激活项（常驻高亮，无动画定位） */
-      this._moveMegaToIndex(this._defaultPanelIndex, false);
-    }
+    /* 一级 group 项集合：鼠标路径延迟关闭时维护其 is-open 展开态 */
+    this._groups = Array.from(this.querySelectorAll('.main-nav__item--group'));
 
     const pill = document.createElement('span');
     pill.className = 'main-nav__pill';
@@ -108,7 +127,8 @@ class NavPill extends HTMLElement {
             event.target.closest('.main-nav__link') &&
             item.classList.contains('main-nav__item--group')
           ) {
-            this._switchTabs(this._defaultPanelIndex);
+            const scope = this._scopeOf(item);
+            if (scope) this._switchTabs(scope.defaultIndex, scope);
           }
           /* 鼠标进入某一级 group → 展开该组（is-open 拖尾由 _close 延时撤除），
              清掉其它组的 is-open，避免从 A 划到 B 时 A 残留展开 */
@@ -130,7 +150,8 @@ class NavPill extends HTMLElement {
       (event) => {
         const tab = event.target.closest('[data-mega-tab]');
         if (tab && this.contains(tab)) {
-          this._switchTabs(tab.dataset.megaTab);
+          const scope = this._scopeOf(tab);
+          if (scope) this._switchTabs(tab.dataset.megaTab, scope);
           this._moveMega(tab, true);
         }
         const item = event.target.closest('.main-nav__item');
@@ -153,20 +174,14 @@ class NavPill extends HTMLElement {
       if (!list.contains(event.relatedTarget)) this._hide();
     }, { signal });
 
-    window.addEventListener('resize', () => {
+    const reposition = () => {
       if (this._isOn()) this._move(this._current);
-      if (this._megaPill && this._megaPill.classList.contains('main-nav__mega-pill--on')) {
-        this._moveMegaToIndex(this._activePanelIndex, false);
-      }
-    }, { signal });
+      this._repositionMegaPills();
+    };
+    window.addEventListener('resize', reposition, { signal });
 
     if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(() => {
-        if (this._isOn()) this._move(this._current);
-        if (this._megaPill && this._megaPill.classList.contains('main-nav__mega-pill--on')) {
-          this._moveMegaToIndex(this._activePanelIndex, false);
-        }
-      });
+      document.fonts.ready.then(reposition);
     }
   }
 
@@ -175,7 +190,9 @@ class NavPill extends HTMLElement {
     if (this._megaSwitchTimer) clearTimeout(this._megaSwitchTimer);
     if (this._closeTimer) clearTimeout(this._closeTimer);
     if (this._pill) this._pill.remove();
-    if (this._megaPill) this._megaPill.remove();
+    for (const scope of this._scopes || []) {
+      if (scope.pill) scope.pill.remove();
+    }
     this._current = null;
   }
 
@@ -248,23 +265,47 @@ class NavPill extends HTMLElement {
     if (this._megaSwitchTimer) clearTimeout(this._megaSwitchTimer);
     this._megaSwitchTimer = setTimeout(() => {
       this._megaSwitchTimer = null;
-      this._switchTabs(tab.dataset.megaTab);
+      const scope = this._scopeOf(tab);
+      if (scope) this._switchTabs(tab.dataset.megaTab, scope);
     }, this._MEGA_HOVER_DELAY);
   }
 
-  /* mega 左列药丸：滑动到指定序号的 tab（无对应序号则跳过） */
-  _moveMegaToIndex(index, animate = true) {
-    if (!index) return;
-    const tab = this._tabs.find((t) => t.dataset.megaTab === index);
+  /* 找到元素所属的 mega 面板作用域（不属于任何面板时返回 null）。
+     两个方向都认：调用点既有面板内部元素（tab / panel 本身），
+     也有面板的祖先（一级项 li，如 _openGroup(item)）。 */
+  _scopeOf(el) {
+    if (!el) return null;
+    for (const scope of this._scopes) {
+      if (scope.inner.contains(el) || el.contains(scope.inner)) return scope;
+    }
+    return null;
+  }
+
+  /* 重算所有"已点亮"药丸的位置（resize / 字体就绪后调用）。
+     2026-10-28：药丸改为 per-scope，逐个重算。 */
+  _repositionMegaPills() {
+    for (const scope of this._scopes) {
+      if (scope.pill && scope.pill.classList.contains('main-nav__mega-pill--on')) {
+        this._moveMegaToIndex(scope.activeIndex, scope, false);
+      }
+    }
+  }
+
+  /* mega 左列药丸：滑动到指定作用域内、指定序号的 tab（无对应序号则跳过） */
+  _moveMegaToIndex(index, scope, animate = true) {
+    if (!scope || !index) return;
+    const tab = scope.tabs.find((t) => t.dataset.megaTab === index);
     if (tab) this._moveMega(tab, animate);
   }
 
   /* mega 左列滑动药丸（2026-10-27）：与 _move 同源测量算法，纵向套用。
      target 相对药丸实际包含块（offsetParent，即 .main-nav__mega-nav）定位，
-     只在 Y 方向滑动 + 高度自适应，宽度取目标满宽。首次/重算时无动画定位。 */
+     只在 Y 方向滑动 + 高度自适应，宽度取目标满宽。首次/重算时无动画定位。
+     2026-10-28：药丸 per-scope，按 tab 所属面板取对应那个，不再只认第一个。 */
   _moveMega(tab, animate = true) {
-    const pill = this._megaPill;
-    if (!pill || !tab || !this.contains(tab)) return;
+    const scope = this._scopeOf(tab);
+    const pill = scope && scope.pill;
+    if (!pill || !tab) return;
     const rect = tab.getBoundingClientRect();
     const container = pill.offsetParent;
     if (!container) return;
@@ -287,31 +328,33 @@ class NavPill extends HTMLElement {
     }
     /* 同步文字反色到药丸所在项（--lit），与药丸滑动同源触发，
        保证"文字变白"与"药丸滑到"同步，不抢拍（2026-10-27 修复 hover 文字先白 bug） */
-    this._setLit(tab);
+    this._setLit(tab, scope);
   }
 
   /* 同步文字反色到药丸所在项：仅当前药丸垫底的项加 --lit（文字反色），其余移除。
-     每次 _moveMega 调用都重算，覆盖初始 / hover / 移出回激活 / resize / fonts 就绪。 */
-  _setLit(tab) {
-    for (const t of this._tabs) {
+     每次 _moveMega 调用都重算，覆盖初始 / hover / 移出回激活 / resize / fonts 就绪。
+     2026-10-28：限定在 tab 所属面板内——跨面板遍历会把别的面板同名项一起反色。 */
+  _setLit(tab, scope) {
+    for (const t of scope.tabs) {
       t.classList.toggle('main-nav__mega-cat-link--lit', t === tab);
     }
   }
 
-  /* 切换中区面板：index = 二级项在菜单里的序号（data-mega-tab/-panel 成对）。
+  /* 切换中区面板：index = 二级项在菜单里的序号（data-mega-tab/-panel 成对，
+     序号在每个面板内独立编号，所以必须带 scope——否则会跨面板命中同号面板）。
      无对应 panel 的 tab（商家只配了图标没配内容）保持当前组不动。 */
-  _switchTabs(index) {
-    if (!index || index === this._activePanelIndex) return;
-    if (!this._panels.length) return;
-    this._activePanelIndex = index;
-    for (const panel of this._panels) {
+  _switchTabs(index, scope) {
+    if (!scope || !index || index === scope.activeIndex) return;
+    if (!scope.panels.length) return;
+    scope.activeIndex = index;
+    for (const panel of scope.panels) {
       if (panel.dataset.megaPanel === index) {
         panel.removeAttribute('hidden');
       } else {
         panel.setAttribute('hidden', '');
       }
     }
-    for (const tab of this._tabs) {
+    for (const tab of scope.tabs) {
       tab.classList.toggle(
         'main-nav__mega-cat-link--active',
         tab.dataset.megaTab === index
@@ -349,17 +392,35 @@ class NavPill extends HTMLElement {
       this._megaSwitchTimer = null;
     }
     this._hide();
-    this._moveMegaToIndex(this._activePanelIndex, true);
+    /* 各面板左列药丸回到各自激活项常驻高亮（从未切过的面板保持原位不动） */
+    for (const scope of this._scopes) {
+      if (scope.activeIndex) this._moveMegaToIndex(scope.activeIndex, scope, true);
+    }
   }
 
   /* 鼠标进入某一级 group：展开该组（is-open），清掉其它组的拖尾 is-open，
      避免从 A 划到 B 时 A 残留展开。键盘路径（focusin）不调用本方法——
      键盘展开由 :focus-within 独立维持，否则 focusout 不会撤 is-open 致面板卡开。 */
   _openGroup(item) {
+    /* 先记"展开前是否已 open"：仅首次展开该组时做药丸初始定位，
+       同组内后续 mouseover 不再重钉——否则会覆盖当前 hover 的即时跟手
+       （_moveMega(tab) 已在 handler 里执行），导致高亮停在上一格
+       （回归：2026-10-27 把定位塞进本方法引入，mega 面板是 group 的后代，
+       mouseover 冒泡使本方法每次悬停分类都被调用）。 */
+    const wasOpen = item.classList.contains('is-open');
     for (const g of this._groups) {
       if (g !== item) g.classList.remove('is-open');
     }
     item.classList.add('is-open');
+    if (!wasOpen) {
+      /* 首次打开面板：把该面板左列滑动药丸定位到默认激活项（常驻高亮首帧不闪）。
+         加 is-open 后面板已 display:block，坐标可测；用 scope.defaultIndex
+         （一组刚展开时激活面板即默认第一项），不用过期的 activeIndex。
+         修复"首次打开无默认选中高亮"：初始化时面板不可见无法定位。
+         2026-10-28：按 item 找所属面板，不再用全局第一个面板的序号。 */
+      const scope = this._scopeOf(item);
+      if (scope) this._moveMegaToIndex(scope.defaultIndex, scope, false);
+    }
   }
 }
 
