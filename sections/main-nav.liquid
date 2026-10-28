@@ -241,36 +241,26 @@
                               三级链接收进组底小链接行，导航功能不丢。
                             {%- endcomment -%}
                             <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
+                              {%- comment -%}
+                                组头一段式（2026-10-28 刘工）：左侧单个入口
+                                "All {集合名} (n) →"，不再有右侧 All 链接。
+                                一段式的好处：不留空壳、不重复、可访问名完整
+                                （不能只留 "(n) →"——那样链接名只剩数字）。
+                                文案走 navigation.all_collection_products，
+                                变量用 total 而非 count：count 在 Shopify 翻译里
+                                会触发复数形式查找。
+                              {%- endcomment -%}
                               <div class="main-nav__mega-group-head">
-                                {%- if mega_collection.title == child_title -%}
-                                  {%- comment -%}
-                                    同名组（最常见）：集合名与菜单项名一致时，让组标题
-                                    本身承担入口职责，不再另起一个 All 链接——否则组头是
-                                    "Mowers  Mowers (11) →"，同一信息出现两次。
-                                    也不能只留 "（11) →"：那样链接的可访问名只剩数字，
-                                    视觉上更是一个孤零零的计数（2026-10-28 刘工指出）。
-                                  {%- endcomment -%}
-                                  <a
-                                    class="main-nav__mega-group-all main-nav__mega-group-all--merged"
-                                    href="{{ mega_collection.url }}"
-                                  >
-                                    {{ child.title }}
-                                    <span class="main-nav__mega-group-count">
-                                      ({{ mega_collection.all_products_count }})
-                                    </span>
-                                    <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
-                                  </a>
-                                {%- else -%}
-                                  <span class="main-nav__mega-group-title">{{ child.title }}</span>
-                                  <a
-                                    class="main-nav__mega-group-all"
-                                    href="{{ mega_collection.url }}"
-                                  >
-                                    {{ mega_collection.title }}
-                                    ({{ mega_collection.all_products_count }})
-                                    <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
-                                  </a>
-                                {%- endif -%}
+                                <a
+                                  class="main-nav__mega-group-title-link"
+                                  href="{{ mega_collection.url }}"
+                                >
+                                  {{
+                                    'navigation.all_collection_products'
+                                    | t: title: mega_collection.title, total: mega_collection.all_products_count
+                                  }}
+                                  <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
+                                </a>
                               </div>
                               <ul class="main-nav__mega-cards" role="list">
                                 {%- for product in mega_collection.products limit: 3 -%}
