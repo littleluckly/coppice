@@ -49,6 +49,21 @@ class NavPill extends HTMLElement {
       this._switchTabs(this._defaultPanelIndex);
     }
 
+    /* mega 左列滑动药丸（2026-10-27，复用本组件测量/滑动算法，纵向套用）：
+       一个药丸垫在左列分类项下，hover 跟手滑动，松手停在激活项做常驻高亮。
+       与顶部 .main-nav__pill 同源但独立实例（不同包含块），无 JS 时不存在。 */
+    this._megaPill = null;
+    const megaNav = this.querySelector('.main-nav__mega-nav');
+    if (megaNav && this._tabs.length) {
+      const mp = document.createElement('span');
+      mp.className = 'main-nav__mega-pill';
+      mp.setAttribute('aria-hidden', 'true');
+      megaNav.appendChild(mp);
+      this._megaPill = mp;
+      /* 初始：药丸停在默认激活项（常驻高亮，无动画定位） */
+      this._moveMegaToIndex(this._defaultPanelIndex, false);
+    }
+
     const pill = document.createElement('span');
     pill.className = 'main-nav__pill';
     pill.setAttribute('aria-hidden', 'true');
@@ -63,7 +78,10 @@ class NavPill extends HTMLElement {
       'mouseover',
       (event) => {
         const tab = event.target.closest('[data-mega-tab]');
-        if (tab && this.contains(tab)) this._switchTabs(tab.dataset.megaTab);
+        if (tab && this.contains(tab)) {
+          this._switchTabs(tab.dataset.megaTab);
+          this._moveMega(tab, true);
+        }
         const item = event.target.closest('.main-nav__item');
         if (item && this.contains(item)) {
           this._move(item);
@@ -80,24 +98,32 @@ class NavPill extends HTMLElement {
       { signal }
     );
 
-    list.addEventListener('mouseleave', () => this._hide(), { signal });
+    list.addEventListener('mouseleave', () => {
+      this._hide(); /* 顶部药丸隐藏 */
+      /* mega 药丸停在激活项（常驻高亮，不隐藏） */
+      this._moveMegaToIndex(this._activePanelIndex, true);
+    }, { signal });
 
     list.addEventListener(
       'focusin',
       (event) => {
         const tab = event.target.closest('[data-mega-tab]');
-        if (tab && this.contains(tab)) this._switchTabs(tab.dataset.megaTab);
+        if (tab && this.contains(tab)) {
+          this._switchTabs(tab.dataset.megaTab);
+          this._moveMega(tab, true);
+        }
         const item = event.target.closest('.main-nav__item');
         if (item && this.contains(item)) this._move(item);
       },
       { signal }
     );
 
-    /* 鼠标离开整个面板内容区（含左列与中区）→ 回默认组 */
+    /* 鼠标离开整个面板内容区（含左列与中区）→ 药丸停在当前激活项（常驻高亮），
+       不再回默认组；面板本身保持在最后激活项（_switchTabs 已切过）。 */
     const megaInner = this.querySelector('.main-nav__mega-inner');
     if (megaInner) {
       megaInner.addEventListener('mouseleave', () => {
-        this._switchTabs(this._defaultPanelIndex);
+        this._moveMegaToIndex(this._activePanelIndex, true);
       }, { signal });
     }
 
@@ -107,11 +133,17 @@ class NavPill extends HTMLElement {
 
     window.addEventListener('resize', () => {
       if (this._isOn()) this._move(this._current);
+      if (this._megaPill && this._megaPill.classList.contains('main-nav__mega-pill--on')) {
+        this._moveMegaToIndex(this._activePanelIndex, false);
+      }
     }, { signal });
 
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => {
         if (this._isOn()) this._move(this._current);
+        if (this._megaPill && this._megaPill.classList.contains('main-nav__mega-pill--on')) {
+          this._moveMegaToIndex(this._activePanelIndex, false);
+        }
       });
     }
   }
@@ -119,6 +151,7 @@ class NavPill extends HTMLElement {
   disconnectedCallback() {
     if (this._controller) this._controller.abort();
     if (this._pill) this._pill.remove();
+    if (this._megaPill) this._megaPill.remove();
     this._current = null;
   }
 
@@ -182,6 +215,41 @@ class NavPill extends HTMLElement {
     if (!this._pill) return;
     this._pill.classList.remove('main-nav__pill--on');
     this._current = null;
+  }
+
+  /* mega 左列药丸：滑动到指定序号的 tab（无对应序号则跳过） */
+  _moveMegaToIndex(index, animate = true) {
+    if (!index) return;
+    const tab = this._tabs.find((t) => t.dataset.megaTab === index);
+    if (tab) this._moveMega(tab, animate);
+  }
+
+  /* mega 左列滑动药丸（2026-10-27）：与 _move 同源测量算法，纵向套用。
+     target 相对药丸实际包含块（offsetParent，即 .main-nav__mega-nav）定位，
+     只在 Y 方向滑动 + 高度自适应，宽度取目标满宽。首次/重算时无动画定位。 */
+  _moveMega(tab, animate = true) {
+    const pill = this._megaPill;
+    if (!pill || !tab || !this.contains(tab)) return;
+    const rect = tab.getBoundingClientRect();
+    const container = pill.offsetParent;
+    if (!container) return;
+    const base = container.getBoundingClientRect();
+    const x = rect.left - base.left;
+    const y = rect.top - base.top;
+    const wasOn = pill.classList.contains('main-nav__mega-pill--on');
+    if (!wasOn || !animate) {
+      pill.style.transition = 'none';
+      pill.style.width = rect.width + 'px';
+      pill.style.height = rect.height + 'px';
+      pill.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+      pill.getBoundingClientRect(); /* 强制 reflow，让下面的 transition 生效 */
+      pill.style.transition = '';
+      pill.classList.add('main-nav__mega-pill--on');
+    } else {
+      pill.style.width = rect.width + 'px';
+      pill.style.height = rect.height + 'px';
+      pill.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    }
   }
 
   /* 切换中区面板：index = 二级项在菜单里的序号（data-mega-tab/-panel 成对）。
