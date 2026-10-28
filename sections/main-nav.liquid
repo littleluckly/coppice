@@ -152,18 +152,6 @@
                         <span class="main-nav__mega-label">{{ link.title }}</span>
                         <ul class="main-nav__mega-cats" role="list">
                           {%- for child in link.links -%}
-                            {%- liquid
-                              assign child_title = child.title | strip
-                              assign icon_kind = ''
-                              for block in section.blocks
-                                if block.type == 'mega_category_icon' and icon_kind == ''
-                                  assign wanted = block.settings.menu_item | strip
-                                  if wanted == child_title
-                                    assign icon_kind = block.settings.icon
-                                  endif
-                                endif
-                              endfor
-                            -%}
                             <li class="main-nav__mega-cat">
                               {%- if child.links.size > 0 -%}
                                 <span
@@ -171,12 +159,6 @@
                                   tabindex="0"
                                   data-mega-tab="{{ forloop.index }}"
                                 >
-                                  {%- if icon_kind != blank -%}
-                                    {%- assign icon_file = icon_kind | prepend: 'icon-' | append: '.svg' -%}
-                                    <span class="main-nav__mega-cat-icon" aria-hidden="true">
-                                      {{ icon_file | inline_asset_content }}
-                                    </span>
-                                  {%- endif -%}
                                   {{ child.title }}
                                 </span>
                               {%- else -%}
@@ -189,12 +171,6 @@
                                     aria-current="page"
                                   {% endif %}
                                 >
-                                  {%- if icon_kind != blank -%}
-                                    {%- assign icon_file = icon_kind | prepend: 'icon-' | append: '.svg' -%}
-                                    <span class="main-nav__mega-cat-icon" aria-hidden="true">
-                                      {{ icon_file | inline_asset_content }}
-                                    </span>
-                                  {%- endif -%}
                                   {{ child.title }}
                                 </a>
                               {%- endif -%}
