@@ -1305,14 +1305,17 @@
     padding: 0;
     list-style: none;
     display: grid;
-    /* 16rem 下限（2026-10-28 刘工：只出 3 张卡时面板大半是空的）。
-       中区可用宽 1088px = content-width 1400 − 面板 padding 80
-       − 左列 192 − 列间距 40。12rem 下限会算出 5 列，3 张卡只坐满 3 列、
-       右边空掉约 450px——那才是"空"的来源，不是图小。
-       16rem 下限正好落成 3 列：每卡约 347px、图约 322px，铺满中区。
-       用 auto-fill 不用 auto-fit：卡少于 3 张时（如 80V Battery 只有 2 个商品）
-       保持列宽一致、右侧留白，而不是把 2 张卡拉成 500px+ 的大块。 */
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    /* 卡宽两端都受控（2026-10-28 第二轮修正，刘工 1130px 截图）：
+       - 下限 12rem：窄视口也保证落成 3 列。中区宽 = 视口 − 40(页边距)
+         − 80(面板 padding) − 192(左列) − 40(gap)；桌面断点 990px 时中区 638px，
+         12rem 下限刚好算出 3 列（196px/卡）。上一版的 16rem 在 1130px 只算出
+         **2 列 × 377px**——比宽屏还大，第 3 张被挤到下一行，面板高到出滚动条。
+       - 上限 20rem（320px）：中区够宽时卡片不再被 1fr 拉成 350px+。
+       - auto-fit（不是 auto-fill）：列数按容器算完会折叠空轨道，3 张卡不会
+         被压成"3 列坐满、右边空掉 450px"；2 张卡时（80V Battery）折叠成
+         2 列，各自被 20rem 上限兜住，不会拉成 500px 大块。
+       实测：990 → 3×197px；1130 → 3×243px；1440 → 3×320px（右侧留 80px）。 */
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 20rem));
     gap: 1.5rem;
   }
 
