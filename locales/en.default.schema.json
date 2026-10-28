@@ -330,7 +330,8 @@
       "name": "Similar products",
       "default_heading": "Similar mowers",
       "limit": "Number of products",
-      "default_heading_generic": "You may also like"
+      "default_heading_generic": "You may also like",
+      "heading_info": "Leave blank to use \"Similar mowers\" for equipment and \"You may also like\" for accessories."
     },
     "product_anchor_nav": {
       "name": "Section anchor bar"
