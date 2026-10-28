@@ -29,10 +29,17 @@
   endif
 -%}
 
+{%- comment -%}
+  data-reveal 只在「耗材由服务端渲染」时挂：缺耗材走 complementary 时内容由 JS 异步拉回，
+  那时给空容器播入场动画会看到"先浮上一个空盒子、再塞进卡片"，比不播更糟。
+{%- endcomment -%}
 <section
   class="product-supplies"
   id="product-supplies"
   data-section-id="{{ section.id }}"
+  {% if supply_count > 0 %}
+    data-reveal
+  {% endif %}
   {% if supply_count == 0 and section.settings.fallback_to_complementary == false %}
     hidden
   {% endif %}

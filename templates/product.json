@@ -82,10 +82,6 @@
       ],
       "settings": {}
     },
-    "product-anchor-nav": {
-      "type": "product-anchor-nav",
-      "settings": {}
-    },
     "product-description": {
       "type": "product-description",
       "settings": {}
@@ -112,7 +108,6 @@
   "order": [
     "main",
     "product-highlights",
-    "product-anchor-nav",
     "product-description",
     "product-supplies",
     "product-spec-table",
