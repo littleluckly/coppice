@@ -1428,55 +1428,10 @@
 
   .main-nav__mega-cat-link:focus-visible,
   .main-nav__mega-card-link:focus-visible,
-  .main-nav__mega-coll:focus-visible {
+  .main-nav__dropdown-link:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
     border-radius: 4px;
-  }
-
-  /* 右列：二级集合卡网格（2026-10-27 刘工）：自动取菜单里指向集合的二级项，
-     零配置。定宽两列，封面图在上、标题在下；纯链接卡，无 JS 也可用。
-     图缺失出占位色块（与中列卡同款 --empty）。 */
-  .main-nav__mega-colls {
-    flex: 0 0 17rem;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.625rem;
-    align-content: start;
-    min-inline-size: 0;
-  }
-
-  .main-nav__mega-coll {
-    display: flex;
-    flex-direction: column;
-    border-radius: 8px;
-    overflow: hidden;
-    background-color: var(--color-background);
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
-    text-decoration: none;
-    color: var(--color-foreground);
-  }
-
-  .main-nav__mega-coll-img {
-    inline-size: 100%;
-    block-size: auto;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    display: block;
-  }
-
-  .main-nav__mega-coll-media--empty {
-    inline-size: 100%;
-    aspect-ratio: 4 / 3;
-    display: block;
-    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
-  }
-
-  .main-nav__mega-coll-title {
-    padding: 0.5rem 0.625rem 0.625rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    line-height: 1.3;
   }
 
   /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
