@@ -1,20 +1,20 @@
 {% comment %}
   product-supplies — 耗材复购区（task-product T-2.3，SDD §6.3）。
 
+  **只负责主机页的耗材**。2026-10-28 二次拍板后拆成两个 section：
+    · 本文件（耗材，数据来自 `acc.consumables`）→ 排在 Specifications **之后**
+    · `product-complementary.liquid`（互补整机，数据来自 S&D）→ 排在概览**之前**、紧跟买盒
+  两者**互斥**：有耗材的商品只出耗材区，没有耗材的（配件/电池）只出互补区，
+  不会出现同一页两块推荐打架。
+
   **命名**：叫 Recommended Supplies 而不是效果图的 "Frequently Bought Together"。
-  FBT 是购买关联算法的语义，本主题没有任何订单关联数据，用了等于暗示一个不存在的能力。
-  「四张整机推荐」在 product-recommendations 里，叫 Similar Mowers。
+  FBT 是购买关联算法的语义，本主题没有订单关联数据，用了等于暗示一个不存在的能力。
 
-  数据源：`acc.consumables`（list.product_reference，值为商品引用）。
-  · 卡片的适配说明读**配件自己的** `acc.fitment_note`（写在配件侧，主机不填）。
-  · 单卡加购复用 `<quick-add>`（assets/quick-add.js）——它读整张表单的 FormData，
-    所以卡内数量步进自然随单卡提交，不必再写一个组件。
-  · 底部 `Add all N items`：一次 POST /cart/add.js 多个 items（assets/supplies.js）。
-    **N ≤ 1 时不渲染该按钮**；**不做任何捆绑折扣**（红线：买赠/捆绑定价不实现）。
-
-  退化路径（强制项 14 的落点）：`acc.consumables` 为空 → 改渲染官方 complementary 推荐
-  （`/recommendations/products?intent=complementary`，由 Search & Discovery 配置）。
-  两条路径**互斥**，任何情况下不会同时出现。
+  · 适配说明读**配件自己的** `acc.fitment_note`（写在配件侧，主机不填）
+  · 单卡加购复用 `<quick-add>`（它读整张表单的 FormData，所以卡内数量自然随单卡提交）
+  · 底部 `Add all N items`：一次 POST /cart/add.js 多个 items（assets/supplies.js）
+  · **N ≤ 1 时不渲染该按钮**；**不做任何捆绑折扣**（红线：买赠/捆绑定价不实现）
+  · 无耗材 → **整个 section 不输出**（不留空壳，退化交给 product-complementary）
 {% endcomment %}
 
 {%- liquid
@@ -29,22 +29,8 @@
   endif
 -%}
 
-{%- comment -%}
-  data-reveal 只在「耗材由服务端渲染」时挂：缺耗材走 complementary 时内容由 JS 异步拉回，
-  那时给空容器播入场动画会看到"先浮上一个空盒子、再塞进卡片"，比不播更糟。
-{%- endcomment -%}
-<section
-  class="product-supplies"
-  id="product-supplies"
-  data-section-id="{{ section.id }}"
-  {% if supply_count > 0 %}
-    data-reveal
-  {% endif %}
-  {% if supply_count == 0 and section.settings.fallback_to_complementary == false %}
-    hidden
-  {% endif %}
->
-  {%- if supply_count > 0 -%}
+{%- if supply_count > 0 -%}
+  <section class="product-supplies" id="product-supplies" data-reveal>
     <h2 class="product-supplies__heading">{{ heading }}</h2>
     <script src="{{ 'supplies.js' | asset_url }}" defer></script>
 
@@ -119,52 +105,8 @@
         <p class="product-supplies__status" data-bundle-status role="status" aria-live="polite"></p>
       </supplies-bundle>
     {%- endif -%}
-
-  {%- elsif section.settings.fallback_to_complementary -%}
-    {%- comment -%}
-      互补推荐退化路径：初始渲染容器为空，由 product-recommendations.js 用
-      Section Rendering API 拉取；拉回的内容里 `recommendations.performed` 为真，
-      才会渲染卡片。无结果 → 容器仍空 → JS 把整个 section 隐藏，不留空标题。
-    {%- endcomment -%}
-    <script src="{{ 'product-recommendations.js' | asset_url }}" defer></script>
-    <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
-    <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
-    {{ 'product-card.css' | asset_url | stylesheet_tag }}
-
-    <product-recommendations
-      data-intent="complementary"
-      data-url="{{ routes.product_recommendations_url }}?section_id={{ section.id }}&product_id={{ product.id }}&limit=4&intent=complementary"
-    >
-      <div class="product-supplies__fallback" data-recommendations-container>
-        {%- if recommendations.performed and recommendations.products_count > 0 -%}
-          {%- comment -%}
-            互补路径的标题必须与耗材路径不同：这里推的是整机（割草机/链锯），
-            叫 "Supplies" 会让顾客以为下面还是刀片锯链（2026-10-28 实测发现）。
-          {%- endcomment -%}
-          <h2 class="product-supplies__heading">
-            {{- 'sections.product_supplies.complementary_heading' | t -}}
-          </h2>
-          <ul class="product-supplies__grid product-supplies__grid--cards" role="list">
-            {%- for item in recommendations.products limit: 4 -%}
-              <li>
-                {% render 'product-card',
-                  product: item,
-                  lazy: true,
-                  quick_add: false,
-                  show_width: false,
-                  show_cc: false,
-                  show_power: false,
-                  show_weight: false,
-                  sizes: '(min-width: 1100px) 18vw, 45vw'
-                %}
-              </li>
-            {%- endfor -%}
-          </ul>
-        {%- endif -%}
-      </div>
-    </product-recommendations>
-  {%- endif -%}
-</section>
+  </section>
+{%- endif -%}
 
 {% stylesheet %}
   .product-supplies {
@@ -303,14 +245,6 @@
     font-size: 0.85rem;
     color: var(--color-foreground-muted);
   }
-  .product-supplies__grid--cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  @media (min-width: 1100px) {
-    .product-supplies__grid--cards {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
 {% endstylesheet %}
 
 {% schema %}
@@ -324,13 +258,6 @@
       "id": "heading",
       "label": "t:labels.heading",
       "default": "t:sections.product_supplies.default_heading"
-    },
-    {
-      "type": "checkbox",
-      "id": "fallback_to_complementary",
-      "label": "t:sections.product_supplies.fallback",
-      "info": "t:sections.product_supplies.fallback_info",
-      "default": true
     }
   ],
   "presets": [
