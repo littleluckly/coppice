@@ -276,8 +276,8 @@
                                             card_image
                                             | image_url: width: 480
                                             | image_tag:
-                                              widths: '160, 240, 360, 480',
-                                              sizes: '13rem',
+                                              widths: '240, 360, 480, 640',
+                                              sizes: '20rem',
                                               loading: 'lazy',
                                               alt: '',
                                               class: 'main-nav__mega-card-img'
@@ -350,8 +350,8 @@
                                               card_image
                                               | image_url: width: 480
                                               | image_tag:
-                                                widths: '160, 240, 360, 480',
-                                                sizes: '13rem',
+                                                widths: '240, 360, 480, 640',
+                                                sizes: '20rem',
                                                 loading: 'lazy',
                                                 alt: '',
                                                 class: 'main-nav__mega-card-img'
@@ -1305,9 +1305,14 @@
     padding: 0;
     list-style: none;
     display: grid;
-    /* 12rem 下限（2026-10-13 刘工：仍紧凑压抑——卡更宽、间距更大），
-       每行少一张卡换呼吸感 */
-    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    /* 16rem 下限（2026-10-28 刘工：只出 3 张卡时面板大半是空的）。
+       中区可用宽 1088px = content-width 1400 − 面板 padding 80
+       − 左列 192 − 列间距 40。12rem 下限会算出 5 列，3 张卡只坐满 3 列、
+       右边空掉约 450px——那才是"空"的来源，不是图小。
+       16rem 下限正好落成 3 列：每卡约 347px、图约 322px，铺满中区。
+       用 auto-fill 不用 auto-fit：卡少于 3 张时（如 80V Battery 只有 2 个商品）
+       保持列宽一致、右侧留白，而不是把 2 张卡拉成 500px+ 的大块。 */
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: 1.5rem;
   }
 
