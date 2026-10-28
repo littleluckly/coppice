@@ -1464,47 +1464,32 @@
   .main-nav__mega-group-head {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
   }
 
-  .main-nav__mega-group-all {
-    display: flex;
+  /* 组头入口（一段式，2026-10-28）：同时是组标题与集合入口，
+     所以字号/字重取组标题规格，而不是原来右侧 All 链接的次级小字。 */
+  .main-nav__mega-group-title-link {
+    display: inline-flex;
     align-items: center;
     gap: 0.375rem;
     min-height: 44px;
-    font-size: 0.875rem;
-    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-foreground);
     text-decoration: none;
     white-space: nowrap;
     transition: color 0.15s ease;
   }
 
-  .main-nav__mega-group-all:hover {
+  .main-nav__mega-group-title-link:hover {
     color: var(--color-brand);
-  }
-
-  /* 同名组：组标题本身即集合入口（模板里 --merged 那一支）。
-     字号/字重取组标题规格——它现在承担标题职责；计数退回次级样式，
-     避免整个组头都跟着变粗。hover 变品牌色由上面的 :hover 规则接管
-     （class + pseudo-class 特异性高于本行的 class）。 */
-  .main-nav__mega-group-all--merged {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--color-foreground);
-  }
-
-  .main-nav__mega-group-count {
-    font-size: 0.875rem;
-    font-weight: 400;
-    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
   }
 
   .main-nav__mega-group-all-arrow {
     transition: translate 0.15s ease;
   }
 
-  .main-nav__mega-group-all:hover .main-nav__mega-group-all-arrow {
+  .main-nav__mega-group-title-link:hover .main-nav__mega-group-all-arrow {
     translate: 0.25rem 0;
   }
 
