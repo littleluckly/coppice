@@ -1,0 +1,154 @@
+{% comment %}
+  product-spec-table — 完整规格表（task-product T-2.4）。
+
+  **行定义不另建**：直接复用对比页的 `compare-row-keys` / `compare-cell` / `compare-row-label`。
+  产品页与对比页若各维护一份字段表，改一处忘一处，两张表迟早对不上（这是本文件最重要的约束）。
+
+  缺值规则与对比表相反、与产品页一致：**该行不出现**（对比表要显示 —，因为表格行是固定的）。
+  `spec.spec_variance_note` 非空 → 表头出提示按钮（`<details>`，天然无 JS 可展开）。
+{% endcomment %}
+
+{%- liquid
+  assign group = product.metafields.spec.compare_group.value
+  assign group_key = group | downcase | remove: '-compare'
+  if group_key == blank
+    assign group_key = 'generic'
+  endif
+
+  capture row_keys_raw
+    render 'compare-row-keys', group: group_key
+  endcapture
+  assign row_keys = row_keys_raw | strip | split: ','
+
+  assign variance_note = product.metafields.spec.spec_variance_note.value
+  assign heading = section.settings.heading
+  if heading == blank
+    assign heading = 'sections.product_spec_table.default_heading' | t
+  endif
+-%}
+
+{%- capture table_rows -%}
+  {%- for row_key in row_keys -%}
+    {%- capture cell_text -%}
+      {%- render 'compare-cell', product: product, row_key: row_key, as_text: true -%}
+    {%- endcapture -%}
+    {%- assign cell_text = cell_text | strip -%}
+    {%- if cell_text != blank -%}
+      <tr class="product-spec-table__row">
+        <th class="product-spec-table__label" scope="row">
+          {%- render 'compare-row-label', row_key: row_key -%}
+        </th>
+        <td class="product-spec-table__value">{{ cell_text }}</td>
+      </tr>
+    {%- endif -%}
+  {%- endfor -%}
+{%- endcapture -%}
+
+{%- assign has_rows = false -%}
+{%- if table_rows contains '<tr' -%}
+  {%- assign has_rows = true -%}
+{%- endif -%}
+
+{%- if has_rows -%}
+  <section class="product-spec-table" id="product-specs">
+    <div class="product-spec-table__head">
+      <h2 class="product-spec-table__heading">{{ heading }}</h2>
+      {%- if variance_note != blank -%}
+        <details class="product-spec-table__note">
+          <summary class="product-spec-table__note-summary">
+            {{- 'sections.product_spec_table.variance_label' | t -}}
+          </summary>
+          <p class="product-spec-table__note-text">{{ variance_note | escape }}</p>
+        </details>
+      {%- endif -%}
+    </div>
+    <table class="product-spec-table__table">
+      <caption class="visually-hidden">{{ product.title | escape }} — {{ heading }}</caption>
+      <tbody>
+        {{ table_rows }}
+      </tbody>
+    </table>
+  </section>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-spec-table {
+    max-width: var(--page-width);
+    margin-inline: auto;
+    padding-inline: var(--page-margin);
+    padding-block: 2rem 0;
+  }
+  .product-spec-table__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-end: 0.75rem;
+  }
+  .product-spec-table__heading {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 500;
+  }
+  .product-spec-table__note {
+    font-size: 0.85rem;
+  }
+  .product-spec-table__note-summary {
+    cursor: pointer;
+    color: var(--color-brand);
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .product-spec-table__note-text {
+    margin: 0.35rem 0 0;
+    max-width: 42ch;
+    color: var(--color-foreground-muted);
+    line-height: 1.55;
+  }
+  .product-spec-table__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .product-spec-table__row {
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  .product-spec-table__label {
+    width: 45%;
+    padding: 0.6rem 0.75rem 0.6rem 0;
+    text-align: start;
+    font-weight: 400;
+    color: var(--color-foreground-muted);
+    vertical-align: top;
+  }
+  .product-spec-table__value {
+    padding: 0.6rem 0;
+    color: var(--color-foreground);
+    font-weight: 500;
+    /* 长值（如 "166 cc / 2500 W"）不把表格撑破 */
+    overflow-wrap: anywhere;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.product_spec_table.name",
+  "tag": "div",
+  "class": "product-spec-table-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "t:sections.product_spec_table.default_heading"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.product_spec_table.name"
+    }
+  ]
+}
+{% endschema %}

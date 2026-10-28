@@ -1,0 +1,328 @@
+{% comment %}
+  product-supplies — 耗材复购区（task-product T-2.3，SDD §6.3）。
+
+  **命名**：叫 Recommended Supplies 而不是效果图的 "Frequently Bought Together"。
+  FBT 是购买关联算法的语义，本主题没有任何订单关联数据，用了等于暗示一个不存在的能力。
+  「四张整机推荐」在 product-recommendations 里，叫 Similar Mowers。
+
+  数据源：`acc.consumables`（list.product_reference，值为商品引用）。
+  · 卡片的适配说明读**配件自己的** `acc.fitment_note`（写在配件侧，主机不填）。
+  · 单卡加购复用 `<quick-add>`（assets/quick-add.js）——它读整张表单的 FormData，
+    所以卡内数量步进自然随单卡提交，不必再写一个组件。
+  · 底部 `Add all N items`：一次 POST /cart/add.js 多个 items（assets/supplies.js）。
+    **N ≤ 1 时不渲染该按钮**；**不做任何捆绑折扣**（红线：买赠/捆绑定价不实现）。
+
+  退化路径（强制项 14 的落点）：`acc.consumables` 为空 → 改渲染官方 complementary 推荐
+  （`/recommendations/products?intent=complementary`，由 Search & Discovery 配置）。
+  两条路径**互斥**，任何情况下不会同时出现。
+{% endcomment %}
+
+{%- liquid
+  assign consumables = product.metafields.acc.consumables.value
+  assign supply_count = 0
+  if consumables != null
+    assign supply_count = consumables.size
+  endif
+  assign heading = section.settings.heading
+  if heading == blank
+    assign heading = 'sections.product_supplies.default_heading' | t
+  endif
+-%}
+
+<section
+  class="product-supplies"
+  id="product-supplies"
+  data-section-id="{{ section.id }}"
+  {% if supply_count == 0 and section.settings.fallback_to_complementary == false %}
+    hidden
+  {% endif %}
+>
+  {%- if supply_count > 0 -%}
+    <h2 class="product-supplies__heading">{{ heading }}</h2>
+    <script src="{{ 'supplies.js' | asset_url }}" defer></script>
+
+    <ul class="product-supplies__grid" role="list">
+      {%- for item in consumables limit: 6 -%}
+        {%- liquid
+          assign item_variant = item.selected_or_first_available_variant
+          assign fitment = item.metafields.acc.fitment_note.value
+        -%}
+        <li class="product-supplies__item">
+          <a class="product-supplies__media" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+            {%- if item.featured_image -%}
+              {{
+                item.featured_image
+                | image_url: width: 320
+                | image_tag:
+                  loading: 'lazy',
+                  widths: '160,240,320',
+                  sizes: '(min-width: 1100px) 15vw, 40vw',
+                  class: 'product-supplies__img',
+                  alt: ''
+              }}
+            {%- endif -%}
+          </a>
+          <div class="product-supplies__body">
+            <a class="product-supplies__title" href="{{ item.url }}">{{ item.title | escape }}</a>
+            {%- if fitment != blank -%}
+              <p class="product-supplies__fitment">{{ fitment | escape }}</p>
+            {%- endif -%}
+            <p class="product-supplies__price">{{ item.price | money }}</p>
+
+            <quick-add class="product-supplies__add">
+              <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">
+                <input type="hidden" name="id" value="{{ item_variant.id }}">
+                <input type="hidden" name="quantity" value="1" data-supply-qty data-supply-id="{{ item_variant.id }}">
+                <button
+                  type="submit"
+                  class="product-supplies__button"
+                  {% unless item.available %}
+                    disabled
+                  {% endunless %}
+                  data-added-label="{{ 'products.product.added' | t }}"
+                  data-added-message="{{ 'products.product.added_message' | t: title: item.title }}"
+                  data-error-message="{{ 'products.product.add_error' | t }}"
+                >
+                  {%- if item.available -%}
+                    {{ 'products.product.add' | t }}
+                  {%- else -%}
+                    {{ 'products.product.sold_out' | t }}
+                  {%- endif -%}
+                </button>
+                <span class="visually-hidden" data-quick-add-status role="status" aria-live="polite"></span>
+              </form>
+            </quick-add>
+          </div>
+        </li>
+      {%- endfor -%}
+    </ul>
+
+    {%- if supply_count > 1 -%}
+      <supplies-bundle class="product-supplies__bundle">
+        <button
+          type="button"
+          class="product-supplies__bundle-button"
+          data-bundle-add
+          data-adding-label="{{ 'sections.product_supplies.bundle_adding' | t }}"
+          data-added-label="{{ 'sections.product_supplies.bundle_added' | t }}"
+          data-error-label="{{ 'products.product.add_error' | t }}"
+        >
+          {{- 'sections.product_supplies.bundle_add' | t: count: supply_count -}}
+        </button>
+        <p class="product-supplies__status" data-bundle-status role="status" aria-live="polite"></p>
+      </supplies-bundle>
+    {%- endif -%}
+
+  {%- elsif section.settings.fallback_to_complementary -%}
+    {%- comment -%}
+      互补推荐退化路径：初始渲染容器为空，由 product-recommendations.js 用
+      Section Rendering API 拉取；拉回的内容里 `recommendations.performed` 为真，
+      才会渲染卡片。无结果 → 容器仍空 → JS 把整个 section 隐藏，不留空标题。
+    {%- endcomment -%}
+    <script src="{{ 'product-recommendations.js' | asset_url }}" defer></script>
+    <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+    <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
+    {{ 'product-card.css' | asset_url | stylesheet_tag }}
+
+    <product-recommendations
+      data-intent="complementary"
+      data-url="{{ routes.product_recommendations_url }}?section_id={{ section.id }}&product_id={{ product.id }}&limit=4&intent=complementary"
+    >
+      <div class="product-supplies__fallback" data-recommendations-container>
+        {%- if recommendations.performed and recommendations.products_count > 0 -%}
+          <h2 class="product-supplies__heading">{{ heading }}</h2>
+          <ul class="product-supplies__grid product-supplies__grid--cards" role="list">
+            {%- for item in recommendations.products limit: 4 -%}
+              <li>
+                {% render 'product-card',
+                  product: item,
+                  lazy: true,
+                  quick_add: false,
+                  show_width: false,
+                  show_cc: false,
+                  show_power: false,
+                  show_weight: false,
+                  sizes: '(min-width: 1100px) 18vw, 45vw'
+                %}
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+      </div>
+    </product-recommendations>
+  {%- endif -%}
+</section>
+
+{% stylesheet %}
+  .product-supplies {
+    max-width: var(--page-width);
+    margin-inline: auto;
+    padding-inline: var(--page-margin);
+    padding-block: 2rem 0;
+  }
+  .product-supplies__heading {
+    margin: 0 0 1rem;
+    font-size: 1.15rem;
+    font-weight: 500;
+  }
+  .product-supplies__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 750px) {
+    .product-supplies__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1100px) {
+    .product-supplies__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .product-supplies__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: calc(var(--style-border-radius-inputs) * 1.5);
+    min-inline-size: 0;
+  }
+  .product-supplies__media {
+    display: block;
+    border-radius: var(--style-border-radius-inputs);
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+    overflow: hidden;
+  }
+  .product-supplies__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+  .product-supplies__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-inline-size: 0;
+  }
+  .product-supplies__title {
+    color: var(--color-foreground);
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-decoration: none;
+    line-height: 1.35;
+  }
+  .product-supplies__title:hover {
+    text-decoration: underline;
+  }
+  .product-supplies__fitment {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--color-foreground-muted);
+  }
+  .product-supplies__price {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .product-supplies__add {
+    margin-block-start: auto;
+    padding-block-start: 0.35rem;
+  }
+  .product-supplies__button {
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 0.75rem;
+    border: 1px solid var(--color-brand);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: transparent;
+    color: var(--color-brand);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .product-supplies__button:hover:not(:disabled) {
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+  .product-supplies__button:disabled {
+    border-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+    cursor: not-allowed;
+  }
+  .product-supplies__button[data-state='added'] {
+    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
+    color: var(--color-background);
+  }
+  .product-supplies__bundle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-block-start: 1rem;
+  }
+  .product-supplies__bundle-button {
+    min-height: 44px;
+    padding: 10px 1.25rem;
+    border: 1px solid var(--color-brand);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .product-supplies__bundle-button[data-state='added'] {
+    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
+  }
+  .product-supplies__status {
+    margin: 0;
+    min-height: 1.2em;
+    font-size: 0.85rem;
+    color: var(--color-foreground-muted);
+  }
+  .product-supplies__grid--cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (min-width: 1100px) {
+    .product-supplies__grid--cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.product_supplies.name",
+  "tag": "div",
+  "class": "product-supplies-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "t:sections.product_supplies.default_heading"
+    },
+    {
+      "type": "checkbox",
+      "id": "fallback_to_complementary",
+      "label": "t:sections.product_supplies.fallback",
+      "info": "t:sections.product_supplies.fallback_info",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.product_supplies.name"
+    }
+  ]
+}
+{% endschema %}
