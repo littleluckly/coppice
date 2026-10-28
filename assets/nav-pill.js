@@ -26,6 +26,12 @@ class NavPill extends HTMLElement {
     this._list = list;
     this._current = null;
 
+    /* hover 防抖（2026-10-27 刘工）：快速划过 mega 左列时不触发面板切换，
+       鼠标在某分类上停留超过阈值才滑动药丸并切换面板，过滤"扫过"误触。
+       只作用于鼠标路径（mouseover）；键盘 focus 为离散操作，保持即时响应。 */
+    this._megaHoverTimer = null;
+    this._MEGA_HOVER_DELAY = 150;
+
     /* 显式锚点（第五轮，刘工）：[data-nav-pill-anchor] 是药丸与 mega 面板
        约定的定位父级（main-nav.liquid 里该元素同时持有 position: relative，
        即 CSS 包含块）。量测基准优先认它；若它不是 positioned、或药丸的
@@ -100,6 +106,11 @@ class NavPill extends HTMLElement {
 
     list.addEventListener('mouseleave', () => {
       this._hide(); /* 顶部药丸隐藏 */
+      /* 取消可能待执行的左列切换（快速划出时不该迟到触发） */
+      if (this._megaHoverTimer) {
+        clearTimeout(this._megaHoverTimer);
+        this._megaHoverTimer = null;
+      }
       /* mega 药丸停在激活项（常驻高亮，不隐藏） */
       this._moveMegaToIndex(this._activePanelIndex, true);
     }, { signal });
@@ -123,6 +134,10 @@ class NavPill extends HTMLElement {
     const megaInner = this.querySelector('.main-nav__mega-inner');
     if (megaInner) {
       megaInner.addEventListener('mouseleave', () => {
+        if (this._megaHoverTimer) {
+          clearTimeout(this._megaHoverTimer);
+          this._megaHoverTimer = null;
+        }
         this._moveMegaToIndex(this._activePanelIndex, true);
       }, { signal });
     }
@@ -150,6 +165,7 @@ class NavPill extends HTMLElement {
 
   disconnectedCallback() {
     if (this._controller) this._controller.abort();
+    if (this._megaHoverTimer) clearTimeout(this._megaHoverTimer);
     if (this._pill) this._pill.remove();
     if (this._megaPill) this._megaPill.remove();
     this._current = null;
@@ -215,6 +231,18 @@ class NavPill extends HTMLElement {
     if (!this._pill) return;
     this._pill.classList.remove('main-nav__pill--on');
     this._current = null;
+  }
+
+  /* mega 左列 hover 防抖（2026-10-27 刘工）：快速划过多个分类时，每次
+     mouseover 都重置计时器，直到鼠标在某个项上停留超过 _MEGA_HOVER_DELAY
+     才真正滑动药丸 + 切换面板。停下即触发，扫过不触发。 */
+  _scheduleMegaHover(tab) {
+    if (this._megaHoverTimer) clearTimeout(this._megaHoverTimer);
+    this._megaHoverTimer = setTimeout(() => {
+      this._megaHoverTimer = null;
+      this._switchTabs(tab.dataset.megaTab);
+      this._moveMega(tab, true);
+    }, this._MEGA_HOVER_DELAY);
   }
 
   /* mega 左列药丸：滑动到指定序号的 tab（无对应序号则跳过） */
