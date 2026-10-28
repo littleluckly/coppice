@@ -15,17 +15,19 @@
     assign group_key = 'generic'
   endif
 
-  capture row_keys_raw
-    render 'compare-row-keys', group: group_key
-  endcapture
-  assign row_keys = row_keys_raw | strip | split: ','
-
   assign variance_note = product.metafields.spec.spec_variance_note.value
   assign heading = section.settings.heading
   if heading == blank
     assign heading = 'sections.product_spec_table.default_heading' | t
   endif
 -%}
+
+{%- comment -%}
+  capture 是块标签，不能写在 {% liquid %} 里（会报 LiquidHTMLSyntaxError）。
+  行键来自与对比页共用的 compare-row-keys，group 为空时它自己退回通用行集。
+{%- endcomment -%}
+{%- capture row_keys_raw -%}{%- render 'compare-row-keys', group: group_key -%}{%- endcapture -%}
+{%- assign row_keys = row_keys_raw | strip | split: ',' -%}
 
 {%- capture table_rows -%}
   {%- for row_key in row_keys -%}
