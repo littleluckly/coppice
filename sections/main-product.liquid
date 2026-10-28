@@ -1,0 +1,1143 @@
+{% comment %}
+  main-product — 产品页主体（task-product T-2.1，pages-ui §3）。
+
+  结构（自上而下）：面包屑 → 左侧画廊 + 右侧买盒（标题 / 副标题 / 价格 / 摘要 /
+  三条参数 / 变体 / 数量 + 加购 + 加速结账 + 分期 / 自提 / 信任行 / 对比入口）。
+
+  **与 pages-ui §3 的实现偏差（有意，记录在此）**：§3 把「媒体 / 变体选择器 / 数量 /
+  买按钮 / 分期 / 自提」都列成 block。实际只把**买盒外部的可选项**做成 block
+  （spec_bullets / trust_warranty / trust_item / pickup / compare），表单内部
+  （变体 / 数量 / 加购 / 加速结账 / 分期）固定顺序、用 settings 开关——原因有二：
+  1. `form | payment_button` 与 `form | payment_terms` 依赖 `{% form %}` 作用域内的
+     `form` 变量，做成 block 就必须把 block 渲染进 form，商家拖拽后会得到
+     「表单里套表单」的非法结构；
+  2. 变体选择器必须在提交按钮之前、数量必须与提交同在一个 form，顺序被拖乱直接坏功能。
+  可增删的部分（参数 / 信任项 / 自提 / 对比）全部 block 化，仍满足 Sections Everywhere。
+
+  **面包屑**：只在 `collection` 上下文（从集合页进入）出三级；直接打开商品页出两级。
+  不用 `product.collections.first` —— 商品挂多个集合时会指错分类（拍板 11）。
+
+  **3D 媒体**：仅当商品确实带 model 媒体时才加载平台自带的 model-viewer UI
+  （cdn.shopify.com/shopifycloud/model-viewer-ui，Shopify 官方组件；AGENTS「不引外部
+  资源」的本意是禁止依赖第三方服务）。资源不可用时 `<model-viewer>` 不升级，
+  退回封面图，不报错。
+
+  JS：product-gallery.js / product-form.js / pickup-availability.js（均为 Custom Element）。
+{% endcomment %}
+
+{%- liquid
+  assign current_variant = product.selected_or_first_available_variant
+  assign media_count = product.media.size
+  assign form_id = 'product-form-' | append: section.id
+
+  assign has_model = false
+  for media in product.media
+    if media.media_type == 'model'
+      assign has_model = true
+      break
+    endif
+  endfor
+
+  assign save_percent = 0
+  if current_variant.compare_at_price > current_variant.price
+    assign price_diff = current_variant.compare_at_price | minus: current_variant.price
+    assign save_percent = price_diff | times: 100.0 | divided_by: current_variant.compare_at_price | round
+  endif
+-%}
+
+<script src="{{ 'product-gallery.js' | asset_url }}" defer></script>
+<script src="{{ 'product-form.js' | asset_url }}" defer></script>
+<script src="{{ 'pickup-availability.js' | asset_url }}" defer></script>
+{%- if has_model -%}
+  <link
+    rel="stylesheet"
+    href="https://cdn.shopify.com/shopifycloud/model-viewer-ui/assets/v1.0/model-viewer-ui.css"
+  >
+  <script
+    src="https://cdn.shopify.com/shopifycloud/model-viewer-ui/assets/v1.0/model-viewer-ui.js"
+    defer
+  ></script>
+{%- endif -%}
+
+<section class="main-product" data-section-id="{{ section.id }}">
+  {%- if section.settings.show_breadcrumb -%}
+    <nav class="main-product__breadcrumb" aria-label="{{ 'general.breadcrumb' | t }}">
+      <ol class="main-product__breadcrumb-list" role="list">
+        <li><a href="{{ routes.root_url }}">{{ 'general.home' | t }}</a></li>
+        {%- if collection != blank -%}
+          <li><a href="{{ collection.url }}">{{ collection.title | escape }}</a></li>
+        {%- endif -%}
+        <li><span aria-current="page">{{ product.title | escape }}</span></li>
+      </ol>
+    </nav>
+  {%- endif -%}
+
+  <div class="main-product__layout">
+    <product-gallery class="product-gallery" data-media-count="{{ media_count }}">
+      <div class="product-gallery__stage">
+        <ul class="product-gallery__slides" role="list">
+          {%- for media in product.media -%}
+            {%- assign is_first = false -%}
+            {%- if forloop.first -%}{%- assign is_first = true -%}{%- endif -%}
+            <li
+              class="product-gallery__slide{% if is_first %} is-active{% endif %}"
+              data-media-id="{{ media.id }}"
+              data-media-type="{{ media.media_type }}"
+              {% unless is_first %}
+                hidden
+              {% endunless %}
+              aria-roledescription="slide"
+              aria-label="{{ 'products.product.media_slide' | t: index: forloop.index, total: media_count }}"
+            >
+              {%- case media.media_type -%}
+                {%- when 'image' -%}
+                  {%- liquid
+                    if is_first
+                      assign img_loading = 'eager'
+                      assign img_priority = 'high'
+                    else
+                      assign img_loading = 'lazy'
+                      assign img_priority = 'auto'
+                    endif
+                  -%}
+                  {{
+                    media
+                    | image_url: width: 1600
+                    | image_tag:
+                      loading: img_loading,
+                      fetchpriority: img_priority,
+                      widths: '400,600,800,1200,1600',
+                      sizes: '(min-width: 1100px) 48vw, 100vw',
+                      class: 'product-gallery__img',
+                      alt: media.alt
+                  }}
+                {%- when 'video', 'external_video', 'model' -%}
+                  {%- comment -%}
+                    非图片媒体：先给封面 + 播放/3D 按钮，真正的播放器在首次激活时
+                    由 <template> 实例化（延续「隐藏组件首次打开才建 DOM」）。
+                  {%- endcomment -%}
+                  <div class="product-gallery__deferred" data-deferred-media>
+                    <button
+                      type="button"
+                      class="product-gallery__deferred-button"
+                      data-deferred-trigger
+                      aria-label="{% if media.media_type == 'model' %}{{ 'products.product.view_in_3d' | t }}{% else %}{{ 'products.product.play_video' | t }}{% endif %}"
+                    >
+                      {%- if media.preview_image -%}
+                        {{
+                          media.preview_image
+                          | image_url: width: 1600
+                          | image_tag:
+                            loading: 'lazy',
+                            widths: '400,600,800,1200,1600',
+                            sizes: '(min-width: 1100px) 48vw, 100vw',
+                            class: 'product-gallery__img',
+                            alt: media.alt
+                        }}
+                      {%- endif -%}
+                      <span class="product-gallery__deferred-icon" aria-hidden="true">
+                        {%- if media.media_type == 'model' -%}
+                          3D
+                        {%- else -%}
+                          {{- 'icon-play.svg' | inline_asset_content -}}
+                        {%- endif -%}
+                      </span>
+                    </button>
+                    <template>
+                      {%- case media.media_type -%}
+                        {%- when 'video' -%}
+                          {{ media | video_tag: controls: true, playsinline: true, preload: 'metadata' }}
+                        {%- when 'external_video' -%}
+                          {{ media | external_video_tag }}
+                        {%- when 'model' -%}
+                          {{ media | model_viewer_tag }}
+                      {%- endcase -%}
+                    </template>
+                  </div>
+              {%- endcase -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+
+        {%- if media_count > 1 -%}
+          <button
+            type="button"
+            class="product-gallery__arrow product-gallery__arrow--prev"
+            data-gallery-prev
+            aria-label="{{ 'products.product.media_previous' | t }}"
+          >
+            {{- 'icon-arrow-left.svg' | inline_asset_content -}}
+          </button>
+          <button
+            type="button"
+            class="product-gallery__arrow product-gallery__arrow--next"
+            data-gallery-next
+            aria-label="{{ 'products.product.media_next' | t }}"
+          >
+            {{- 'icon-chevron-right.svg' | inline_asset_content -}}
+          </button>
+          <div class="product-gallery__dots">
+            {%- for media in product.media -%}
+              <button
+                type="button"
+                class="product-gallery__dot{% if forloop.first %} is-active{% endif %}"
+                data-gallery-dot="{{ forloop.index0 }}"
+                aria-label="{{ 'products.product.media_slide' | t: index: forloop.index, total: media_count }}"
+                aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+              ></button>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      {%- if media_count > 1 -%}
+        <ul class="product-gallery__thumbs" role="list">
+          {%- for media in product.media -%}
+            <li>
+              <button
+                type="button"
+                class="product-gallery__thumb{% if forloop.first %} is-active{% endif %}"
+                data-gallery-thumb="{{ forloop.index0 }}"
+                aria-label="{{ 'products.product.media_slide' | t: index: forloop.index, total: media_count }}"
+                aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+              >
+                {%- if media.preview_image -%}
+                  {{
+                    media.preview_image
+                    | image_url: width: 200
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '100,150,200',
+                      sizes: '76px',
+                      class: 'product-gallery__thumb-img',
+                      alt: ''
+                  }}
+                {%- endif -%}
+              </button>
+            </li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </product-gallery>
+
+    <div class="main-product__info">
+      <h1 class="main-product__title">{{ product.title | escape }}</h1>
+
+      {%- comment -%}
+        副标题：不新增字段，由 spec 拼装（拍板 10）——切割宽度/导板 · 操作方式 · 排量/功率。
+        缺值自动跳项；全空则不输出这一行。
+      {%- endcomment -%}
+      {%- capture subtitle -%}
+        {%- assign sub_width = product.metafields.spec.cutting_width_mm.value -%}
+        {%- assign sub_bar = product.metafields.spec.bar_length_mm.value -%}
+        {%- assign sub_op = product.metafields.spec.operation_type.value -%}
+        {%- if product.metafields.spec.power_source.value == 'Battery' -%}
+          {%- assign sub_power = product.metafields.spec.power_w.value -%}
+          {%- assign sub_power_unit = 'power_w' -%}
+        {%- else -%}
+          {%- assign sub_power = product.metafields.spec.displacement_cc.value -%}
+          {%- assign sub_power_unit = 'displacement_cc' -%}
+        {%- endif -%}
+        {%- if sub_width != blank -%}
+          {%- render 'spec-value', value: sub_width, unit_type: 'length_mm' %}<span class="main-product__sep" aria-hidden="true">·</span>
+        {%- elsif sub_bar != blank -%}
+          {%- render 'spec-value', value: sub_bar, unit_type: 'length_mm' %}<span class="main-product__sep" aria-hidden="true">·</span>
+        {%- endif -%}
+        {%- if sub_op != blank and sub_op != 'N/A' -%}
+          {{ sub_op }}<span class="main-product__sep" aria-hidden="true">·</span>
+        {%- endif -%}
+        {%- if sub_power != blank -%}
+          {%- render 'spec-value', value: sub_power, unit_type: sub_power_unit -%}
+        {%- endif -%}
+      {%- endcapture -%}
+      {%- assign subtitle_text = subtitle | strip_html | strip -%}
+      {%- if subtitle_text != '·' and subtitle_text != blank -%}
+        <p class="main-product__subtitle">{{ subtitle }}</p>
+      {%- endif -%}
+
+      <div class="main-product__price">
+        <span class="main-product__price-current" data-price>{{ current_variant.price | money }}</span>
+        <s
+          class="main-product__price-compare"
+          data-compare-price
+          {% unless current_variant.compare_at_price > current_variant.price %}
+            hidden
+          {% endunless %}
+        >
+          {{- current_variant.compare_at_price | money -}}
+        </s>
+        <span
+          class="main-product__price-save"
+          data-save-badge
+          {% unless current_variant.compare_at_price > current_variant.price %}
+            hidden
+          {% endunless %}
+        >
+          {{- 'products.product.save_percent' | t: percent: save_percent -}}
+        </span>
+      </div>
+
+      {%- if current_variant.unit_price_measurement -%}
+        <p class="main-product__unit-price" data-unit-price>
+          {{- current_variant.unit_price | money -}}
+          <span aria-hidden="true">/</span>
+          <span class="visually-hidden">{{ 'products.product.unit_price_separator' | t }}</span>
+          {{- current_variant.unit_price_measurement.reference_value -}}
+          {{- current_variant.unit_price_measurement.reference_unit -}}
+        </p>
+      {%- endif -%}
+
+      {%- if section.settings.show_description and product.description != blank -%}
+        <div class="main-product__excerpt">
+          {{ product.description | strip_html | truncatewords: section.settings.description_words }}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%}
+        变体选择器：单变体（Default Title）整块不渲染；无 JS 时是原生 radio，可随表单提交。
+        变体数据以 JSON 下发（含格式化好的价格串），JS 不自己拼货币格式。
+      {%- endcomment -%}
+      {%- unless product.has_only_default_variant -%}
+        {%- capture variants_json -%}
+          [
+          {%- for variant in product.variants -%}
+            {
+              "id": {{ variant.id }},
+              "available": {{ variant.available }},
+              "options": {{ variant.options | json }},
+              "price": {{ variant.price | money | json }},
+              "compare": {% if variant.compare_at_price > variant.price %}{{ variant.compare_at_price | money | json }}{% else %}null{% endif %},
+              "save": {% if variant.compare_at_price > variant.price %}{{ variant.compare_at_price | minus: variant.price | times: 100.0 | divided_by: variant.compare_at_price | round }}{% else %}0{% endif %},
+              "unitPrice": {% if variant.unit_price_measurement %}{{ variant.unit_price | money | json }}{% else %}null{% endif %},
+              "unitReference": {% if variant.unit_price_measurement %}{{ variant.unit_price_measurement.reference_value }}{{ variant.unit_price_measurement.reference_unit }}{% else %}null{% endif %},
+              "mediaId": {{ variant.featured_media.id | default: 0 }}
+            }{%- unless forloop.last -%},{%- endunless -%}
+          {%- endfor -%}
+          ]
+        {%- endcapture -%}
+
+        <variant-picker class="product-variant">
+          <script type="application/json" data-variant-json>{{ variants_json | strip }}</script>
+          {%- for option in product.options_with_values -%}
+            <fieldset class="product-variant__group">
+              <legend class="product-variant__label">{{ option.name | escape }}</legend>
+              <div class="product-variant__values">
+                {%- for value in option.values -%}
+                  {%- assign input_id = 'option-' | append: section.id | append: '-' | append: option.position | append: '-' | append: forloop.index0 -%}
+                  <input
+                    type="radio"
+                    class="product-variant__radio visually-hidden"
+                    id="{{ input_id }}"
+                    name="options[{{ option.name | escape }}]"
+                    value="{{ value | escape }}"
+                    form="{{ form_id }}"
+                    data-option-position="{{ option.position }}"
+                    {% if option.selected_value == value %}
+                      checked
+                    {% endif %}
+                  >
+                  <label class="product-variant__pill" for="{{ input_id }}">{{ value | escape }}</label>
+                {%- endfor -%}
+              </div>
+            </fieldset>
+          {%- endfor -%}
+        </variant-picker>
+      {%- endunless -%}
+
+      <product-form class="product-form" data-section-id="{{ section.id }}">
+        {%- form 'product', product, id: form_id, class: 'product-form__form', novalidate: 'novalidate' -%}
+          <input type="hidden" name="id" value="{{ current_variant.id }}" data-variant-input>
+
+          <div class="product-form__row">
+            <quantity-input class="quantity">
+              <button
+                type="button"
+                class="quantity__button"
+                data-quantity-minus
+                aria-label="{{ 'products.product.decrease_quantity' | t }}"
+              >
+                <span aria-hidden="true">&minus;</span>
+              </button>
+              <input
+                class="quantity__input"
+                type="number"
+                name="quantity"
+                id="Quantity-{{ section.id }}"
+                value="1"
+                min="1"
+                step="1"
+                data-quantity-input
+              >
+              <label class="visually-hidden" for="Quantity-{{ section.id }}">
+                {{- 'products.product.quantity' | t -}}
+              </label>
+              <button
+                type="button"
+                class="quantity__button"
+                data-quantity-plus
+                aria-label="{{ 'products.product.increase_quantity' | t }}"
+              >
+                <span aria-hidden="true">+</span>
+              </button>
+            </quantity-input>
+
+            <button
+              type="submit"
+              class="product-form__submit"
+              data-add-button
+              data-added-label="{{ 'products.product.added' | t }}"
+              data-added-message="{{ 'products.product.added_message' | t: title: product.title }}"
+              data-error-message="{{ 'products.product.add_error' | t }}"
+              data-sold-out-label="{{ 'products.product.sold_out' | t }}"
+              data-add-label="{{ 'products.product.add_to_cart' | t }}"
+              {% unless current_variant.available %}
+                disabled
+              {% endunless %}
+            >
+              {%- if current_variant.available -%}
+                {{ 'products.product.add_to_cart' | t }}
+              {%- else -%}
+                {{ 'products.product.sold_out' | t }}
+              {%- endif -%}
+            </button>
+          </div>
+
+          <p class="product-form__status" data-form-status role="status" aria-live="polite"></p>
+
+          {%- if section.settings.show_accelerated_checkout -%}
+            <div class="product-form__accelerated">{{ form | payment_button }}</div>
+          {%- endif -%}
+
+          {%- if section.settings.show_payment_terms -%}
+            <div class="product-form__terms">{{ form | payment_terms }}</div>
+          {%- endif -%}
+        {%- endform -%}
+      </product-form>
+
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'spec_bullets' -%}
+            <div class="main-product__block" {{ block.shopify_attributes }}>
+              {% render 'spec-bullets', product: product %}
+            </div>
+
+          {%- when 'trust_warranty' -%}
+            {%- assign warranty = product.metafields.spec.warranty_months.value -%}
+            {%- if warranty != blank and warranty != 0 -%}
+              <div class="main-product__block" {{ block.shopify_attributes }}>
+                <div class="trust-item">
+                  <span class="trust-item__icon" aria-hidden="true">
+                    {{- 'icon-warranty.svg' | inline_asset_content -}}
+                  </span>
+                  <span class="trust-item__text">
+                    {%- assign warranty_rest = warranty | modulo: 12 -%}
+                    {%- if warranty_rest == 0 -%}
+                      {{- 'products.product.warranty_years' | t: years: warranty | divided_by: 12 -}}
+                    {%- else -%}
+                      {{- 'products.product.warranty_months' | t: months: warranty -}}
+                    {%- endif -%}
+                  </span>
+                </div>
+              </div>
+            {%- endif -%}
+
+          {%- when 'trust_item' -%}
+            {%- if block.settings.text != blank -%}
+              <div class="main-product__block" {{ block.shopify_attributes }}>
+                <div class="trust-item">
+                  <span class="trust-item__icon" aria-hidden="true">
+                    {%- case block.settings.icon -%}
+                      {%- when 'shipping' -%}
+                        {{- 'icon-truck.svg' | inline_asset_content -}}
+                      {%- when 'returns' -%}
+                        {{- 'icon-return.svg' | inline_asset_content -}}
+                      {%- else -%}
+                        {{- 'icon-warranty.svg' | inline_asset_content -}}
+                    {%- endcase -%}
+                  </span>
+                  <span class="trust-item__text">{{ block.settings.text | escape }}</span>
+                </div>
+              </div>
+            {%- endif -%}
+
+          {%- when 'pickup' -%}
+            <div class="main-product__block" data-pickup-block {{ block.shopify_attributes }}>
+              <pickup-availability
+                class="pickup"
+                data-variant-id="{{ current_variant.id }}"
+                data-section-id="{{ section.id }}"
+                data-url="{{ product.url }}"
+                data-label-checking="{{ 'products.product.pickup_checking' | t }}"
+              >
+                <h2 class="pickup__heading">{{ 'products.product.pickup_heading' | t }}</h2>
+                {%- assign pickup_items = current_variant.store_availabilities -%}
+                {%- if pickup_items.size > 0 -%}
+                  {%- assign any_pickup = false -%}
+                  <ul class="pickup__list" role="list">
+                    {%- for item in pickup_items -%}
+                      {%- if item.available -%}
+                        {%- assign any_pickup = true -%}
+                        <li class="pickup__item">
+                          <span class="pickup__store">{{ item.location.name | escape }}</span>
+                          {%- if item.pickup_time != blank -%}
+                            <span class="pickup__time">
+                              {{- 'products.product.pickup_time' | t: time: item.pickup_time -}}
+                            </span>
+                          {%- endif -%}
+                        </li>
+                      {%- endif -%}
+                    {%- endfor -%}
+                  </ul>
+                  {%- unless any_pickup -%}
+                    <p class="pickup__unavailable">{{ 'products.product.pickup_unavailable' | t }}</p>
+                  {%- endunless -%}
+                {%- else -%}
+                  <p class="pickup__unavailable">{{ 'products.product.pickup_unavailable' | t }}</p>
+                {%- endif -%}
+              </pickup-availability>
+            </div>
+
+          {%- when 'compare' -%}
+            <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>
+              {% render 'compare-button', product: product %}
+            </div>
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% stylesheet %}
+  .main-product {
+    max-width: var(--page-width);
+    margin-inline: auto;
+    padding-inline: var(--page-margin);
+    padding-block: 1rem 2.5rem;
+  }
+
+  /* 面包屑 */
+  .main-product__breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+    font-size: 0.82rem;
+    color: var(--color-foreground-muted);
+  }
+  .main-product__breadcrumb-list li + li::before {
+    content: '/';
+    margin-inline-end: 0.35rem;
+    opacity: 0.6;
+  }
+  .main-product__breadcrumb-list a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .main-product__breadcrumb-list a:hover {
+    color: var(--color-brand);
+    text-decoration: underline;
+  }
+  .main-product__breadcrumb-list [aria-current='page'] {
+    color: var(--color-foreground);
+  }
+
+  /* 两栏 */
+  .main-product__layout {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 1100px) {
+    .main-product__layout {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 2.5rem;
+      align-items: start;
+    }
+  }
+
+  /* 画廊 */
+  .product-gallery {
+    display: block;
+    min-inline-size: 0;
+  }
+  .product-gallery__stage {
+    position: relative;
+    display: block;
+  }
+  .product-gallery__slides {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-radius: calc(var(--style-border-radius-inputs) * 1.5);
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+    overflow: hidden;
+  }
+  .product-gallery__slide {
+    margin: 0;
+  }
+  .product-gallery__slide[hidden] {
+    display: none;
+  }
+  .product-gallery__img,
+  .product-gallery__slide :is(video, iframe, model-viewer) {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 78vh;
+    object-fit: contain;
+    background-color: var(--color-background);
+  }
+  .product-gallery__deferred {
+    position: relative;
+  }
+  .product-gallery__deferred-button {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    position: relative;
+  }
+  .product-gallery__deferred-icon {
+    position: absolute;
+    inset-block-end: 1rem;
+    inset-inline-start: 1rem;
+    display: grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: 0.75rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-background) 88%, transparent);
+    color: var(--color-foreground);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-foreground) 22%, transparent);
+  }
+  .product-gallery__deferred-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .product-gallery__arrow {
+    position: absolute;
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+    display: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-background) 92%, transparent);
+    color: var(--color-foreground);
+    cursor: pointer;
+  }
+  .product-gallery__arrow svg {
+    width: 18px;
+    height: 18px;
+  }
+  .product-gallery__arrow--prev {
+    inset-inline-start: 0.75rem;
+  }
+  .product-gallery__arrow--next {
+    inset-inline-end: 0.75rem;
+  }
+  .product-gallery__arrow:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
+  @media (min-width: 750px) {
+    .product-gallery__arrow {
+      display: grid;
+    }
+  }
+
+  .product-gallery__dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-block-start: 0.75rem;
+  }
+  .product-gallery__dot {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 28%, transparent);
+    cursor: pointer;
+    transition: width 0.2s ease, background-color 0.2s ease;
+  }
+  .product-gallery__dot.is-active {
+    width: 20px;
+    background-color: var(--color-brand);
+  }
+  /* 圆点只服务触屏；桌面有缩略图列与箭头（拍板 D1：三套并存是效果图的冗余） */
+  @media (min-width: 1100px) {
+    .product-gallery__dots {
+      display: none;
+    }
+  }
+
+  .product-gallery__thumbs {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .product-gallery__thumb {
+    display: block;
+    width: 76px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-background);
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .product-gallery__thumb.is-active {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 1px var(--color-brand);
+  }
+  .product-gallery__thumb-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+  @media (min-width: 1100px) {
+    .product-gallery {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 0.75rem;
+      align-items: start;
+    }
+    .product-gallery__thumbs {
+      order: -1;
+      flex-direction: column;
+      overflow-y: auto;
+      max-height: 78vh;
+    }
+  }
+
+  /* 买盒 */
+  .main-product__info {
+    min-inline-size: 0;
+  }
+  .main-product__title {
+    margin: 0 0 0.35rem;
+    font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+    line-height: 1.2;
+  }
+  .main-product__subtitle {
+    margin: 0 0 0.85rem;
+    color: var(--color-foreground-muted);
+  }
+  .main-product__sep {
+    margin-inline: 0.4rem;
+  }
+
+  .main-product__price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-block-end: 0.25rem;
+  }
+  .main-product__price-current {
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: var(--color-foreground);
+  }
+  .main-product__price-compare {
+    color: var(--color-foreground-muted);
+    font-size: 0.95rem;
+  }
+  .main-product__price-save {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+    color: var(--color-brand);
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+  .main-product__unit-price {
+    margin: 0 0 1rem;
+    font-size: 0.82rem;
+    color: var(--color-foreground-muted);
+  }
+  .main-product__excerpt {
+    margin-block: 1rem;
+    color: var(--color-foreground-muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+
+  /* 变体 */
+  .product-variant__group {
+    margin: 0 0 1rem;
+    padding: 0;
+    border: 0;
+  }
+  .product-variant__label {
+    padding: 0;
+    margin-block-end: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-foreground);
+  }
+  .product-variant__values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .product-variant__pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .product-variant__radio:checked + .product-variant__pill {
+    border-color: var(--color-brand);
+    box-shadow: inset 0 0 0 1px var(--color-brand);
+    color: var(--color-brand);
+    font-weight: 500;
+  }
+  .product-variant__radio:focus-visible + .product-variant__pill {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 2px;
+  }
+
+  /* 表单 */
+  .product-form__row {
+    display: flex;
+    gap: 0.75rem;
+    margin-block-start: 1rem;
+  }
+  .quantity {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    overflow: hidden;
+    flex: 0 0 auto;
+  }
+  .quantity__button {
+    width: 44px;
+    min-height: 44px;
+    border: 0;
+    background: none;
+    color: var(--color-foreground);
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .quantity__button:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+  .quantity__input {
+    width: 3.25rem;
+    min-height: 44px;
+    border: 0;
+    background: none;
+    color: var(--color-foreground);
+    font: inherit;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .quantity__input::-webkit-outer-spin-button,
+  .quantity__input::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  .product-form__submit {
+    flex: 1 1 auto;
+    min-height: 44px;
+    padding: 10px 1.25rem;
+    border: 1px solid var(--color-brand);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .product-form__submit:hover:not(:disabled) {
+    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
+  }
+  .product-form__submit:disabled {
+    border-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
+    background-color: transparent;
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+    cursor: not-allowed;
+  }
+  .product-form__submit[data-state='added'] {
+    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
+  }
+  .product-form__status {
+    margin: 0.5rem 0 0;
+    min-height: 1.2em;
+    font-size: 0.85rem;
+    color: var(--color-foreground-muted);
+  }
+  .product-form__accelerated,
+  .product-form__terms {
+    margin-block-start: 0.75rem;
+  }
+
+  /* 信任行 / 自提 / 对比 */
+  .main-product__block {
+    margin-block-start: 0.75rem;
+  }
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    color: var(--color-foreground-muted);
+  }
+  .trust-item__icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--color-brand);
+  }
+  .trust-item__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .pickup__heading {
+    margin: 0 0 0.35rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+  }
+  .pickup__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.85rem;
+    color: var(--color-foreground-muted);
+  }
+  .pickup__item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .pickup__store {
+    color: var(--color-foreground);
+  }
+  .pickup__unavailable {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-foreground-muted);
+  }
+
+  /* 对比入口（compare-button snippet 的样式归属；snippet 不能自带样式块） */
+  .product-compare__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-foreground-muted);
+    font: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .product-compare__box {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 30%, transparent);
+    border-radius: 4px;
+    color: transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .product-compare__box svg {
+    width: 14px;
+    height: 14px;
+  }
+  .product-compare__button[aria-pressed='true'] .product-compare__box {
+    border-color: var(--color-brand);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+  .product-compare__button[aria-pressed='true'] {
+    color: var(--color-brand);
+  }
+  .product-compare__button:hover .product-compare__box {
+    border-color: var(--color-brand);
+  }
+
+  /* 三条决策参数（spec-bullets snippet 的样式归属） */
+  .spec-bullets {
+    display: grid;
+    gap: 0.4rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .spec-bullets__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    color: var(--color-foreground-muted);
+  }
+  .spec-bullets__icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+  }
+  .spec-bullets__icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .spec-bullets__text {
+    display: inline-flex;
+    gap: 0.3rem;
+    align-items: baseline;
+  }
+  .spec-bullets__text .spec-value,
+  .spec-bullets__value {
+    color: var(--color-foreground);
+    font-weight: 500;
+  }
+
+  @media (max-width: 749px) {
+    .product-form__row {
+      flex-wrap: wrap;
+    }
+    .quantity {
+      order: 2;
+    }
+    .product-form__submit {
+      order: 1;
+      flex: 1 0 100%;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.main_product.name",
+  "tag": "section",
+  "class": "main-product-section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumb",
+      "label": "t:sections.main_product.labels.show_breadcrumb",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "t:sections.main_product.labels.show_description",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "description_words",
+      "min": 20,
+      "max": 80,
+      "step": 10,
+      "label": "t:sections.main_product.labels.description_words",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main_product.headers.checkout"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_accelerated_checkout",
+      "label": "t:sections.main_product.labels.show_accelerated_checkout",
+      "info": "t:sections.main_product.labels.accelerated_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_payment_terms",
+      "label": "t:sections.main_product.labels.show_payment_terms",
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "spec_bullets",
+      "name": "t:sections.main_product.blocks.spec_bullets.name",
+      "limit": 1
+    },
+    {
+      "type": "trust_warranty",
+      "name": "t:sections.main_product.blocks.trust_warranty.name",
+      "limit": 1
+    },
+    {
+      "type": "trust_item",
+      "name": "t:sections.main_product.blocks.trust_item.name",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "t:sections.main_product.blocks.trust_item.icon",
+          "options": [
+            { "value": "shipping", "label": "t:sections.main_product.blocks.trust_item.icons.shipping" },
+            { "value": "returns", "label": "t:sections.main_product.blocks.trust_item.icons.returns" },
+            { "value": "warranty", "label": "t:sections.main_product.blocks.trust_item.icons.warranty" }
+          ],
+          "default": "shipping"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "t:sections.main_product.blocks.trust_item.text",
+          "info": "t:sections.main_product.blocks.trust_item.text_info"
+        }
+      ]
+    },
+    {
+      "type": "pickup",
+      "name": "t:sections.main_product.blocks.pickup.name",
+      "limit": 1
+    },
+    {
+      "type": "compare",
+      "name": "t:sections.main_product.blocks.compare.name",
+      "limit": 1
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.main_product.name",
+      "blocks": [
+        { "type": "spec_bullets" },
+        { "type": "trust_warranty" },
+        { "type": "trust_item", "settings": { "icon": "shipping", "text": "Free shipping on orders over $99" } },
+        { "type": "trust_item", "settings": { "icon": "returns", "text": "30-day returns" } },
+        { "type": "compare" },
+        { "type": "pickup" }
+      ]
+    }
+  ]
+}
+{% endschema %}
