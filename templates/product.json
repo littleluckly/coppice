@@ -59,6 +59,51 @@
         "show_payment_terms": true
       }
     },
+    "product-highlights": {
+      "type": "product-highlights",
+      "blocks": {
+        "platform": {
+          "type": "platform_compat",
+          "settings": {}
+        },
+        "logistics": {
+          "type": "logistics",
+          "settings": {}
+        },
+        "quickview": {
+          "type": "spec_quickview",
+          "settings": {}
+        }
+      },
+      "block_order": [
+        "platform",
+        "logistics",
+        "quickview"
+      ],
+      "settings": {}
+    },
+    "product-anchor-nav": {
+      "type": "product-anchor-nav",
+      "settings": {}
+    },
+    "product-description": {
+      "type": "product-description",
+      "settings": {}
+    },
+    "product-supplies": {
+      "type": "product-supplies",
+      "settings": {
+        "fallback_to_complementary": true
+      }
+    },
+    "product-spec-table": {
+      "type": "product-spec-table",
+      "settings": {}
+    },
+    "product-recommendations": {
+      "type": "product-recommendations",
+      "settings": {}
+    },
     "compare-lookup": {
       "type": "compare-lookup",
       "settings": {}
@@ -66,6 +111,12 @@
   },
   "order": [
     "main",
+    "product-highlights",
+    "product-anchor-nav",
+    "product-description",
+    "product-supplies",
+    "product-spec-table",
+    "product-recommendations",
     "compare-lookup"
   ]
 }
