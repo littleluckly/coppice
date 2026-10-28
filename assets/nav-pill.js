@@ -26,10 +26,10 @@ class NavPill extends HTMLElement {
     this._list = list;
     this._current = null;
 
-    /* hover 防抖（2026-10-27 刘工）：快速划过 mega 左列时不触发面板切换，
-       鼠标在某分类上停留超过阈值才滑动药丸并切换面板，过滤"扫过"误触。
+    /* 面板切换防抖（2026-10-27 刘工）：快速划过 mega 左列时不触发面板切换（重操作），
+       鼠标在某分类上停留超过阈值才切；药丸滑动 + 文字反色走即时跟手（见 _moveMega）。
        只作用于鼠标路径（mouseover）；键盘 focus 为离散操作，保持即时响应。 */
-    this._megaHoverTimer = null;
+    this._megaSwitchTimer = null;
     this._MEGA_HOVER_DELAY = 150;
 
     /* 显式锚点（第五轮，刘工）：[data-nav-pill-anchor] 是药丸与 mega 面板
@@ -85,7 +85,8 @@ class NavPill extends HTMLElement {
       (event) => {
         const tab = event.target.closest('[data-mega-tab]');
         if (tab && this.contains(tab)) {
-          this._scheduleMegaHover(tab);
+          this._moveMega(tab, true); /* 即时跟手：滑动药丸 + 同步 --lit 反色 */
+          this._scheduleMegaSwitch(tab); /* 仅面板切换防抖，过滤快速划过 */
         }
         const item = event.target.closest('.main-nav__item');
         if (item && this.contains(item)) {
@@ -105,10 +106,10 @@ class NavPill extends HTMLElement {
 
     list.addEventListener('mouseleave', () => {
       this._hide(); /* 顶部药丸隐藏 */
-      /* 取消可能待执行的左列切换（快速划出时不该迟到触发） */
-      if (this._megaHoverTimer) {
-        clearTimeout(this._megaHoverTimer);
-        this._megaHoverTimer = null;
+      /* 取消可能待执行的左列面板切换（快速划出时不该迟到触发） */
+      if (this._megaSwitchTimer) {
+        clearTimeout(this._megaSwitchTimer);
+        this._megaSwitchTimer = null;
       }
       /* mega 药丸停在激活项（常驻高亮，不隐藏） */
       this._moveMegaToIndex(this._activePanelIndex, true);
@@ -133,9 +134,9 @@ class NavPill extends HTMLElement {
     const megaInner = this.querySelector('.main-nav__mega-inner');
     if (megaInner) {
       megaInner.addEventListener('mouseleave', () => {
-        if (this._megaHoverTimer) {
-          clearTimeout(this._megaHoverTimer);
-          this._megaHoverTimer = null;
+        if (this._megaSwitchTimer) {
+          clearTimeout(this._megaSwitchTimer);
+          this._megaSwitchTimer = null;
         }
         this._moveMegaToIndex(this._activePanelIndex, true);
       }, { signal });
@@ -164,7 +165,7 @@ class NavPill extends HTMLElement {
 
   disconnectedCallback() {
     if (this._controller) this._controller.abort();
-    if (this._megaHoverTimer) clearTimeout(this._megaHoverTimer);
+    if (this._megaSwitchTimer) clearTimeout(this._megaSwitchTimer);
     if (this._pill) this._pill.remove();
     if (this._megaPill) this._megaPill.remove();
     this._current = null;
@@ -232,15 +233,14 @@ class NavPill extends HTMLElement {
     this._current = null;
   }
 
-  /* mega 左列 hover 防抖（2026-10-27 刘工）：快速划过多个分类时，每次
-     mouseover 都重置计时器，直到鼠标在某个项上停留超过 _MEGA_HOVER_DELAY
-     才真正滑动药丸 + 切换面板。停下即触发，扫过不触发。 */
-  _scheduleMegaHover(tab) {
-    if (this._megaHoverTimer) clearTimeout(this._megaHoverTimer);
-    this._megaHoverTimer = setTimeout(() => {
-      this._megaHoverTimer = null;
+  /* 面板切换防抖（2026-10-27 刘工）：快速划过 mega 左列时不触发面板切换（重操作），
+     鼠标在某分类上停留超过 _MEGA_HOVER_DELAY 才切；药丸滑动 + 文字反色由
+     _moveMega 即时跟手（见 mouseover handler），不在防抖内。 */
+  _scheduleMegaSwitch(tab) {
+    if (this._megaSwitchTimer) clearTimeout(this._megaSwitchTimer);
+    this._megaSwitchTimer = setTimeout(() => {
+      this._megaSwitchTimer = null;
       this._switchTabs(tab.dataset.megaTab);
-      this._moveMega(tab, true);
     }, this._MEGA_HOVER_DELAY);
   }
 
@@ -276,6 +276,17 @@ class NavPill extends HTMLElement {
       pill.style.width = rect.width + 'px';
       pill.style.height = rect.height + 'px';
       pill.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    }
+    /* 同步文字反色到药丸所在项（--lit），与药丸滑动同源触发，
+       保证"文字变白"与"药丸滑到"同步，不抢拍（2026-10-27 修复 hover 文字先白 bug） */
+    this._setLit(tab);
+  }
+
+  /* 同步文字反色到药丸所在项：仅当前药丸垫底的项加 --lit（文字反色），其余移除。
+     每次 _moveMega 调用都重算，覆盖初始 / hover / 移出回激活 / resize / fonts 就绪。 */
+  _setLit(tab) {
+    for (const t of this._tabs) {
+      t.classList.toggle('main-nav__mega-cat-link--lit', t === tab);
     }
   }
 

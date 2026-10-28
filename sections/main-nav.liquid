@@ -1145,17 +1145,21 @@
     font-weight: 500;
     text-decoration: none;
     cursor: pointer;
-    transition: color 0.15s ease, background-color 0.15s ease;
+    /* 文字反色跟随药丸（--lit 由 JS 在药丸移动时同步设置），
+       color 时长对齐药丸 transform 0.25s，确保"文字变白"与"药丸滑到"同步，
+       不抢拍（修复 hover 文字先白、底色滞后 bug，2026-10-27） */
+    transition: color 0.25s ease, background-color 0.15s ease;
     /* 分类名短，不折行（面板整体已恢复 normal） */
     white-space: nowrap;
   }
 
-  /* hover / 键盘聚焦：文字反色（背景由 .main-nav__mega-pill 滑动药丸提供，
-     与顶部导航同机制：JS 接管后链接自身不出底色）。特异性高于 --current / --active，
-     确保选中态 hover 时文字也反色、可读。 */
-  .main-nav__mega-cats .main-nav__mega-cat-link:hover,
-  .main-nav__mega-cats .main-nav__mega-cat-link:focus-visible {
+  /* 有 JS 接管：文字反色跟随药丸（--lit 由 nav-pill.js 在药丸移动时同步设置），
+     不靠 :hover 即时反色——否则文字会比滑动药丸抢拍变白（2026-10-27 修复 hover
+     文字先白、底色滞后 bug）。特异性高于 --current，确保当前页项被药丸垫底时
+     文字也反色、可读。 */
+  .main-nav__mega-cats .main-nav__mega-cat-link--lit {
     color: var(--color-background);
+    font-weight: 700;
   }
 
   /* 无 JS 降级：custom element 未升级（无 nav-mega-tabs--ready）时，
@@ -1163,20 +1167,17 @@
      :not(.nav-pill--ready) 兜底同源。 */
   .main-nav__list-wrap:not(.nav-mega-tabs--ready) .main-nav__mega-cat-link:hover,
   .main-nav__list-wrap:not(.nav-mega-tabs--ready) .main-nav__mega-cat-link:focus-visible {
+    color: var(--color-background);
     background-color: var(--color-brand);
   }
 
-  /* 左列激活分类（JS 切换）：品牌色药丸垫底 + 文字反色，常驻高亮（2026-10-27）。
-     药丸停在激活项即"常驻"指示；特异性高于 --current，确保同时激活+当前页时
-     药丸与反色文字生效、可读。 */
-  .main-nav__mega-cats .main-nav__mega-cat-link--active {
-    color: var(--color-background);
-    font-weight: 700;
-  }
+  /* 左列激活项（JS 切换）：--active 仅作面板标记（_switchTabs 维护），
+     文字反色已改由 --lit（药丸所在项）驱动，避免与 hover 其他项时药丸移走冲突。
+     故此处不再设反色，避免"白字无底"。 */
 
   /* mega 左列滑动药丸（2026-10-27，复用 nav-pill.js 测量/滑动算法，纵向套用）：
      垫在分类项下方，hover 跟手滑动、松手停在激活项做常驻高亮；
-     文字反色由 .main-nav__cat-link 的 :hover / --active 配合（与顶部导航同机制）。
+     文字反色由 .main-nav__cat-link 的 --lit 配合（药丸滑到该项即反色，与药丸同步）。
      无 JS 时本元素不存在（由 JS 创建），无无效 DOM。 */
   .main-nav__mega-pill {
     position: absolute;
