@@ -46,6 +46,13 @@ class ProductRecommendations extends HTMLElement {
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const fresh = doc.querySelector('[data-recommendations-container]');
       if (!fresh || !fresh.querySelector('.product-card')) {
+        // 空结果是"正常但看不见"的路径：商家以为配好了、顾客什么都没看到。
+        // 控制台留一条线索，排查时不用靠猜（页面本身仍安静隐藏，不打扰购买流程）。
+        console.warn(
+          '[product-recommendations] 接口返回 0 条推荐，本区块已隐藏。' +
+            ' 常见原因：S&D 未配互补品 / 推荐商品缺货或未发布 / 价格 ≤ 0。url=',
+          this._url
+        );
         this._hide();
         return;
       }
@@ -56,6 +63,7 @@ class ProductRecommendations extends HTMLElement {
       this.dispatchEvent(new CustomEvent('recommendations:loaded', { bubbles: true }));
     } catch (error) {
       if (error.name === 'AbortError') return;
+      console.warn('[product-recommendations] 拉取失败，本区块已隐藏：', this._url, error);
       this._hide();
     }
   }
