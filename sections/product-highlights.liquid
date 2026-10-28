@@ -1,0 +1,440 @@
+{% comment %}
+  product-highlights — 产品页信息卡带（task-product T-2.2，合并 pages-ui §3 的 ①②③）。
+
+  **为什么合并成一个 section**：三张卡在桌面同排、Key Specifications 跨两列、需等高对齐；
+  跨 section 无法共享网格行（与 sections/collection.liquid 合并主体同一判断）。
+  职责由 block 类型区分，仍然满足 Sections Everywhere —— 商家可增删、可排序每张卡。
+
+  三种 block：
+    platform_compat   读 platform.battery_platform；**空值整卡不渲染**（汽油机不该出现
+                      "Compatible with 40V Platform"）。链接目标由 block 选一个集合。
+    logistics         按 logistics.shipping_class **只出一档**（字段是单值枚举，
+                      效果图把 Parcel 与 Freight 并排列出是错的）。四个字段全空 → 不渲染。
+                      时效文案走 block setting，商家可改；底部固定声明「以结账为准」。
+    spec_quickview    决策参数卡。**5 个槽位 + 字段下拉**，而不是无限嵌套 block：
+                      嵌套 block 在当前主题基线上没有先例、编辑器行为未验证，用槽位换取
+                      确定性（代价是槽位之间不能任意重排，记在 task-product T-2.2）。
+{% endcomment %}
+
+{%- liquid
+  assign has_blocks = false
+  if section.blocks.size > 0
+    assign has_blocks = true
+  endif
+-%}
+
+{%- if has_blocks -%}
+  <section class="product-highlights" aria-labelledby="product-highlights-title">
+    <h2 class="visually-hidden" id="product-highlights-title">
+      {{- 'sections.product_highlights.heading' | t -}}
+    </h2>
+    <ul class="product-highlights__grid" role="list">
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'platform_compat' -%}
+            {%- liquid
+              assign platform = product.metafields.platform.battery_platform.value
+              assign platform_collection = block.settings.collection
+            -%}
+            {%- if platform != blank and platform != 'N/A' -%}
+              <li class="product-highlights__card" {{ block.shopify_attributes }}>
+                <span class="product-highlights__icon" aria-hidden="true">
+                  {{- 'icon-battery.svg' | inline_asset_content -}}
+                </span>
+                <h3 class="product-highlights__title">
+                  {{- 'sections.product_highlights.platform.title' | t: platform: platform -}}
+                </h3>
+                <p class="product-highlights__text">
+                  {{- 'sections.product_highlights.platform.text' | t: platform: platform -}}
+                </p>
+                {%- if platform_collection != blank -%}
+                  <a
+                    class="product-highlights__link"
+                    href="{{ platform_collection.url }}"
+                  >
+                    {{- 'sections.product_highlights.platform.cta' | t -}}
+                  </a>
+                {%- endif -%}
+              </li>
+            {%- endif -%}
+
+          {%- when 'logistics' -%}
+            {%- liquid
+              assign shipping_class = product.metafields.logistics.shipping_class.value
+              assign lead_time = product.metafields.logistics.lead_time_days.value
+              assign liftgate = product.metafields.logistics.needs_liftgate.value
+              assign assembly = product.metafields.logistics.assembly_required.value
+              assign logistics_text = ''
+              case shipping_class
+                when 'Parcel'
+                  assign logistics_text = block.settings.text_parcel
+                when 'Oversized'
+                  assign logistics_text = block.settings.text_oversized
+                when 'Freight LTL'
+                  assign logistics_text = block.settings.text_freight
+              endcase
+            -%}
+            {%- if logistics_text != blank or lead_time != blank or liftgate == 'TRUE' or assembly == 'TRUE' -%}
+              <li class="product-highlights__card" {{ block.shopify_attributes }}>
+                <span class="product-highlights__icon" aria-hidden="true">
+                  {{- 'icon-truck.svg' | inline_asset_content -}}
+                </span>
+                <h3 class="product-highlights__title">
+                  {{- 'sections.product_highlights.logistics.title' | t -}}
+                </h3>
+                {%- if logistics_text != blank -%}
+                  <p class="product-highlights__text">{{ logistics_text | escape }}</p>
+                {%- endif -%}
+                <ul class="product-highlights__list" role="list">
+                  {%- if lead_time != blank -%}
+                    <li>
+                      {%- if lead_time == 0 -%}
+                        {{- 'sections.product_highlights.logistics.lead_same_day' | t -}}
+                      {%- else -%}
+                        {{- 'sections.product_highlights.logistics.lead_time' | t: days: lead_time -}}
+                      {%- endif -%}
+                    </li>
+                  {%- endif -%}
+                  {%- if liftgate == 'TRUE' -%}
+                    <li>{{ 'sections.product_highlights.logistics.liftgate' | t }}</li>
+                  {%- endif -%}
+                  {%- if assembly == 'TRUE' -%}
+                    <li>{{ 'sections.product_highlights.logistics.assembly' | t }}</li>
+                  {%- endif -%}
+                </ul>
+                <p class="product-highlights__note">
+                  {{- 'sections.product_highlights.logistics.note' | t -}}
+                </p>
+              </li>
+            {%- endif -%}
+
+          {%- when 'spec_quickview' -%}
+            {%- liquid
+              assign slot_raw = ''
+              for i in (1..5)
+                assign setting_id = 'row_' | append: i
+                assign key = block.settings[setting_id]
+                if key != blank and key != 'none'
+                  assign slot_raw = slot_raw | append: key | append: ','
+                endif
+              endfor
+              assign slot_keys = slot_raw | split: ','
+
+              assign qv_heading = block.settings.heading
+              if qv_heading == blank
+                assign qv_heading = 'sections.product_highlights.quickview.default_heading' | t
+              endif
+            -%}
+            {%- if slot_keys.size > 0 -%}
+              <li
+                class="product-highlights__card product-highlights__card--wide"
+                {{ block.shopify_attributes }}
+              >
+                <h3 class="product-highlights__title">{{ qv_heading }}</h3>
+                <dl class="spec-quickview">
+                  {%- for key in slot_keys -%}
+                    {%- capture cell_text -%}
+                      {%- render 'compare-cell', product: product, row_key: key, as_text: true -%}
+                    {%- endcapture -%}
+                    {%- assign cell_text = cell_text | strip -%}
+                    {%- if cell_text != blank -%}
+                      <div class="spec-quickview__row">
+                        <dt class="spec-quickview__label">
+                          {%- render 'compare-row-label', row_key: key -%}
+                        </dt>
+                        <dd class="spec-quickview__value">{{ cell_text }}</dd>
+                      </div>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </dl>
+              </li>
+            {%- endif -%}
+        {%- endcase -%}
+      {%- endfor -%}
+    </ul>
+  </section>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-highlights {
+    max-width: var(--page-width);
+    margin-inline: auto;
+    padding-inline: var(--page-margin);
+    margin-block-end: 2rem;
+  }
+  .product-highlights__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 750px) {
+    .product-highlights__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1100px) {
+    .product-highlights__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .product-highlights__card--wide {
+      grid-column: span 2;
+    }
+  }
+  .product-highlights__card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: calc(var(--style-border-radius-inputs) * 1.5);
+    background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
+  }
+  .product-highlights__icon {
+    color: var(--color-brand);
+  }
+  .product-highlights__icon svg {
+    width: 22px;
+    height: 22px;
+  }
+  .product-highlights__title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .product-highlights__text,
+  .product-highlights__list,
+  .product-highlights__note {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+  .product-highlights__list {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0;
+    list-style: none;
+  }
+  .product-highlights__note {
+    margin-block-start: auto;
+    font-size: 0.75rem;
+  }
+  .product-highlights__link {
+    color: var(--color-brand);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .product-highlights__link::after {
+    content: '→';
+    margin-inline-start: 0.3rem;
+  }
+
+  /* 规格速览：两列参数 */
+  .spec-quickview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.4rem 1.25rem;
+    margin: 0;
+  }
+  @media (min-width: 500px) {
+    .spec-quickview {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .spec-quickview__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-block-end: 0.3rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  .spec-quickview__label {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--color-foreground-muted);
+  }
+  .spec-quickview__value {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-align: end;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.product_highlights.name",
+  "tag": "div",
+  "class": "product-highlights-section",
+  "blocks": [
+    {
+      "type": "platform_compat",
+      "name": "t:sections.product_highlights.blocks.platform.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "t:sections.product_highlights.blocks.platform.collection",
+          "info": "t:sections.product_highlights.blocks.platform.collection_info"
+        }
+      ]
+    },
+    {
+      "type": "logistics",
+      "name": "t:sections.product_highlights.blocks.logistics.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "text_parcel",
+          "label": "t:sections.product_highlights.blocks.logistics.text_parcel",
+          "default": "Parcel shipping, 3–5 business days"
+        },
+        {
+          "type": "text",
+          "id": "text_oversized",
+          "label": "t:sections.product_highlights.blocks.logistics.text_oversized",
+          "default": "Oversized shipping, 7–10 business days"
+        },
+        {
+          "type": "text",
+          "id": "text_freight",
+          "label": "t:sections.product_highlights.blocks.logistics.text_freight",
+          "default": "Freight (LTL), 7–14 business days"
+        }
+      ]
+    },
+    {
+      "type": "spec_quickview",
+      "name": "t:sections.product_highlights.blocks.quickview.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:labels.heading",
+          "default": "t:sections.product_highlights.quickview.default_heading"
+        },
+        {
+          "type": "select",
+          "id": "row_1",
+          "label": "t:sections.product_highlights.blocks.quickview.row_1",
+          "options": [
+            { "value": "none", "label": "t:sections.product_highlights.blocks.quickview.options.none" },
+            { "value": "cutting_width_mm", "label": "t:sections.product_highlights.blocks.quickview.options.cutting_width" },
+            { "value": "bar_length_mm", "label": "t:sections.product_highlights.blocks.quickview.options.bar_length" },
+            { "value": "power", "label": "t:sections.product_highlights.blocks.quickview.options.power" },
+            { "value": "weight_kg", "label": "t:sections.product_highlights.blocks.quickview.options.weight" },
+            { "value": "power_source", "label": "t:sections.product_highlights.blocks.quickview.options.power_source" },
+            { "value": "operation_type", "label": "t:sections.product_highlights.blocks.quickview.options.operation_type" },
+            { "value": "drive_type", "label": "t:sections.product_highlights.blocks.quickview.options.drive_type" },
+            { "value": "area_coverage", "label": "t:sections.product_highlights.blocks.quickview.options.area_coverage" },
+            { "value": "duty_level", "label": "t:sections.product_highlights.blocks.quickview.options.duty_level" },
+            { "value": "noise_db", "label": "t:sections.product_highlights.blocks.quickview.options.noise" },
+            { "value": "warranty_months", "label": "t:sections.product_highlights.blocks.quickview.options.warranty" }
+          ],
+          "default": "cutting_width_mm"
+        },
+        {
+          "type": "select",
+          "id": "row_2",
+          "label": "t:sections.product_highlights.blocks.quickview.row_2",
+          "options": [
+            { "value": "none", "label": "t:sections.product_highlights.blocks.quickview.options.none" },
+            { "value": "cutting_width_mm", "label": "t:sections.product_highlights.blocks.quickview.options.cutting_width" },
+            { "value": "bar_length_mm", "label": "t:sections.product_highlights.blocks.quickview.options.bar_length" },
+            { "value": "power", "label": "t:sections.product_highlights.blocks.quickview.options.power" },
+            { "value": "weight_kg", "label": "t:sections.product_highlights.blocks.quickview.options.weight" },
+            { "value": "power_source", "label": "t:sections.product_highlights.blocks.quickview.options.power_source" },
+            { "value": "operation_type", "label": "t:sections.product_highlights.blocks.quickview.options.operation_type" },
+            { "value": "drive_type", "label": "t:sections.product_highlights.blocks.quickview.options.drive_type" },
+            { "value": "area_coverage", "label": "t:sections.product_highlights.blocks.quickview.options.area_coverage" },
+            { "value": "duty_level", "label": "t:sections.product_highlights.blocks.quickview.options.duty_level" },
+            { "value": "noise_db", "label": "t:sections.product_highlights.blocks.quickview.options.noise" },
+            { "value": "warranty_months", "label": "t:sections.product_highlights.blocks.quickview.options.warranty" }
+          ],
+          "default": "power"
+        },
+        {
+          "type": "select",
+          "id": "row_3",
+          "label": "t:sections.product_highlights.blocks.quickview.row_3",
+          "options": [
+            { "value": "none", "label": "t:sections.product_highlights.blocks.quickview.options.none" },
+            { "value": "cutting_width_mm", "label": "t:sections.product_highlights.blocks.quickview.options.cutting_width" },
+            { "value": "bar_length_mm", "label": "t:sections.product_highlights.blocks.quickview.options.bar_length" },
+            { "value": "power", "label": "t:sections.product_highlights.blocks.quickview.options.power" },
+            { "value": "weight_kg", "label": "t:sections.product_highlights.blocks.quickview.options.weight" },
+            { "value": "power_source", "label": "t:sections.product_highlights.blocks.quickview.options.power_source" },
+            { "value": "operation_type", "label": "t:sections.product_highlights.blocks.quickview.options.operation_type" },
+            { "value": "drive_type", "label": "t:sections.product_highlights.blocks.quickview.options.drive_type" },
+            { "value": "area_coverage", "label": "t:sections.product_highlights.blocks.quickview.options.area_coverage" },
+            { "value": "duty_level", "label": "t:sections.product_highlights.blocks.quickview.options.duty_level" },
+            { "value": "noise_db", "label": "t:sections.product_highlights.blocks.quickview.options.noise" },
+            { "value": "warranty_months", "label": "t:sections.product_highlights.blocks.quickview.options.warranty" }
+          ],
+          "default": "weight_kg"
+        },
+        {
+          "type": "select",
+          "id": "row_4",
+          "label": "t:sections.product_highlights.blocks.quickview.row_4",
+          "options": [
+            { "value": "none", "label": "t:sections.product_highlights.blocks.quickview.options.none" },
+            { "value": "cutting_width_mm", "label": "t:sections.product_highlights.blocks.quickview.options.cutting_width" },
+            { "value": "bar_length_mm", "label": "t:sections.product_highlights.blocks.quickview.options.bar_length" },
+            { "value": "power", "label": "t:sections.product_highlights.blocks.quickview.options.power" },
+            { "value": "weight_kg", "label": "t:sections.product_highlights.blocks.quickview.options.weight" },
+            { "value": "power_source", "label": "t:sections.product_highlights.blocks.quickview.options.power_source" },
+            { "value": "operation_type", "label": "t:sections.product_highlights.blocks.quickview.options.operation_type" },
+            { "value": "drive_type", "label": "t:sections.product_highlights.blocks.quickview.options.drive_type" },
+            { "value": "area_coverage", "label": "t:sections.product_highlights.blocks.quickview.options.area_coverage" },
+            { "value": "duty_level", "label": "t:sections.product_highlights.blocks.quickview.options.duty_level" },
+            { "value": "noise_db", "label": "t:sections.product_highlights.blocks.quickview.options.noise" },
+            { "value": "warranty_months", "label": "t:sections.product_highlights.blocks.quickview.options.warranty" }
+          ],
+          "default": "warranty_months"
+        },
+        {
+          "type": "select",
+          "id": "row_5",
+          "label": "t:sections.product_highlights.blocks.quickview.row_5",
+          "options": [
+            { "value": "none", "label": "t:sections.product_highlights.blocks.quickview.options.none" },
+            { "value": "cutting_width_mm", "label": "t:sections.product_highlights.blocks.quickview.options.cutting_width" },
+            { "value": "bar_length_mm", "label": "t:sections.product_highlights.blocks.quickview.options.bar_length" },
+            { "value": "power", "label": "t:sections.product_highlights.blocks.quickview.options.power" },
+            { "value": "weight_kg", "label": "t:sections.product_highlights.blocks.quickview.options.weight" },
+            { "value": "power_source", "label": "t:sections.product_highlights.blocks.quickview.options.power_source" },
+            { "value": "operation_type", "label": "t:sections.product_highlights.blocks.quickview.options.operation_type" },
+            { "value": "drive_type", "label": "t:sections.product_highlights.blocks.quickview.options.drive_type" },
+            { "value": "area_coverage", "label": "t:sections.product_highlights.blocks.quickview.options.area_coverage" },
+            { "value": "duty_level", "label": "t:sections.product_highlights.blocks.quickview.options.duty_level" },
+            { "value": "noise_db", "label": "t:sections.product_highlights.blocks.quickview.options.noise" },
+            { "value": "warranty_months", "label": "t:sections.product_highlights.blocks.quickview.options.warranty" }
+          ],
+          "default": "none"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.product_highlights.name",
+      "blocks": [
+        { "type": "platform_compat" },
+        { "type": "logistics" },
+        { "type": "spec_quickview" }
+      ]
+    }
+  ]
+}
+{% endschema %}
