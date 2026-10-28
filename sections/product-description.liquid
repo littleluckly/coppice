@@ -20,7 +20,11 @@
 -%}
 
 {%- if product.description != blank -%}
-  <section class="product-description{% if has_image %} product-description--split{% endif %}" id="product-overview">
+  <section
+    class="product-description{% if has_image %} product-description--split{% endif %}"
+    id="product-overview"
+    data-reveal
+  >
     <div class="product-description__inner">
       <div class="product-description__text">
         <h2 class="product-description__heading">{{ heading }}</h2>
