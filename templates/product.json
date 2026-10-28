@@ -53,7 +53,7 @@
       ],
       "settings": {
         "show_breadcrumb": true,
-        "show_description": true,
+        "show_description": false,
         "description_words": 40,
         "show_accelerated_checkout": true,
         "show_payment_terms": true
@@ -101,12 +101,17 @@
     "product-complementary": {
       "type": "product-complementary",
       "settings": {}
+    },
+    "product-description": {
+      "type": "product-description",
+      "settings": {}
     }
   },
   "order": [
     "main",
     "product-highlights",
     "product-complementary",
+    "product-description",
     "product-spec-table",
     "product-supplies",
     "product-recommendations",
