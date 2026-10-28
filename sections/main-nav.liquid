@@ -241,16 +241,24 @@
                               三级链接收进组底小链接行，导航功能不丢。
                             {%- endcomment -%}
                             <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
+                              {%- comment -%}
+                                组头一段式（2026-10-28 刘工）：左侧单个入口
+                                "All {集合名} (n) →"，不再有右侧 All 链接。
+                                一段式的好处：不留空壳、不重复、可访问名完整
+                                （不能只留 "(n) →"——那样链接名只剩数字）。
+                                文案走 navigation.all_collection_products，
+                                变量用 total 而非 count：count 在 Shopify 翻译里
+                                会触发复数形式查找。
+                              {%- endcomment -%}
                               <div class="main-nav__mega-group-head">
-                                <span class="main-nav__mega-group-title">{{ child.title }}</span>
                                 <a
-                                  class="main-nav__mega-group-all"
+                                  class="main-nav__mega-group-title-link"
                                   href="{{ mega_collection.url }}"
                                 >
-                                  {%- if mega_collection.title != child_title -%}
-                                    {{ mega_collection.title }}
-                                  {%- endif -%}
-                                  ({{ mega_collection.all_products_count }})
+                                  {{
+                                    'navigation.all_collection_products'
+                                    | t: title: mega_collection.title, total: mega_collection.all_products_count
+                                  }}
                                   <span class="main-nav__mega-group-all-arrow" aria-hidden="true">→</span>
                                 </a>
                               </div>
@@ -1456,23 +1464,24 @@
   .main-nav__mega-group-head {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
   }
 
-  .main-nav__mega-group-all {
-    display: flex;
+  /* 组头入口（一段式，2026-10-28）：同时是组标题与集合入口，
+     所以字号/字重取组标题规格，而不是原来右侧 All 链接的次级小字。 */
+  .main-nav__mega-group-title-link {
+    display: inline-flex;
     align-items: center;
     gap: 0.375rem;
     min-height: 44px;
-    font-size: 0.875rem;
-    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-foreground);
     text-decoration: none;
     white-space: nowrap;
     transition: color 0.15s ease;
   }
 
-  .main-nav__mega-group-all:hover {
+  .main-nav__mega-group-title-link:hover {
     color: var(--color-brand);
   }
 
@@ -1480,7 +1489,7 @@
     transition: translate 0.15s ease;
   }
 
-  .main-nav__mega-group-all:hover .main-nav__mega-group-all-arrow {
+  .main-nav__mega-group-title-link:hover .main-nav__mega-group-all-arrow {
     translate: 0.25rem 0;
   }
 

@@ -86,6 +86,7 @@
     "close": "Close",
     "back": "Back",
     "view_all_products": "View all products",
+    "all_collection_products": "All {{ title }} ({{ total }})",
     "products_count": {
       "one": "{{ count }} product",
       "other": "{{ count }} products"
