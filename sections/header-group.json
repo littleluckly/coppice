@@ -43,34 +43,30 @@
       "type": "main-nav",
       "blocks": {
         "mega_category_icon_bMTbBr": {
-          "type": "mega_category_icon",
+          "type": "mega_category",
           "settings": {
             "menu_item": "Accessories",
-            "icon": "accessories",
             "popular_collection": "featured"
           }
         },
         "mega_category_icon_X4g7yq": {
-          "type": "mega_category_icon",
+          "type": "mega_category",
           "settings": {
             "menu_item": "Trimmers",
-            "icon": "trimmer",
             "popular_collection": "string-trimmer"
           }
         },
         "mega_category_icon_8Jt6np": {
-          "type": "mega_category_icon",
+          "type": "mega_category",
           "settings": {
             "menu_item": "Chainsaws",
-            "icon": "chainsaw",
             "popular_collection": "chainsaw"
           }
         },
         "mega_category_icon_mgPtg6": {
-          "type": "mega_category_icon",
+          "type": "mega_category",
           "settings": {
             "menu_item": "Mowers",
-            "icon": "mower",
             "popular_collection": "mower-popular"
           }
         }
