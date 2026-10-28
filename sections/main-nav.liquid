@@ -155,7 +155,14 @@
                     锚在 li 上，所以只有 --dropdown 那一支给 li 加 position: relative。
                     不带下拉箭头（2026-10-12 刘工）：选中态交给滑动药丸指示器。
                   {%- endcomment -%}
-                  <span class="main-nav__link main-nav__link--group" aria-haspopup="true">
+                  {%- comment -%}
+                    键盘可达性（2026-10-28）：span 必须可聚焦，否则 :focus-within
+                    永不成立、Tab 键根本打不开面板（WCAG 2.1 AA 键盘可操作）。
+                    面板展开由 CSS :hover / :focus-within 驱动，不需要 JS 响应
+                    Enter/Space，故不设 role="button"（那是"按下即动作"的语义，
+                    与这里"聚焦即展开"不符）。focus-visible 轮廓已有全局规则。
+                  {%- endcomment -%}
+                  <span class="main-nav__link main-nav__link--group" aria-haspopup="true" tabindex="0">
                     {{ link.title }}
                   </span>
 
@@ -164,8 +171,7 @@
                     Mega 面板（2026-10-13 第八轮，参考 demo 截图三段式）：
                     左列 = 二级分类导航（直接取菜单二级项，无 block 配置）；
                     中区 = 二级集合项的产品卡组（集合直接取自该菜单项指向的集合，
-                    零配置；图/价/产品数均走真实对象，不伪造）；右列 = 二级集合卡
-                    网格（同样自动取菜单里指向集合的二级项，零配置）。
+                    零配置；图/价/产品数均走真实对象，不伪造）。
                     叶子二级项只在左列出链接，中区不输出空壳组。
                   {%- endcomment -%}
                   <div class="main-nav__mega">
