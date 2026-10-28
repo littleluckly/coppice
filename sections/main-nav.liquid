@@ -141,7 +141,7 @@
 
                   {%- comment -%}
                     Mega 面板（2026-10-13 第八轮，参考 demo 截图三段式）：
-                    左列 = 二级分类导航（图标走 mega_category_icon block 配置，
+                    左列 = 二级分类导航（映射走 mega_category block 配置，
                     商家可配可删）；中区 = 二级分组的集合卡组（图 + 标题 +
                     真实产品数，数据走 link.object，不伪造）；右列 = promo 卡。
                     叶子二级项只在左列出链接，中区不输出空壳组。
@@ -196,7 +196,7 @@
                             assign child_title = child.title | strip
                             assign popular_collection = blank
                             for block in section.blocks
-                              if block.type == 'mega_category_icon' and popular_collection == blank
+                              if block.type == 'mega_category' and popular_collection == blank
                                 assign wanted = block.settings.menu_item | strip
                                 if wanted == child_title
                                   assign popular_collection = block.settings.popular_collection
@@ -1201,28 +1201,6 @@
       opacity: 0;
       translate: 0 0.5rem;
     }
-  }
-
-  /* 图标线框随文字色走（svg 内 stroke=currentColor，尺寸由 CSS 控制） */
-  .main-nav__mega-cat-icon {
-    display: flex;
-    color: inherit;
-  }
-
-  .main-nav__mega-cat-icon svg {
-    /* 图标比文字大一点（2026-10-13 刘工）：文字 0.9375rem，图标 1.75rem */
-    inline-size: 1.75rem;
-    block-size: 1.75rem;
-  }
-
-  /* 线宽（2026-10-13 刘工）：图标已规范化为 24 网格 + stroke-width 1.5
-     （与 header 图标同规格）。1.75rem 显示时属性线宽 ≈1.75px，
-     non-scaling-stroke 锁定精确 1.5px 并防止任何缩放导致的模糊；
-     颜色仍由 currentColor 跟随文字态（默认灰 / hover 深 / 激活品牌色）。 */
-  .main-nav__mega-cat-icon svg,
-  .main-nav__mega-cat-icon svg * {
-    vector-effect: non-scaling-stroke;
-    stroke-width: 1.5px;
   }
 
   /* 中区：二级分组的集合卡组，纵向堆叠（无切换依赖，无 JS 可用） */
@@ -2430,8 +2408,8 @@
   ],
   "blocks": [
     {
-      "type": "mega_category_icon",
-      "name": "t:general.mega_category_icon",
+      "type": "mega_category",
+      "name": "t:general.mega_category",
       "limit": 10,
       "settings": [
         {
@@ -2439,34 +2417,6 @@
           "id": "menu_item",
           "label": "t:labels.mega_category_menu_item",
           "info": "t:labels.mega_category_menu_item_info"
-        },
-        {
-          "type": "select",
-          "id": "icon",
-          "label": "t:labels.category_icon",
-          "options": [
-            {
-              "value": "none",
-              "label": "t:options.category_icon.none"
-            },
-            {
-              "value": "mower",
-              "label": "t:options.category_icon.mower"
-            },
-            {
-              "value": "chainsaw",
-              "label": "t:options.category_icon.chainsaw"
-            },
-            {
-              "value": "trimmer",
-              "label": "t:options.category_icon.trimmer"
-            },
-            {
-              "value": "accessories",
-              "label": "t:options.category_icon.accessories"
-            }
-          ],
-          "default": "none"
         },
         {
           "type": "collection",
