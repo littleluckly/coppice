@@ -108,7 +108,13 @@
   },
   "products": {
     "product": {
-      "from_price_html": "From"
+      "from_price_html": "From",
+      "add_to_compare": "Add to compare",
+      "spec_cutting_width": "cutting width",
+      "spec_bar_length": "bar length",
+      "spec_engine": "engine",
+      "spec_power": "power",
+      "spec_drive": "drive"
     },
     "product_card": {
       "add_to_compare": "Compare",
