@@ -1,8 +1,9 @@
 {% comment %}
-  product-spec-table-content — 规格（Specifications）Tab 面板的表格内容。
+  product-spec-table-content — 规格（Specifications）Tab 面板的卡片网格内容。
 
-  从 product-spec-table section 抽出的表格渲染部分（2026-10-29 刘工，Tab 化改造）：
-  只承载规格表 + 方差提示，不含 section 包装、heading、schema。
+  从 product-spec-table section 抽出的规格渲染部分（2026-10-29 刘工，Tab 化改造）。
+  2026-10-29 二次改：从「表格」改为参考稿的「规格卡片网格」（灰底圆角卡片、
+  label 大写 + value 加粗、2 列 grid）。不含 section 包装、heading、schema。
   样式归属 product-tabs.liquid（snippet 不能带 {% stylesheet %}）。
 
   **行定义不另建**：直接复用对比页的 compare-row-keys / compare-cell / compare-row-label。
@@ -17,11 +18,6 @@
     assign group_key = 'generic'
   endif
   assign variance_note = product.metafields.spec.spec_variance_note.value
-  if label != blank
-    assign spec_caption = label
-  else
-    assign spec_caption = 'sections.product_spec_table.default_heading' | t
-  endif
 -%}
 
 {%- comment -%}
@@ -31,25 +27,25 @@
 {%- capture row_keys_raw -%}{%- render 'compare-row-keys', group: group_key -%}{%- endcapture -%}
 {%- assign row_keys = row_keys_raw | strip | split: ',' -%}
 
-{%- capture table_rows -%}
+{%- capture spec_cards -%}
   {%- for row_key in row_keys -%}
     {%- capture cell_text -%}
       {%- render 'compare-cell', product: product, row_key: row_key, as_text: true -%}
     {%- endcapture -%}
     {%- assign cell_text = cell_text | strip -%}
     {%- if cell_text != blank -%}
-      <tr class="product-tabs__spec-row">
-        <th class="product-tabs__spec-label" scope="row">
+      <div class="product-tabs__spec-card">
+        <span class="product-tabs__spec-card-label">
           {%- render 'compare-row-label', row_key: row_key -%}
-        </th>
-        <td class="product-tabs__spec-value">{{ cell_text }}</td>
-      </tr>
+        </span>
+        <span class="product-tabs__spec-card-value">{{ cell_text }}</span>
+      </div>
     {%- endif -%}
   {%- endfor -%}
 {%- endcapture -%}
 
 {%- assign has_rows = false -%}
-{%- if table_rows contains '<tr' -%}
+{%- if spec_cards contains 'product-tabs__spec-card' -%}
   {%- assign has_rows = true -%}
 {%- endif -%}
 
@@ -63,11 +59,8 @@
         <p class="product-tabs__spec-note-text">{{ variance_note | escape }}</p>
       </details>
     {%- endif -%}
-    <table class="product-tabs__spec-table">
-      <caption class="visually-hidden">{{ product.title | escape }} — {{ spec_caption }}</caption>
-      <tbody>
-        {{ table_rows }}
-      </tbody>
-    </table>
+    <div class="product-tabs__spec-grid" role="list">
+      {{ spec_cards }}
+    </div>
   </div>
 {%- endif -%}
