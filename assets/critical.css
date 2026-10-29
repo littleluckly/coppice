@@ -30,6 +30,42 @@ html:has(dialog[scroll-lock][open], details[scroll-lock][open]) {
   scrollbar-gutter: stable;
 }
 
+/* ---- 全局滚动条（2026-10-29 刘工：默认样式太重，换细条）----
+   两套写法并存、各管一段：
+   · 标准属性（scrollbar-width / scrollbar-color）：Firefox 全系 + Safari 18.2+
+     + Chrome 121+。不改变 macOS overlay 滚动条「滚动时才浮现」的行为，只换色变细。
+   · ::-webkit-scrollbar：老 Safari / 老 Chrome 的兜底。⚠️ 已知代价：webkit 私有
+     规则会把 macOS 的 overlay 滚动条强制成常驻占位的经典滚动条（历史行为，
+     无法绕开）——只有走这条兜底的老 Safari / 老 Chrome 用户受影响。
+   Chrome 121+ 两套都认识时以标准属性为准、忽略 webkit 私有规则。
+   颜色一律从 --color-foreground 派生（配色纪律），Noir 深色预设自动翻转，
+   轨道恒透明（页面底色即轨道）。 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-foreground) 30%, transparent) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+/* thumb 视觉宽 = 10px − 上下左右透明描边 2.5px × 2 = 5px：
+   border 只负责留白，背景裁进 padding-box 才是可见部分（圆头细条） */
+*::-webkit-scrollbar-thumb {
+  border: 2.5px solid transparent;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 img,
 picture,
 video,
