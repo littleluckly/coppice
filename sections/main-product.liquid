@@ -564,16 +564,9 @@
 
         代价（有意，说清楚）：trust 类 block 会被「吸」进信任组，不再能和
         compare / pickup 交错排序——信任项本来就是一个视觉单元，聚组更符合设计意图；
-        组内相对顺序仍由商家拖拽决定（用 for + 条件收集保留原序），增删不受影响。
+        组内相对顺序仍由商家拖拽决定（信任组里重新按 section.blocks 顺序扫一遍，
+        天然保留原序），增删不受影响。
       {%- endcomment -%}
-      {%- assign trust_blocks = '' -%}
-      {%- for block in section.blocks -%}
-        {%- if block.type == 'trust_warranty' or block.type == 'trust_item' -%}
-          {%- assign trust_blocks = trust_blocks | append: '|' | append: forloop.index0 -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {%- assign trust_blocks = trust_blocks | split: '|' -%}
-
       {%- for block in section.blocks -%}
         {%- case block.type -%}
           {%- when 'trust_warranty', 'trust_item' -%}
