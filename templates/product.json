@@ -13,10 +13,12 @@
       "type": "main-product",
       "blocks": {
         "spec_bullets": {
-          "type": "spec_bullets"
+          "type": "spec_bullets",
+          "settings": {}
         },
         "trust_warranty": {
-          "type": "trust_warranty"
+          "type": "trust_warranty",
+          "settings": {}
         },
         "trust_shipping": {
           "type": "trust_item",
@@ -33,10 +35,12 @@
           }
         },
         "compare": {
-          "type": "compare"
+          "type": "compare",
+          "settings": {}
         },
         "pickup": {
-          "type": "pickup"
+          "type": "pickup",
+          "settings": {}
         }
       },
       "block_order": [
@@ -59,13 +63,16 @@
       "type": "product-highlights",
       "blocks": {
         "platform": {
-          "type": "platform_compat"
+          "type": "platform_compat",
+          "settings": {}
         },
         "logistics": {
-          "type": "logistics"
+          "type": "logistics",
+          "settings": {}
         },
         "quickview": {
-          "type": "spec_quickview"
+          "type": "spec_quickview",
+          "settings": {}
         }
       },
       "block_order": [
