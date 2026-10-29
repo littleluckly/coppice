@@ -767,8 +767,15 @@
 
 </nav>
 
+{%- comment -%}
+  页头吸顶状态检测（2026-10-29 刘工）。放在 <nav> 之外：它不属于导航内容，
+  也让 BUG-044 那个「<nav> 首子节点」判据不受影响（该 span 仍紧贴开标签）。
+{%- endcomment -%}
+<nav-sticky aria-hidden="true"></nav-sticky>
+
 <script src="{{ 'nav-pill.js' | asset_url }}" defer></script>
 <script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
+<script src="{{ 'nav-sticky.js' | asset_url }}" defer></script>
 <script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
 <script src="{{ 'search-drawer.js' | asset_url }}" defer></script>
 
@@ -1568,10 +1575,23 @@
 
   /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
      必须有实底——否则吸顶时页面内容会透过菜单透出来。
-     position: relative 是 mega 面板的锚点（整行宽），不能移到 li / ul 上。 */
+     position: relative 是 mega 面板的锚点（整行宽），不能移到 li / ul 上。
+
+     2026-10-28 刘工（两轮定稿）：页头与内容区原本同为纯白，没有任何分界。
+     现在底色与投影都由 snippets/css-variables.liquid 按骨架明暗算好：
+       浅色 → 底色 = 背景色（视觉上等于没底色）、不画分隔线，只留一层下投影；
+       深色 → 纯黑底 + 一道亮发丝线 + 更实的投影。
+     两个变量必须成对用，不要在这里写死其中一半——移动行同理。 */
   .main-nav__desktop {
     position: relative;
-    background-color: var(--color-background);
+    background-color: var(--color-header-surface);
+    /* 阴影默认不给（2026-10-29 刘工）：页面停在顶部时，页头与内容区之间应当
+       毫无分界。只在**真的吸住**之后才由 <nav-sticky> 往包裹层打 is-stuck
+       浮起来（规则见下方 min-width: 990px 断点，与 sticky 同处一段）。
+       注意移动端行不受此约束——移动端没有 sticky，也就谈不上「触发」，
+       那一行的阴影保持常驻，否则手机上页头与内容区之间完全没有分界。 */
+    box-shadow: none;
+    transition: box-shadow 0.22s ease;
   }
 
   /* 移动端抽屉相关：桌面隐藏汉堡与 dialog */
@@ -1983,6 +2003,13 @@
       align-items: center;
       /* 移动导航行上下 16px，与桌面行一致（第六轮） */
       padding-block: 1rem;
+      /* 与桌面行同一套分层（2026-10-28）：底色 + 投影都取 css-variables 里算好的
+         那两个变量，见 .main-nav__desktop 的注释。
+         横向内边距一并补上——移动行原先只有 padding-block，汉堡贴死在视口
+         左缘；加了色带之后这个贴边会非常显眼，且与其余 section 的内容列不齐。 */
+      padding-inline: var(--page-margin);
+      background-color: var(--color-header-surface);
+      box-shadow: var(--header-shadow);
     }
 
     /* 汉堡居左，搜索图标推到最右 */
@@ -2019,6 +2046,13 @@
       position: sticky;
       top: 0;
       z-index: 20;
+    }
+
+    /* 吸住才浮投影（2026-10-29 刘工）。is-stuck 由 assets/nav-sticky.js 打上，
+       判据与像素阈值无关，见该文件头部说明。这条必须与上面的 sticky 同处一段：
+       低于 990px 时既没有吸顶，也不该有投影出现/消失的状态切换。 */
+    .main-nav-section.is-stuck .main-nav__desktop {
+      box-shadow: var(--header-shadow);
     }
 
     /* 桌面端汉堡与抽屉不出现；桌面区是唯一可见部分 */

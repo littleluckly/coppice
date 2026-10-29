@@ -1,0 +1,41 @@
+{% comment %}
+  product-description-content — 概览（Overview）Tab 面板的富文本内容。
+
+  从 product-description section 抽出的 body 部分（2026-10-29 刘工，Tab 化改造）：
+  只承载「左文右图」的编辑式两栏结构，不含 section 包装、heading、schema。
+  样式归属 product-tabs.liquid（snippet 不能带 {% stylesheet %}，见 BUG 红线）。
+
+  · image 由调用方通过参数传入（image_picker 的 media object），
+    商家不传就单栏全宽——不占位、不留空格子。
+  · description 为空时不渲染（调用方已用 if 包裹）。
+{% endcomment %}
+
+{%- liquid
+  assign tab_image = image | default: blank
+  assign has_image = false
+  if tab_image != blank
+    assign has_image = true
+  endif
+-%}
+
+<div class="product-tabs__description{% if has_image %} product-tabs__description--split{% endif %}">
+  <div class="product-tabs__description-text">
+    <div class="product-tabs__rte">
+      {{ product.description }}
+    </div>
+  </div>
+  {%- if has_image -%}
+    <div class="product-tabs__description-media">
+      {{
+        tab_image
+        | image_url: width: 900
+        | image_tag:
+          loading: 'lazy',
+          widths: '400,600,900',
+          sizes: '(min-width: 1100px) 40vw, 100vw',
+          class: 'product-tabs__description-img',
+          alt: tab_image.alt
+      }}
+    </div>
+  {%- endif -%}
+</div>

@@ -124,53 +124,65 @@
   .product-supplies__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+    gap: 1rem;
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  @media (min-width: 750px) {
+  /* 窄屏：横向卡退回单列竖排（图在上、文在下），避免 120px 图挤压文字 */
+  @media (max-width: 749px) {
     .product-supplies__grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  @media (min-width: 1100px) {
-    .product-supplies__grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
     }
   }
   .product-supplies__item {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    /* 参考稿 supply-card：灰底圆角横向卡，hover 上浮 + 投影 */
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
     border-radius: calc(var(--style-border-radius-inputs) * 1.5);
     min-inline-size: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .product-supplies__item:hover {
+    transform: translateY(-2px);
+    /* 浅绿光晕（2026-10-29 刘工）：与画廊右侧加购按钮同款形态
+       （0 6px 20px / 30%），色相取 --color-brand-light 而非品牌深绿——
+       卡片是浅底，深绿投影会发灰，浅绿才有「被点亮」的通透感。 */
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand-light) 30%, transparent);
   }
   .product-supplies__media {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 120px;
+    height: 80px;
     border-radius: var(--style-border-radius-inputs);
-    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+    /* 参考稿 supply-img：白底小图 */
+    background-color: var(--color-background);
     overflow: hidden;
   }
   .product-supplies__img {
     display: block;
-    width: 100%;
+    width: 80%;
     height: auto;
-    aspect-ratio: 1;
+    max-height: 100%;
     object-fit: contain;
   }
   .product-supplies__body {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
+    flex: 1;
     min-inline-size: 0;
   }
   .product-supplies__title {
     color: var(--color-foreground);
-    font-size: 0.88rem;
-    font-weight: 500;
+    font-size: 0.94rem;
+    font-weight: 600;
     text-decoration: none;
     line-height: 1.35;
   }
@@ -179,36 +191,65 @@
   }
   .product-supplies__fitment {
     margin: 0;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     color: var(--color-foreground-muted);
   }
   .product-supplies__price {
     margin: 0;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 1rem;
+    font-weight: 700;
+    /* 参考稿 supply-price：品牌绿 */
+    color: var(--color-brand);
   }
   .product-supplies__add {
     margin-block-start: auto;
-    padding-block-start: 0.35rem;
+    padding-block-start: 0.5rem;
   }
   .product-supplies__button {
-    width: 100%;
+    width: auto;
     min-height: 44px;
-    padding: 8px 0.75rem;
+    padding: 8px 1.5rem;
     border: 1px solid var(--color-brand);
-    border-radius: var(--style-border-radius-inputs);
-    background-color: transparent;
-    color: var(--color-brand);
-    font: inherit;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  .product-supplies__button:hover:not(:disabled) {
+    /* 全圆角胶囊 + 扫光 + 光晕，与主产品区加购按钮同款（2026-10-29 刘工统一） */
+    border-radius: 999px;
     background-color: var(--color-brand);
     color: var(--color-background);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
+  }
+  .product-supplies__button::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: -100%;
+    inline-size: 100%;
+    block-size: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-background) 26%, transparent),
+      transparent
+    );
+    transition: inset-inline-start 0.6s ease;
+    pointer-events: none;
+  }
+  .product-supplies__button:hover:not(:disabled)::before {
+    inset-inline-start: 100%;
+  }
+  .product-supplies__button:hover:not(:disabled) {
+    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 30%, transparent);
   }
   .product-supplies__button:disabled {
     border-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
+    background-color: transparent;
     color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
     cursor: not-allowed;
   }

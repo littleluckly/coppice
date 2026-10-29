@@ -103,16 +103,11 @@
         "limit": 4
       }
     },
-    "product-description": {
-      "type": "product-description",
+    "product-tabs": {
+      "type": "product-tabs",
       "settings": {
-        "heading": "Overview"
-      }
-    },
-    "product-spec-table": {
-      "type": "product-spec-table",
-      "settings": {
-        "heading": "Specifications"
+        "overview_label": "",
+        "specs_label": ""
       }
     },
     "product-supplies": {
@@ -137,8 +132,7 @@
     "main",
     "product-highlights",
     "product-complementary",
-    "product-description",
-    "product-spec-table",
+    "product-tabs",
     "product-supplies",
     "product-recommendations",
     "compare-lookup"

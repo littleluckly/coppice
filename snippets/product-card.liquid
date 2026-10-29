@@ -212,6 +212,7 @@
         data-url="{{ product.url }}"
         {%- if compare_image != '' %} data-image="{{ compare_image }}"{% endif %}
         data-max="4"
+        data-label-added="{{ 'compare.added' | t }}"
         data-label-conflict-cross-group="{{ 'compare.conflict.cross_group' | t }}"
         data-label-conflict-clear-and-add="{{ 'compare.conflict.clear_and_add' | t }}"
         data-label-conflict-full="{{ 'compare.conflict.full' | t: max: 4 }}"
@@ -222,7 +223,10 @@
           class="product-card__compare"
           aria-pressed="false"
         >
-          {{ 'products.product_card.add_to_compare' | t }}
+          <span class="product-compare__box" aria-hidden="true">
+            {{- 'icon-compare.svg' | inline_asset_content -}}
+          </span>
+          <span class="product-compare__label">{{ 'products.product_card.add_to_compare' | t }}</span>
         </button>
       </compare-toggle>
     {%- endif -%}

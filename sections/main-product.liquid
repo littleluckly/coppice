@@ -22,6 +22,12 @@
   资源」的本意是禁止依赖第三方服务）。资源不可用时 `<model-viewer>` 不升级，
   退回封面图，不报错。
 
+  **全屏查看器（2026-10-28，刘工）**：舞台大图包进 `<button>`，点击用原生
+  `<dialog>` + showModal() 打开灯箱（关闭按钮 / `1 / 7` 计数 / 左右箭头 / Esc）。
+  只收图片——视频与 3D 就地播放，塞进灯箱会跟播放器自带控件抢空间。
+  缩略图上视频与 3D 各有一枚角标（76px 尺度下封面图和静态图肉眼无差）。
+  高度约束的踩坑记录见 dev-docs/bugs.md BUG-052（百分比 max-height 在 fr 行里失效）。
+
   JS：product-gallery.js / product-form.js / pickup-availability.js（均为 Custom Element）。
 {% endcomment %}
 
@@ -31,10 +37,12 @@
   assign form_id = 'product-form-' | append: section.id
 
   assign has_model = false
+  assign image_count = 0
   for media in product.media
     if media.media_type == 'model'
       assign has_model = true
-      break
+    elsif media.media_type == 'image'
+      assign image_count = image_count | plus: 1
     endif
   endfor
 
@@ -42,6 +50,16 @@
   if current_variant.compare_at_price > current_variant.price
     assign price_diff = current_variant.compare_at_price | minus: current_variant.price
     assign save_percent = price_diff | times: 100.0 | divided_by: current_variant.compare_at_price | round
+  endif
+
+  # 媒体框的宽高比（2026-10-28）：取第一张媒体的 preview_image。视频与 3D 也有
+  # preview_image（视频是自动截的封面帧），所以三种类型都有值。
+  # 用 preview_image 而不是原始媒体尺寸：预览图才是页面上真正被看到的那一版。
+  # 取不到时按 1（正方）兜底——宁可方正，也不要让框塌成 0。
+  assign gallery_ratio = 1
+  assign first_media = product.media.first
+  if first_media.preview_image
+    assign gallery_ratio = first_media.preview_image.aspect_ratio
   endif
 -%}
 
@@ -79,7 +97,7 @@
   <div class="main-product__layout">
     <product-gallery class="product-gallery" data-media-count="{{ media_count }}">
       <div class="product-gallery__stage">
-        <ul class="product-gallery__slides" role="list">
+        <ul class="product-gallery__slides" role="list" style="--gallery-ratio: {{ gallery_ratio }}">
           {%- for media in product.media -%}
             {%- assign is_first = false -%}
             {%- if forloop.first -%}{%- assign is_first = true -%}{%- endif -%}
@@ -104,17 +122,31 @@
                       assign img_priority = 'auto'
                     endif
                   -%}
-                  {{
-                    media
-                    | image_url: width: 1600
-                    | image_tag:
-                      loading: img_loading,
-                      fetchpriority: img_priority,
-                      widths: '400,600,800,1200,1600',
-                      sizes: '(min-width: 1100px) 48vw, 100vw',
-                      class: 'product-gallery__img',
-                      alt: media.alt
-                  }}
+                  {%- comment -%}
+                    2026-10-28：舞台图包进按钮——点击进全屏查看器（灯箱）。
+                    用 <button> 而不是给 img 挂 click：键盘可 Tab 到、Enter 可触发，
+                    读屏把它读成"按钮"而不是"图片"（AGENTS §8 只允许原生控件承担交互）。
+                  {%- endcomment -%}
+                  <button
+                    type="button"
+                    class="product-gallery__zoom"
+                    data-gallery-zoom
+                    data-zoom-alt="{{ media.alt | default: product.title | escape }}"
+                    aria-haspopup="dialog"
+                    aria-label="{{ 'products.product.media_expand' | t }}"
+                  >
+                    {{
+                      media
+                      | image_url: width: 1600
+                      | image_tag:
+                        loading: img_loading,
+                        fetchpriority: img_priority,
+                        widths: '400,600,800,1200,1600',
+                        sizes: '(min-width: 1100px) 48vw, 100vw',
+                        class: 'product-gallery__img',
+                        alt: media.alt
+                    }}
+                  </button>
                 {%- when 'video', 'external_video', 'model' -%}
                   {%- comment -%}
                     非图片媒体：先给封面 + 播放/3D 按钮，真正的播放器在首次激活时
@@ -148,11 +180,19 @@
                       </span>
                     </button>
                     <template>
+                      {%- comment -%}
+                        自动播放（2026-10-28）：这段 <template> 只在用户点过缩略图 / 箭头
+                        之后才被实例化，属于用户手势触发，浏览器允许带声开播；页面加载时
+                        不实例化，所以不会出现"一进商品页就自己响"。
+                        原生 <video> 由 product-gallery.js 显式调 play()（可捕获拒绝后
+                        降级静音重试）；iframe 没法调 play()，只能把 autoplay 写进 URL
+                        （官方写法：external_video_url: autoplay: 1 | external_video_tag）。
+                      {%- endcomment -%}
                       {%- case media.media_type -%}
                         {%- when 'video' -%}
                           {{ media | video_tag: controls: true, playsinline: true, preload: 'metadata' }}
                         {%- when 'external_video' -%}
-                          {{ media | external_video_tag }}
+                          {{ media | external_video_url: autoplay: 1 | external_video_tag }}
                         {%- when 'model' -%}
                           {{ media | model_viewer_tag }}
                       {%- endcase -%}
@@ -170,7 +210,7 @@
             data-gallery-prev
             aria-label="{{ 'products.product.media_previous' | t }}"
           >
-            {{- 'icon-arrow-left.svg' | inline_asset_content -}}
+            {{- 'icon-chevron-left.svg' | inline_asset_content -}}
           </button>
           <button
             type="button"
@@ -197,12 +237,26 @@
       {%- if media_count > 1 -%}
         <ul class="product-gallery__thumbs" role="list">
           {%- for media in product.media -%}
+            {%- comment -%}
+              缩略图的可读名要带媒体类型（2026-10-28）：纯图 / 3D / 视频三种缩略图
+              长得一样，只报"2 of 7"读屏用户无从判断点下去会发生什么。
+            {%- endcomment -%}
+            {%- liquid
+              if media.media_type == 'model'
+                assign thumb_label = 'products.product.media_slide_3d' | t: index: forloop.index, total: media_count
+              elsif media.media_type == 'video' or media.media_type == 'external_video'
+                assign thumb_label = 'products.product.media_slide_video' | t: index: forloop.index, total: media_count
+              else
+                assign thumb_label = 'products.product.media_slide' | t: index: forloop.index, total: media_count
+              endif
+            -%}
             <li>
               <button
                 type="button"
                 class="product-gallery__thumb{% if forloop.first %} is-active{% endif %}"
                 data-gallery-thumb="{{ forloop.index0 }}"
-                aria-label="{{ 'products.product.media_slide' | t: index: forloop.index, total: media_count }}"
+                data-media-type="{{ media.media_type }}"
+                aria-label="{{ thumb_label | escape }}"
                 aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
               >
                 {%- if media.preview_image -%}
@@ -217,10 +271,73 @@
                       alt: ''
                   }}
                 {%- endif -%}
+                {%- if media.media_type != 'image' -%}
+                  {%- comment -%}
+                    视频 / 3D 缩略图的角标：76px 的缩略图里，封面和普通图肉眼无差，
+                    不叠一个角标就分不出"这张点下去会播片"。
+                  {%- endcomment -%}
+                  <span class="product-gallery__thumb-badge" aria-hidden="true">
+                    {%- if media.media_type == 'model' -%}
+                      3D
+                    {%- else -%}
+                      {{- 'icon-play.svg' | inline_asset_content -}}
+                    {%- endif -%}
+                  </span>
+                {%- endif -%}
               </button>
             </li>
           {%- endfor -%}
         </ul>
+      {%- endif -%}
+
+      {%- if image_count > 0 -%}
+        {%- comment -%}
+          全屏查看器（2026-10-28）。原生 <dialog> + showModal() 拿焦点锁定、
+          背景 inert、Esc 关闭、::backdrop；scroll-lock 属性触发 critical.css
+          里既有的 html:has(dialog[scroll-lock][open]) 锁滚动。
+
+          只收图片：视频与 3D 在舞台内就地播放，塞进灯箱会和播放器自带控件抢空间。
+          内容（img / 计数文本）由 product-gallery.js 在打开时填，
+          因此标记里不出现任何 src，避免多一次无意义的图片请求。
+        {%- endcomment -%}
+        <dialog
+          class="product-lightbox"
+          data-gallery-lightbox
+          scroll-lock
+          aria-label="{{ 'products.product.media_viewer' | t }}"
+          data-counter-template="{{ 'products.product.media_counter' | t: index: '[index]', total: '[total]' }}"
+        >
+          <div class="product-lightbox__bar">
+            <p class="product-lightbox__counter" data-lightbox-counter aria-live="polite"></p>
+            <button
+              type="button"
+              class="product-lightbox__close"
+              data-lightbox-close
+              aria-label="{{ 'products.product.media_close' | t }}"
+            >
+              {{- 'icon-close.svg' | inline_asset_content -}}
+            </button>
+          </div>
+          <div class="product-lightbox__stage">
+            <button
+              type="button"
+              class="product-lightbox__arrow product-lightbox__arrow--prev"
+              data-lightbox-prev
+              aria-label="{{ 'products.product.media_previous' | t }}"
+            >
+              {{- 'icon-chevron-left.svg' | inline_asset_content -}}
+            </button>
+            <div class="product-lightbox__canvas" data-lightbox-canvas></div>
+            <button
+              type="button"
+              class="product-lightbox__arrow product-lightbox__arrow--next"
+              data-lightbox-next
+              aria-label="{{ 'products.product.media_next' | t }}"
+            >
+              {{- 'icon-chevron-right.svg' | inline_asset_content -}}
+            </button>
+          </div>
+        </dialog>
       {%- endif -%}
     </product-gallery>
 
@@ -228,10 +345,12 @@
       <h1 class="main-product__title">{{ product.title | escape }}</h1>
 
       {%- comment -%}
-        副标题：不新增字段，由 spec 拼装（拍板 10）——切割宽度/导板 · 操作方式 · 排量/功率。
-        分隔符**前置**（第一项之前为空）——后置写法会在末项缺值时留下一个孤零零的「·」。
+        规格胶囊（2026-10-29 刘工，参考稿 badges）：不新增字段，由 spec 拼装（拍板 10）——
+        切割宽度/导板 · 操作方式 · 排量/功率/电压。原来是「·」拼接成一行灰字，现按参考稿
+        拆成独立的浅绿胶囊，每个字段一个 <span>。缺值字段跳过（不留空胶囊）。
+        单位换算仍走 spec-value snippet（AGENTS §4 红线，不在这里碰系数）。
       {%- endcomment -%}
-      {%- capture subtitle -%}
+      {%- capture badges -%}
         {%- assign sub_width = product.metafields.spec.cutting_width_mm.value -%}
         {%- assign sub_bar = product.metafields.spec.bar_length_mm.value -%}
         {%- assign sub_op = product.metafields.spec.operation_type.value -%}
@@ -247,38 +366,33 @@
           {%- assign sub_power_unit = 'displacement_cc' -%}
         {%- endif -%}
 
-        {%- assign sub_sep = '' -%}
-        {%- assign sub_out = '' -%}
-
         {%- if sub_width != blank -%}
-          {%- capture sub_part -%}{%- render 'spec-value', value: sub_width, unit_type: 'length_mm' -%}{%- endcapture -%}
+          <span class="main-product__badge">
+            {%- render 'spec-value', value: sub_width, unit_type: 'length_mm' -%}
+          </span>
         {%- elsif sub_bar != blank -%}
-          {%- capture sub_part -%}{%- render 'spec-value', value: sub_bar, unit_type: 'length_mm' -%}{%- endcapture -%}
-        {%- endif -%}
-        {%- if sub_part != blank -%}
-          {%- assign sub_out = sub_out | append: sub_sep | append: sub_part -%}
-          {%- assign sub_sep = ' · ' -%}
-          {%- assign sub_part = '' -%}
+          <span class="main-product__badge">
+            {%- render 'spec-value', value: sub_bar, unit_type: 'length_mm' -%}
+          </span>
         {%- endif -%}
 
         {%- if sub_op != blank and sub_op != 'N/A' -%}
-          {%- assign sub_out = sub_out | append: sub_sep | append: sub_op -%}
-          {%- assign sub_sep = ' · ' -%}
+          <span class="main-product__badge">{{ sub_op }}</span>
         {%- endif -%}
 
         {%- if sub_power != blank -%}
           {%- if sub_power_unit == 'raw' -%}
-            {%- assign sub_out = sub_out | append: sub_sep | append: sub_power -%}
+            <span class="main-product__badge">{{ sub_power }}</span>
           {%- else -%}
-            {%- capture sub_power_part -%}{%- render 'spec-value', value: sub_power, unit_type: sub_power_unit -%}{%- endcapture -%}
-            {%- assign sub_out = sub_out | append: sub_sep | append: sub_power_part -%}
+            <span class="main-product__badge">
+              {%- render 'spec-value', value: sub_power, unit_type: sub_power_unit -%}
+            </span>
           {%- endif -%}
         {%- endif -%}
-        {{- sub_out -}}
       {%- endcapture -%}
-      {%- assign subtitle_text = subtitle | strip_html | strip -%}
-      {%- if subtitle_text != blank -%}
-        <p class="main-product__subtitle">{{ subtitle }}</p>
+      {%- assign badges_text = badges | strip_html | strip -%}
+      {%- if badges_text != blank -%}
+        <div class="main-product__badges">{{ badges }}</div>
       {%- endif -%}
 
       <div class="main-product__price">
@@ -440,18 +554,115 @@
         {%- endform -%}
       </product-form>
 
+      {%- comment -%}
+        信任行（2026-10-29 刘工，参考稿 trust-features）：trust_warranty 与 trust_item
+        两类 block 抽出来渲染进同一个网格容器，做成「顶线分隔 + 桌面 2 列」的信任区。
+        其余 block（spec_bullets / pickup / compare）仍在主流程里自由排序。
+
+        代价（有意，说清楚）：trust 类 block 会被「吸」进信任组，不再能和
+        compare / pickup 交错排序——信任项本来就是一个视觉单元，聚组更符合设计意图；
+        组内相对顺序仍由商家拖拽决定（信任组里重新按 section.blocks 顺序扫一遍，
+        天然保留原序），增删不受影响。
+      {%- endcomment -%}
       {%- for block in section.blocks -%}
         {%- case block.type -%}
-          {%- when 'spec_bullets' -%}
-            <div class="main-product__block" {{ block.shopify_attributes }}>
-              {% render 'spec-bullets', product: product %}
-            </div>
+          {%- when 'trust_warranty', 'trust_item', 'spec_bullets' -%}
+            {%- continue -%}
 
-          {%- when 'trust_warranty' -%}
-            {%- assign warranty = product.metafields.spec.warranty_months.value -%}
-            {%- if warranty != blank and warranty != 0 -%}
-              <div class="main-product__block" {{ block.shopify_attributes }}>
-                <div class="trust-item">
+          {%- when 'pickup' -%}
+            {%- comment -%}
+              BUG-053：store_availabilities 的语义是「这个变体在这个 location 有库存记录」，
+              不等于该 location 开通了自提。官方原文：returned location isn't guaranteed
+              to offer local pickup，必须先按 pick_up_enabled 过滤，否则会把「有货但不
+              提供自提」的门店列给顾客。这也是 Dawn 的官方写法（where 过滤器前置）。
+
+              2026-10-29 刘工：后台关闭「门店自提」配送方式后，过滤结果为空，原来会
+              渲染「Pickup availability / Not available for pickup」这一整块负面提示。
+              改为：无任何可自提门店时，整个 pickup block 不渲染（标题也不出），
+              商品页直接干净。变体切换走 Section Rendering API 回包，走的是同一套
+              服务端逻辑，所以切换后同样自动隐藏。
+            {%- endcomment -%}
+            {%- assign pickup_items = current_variant.store_availabilities | where: 'pick_up_enabled', true -%}
+            {%- if pickup_items.size > 0 -%}
+              <div class="main-product__block" data-pickup-block aria-live="polite" {{ block.shopify_attributes }}>
+                <pickup-availability
+                  class="pickup"
+                  data-variant-id="{{ current_variant.id }}"
+                  data-section-id="{{ section.id }}"
+                  data-url="{{ product.url }}"
+                  data-label-checking="{{ 'products.product.pickup_checking' | t }}"
+                >
+                  <h2 class="pickup__heading">{{ 'products.product.pickup_heading' | t }}</h2>
+                  {%- assign any_pickup = false -%}
+                  <ul class="pickup__list" role="list">
+                    {%- for item in pickup_items -%}
+                      {%- if item.available -%}
+                        {%- assign any_pickup = true -%}
+                        <li class="pickup__item">
+                          <span class="pickup__store">{{ item.location.name | escape }}</span>
+                          {%- comment -%}
+                            BUG-054：时间属性名带下划线（pick + 下划线 + up + 下划线 + time），
+                            漏掉下划线会静默取到空白、整行不渲染。详见 dev-docs/bugs.md。
+                            BUG-055：pick_up_time 返回的已是完整句子（"Usually ready in 24
+                            hours"，商家可在后台改），不能再套 "Ready in {{ time }}"，
+                            否则重复前缀。直出原文，与 Dawn 一致。
+                          {%- endcomment -%}
+                          {%- if item.pick_up_time != blank -%}
+                            <span class="pickup__time">{{ item.pick_up_time | escape }}</span>
+                          {%- endif -%}
+                        </li>
+                      {%- endif -%}
+                    {%- endfor -%}
+                  </ul>
+                  {%- unless any_pickup -%}
+                    <p class="pickup__unavailable">{{ 'products.product.pickup_unavailable' | t }}</p>
+                  {%- endunless -%}
+                </pickup-availability>
+              </div>
+            {%- endif -%}
+
+          {%- when 'compare' -%}
+            <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>
+              {% render 'compare-button', product: product %}
+            </div>
+        {%- endcase -%}
+      {%- endfor -%}
+
+      {%- comment -%}
+        决策参数 + 信任组（2026-10-29 刘工）：spec_bullets 与 trust 项都抽到买盒底部，
+        spec-bullets 在信任组上方，各带顶线分隔（参考稿把决策参数和信任行都放在
+        购买区下半部）。spec_bullets 的 shopify_attributes 只在下面渲染一次
+        （主循环里已 continue 跳过）。
+      {%- endcomment -%}
+      {%- assign has_spec = false -%}
+      {%- assign has_trust = false -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'spec_bullets' -%}
+          {%- assign has_spec = true -%}
+        {%- elsif block.type == 'trust_warranty' or block.type == 'trust_item' -%}
+          {%- assign has_trust = true -%}
+        {%- endif -%}
+      {%- endfor -%}
+
+      {%- if has_spec -%}
+        <div class="main-product__specs">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'spec_bullets' -%}
+              <div {{ block.shopify_attributes }}>
+                {% render 'spec-bullets', product: product %}
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      {%- if has_trust -%}
+        <div class="main-product__trust">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'trust_warranty' -%}
+              {%- assign warranty = product.metafields.spec.warranty_months.value -%}
+              {%- if warranty != blank and warranty != 0 -%}
+                <div class="trust-item" {{ block.shopify_attributes }}>
                   <span class="trust-item__icon" aria-hidden="true">
                     {{- 'icon-warranty.svg' | inline_asset_content -}}
                   </span>
@@ -465,13 +676,10 @@
                     {%- endif -%}
                   </span>
                 </div>
-              </div>
-            {%- endif -%}
-
-          {%- when 'trust_item' -%}
-            {%- if block.settings.text != blank -%}
-              <div class="main-product__block" {{ block.shopify_attributes }}>
-                <div class="trust-item">
+              {%- endif -%}
+            {%- elsif block.type == 'trust_item' -%}
+              {%- if block.settings.text != blank -%}
+                <div class="trust-item" {{ block.shopify_attributes }}>
                   <span class="trust-item__icon" aria-hidden="true">
                     {%- case block.settings.icon -%}
                       {%- when 'shipping' -%}
@@ -484,52 +692,11 @@
                   </span>
                   <span class="trust-item__text">{{ block.settings.text | escape }}</span>
                 </div>
-              </div>
+              {%- endif -%}
             {%- endif -%}
-
-          {%- when 'pickup' -%}
-            <div class="main-product__block" data-pickup-block aria-live="polite" {{ block.shopify_attributes }}>
-              <pickup-availability
-                class="pickup"
-                data-variant-id="{{ current_variant.id }}"
-                data-section-id="{{ section.id }}"
-                data-url="{{ product.url }}"
-                data-label-checking="{{ 'products.product.pickup_checking' | t }}"
-              >
-                <h2 class="pickup__heading">{{ 'products.product.pickup_heading' | t }}</h2>
-                {%- assign pickup_items = current_variant.store_availabilities -%}
-                {%- if pickup_items.size > 0 -%}
-                  {%- assign any_pickup = false -%}
-                  <ul class="pickup__list" role="list">
-                    {%- for item in pickup_items -%}
-                      {%- if item.available -%}
-                        {%- assign any_pickup = true -%}
-                        <li class="pickup__item">
-                          <span class="pickup__store">{{ item.location.name | escape }}</span>
-                          {%- if item.pickup_time != blank -%}
-                            <span class="pickup__time">
-                              {{- 'products.product.pickup_time' | t: time: item.pickup_time -}}
-                            </span>
-                          {%- endif -%}
-                        </li>
-                      {%- endif -%}
-                    {%- endfor -%}
-                  </ul>
-                  {%- unless any_pickup -%}
-                    <p class="pickup__unavailable">{{ 'products.product.pickup_unavailable' | t }}</p>
-                  {%- endunless -%}
-                {%- else -%}
-                  <p class="pickup__unavailable">{{ 'products.product.pickup_unavailable' | t }}</p>
-                {%- endif -%}
-              </pickup-availability>
-            </div>
-
-          {%- when 'compare' -%}
-            <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>
-              {% render 'compare-button', product: product %}
-            </div>
-        {%- endcase -%}
-      {%- endfor -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
     </div>
   </div>
 </section>
@@ -602,51 +769,84 @@
     border-radius: calc(var(--style-border-radius-inputs) * 1.5);
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
     overflow: hidden;
+    /* 常驻柔和光晕（2026-10-29 刘工，参考稿）：只保留 pulseGlow 的**静态**值——
+       参考稿是 4s 无限循环呼吸，这里去掉循环，留一圈常驻投影让媒体框从浅底里
+       浮出来。不循环：无限装饰动画会踩 prefers-reduced-motion 语义，也跟
+       「大图可点击放大」的交互抢注意力。 */
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--color-brand) 8%, transparent);
+    /* 媒体框（2026-10-28 刘工）：所有 slide 共用同一个框，比例取自第一张媒体的
+       preview_image（Liquid 写在 ul 的 --gallery-ratio 上）。
+       原来每个 slide 按自身比例撑高，切到视频——或切到另一张比例不同的图——
+       整块高度跟着变，页面上下跳一截。框定死之后，谁也不许改高度。 */
+    aspect-ratio: var(--gallery-ratio, 1);
+    max-block-size: 78vh;
   }
+  /* 绝对定位铺满媒体框。用 inset 而不是 height: 100%——框高由 aspect-ratio 派生，
+     百分比高度在这条链上会被当不确定值（BUG-052 的同类坑，别再赌）。 */
   .product-gallery__slide {
+    position: absolute;
+    inset: 0;
     margin: 0;
   }
   .product-gallery__slide[hidden] {
     display: none;
   }
+  /* 图片 / 视频 / iframe / 3D 一律铺满同一个框、各自 contain 居中：
+     切媒体时变的只有框里的内容，框本身纹丝不动。 */
   .product-gallery__img,
   .product-gallery__slide :is(video, iframe, model-viewer) {
+    position: absolute;
+    inset: 0;
     display: block;
-    width: 100%;
-    height: auto;
-    max-height: 78vh;
+    inline-size: 100%;
+    block-size: 100%;
     object-fit: contain;
     background-color: var(--color-background);
   }
   .product-gallery__deferred {
-    position: relative;
+    position: absolute;
+    inset: 0;
   }
   .product-gallery__deferred-button {
+    /* 按钮铺满媒体框（不是随内容高）：封面图和播放器都绝对定位在它里面 */
+    position: absolute;
+    inset: 0;
     display: block;
-    width: 100%;
+    inline-size: 100%;
     padding: 0;
     border: 0;
     background: none;
     cursor: pointer;
-    position: relative;
   }
+  /* 舞台封面上的媒体类型按钮（2026-10-28 第二轮修订）：原来也是左下角小胶囊，
+     和缩略图角标一样的问题。改成压在封面正中的 64px 圆盘——这是视频封面的
+     通行画法，也把"整张封面就是播放键"这件事说清楚了。
+
+     底色用品牌色实心、不用半透明白：商品图绝大多数是浅底，白圆盘压在白底上
+     边界几乎消失（实测只剩投影，等于没有按钮）。品牌色在深浅两套预设里都够重，
+     白/深字与它天然高对比——它和主按钮（product-form__submit）同一套配色语义。
+     缩略图上的角标仍是中性深色小圆点：那是"这张是视频"的标签，不是按钮，
+     两者角色不同，不该长得一模一样。 */
   .product-gallery__deferred-icon {
     position: absolute;
-    inset-block-end: 1rem;
-    inset-inline-start: 1rem;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    translate: -50% -50%;
     display: grid;
     place-items: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding-inline: 0.75rem;
+    inline-size: 64px;
+    block-size: 64px;
     border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-background) 88%, transparent);
-    color: var(--color-foreground);
-    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-foreground) 22%, transparent);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--color-foreground) 28%, transparent);
   }
   .product-gallery__deferred-icon svg {
-    width: 20px;
-    height: 20px;
+    inline-size: 26px;
+    block-size: 26px;
   }
 
   .product-gallery__arrow {
@@ -662,6 +862,11 @@
     background-color: color-mix(in srgb, var(--color-background) 92%, transparent);
     color: var(--color-foreground);
     cursor: pointer;
+    transition:
+      background-color 0.22s ease,
+      border-color 0.22s ease,
+      color 0.22s ease,
+      box-shadow 0.22s ease;
   }
   .product-gallery__arrow svg {
     width: 18px;
@@ -673,9 +878,17 @@
   .product-gallery__arrow--next {
     inset-inline-end: 0.75rem;
   }
-  .product-gallery__arrow:hover {
+  .product-gallery__arrow:hover,
+  .product-gallery__arrow:focus-visible {
     border-color: var(--color-brand);
-    color: var(--color-brand);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--color-brand) 34%, transparent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .product-gallery__arrow {
+      transition: none;
+    }
   }
   @media (min-width: 750px) {
     .product-gallery__arrow {
@@ -721,9 +934,10 @@
   }
   .product-gallery__thumb {
     display: block;
+    position: relative;
     width: 76px;
     padding: 0;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border: 2px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
     border-radius: var(--style-border-radius-inputs);
     background-color: var(--color-background);
     cursor: pointer;
@@ -731,7 +945,6 @@
   }
   .product-gallery__thumb.is-active {
     border-color: var(--color-brand);
-    box-shadow: 0 0 0 1px var(--color-brand);
   }
   .product-gallery__thumb-img {
     display: block;
@@ -740,6 +953,53 @@
     aspect-ratio: 1;
     object-fit: contain;
   }
+
+  /* 缩略图媒体角标（2026-10-28，第二轮修订）：视频 / 3D 与静态图在 76px 尺度上
+     肉眼无差，必须在缩略图本身就标出来，否则"点下去会播片"只能靠猜。
+     位置压在缩略图正中间、尺寸放大到 32px —— 第一版做在左下角 20px，实际看
+     既看不见也认不出是播放键。中心位置和舞台上的播放按钮完全同构。 */
+  .product-gallery__thumb-badge {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    translate: -50% -50%;
+    display: grid;
+    place-items: center;
+    inline-size: 32px;
+    block-size: 32px;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 80%, transparent);
+    color: var(--color-background);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+  }
+  .product-gallery__thumb-badge svg {
+    inline-size: 18px;
+    block-size: 18px;
+  }
+
+  /* ---- 舞台图放大入口（2026-10-28） ---- */
+  /* 2026-10-28 晚：右下角提示胶囊已移除（刘工：绿圈常驻抢视线），
+     只留"整张图可点"的点击区——靠 cursor: zoom-in + 灯箱本身传达可放大。 */
+  .product-gallery__zoom {
+    /* 同样铺满媒体框：图片是绝对定位的，按钮不能靠内容撑高（否则塌成 0） */
+    position: absolute;
+    inset: 0;
+    display: block;
+    inline-size: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+  }
+  .product-gallery__zoom:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
   @media (min-width: 1100px) {
     .product-gallery {
       display: grid;
@@ -755,6 +1015,129 @@
     }
   }
 
+  /* ===== 全屏查看器（灯箱，2026-10-28） =====
+     底色走 --color-background（参考稿是浅色底，而且这样 Noir 深色预设自动跟随）。
+     控件沿用主题既有的叠加语言：18% 前景色描边 + 品牌色 hover，与舞台箭头同款，
+     不引入第二套按钮外观。 */
+  .product-lightbox {
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    overflow: hidden;
+  }
+  /* UA 对未打开的 dialog 已给 display:none，这里显式写一遍：
+     <product-gallery> 在桌面是 grid 容器，绝不能让这个 dialog 占一个格子 */
+  .product-lightbox:not([open]) {
+    display: none;
+  }
+  .product-lightbox[open] {
+    display: grid;
+    /* 顶栏自适应，舞台吃掉剩余高度（图片按这个高度做 contain） */
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  /* 全屏面板本身已铺满视口，backdrop 只在入场/退场那一瞬可见 */
+  .product-lightbox::backdrop {
+    background-color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+  }
+
+  .product-lightbox__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem clamp(0.75rem, 3vw, 1.5rem);
+  }
+  /* 计数（1 / 7）：等宽数字，翻页时数字不抖 */
+  .product-lightbox__counter {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground);
+  }
+
+  .product-lightbox__close,
+  .product-lightbox__arrow {
+    display: grid;
+    place-items: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+    border-radius: 999px;
+    background-color: transparent;
+    color: var(--color-foreground);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  /* hover 与舞台箭头保持同一套反馈：描边 + 图标转品牌色 */
+  .product-lightbox__close:hover,
+  .product-lightbox__arrow:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
+  .product-lightbox__close:focus-visible,
+  .product-lightbox__arrow:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  .product-lightbox__close svg,
+  .product-lightbox__arrow svg {
+    inline-size: 20px;
+    block-size: 20px;
+  }
+  /* JS 在只有一张图时把箭头 hidden——本组规则声明了 display:grid，
+     会盖掉 UA 的 [hidden]{display:none}，必须显式补回来 */
+  .product-lightbox__arrow[hidden] {
+    display: none;
+  }
+
+  .product-lightbox__stage {
+    /* 三列固定：箭头各占一列，图片永远不会被箭头压住 */
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: clamp(0.25rem, 2vw, 1.5rem);
+    min-block-size: 0;
+    padding: 0 clamp(0.5rem, 3vw, 1.5rem) clamp(1rem, 4vh, 2.5rem);
+  }
+  /* 画布 = 图片以外可点击关闭的区域（灯箱的常规习惯）。
+     flex 而非 grid：grid 的隐式行按内容定尺寸，图片的百分比上限会失效。 */
+  .product-lightbox__canvas {
+    /* 尺寸容器：让图片能用 cqw / cqh 取到画布的真实宽高。
+       为什么不用百分比——画布高是「1fr 行 → 100%」派生出来的，Chrome 在该链条上
+       把高度当不确定值，max-block-size: 100% 直接失效；实测竖版大图会溢出
+       65px 并被 dialog 的 overflow:hidden 裁掉。cq 单位没有这个问题。 */
+    container-type: size;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 0;
+    min-block-size: 0;
+    block-size: 100%;
+  }
+  /* 不放大（inline-size: auto 取图片自身宽度），只按可用区域等比收窄。
+     前两行是百分比兜底（不支持容器查询的老浏览器），后两行才是主力。 */
+  .product-lightbox__img {
+    inline-size: auto;
+    block-size: auto;
+    max-inline-size: 100%;
+    max-block-size: 100%;
+    max-inline-size: 100cqw;
+    max-block-size: 100cqh;
+    object-fit: contain;
+  }
+
   /* 买盒 */
   .main-product__info {
     min-inline-size: 0;
@@ -762,14 +1145,25 @@
   .main-product__title {
     margin: 0 0 0.35rem;
     font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+    font-weight: 700;
     line-height: 1.2;
   }
-  .main-product__subtitle {
-    margin: 0 0 0.85rem;
-    color: var(--color-foreground-muted);
+  /* 规格胶囊（2026-10-29 刘工，参考稿 badges）：浅绿胶囊，全圆角。
+     参考稿是 --primary-light 底 + --primary 绿字，这里用 color-mix 品牌色浅底，
+     不硬编码色值（AGENTS §3 红线）。 */
+  .main-product__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
   }
-  .main-product__sep {
-    margin-inline: 0.4rem;
+  .main-product__badge {
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+    color: var(--color-brand);
+    font-size: 0.82rem;
+    font-weight: 600;
   }
 
   .main-product__price {
@@ -780,21 +1174,21 @@
     margin-block-end: 0.25rem;
   }
   .main-product__price-current {
-    font-size: 1.6rem;
-    font-weight: 500;
-    color: var(--color-foreground);
+    font-size: clamp(1.75rem, 1.5rem + 0.8vw, 2rem);
+    font-weight: 700;
+    color: var(--color-brand);
   }
   .main-product__price-compare {
     color: var(--color-foreground-muted);
-    font-size: 0.95rem;
+    font-size: 1rem;
   }
   .main-product__price-save {
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
-    color: var(--color-brand);
-    font-size: 0.78rem;
-    font-weight: 500;
+    background-color: #ffebeb;
+    color: #d32f2f;
+    font-size: 0.8rem;
+    font-weight: 600;
   }
   .main-product__unit-price {
     margin: 0 0 1rem;
@@ -857,9 +1251,16 @@
     display: inline-flex;
     align-items: stretch;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
-    border-radius: var(--style-border-radius-inputs);
+    /* 全圆角（2026-10-29 刘工，参考稿）：购买区三个控件统一胶囊形。
+       overflow: hidden 保留——两端按钮的 hover 底色靠它裁进圆角里。 */
+    border-radius: 999px;
     overflow: hidden;
     flex: 0 0 auto;
+    transition: border-color 0.2s ease;
+  }
+  /* hover 边框转品牌色（2026-10-29 刘工，参考稿 qty-selector） */
+  .quantity:hover {
+    border-color: var(--color-brand);
   }
   .quantity__button {
     width: 44px;
@@ -869,9 +1270,14 @@
     color: var(--color-foreground);
     font-size: 1rem;
     cursor: pointer;
+    transition: transform 0.1s ease, color 0.2s ease;
   }
   .quantity__button:hover {
     background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+  .quantity__button:active {
+    transform: scale(0.8);
+    color: var(--color-brand);
   }
   .quantity__input {
     width: 3.25rem;
@@ -894,17 +1300,48 @@
     min-height: 44px;
     padding: 10px 1.25rem;
     border: 1px solid var(--color-brand);
-    border-radius: var(--style-border-radius-inputs);
+    /* 全圆角胶囊（2026-10-29 刘工），与数量选择器、Buy it now 同一套形状 */
+    border-radius: 999px;
     background-color: var(--color-brand);
     color: var(--color-background);
     font: inherit;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
+    /* 扫光层要压在按钮文字上方，同时裁掉移出按钮的渐变条（参考稿） */
+    position: relative;
+    overflow: hidden;
+    /* 常驻光晕（2026-10-29 刘工，参考稿 btn-primary box-shadow）：
+       品牌绿投影，hover 时加深扩散。用 color-mix 不硬编码色值。 */
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);
+  }
+  /* 扫光（2026-10-29 刘工，参考稿 btn-primary::before）：hover 时一条高光
+     从左扫到右。纯 hover 触发、不循环，prefers-reduced-motion 下由下面
+     的媒体查询整体关掉 transition，渐变条不再扫，只剩即时反馈。 */
+  .product-form__submit::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: -100%;
+    inline-size: 100%;
+    block-size: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-background) 26%, transparent),
+      transparent
+    );
+    transition: inset-inline-start 0.6s ease;
+    pointer-events: none;
+  }
+  .product-form__submit:hover:not(:disabled)::before {
+    inset-inline-start: 100%;
   }
   .product-form__submit:hover:not(:disabled) {
     background-color: var(--color-brand-accent);
     border-color: var(--color-brand-accent);
+    /* hover 光晕加深扩散（参考稿 btn-primary:hover） */
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 30%, transparent);
   }
   .product-form__submit:disabled {
     border-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
@@ -926,10 +1363,56 @@
   .product-form__terms {
     margin-block-start: 0.75rem;
   }
+  /* Buy it now（加速结账按钮）——去底色、描边随品牌色（2026-10-29 刘工）。
+
+     平台事实（shopify.dev / Accelerated checkout）：这组按钮渲染在自定义元素
+     `shopify-accelerated-checkout` 的 **closed shadow DOM** 里，针对内部类名与
+     结构的任何样式都不会生效。官方开放的自定义属性只有这一组：
+       高度 / 圆角 / 投影 / 骨架色 / 购物车布局
+     **没有背景色、没有文字色**——那两项只能在主题设置 Colors 里改（全站按钮一起变）。
+
+     所以这里分两路：
+       1) 圆角 + 内描边走官方属性（box-shadow 冒充 border），稳定生效；
+       2) 去底色用旧版类名兜底——尚未升级到 shadow DOM 的实现会生效，
+          已升级的实现会静默忽略。文字色同理。
+     代价说清楚：若平台已升级，按钮仍是实心底，只有形状变胶囊。
+     真机上确认；实在去不掉只能退一步把描边做粗、让实心与页面更协调。 */
+  .product-form__accelerated shopify-accelerated-checkout {
+    --shopify-accelerated-checkout-button-border-radius: 999px;
+    --shopify-accelerated-checkout-button-block-size: 44px;
+    --shopify-accelerated-checkout-button-box-shadow: inset 0 0 0 1.5px var(--color-brand);
+  }
+  .product-form__accelerated .shopify-payment-button__button--unbranded {
+    border-radius: 999px;
+    background-color: transparent;
+    color: var(--color-brand);
+    box-shadow: inset 0 0 0 1.5px var(--color-brand);
+  }
+  .product-form__accelerated .shopify-payment-button__button--unbranded:hover:not([disabled]) {
+    background-color: color-mix(in srgb, var(--color-brand) 7%, transparent);
+  }
 
   /* 信任行 / 自提 / 对比 */
   .main-product__block {
     margin-block-start: 0.75rem;
+  }
+  /* 决策参数容器（2026-10-29 刘工）：spec-bullets 抽到信任组上方，顶线分隔，
+     与信任组同一条视觉语言。 */
+  .main-product__specs {
+    margin-block-start: 1.25rem;
+    padding-block-start: 1.25rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+  }
+  /* 信任组容器（2026-10-29 刘工，参考稿 trust-features）：顶线分隔 + 桌面 2 列。
+     参考稿是 2×2 固定网格，这里信任项数量可变，所以用 auto-fit 的响应式两列：
+     桌面端每列最小 ~14rem 时自然分两列，窄了退单列。 */
+  .main-product__trust {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.75rem 1rem;
+    margin-block-start: 1.25rem;
+    padding-block-start: 1.25rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
   }
   .trust-item {
     display: flex;
@@ -937,12 +1420,20 @@
     gap: 0.5rem;
     font-size: 0.88rem;
     color: var(--color-foreground-muted);
+    transition: color 0.2s ease;
+  }
+  .trust-item:hover {
+    color: var(--color-brand);
   }
   .trust-item__icon {
     display: grid;
     place-items: center;
     flex: 0 0 auto;
     color: var(--color-brand);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .trust-item:hover .trust-item__icon {
+    transform: scale(1.25) rotate(5deg);
   }
   .trust-item__icon svg {
     width: 20px;
@@ -965,8 +1456,20 @@
     flex-wrap: wrap;
     gap: 0.35rem;
   }
+  /* 多个门店之间留一口气 —— 单行时代靠行距就够，两行式（门店名 + 备货时长）
+     挤在一起会读成一家店的两段 */
+  .pickup__item + .pickup__item {
+    margin-block-start: 0.5rem;
+  }
   .pickup__store {
     color: var(--color-foreground);
+  }
+  /* 备货时长单独占一行（flex-basis: 100% 强制换行）。
+     平台返回的是整句（"Usually ready in 24 hours"），和门店名挤在一行会太长。 */
+  .pickup__time {
+    flex-basis: 100%;
+    font-size: 0.8rem;
+    color: var(--color-foreground-muted);
   }
   .pickup__unavailable {
     margin: 0;
@@ -974,51 +1477,68 @@
     color: var(--color-foreground-muted);
   }
 
-  /* 对比入口（compare-button snippet 的样式归属；snippet 不能自带样式块） */
+  /* 对比入口（compare-button snippet 的样式归属；snippet 不能自带样式块）
+     2026-10-29 刘工，参考稿 btn-compare：绿底白字图标方盒 + 文字，
+     hover 图标盒 scale+rotate、文字下划线。 */
   .product-compare__button {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
     min-height: 44px;
-    padding: 0;
+    padding: 0.25rem;
     border: 0;
     background: none;
-    color: var(--color-foreground-muted);
+    color: var(--color-brand);
     font: inherit;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
   }
   .product-compare__box {
     display: grid;
     place-items: center;
-    width: 22px;
-    height: 22px;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 30%, transparent);
-    border-radius: 4px;
-    color: transparent;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    width: 32px;
+    height: 32px;
+    /* 默认：浅色底 + 品牌绿描边（未加入对比时是「待选」态） */
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+    color: var(--color-brand);
+    border: 1.5px solid color-mix(in srgb, var(--color-brand) 55%, transparent);
+    border-radius: 6px;
+    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
   }
   .product-compare__box svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
-  .product-compare__button[aria-pressed='true'] .product-compare__box {
+  /* hover：图标盒微放大 + 微旋转，文字下划线（参考稿） */
+  .product-compare__button:hover .product-compare__box {
+    transform: scale(1.05) rotate(5deg);
     border-color: var(--color-brand);
+  }
+  .product-compare__button:hover .product-compare__label {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  /* 选中态（aria-pressed=true）：图标盒转深色实心，文字转深绿 */
+  .product-compare__button[aria-pressed='true'] .product-compare__box {
     background-color: var(--color-brand);
     color: var(--color-background);
-  }
-  .product-compare__button[aria-pressed='true'] {
-    color: var(--color-brand);
-  }
-  .product-compare__button:hover .product-compare__box {
     border-color: var(--color-brand);
   }
+  .product-compare__button[aria-pressed='true'] {
+    color: var(--color-brand-accent);
+  }
 
-  /* 三条决策参数（spec-bullets snippet 的样式归属） */
+  /* 三条决策参数（spec-bullets snippet 的样式归属）
+     2026-10-29 刘工，改成与信任项一致的样式：图标品牌绿 + hover 缩放旋转，
+     文字 hover 转品牌绿（参考稿 trust-item）。
+     2026-10-29 再改：与信任项同款响应式两列——auto-fit 每列最小 14rem，
+     桌面端自然分两列、窄屏退单列。 */
   .spec-bullets {
     display: grid;
-    gap: 0.4rem;
-    margin: 1rem 0 0;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.5rem 1rem;
+    margin: 0;
     padding: 0;
     list-style: none;
   }
@@ -1028,11 +1548,20 @@
     gap: 0.5rem;
     font-size: 0.88rem;
     color: var(--color-foreground-muted);
+    transition: color 0.2s ease;
+  }
+  .spec-bullets__item:hover {
+    color: var(--color-brand);
   }
   .spec-bullets__icon {
     display: grid;
     place-items: center;
     flex: 0 0 auto;
+    color: var(--color-brand);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .spec-bullets__item:hover .spec-bullets__icon {
+    transform: scale(1.25) rotate(5deg);
   }
   .spec-bullets__icon svg {
     width: 18px;
@@ -1047,6 +1576,53 @@
   .spec-bullets__value {
     color: var(--color-foreground);
     font-weight: 500;
+  }
+
+  /* ===== 买盒错峰载入（2026-10-29 刘工，参考稿 slideUpFade） =====
+     只对右侧买盒做：左侧画廊是 LCP 元素，绝不参与入场动画。
+     从 opacity 起步 + 极小位移（6px），把对 LCP / CLS 的影响压到最低。
+
+     **为什么不在普通 CSS 里写 `animation`**：`animation` 里的 `var()` 缺兜底会
+     让整条声明失效（本项目的已知坑，见 hero-slideshow.js 的 toMs()），所以
+     错峰 delay 直接写死，不经过变量。
+
+     @keyframes 提在 @media 之外：@keyframes 是顶层 at-rule，规范上不应嵌在
+     条件规则里（老引擎/压缩链可能丢）。动画**只在** @media 里被引用，所以
+     「允许动效」之外根本不触发，减动效用户看到静态完整内容。 */
+  @keyframes main-product-rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .main-product__title,
+    .main-product__badges,
+    .main-product__price,
+    .main-product__unit-price,
+    .main-product__excerpt,
+    .product-variant,
+    .product-form,
+    .main-product__block,
+    .main-product__specs,
+    .main-product__trust {
+      animation: main-product-rise 0.4s ease both;
+    }
+    /* 错峰：标题 → 价格 → 表单 → 信任行，逐级递增 */
+    .main-product__title { animation-delay: 0s; }
+    .main-product__badges { animation-delay: 0.05s; }
+    .main-product__price,
+    .main-product__unit-price { animation-delay: 0.1s; }
+    .main-product__excerpt,
+    .product-variant { animation-delay: 0.15s; }
+    .product-form { animation-delay: 0.2s; }
+    .main-product__block { animation-delay: 0.25s; }
+    .main-product__specs { animation-delay: 0.28s; }
+    .main-product__trust { animation-delay: 0.32s; }
   }
 
   @media (max-width: 749px) {

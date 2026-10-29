@@ -362,6 +362,36 @@
 - **预防**：**任何"更新既有商品"的 CSV 必须带 `Option1 name` + `Option1 value`，且值等于首次导入时的原值**（改值同样会重建变体、换 variant ID，断掉下游引用）。可执行做法：生成任何更新型 CSV 后跑一条断言——`for row in pass2: assert row.Title == main[row.handle].Title and row.option == main[row.handle].option`；这条已写进 `build_mower_csv.py` 的 `write_pass2()`。
   另外把两条覆盖规则写进 `sources-and-notes.md` §5：**列不出现 = 保持原值；列出现但为空 = 覆盖成空**。所以更新型 CSV 只放「要改的列 + 匹配键 + option 列」，多带一列空列就是一次静默的数据清空。
 
+### BUG-052 · 全屏查看器里竖版商品图溢出，被 dialog 的 `overflow:hidden` 裁掉一截
+- **日期**：2026-10-28 ｜ **状态**：Fixed
+- **现象**：灯箱里横版图正常；换成 600×1200 的竖版图后，图片按原始高度渲染，底部约 65px 被裁掉（画布 362×659，图片 362×724）。`max-block-size: 100%` 完全没起作用。
+- **根因**：**BUG-050 的同类二犯**，换了层壳。这是百分比高度解析链：`.product-lightbox__canvas` 的高度来自「dialog 的 `minmax(0,1fr)` 行 → `block-size:100%`」，Chrome 在这条链上把高度当**不确定值**，子元素 `max-block-size:100%` 直接退化成 `none`；而 `max-inline-size:100%` 因为宽度确定仍然生效——于是宽度被收窄、高度按比例冲出去。中途试过把画布改成 `display:grid + place-items:center`，更糟：grid 的隐式行按内容定尺寸，两个百分比上限一起失效（1200 原样输出）。
+- **修复**：画布加 `container-type: size`，图片改用 `max-inline-size: 100cqw` / `max-block-size: 100cqh`；百分比那两行保留在**前**作为老浏览器兜底（不支持容器查询时这两条声明被丢弃）。修复后 362×659 画布里是 325×650，图完整。
+- **预防**：**"图片按容器缩放"的组件，验收必须同时用一张横版图和一张竖版图，并用 `getBoundingClientRect()` 断言 `img.bottom <= 容器.bottom`**——这次正是因为只看了横版图（横版不会触发高度约束）才漏到截图阶段。可执行判据：容器高度只要不是可解析的显式值（来自 `fr` 行、flex 拉伸、`aspect-ratio` 推导），就一律 `container-type: size` + cq 单位，**不要赌百分比**。
+
+### BUG-053 · 自提列表没校验 `pick_up_enabled`，会把「不提供自提的门店」当成自提点列出来
+- **日期**：2026-10-28 ｜ **状态**：Fixed
+- **现象**：`sections/main-product.liquid` 的 `pickup` 块只按 `item.available` 过滤，把该变体有货的**全部** location 当自提门店渲染。
+- **根因**：`variant.store_availabilities` 的语义是「这个变体在这个 location 有库存记录」，**不等于该 location 开通了 local pickup**。官方原文：*"A returned location isn't guaranteed to offer local pickup. Check `pick_up_enabled` before presenting a location as a pickup option."* 我把「有货」误当成「可自提」。
+- **修复**：改用官方（也是 Dawn）的写法——过滤器前置：`assign pickup_items = current_variant.store_availabilities | where: 'pick_up_enabled', true`，循环里只判 `available`。`pickup_items.size > 0` 因此变成「有门店开通自提」，落到 else 分支显示 "Not available for pickup"。
+- **预防**：凡是消费 `store_availabilities` 的地方，判据必须是 `available` + `pick_up_enabled` 两项；`physical_storefront` 只影响展示文案（如"仅线上仓"），不参与过滤。可执行做法：写一个断言脚本扫 `*.liquid` 里 `store_availabilities` 出现处，要求同段落内出现 `pick_up_enabled`。
+
+### BUG-054 · 自提备货时长永远不显示：属性名写成 `pickup_time`（正确是 `pick_up_time`）
+- **日期**：2026-10-28 ｜ **状态**：Fixed
+- **现象**：`pickup` 块只渲染门店名，从不出现 "Ready in ..."。本地看是「数据没填」，容易一直以为是演示店没配 `pick_up_time`。
+- **根因**：`store_availability` 的时间属性是 `pick_up_time`（pick 与 up 之间有下划线，与 `pick_up_enabled` 同一套命名），我按口语直觉写成了 `pickup_time`。Liquid 对不存在的属性返回 `blank` 而**不报错**，`if ... != blank` 于是恒假，整行被静默跳过。
+- **修复**：`item.pickup_time` → `item.pick_up_time`（赋值、判断、`t:` 参数三处）。
+- **预防**：**Liquid 对象属性名不许凭语感写**——`store_availability` 上是 `pick_up_enabled` / `pick_up_time`（下划线式），而同对象的 `physical_storefront` 又不是，靠"看起来对"必错。可执行做法：改完这类字段跑
+  `grep -rnE "(item|variant|location|availability)\.(pickup|pick_up)_(time|enabled)" --include=*.liquid sections snippets blocks`
+  —— 命中行里出现的必须全是 `pick_up_*`；出现 `pickup_*`（少下划线）即写错。本机 grep 是 BSD 版，`\b` 词边界不生效，别往这条里加。
+
+### BUG-055 · 修好 BUG-054 后暴露：文案模板与平台返回值叠加成 "Ready in Usually ready in 24 hours"
+- **日期**：2026-10-28 ｜ **状态**：Fixed
+- **现象**：BUG-054 修复后 `pick_up_time` 第一次真正渲染。平台返回的**已是完整句子**（文档示例 `"Usually ready in 24 hours"`，商家可在后台改文案），而我们的 locale 模板是 `"Ready in {{ time }}"`，拼出来是病句。BUG-054 存在期间这行永远不渲染，等于把这个文案错误**藏了三个月**。
+- **根因**：写模板时假设了 `pick_up_time` 是"一段时长"（如 "24 hours"），实际是"含前缀的整句"。假设没有对照文档核实——与 BUG-054 同源：属性语义凭语感。
+- **修复**：直出平台原文 `{{ item.pick_up_time | escape }}`（与 Dawn 一致），删掉不再使用的 locale 键 `products.product.pickup_time`；`.pickup__time` 补样式（`flex-basis: 100%` 独占一行 + 0.8rem 弱化色），整句压在门店名下一行不显拥挤。
+- **预防**：**消费平台文本字段前，先看官方文档里的示例值**，再决定要不要包模板；"字段返回什么形态"与"字段叫什么"一样要核实。可执行做法：给 `store_availability` 这类对象写字段消费代码时，把文档示例值贴进代码注释里（本次已在 BUG-054/055 注释中写明示例 `"Usually ready in 24 hours"`）。
+
 ## 记录模板（追加新 bug 用）
 
 ```

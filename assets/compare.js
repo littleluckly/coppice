@@ -242,6 +242,14 @@
       this.controller = new AbortController();
       const { signal } = this.controller;
 
+      /* 文案切换（2026-10-29 刘工）：加入对比后 "Add to compare" → "Added to compare"。
+         初始文案存下来作「未加入」态，加入态文案由 Liquid 经 data-label-added 下发，
+         前端不硬编码英文（AGENTS 红线）。label 元素可能因主题结构缺失，取不到就
+         只切 aria-pressed 不切文案，不抛错。 */
+      this.label = this.button.querySelector('.product-compare__label');
+      this.labelIdle = this.label ? this.label.textContent.trim() : '';
+      this.labelAdded = (this.dataset.labelAdded || '').trim();
+
       this.onClick = this.onClick.bind(this);
       this.button.addEventListener('click', this.onClick, { signal });
       document.addEventListener('compare:updated', () => this.sync(), { signal });
@@ -268,12 +276,18 @@
       return (this.dataset.handle || '').trim();
     }
 
-    /** aria-pressed 跟随清单状态（样式靠 [aria-pressed='true'] 命中） */
+    /** aria-pressed 跟随清单状态（样式靠 [aria-pressed='true'] 命中）；文案同步切换 */
     sync() {
       if (!this.button) return;
       const inList = readList().some((item) => item.h === this.handle);
       this.button.setAttribute('aria-pressed', inList ? 'true' : 'false');
       this.toggleAttribute('data-in-list', inList);
+
+      /* 加入/移除时切文案（2026-10-29 刘工）。data-label-added 缺失时保持原文案，
+         只反映在 aria-pressed 上——文案不是本按钮的生命线，不能因它坏了功能。 */
+      if (this.label && this.labelAdded) {
+        this.label.textContent = inList ? this.labelAdded : this.labelIdle;
+      }
     }
 
     onClick() {
