@@ -22,6 +22,12 @@
   HTML. `body` is explicitly discouraged for multi-language stores because it mixes
   translations.
 
+  Prices (2026-10-29): the product rows carry the same three-part treatment as the
+  product page — current / struck compare-at / "Save N%" pill — computed inline per
+  product from `compare_at_price`. The percentage reuses the PDP formula
+  (main-product.liquid, top of file) so the two can never drift; the pill colours come
+  from the shared `--color-sale` tokens.
+
   "No results → hide the panel" lives in the JS, not here: an empty fragment means
   "close", so no markup is shipped for that case.
 {% endcomment %}
