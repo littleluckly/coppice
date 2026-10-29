@@ -9,6 +9,10 @@
  * （延续「隐藏组件首次打开才建 DOM」）。3D 的 model-viewer 由 section 侧按需加载
  * 平台组件，本文件不引任何外部资源。
  *
+ * 自动播放（2026-10-28）：用户**显式选**一张媒体（缩略图 / 圆点 / 箭头 / 横滑）且它
+ * 是视频时，实例化后立刻 play()。页面加载不触发（首次渲染不调 show()），变体联动也
+ * 不触发——那不是"我要看视频"的意图。iframe 类的自动播由 Liquid 写进 URL。
+ *
  * 全屏查看器（2026-10-28）：点舞台大图 → 原生 `<dialog>` + showModal()。
  * 只收图片（视频/3D 就地播放，塞进灯箱会和自带控件抢空间）。内容懒填——
  * 打开时才克隆舞台图（复用它的 srcset 尺寸档位，只需把 sizes 撑到 100vw，
@@ -57,11 +61,19 @@ class ProductGallery extends HTMLElement {
       button.addEventListener('click', () => this._openLightbox(button), { signal })
     );
 
-    // 延迟媒体：封面按钮点一下即实例化播放器
+    // 延迟媒体：封面按钮点一下即实例化播放器，并直接开播——
+    // 按钮写着"播放"，点了只把播放器搬进来却不播（要用户再点一次）是明显的缺陷
     this.querySelectorAll('[data-deferred-media]').forEach((holder) => {
       const trigger = holder.querySelector('[data-deferred-trigger]');
       if (!trigger) return;
-      trigger.addEventListener('click', () => this._activateDeferred(holder), { signal });
+      trigger.addEventListener(
+        'click',
+        () => {
+          this._activateDeferred(holder);
+          this._playMedia(holder);
+        },
+        { signal }
+      );
     });
 
     if (this._lightbox) this._bindLightbox(signal);
@@ -146,6 +158,26 @@ class ProductGallery extends HTMLElement {
     template.replaceWith(template.content.cloneNode(true));
     const trigger = holder.querySelector('[data-deferred-trigger]');
     if (trigger) trigger.remove();
+  }
+
+  /**
+   * 只处理原生 <video>：iframe（YouTube / Vimeo）的 autoplay 写在 URL 里，
+   * 由 Liquid 输出；3D 没有"播放"这个动作。
+   */
+  _playMedia(holder) {
+    if (!holder) return;
+    const video = holder.querySelector('video');
+    if (!video) return;
+
+    const started = video.play();
+    // play() 返回 Promise：带声播放被策略拒绝时退到静音重试；
+    // 再失败就不管了——控件还在，用户自己点。
+    if (started && typeof started.catch === 'function') {
+      started.catch(() => {
+        video.muted = true;
+        video.play().catch(() => {});
+      });
+    }
   }
 
   /* ---------------- 全屏查看器 ---------------- */
