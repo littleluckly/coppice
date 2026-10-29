@@ -146,9 +146,6 @@
                         class: 'product-gallery__img',
                         alt: media.alt
                     }}
-                    <span class="product-gallery__zoom-hint" aria-hidden="true">
-                      {{- 'icon-expand.svg' | inline_asset_content -}}
-                    </span>
                   </button>
                 {%- when 'video', 'external_video', 'model' -%}
                   {%- comment -%}
@@ -941,6 +938,8 @@
   }
 
   /* ---- 舞台图放大入口（2026-10-28） ---- */
+  /* 2026-10-28 晚：右下角提示胶囊已移除（刘工：绿圈常驻抢视线），
+     只留"整张图可点"的点击区——靠 cursor: zoom-in + 灯箱本身传达可放大。 */
   .product-gallery__zoom {
     /* 同样铺满媒体框：图片是绝对定位的，按钮不能靠内容撑高（否则塌成 0） */
     position: absolute;
@@ -955,50 +954,6 @@
   .product-gallery__zoom:focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
-  }
-  /* 放大提示胶囊：规格照抄视频的 __deferred-icon（44px / 88% 底 / 同款投影），
-     位置换到右下角，两者不会互相遮挡。桌面悬停才出现，触屏常显。 */
-  .product-gallery__zoom-hint {
-    position: absolute;
-    inset-block-end: 1rem;
-    inset-inline-end: 1rem;
-    display: grid;
-    place-items: center;
-    inline-size: 44px;
-    block-size: 44px;
-    border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-background) 88%, transparent);
-    color: var(--color-foreground);
-    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-foreground) 22%, transparent);
-    opacity: 0;
-    transition:
-      opacity 0.18s ease,
-      background-color 0.22s ease,
-      color 0.22s ease,
-      box-shadow 0.22s ease;
-    pointer-events: none;
-  }
-  .product-gallery__zoom-hint svg {
-    inline-size: 20px;
-    block-size: 20px;
-  }
-  /* 与画廊左右箭头同一套悬停语言：先显形，再叠主题色实底 + 反白图标 + 品牌色投影 */
-  .product-gallery__zoom:hover .product-gallery__zoom-hint,
-  .product-gallery__zoom:focus-visible .product-gallery__zoom-hint {
-    opacity: 1;
-    background-color: var(--color-brand);
-    color: var(--color-background);
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--color-brand) 34%, transparent);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .product-gallery__zoom-hint {
-      transition: none;
-    }
-  }
-  @media (hover: none) {
-    .product-gallery__zoom-hint {
-      opacity: 1;
-    }
   }
 
   @media (min-width: 1100px) {
