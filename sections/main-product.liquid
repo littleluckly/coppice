@@ -1392,6 +1392,13 @@
   .main-product__block {
     margin-block-start: 0.75rem;
   }
+  /* 决策参数容器（2026-10-29 刘工）：spec-bullets 抽到信任组上方，顶线分隔，
+     与信任组同一条视觉语言。 */
+  .main-product__specs {
+    margin-block-start: 1.25rem;
+    padding-block-start: 1.25rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+  }
   /* 信任组容器（2026-10-29 刘工，参考稿 trust-features）：顶线分隔 + 桌面 2 列。
      参考稿是 2×2 固定网格，这里信任项数量可变，所以用 auto-fit 的响应式两列：
      桌面端每列最小 ~14rem 时自然分两列，窄了退单列。 */
@@ -1522,7 +1529,7 @@
   .spec-bullets {
     display: grid;
     gap: 0.4rem;
-    margin: 1rem 0 0;
+    margin: 0;
     padding: 0;
     list-style: none;
   }
