@@ -57,7 +57,8 @@
        两行同写：oklch 相对颜色语法在 Chrome 119 / Safari 16.4 以下整行作废，
        落到上一行的 color-mix（灰绿，不如下面鲜，但不会变透明——与 --color-brand-light 同一写法）。 */
     {%- assign header_base = settings.skeleton_background_color | default: settings.background_color -%}
-    {%- assign header_luma = header_base | color_brightness -%}
+    {%- comment -%} 兜底 255：色值取不到时按浅色处理，页头不会在浅底站点上突然变纯黑 {%- endcomment -%}
+    {%- assign header_luma = header_base | color_brightness | default: 255 -%}
     {%- if header_luma > 128 -%}
       --color-header-surface: color-mix(in srgb, var(--color-skeleton-accent) 8%, var(--color-skeleton-background));
       --color-header-surface: oklch(from var(--color-skeleton-accent) 0.955 0.024 h);
