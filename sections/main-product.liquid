@@ -1206,6 +1206,11 @@
     border-radius: 999px;
     overflow: hidden;
     flex: 0 0 auto;
+    transition: border-color 0.2s ease;
+  }
+  /* hover 边框转品牌色（2026-10-29 刘工，参考稿 qty-selector） */
+  .quantity:hover {
+    border-color: var(--color-brand);
   }
   .quantity__button {
     width: 44px;
@@ -1215,9 +1220,14 @@
     color: var(--color-foreground);
     font-size: 1rem;
     cursor: pointer;
+    transition: transform 0.1s ease, color 0.2s ease;
   }
   .quantity__button:hover {
     background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+  .quantity__button:active {
+    transform: scale(0.8);
+    color: var(--color-brand);
   }
   .quantity__input {
     width: 3.25rem;
@@ -1337,12 +1347,20 @@
     gap: 0.5rem;
     font-size: 0.88rem;
     color: var(--color-foreground-muted);
+    transition: color 0.2s ease;
+  }
+  .trust-item:hover {
+    color: var(--color-brand);
   }
   .trust-item__icon {
     display: grid;
     place-items: center;
     flex: 0 0 auto;
     color: var(--color-brand);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .trust-item:hover .trust-item__icon {
+    transform: scale(1.25) rotate(5deg);
   }
   .trust-item__icon svg {
     width: 20px;
