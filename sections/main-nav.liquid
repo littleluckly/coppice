@@ -767,8 +767,15 @@
 
 </nav>
 
+{%- comment -%}
+  页头吸顶状态检测（2026-10-29 刘工）。放在 <nav> 之外：它不属于导航内容，
+  也让 BUG-044 那个「<nav> 首子节点」判据不受影响（该 span 仍紧贴开标签）。
+{%- endcomment -%}
+<nav-sticky aria-hidden="true"></nav-sticky>
+
 <script src="{{ 'nav-pill.js' | asset_url }}" defer></script>
 <script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
+<script src="{{ 'nav-sticky.js' | asset_url }}" defer></script>
 <script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
 <script src="{{ 'search-drawer.js' | asset_url }}" defer></script>
 
