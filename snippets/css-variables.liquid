@@ -91,11 +91,19 @@
       --card-glow-1: color-mix(in srgb, var(--color-brand-light) 65%, transparent);
       --card-glow-2: color-mix(in srgb, var(--color-brand-light) 32%, transparent);
       --card-glow-3: color-mix(in srgb, var(--color-brand-light) 5%, transparent);
+      --card-hover-shadow:
+        0 24px 40px -18px color-mix(in srgb, var(--color-brand) 32%, transparent),
+        0 10px 18px -10px rgb(0 0 0 / 12%);
     {%- else -%}
       /* 深底：只留一层几乎贴地的微光，产品仍"浮"着，但不再是一片绿 */
       --card-glow-1: color-mix(in srgb, var(--color-brand-light) 14%, transparent);
       --card-glow-2: color-mix(in srgb, var(--color-brand-light) 7%, transparent);
       --card-glow-3: color-mix(in srgb, var(--color-brand-light) 2%, transparent);
+      /* 外投影同理：深底上 32% 的荧光绿会变成一圈绿边，压到 10%；
+         深度感改由黑色层承担（12% → 24%），hover 才"抬得起来" */
+      --card-hover-shadow:
+        0 24px 40px -18px color-mix(in srgb, var(--color-brand) 10%, transparent),
+        0 10px 18px -10px rgb(0 0 0 / 24%);
     {%- endif -%}
 
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;

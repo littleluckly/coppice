@@ -287,10 +287,10 @@
     transition: box-shadow 0.8s ease;
   }
   .product-card:hover {
-    /* demo 的深黑投影在我们的浅底上会显脏 → 改品牌绿低透明投影 */
-    box-shadow:
-      0 24px 40px -18px color-mix(in srgb, var(--color-brand) 32%, transparent),
-      0 10px 18px -10px rgb(0 0 0 / 12%);
+    /* 浅底用品牌绿低透明投影（demo 的深黑投影在白底上会显脏）；
+       深底（Noir）改用压低的绿 + 加深黑层，否则荧光绿会在深页上烧出一圈绿边。
+       两套值定义在 snippets/css-variables.liquid 的 --card-hover-shadow。 */
+    box-shadow: var(--card-hover-shadow);
   }
   .product-card__media {
     position: relative;
