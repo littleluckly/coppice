@@ -33,6 +33,18 @@
     </h3>
     <ul class="predictive-search__list" role="list">
       {%- for product in predictive_search.resources.products -%}
+        {%- liquid
+          # 折扣百分比：与产品详情页同一算法（main-product.liquid 顶部同款），
+          # 只在 compare_at_price 真的高于 price 时才成立 —— 不能拿两个字段
+          # 是否存在来判断，否则"原价已过期/填反了"会算出 0% 或负数徽标。
+          assign has_discount = false
+          assign save_percent = 0
+          if product.compare_at_price > product.price
+            assign has_discount = true
+            assign price_diff = product.compare_at_price | minus: product.price
+            assign save_percent = price_diff | times: 100.0 | divided_by: product.compare_at_price | round
+          endif
+        -%}
         <li
           class="predictive-search__item"
           role="option"
@@ -51,12 +63,24 @@
               <span class="predictive-search__title">
                 {{ product.title | highlight: predictive_search.terms }}
               </span>
+              {%- comment -%}
+                价格三件套（2026-10-29 刘工：对齐产品详情页）——现价 / 划线原价 / 折扣百分比。
+                折扣缺数据时只出现现价，不留空位、不显示 0%（AGENTS §6）。
+                `s` 的语义由 PDP 延续：视觉划线，读屏按普通文本读（与详情页一致）。
+              {%- endcomment -%}
               <span class="predictive-search__price">
-                {%- if product.price_varies -%}
-                  {{ 'products.product.from_price_html' | t }}
-                  {{ product.price_min | money }}
-                {%- else -%}
-                  {{ product.price_min | money }}
+                <span class="predictive-search__price-current">
+                  {%- if product.price_varies -%}
+                    {{ 'products.product.from_price_html' | t }} {{ product.price_min | money }}
+                  {%- else -%}
+                    {{ product.price_min | money }}
+                  {%- endif -%}
+                </span>
+                {%- if has_discount -%}
+                  <s class="predictive-search__price-compare">{{ product.compare_at_price | money }}</s>
+                  <span class="predictive-search__price-save">
+                    {{- 'products.product.save_percent' | t: percent: save_percent -}}
+                  </span>
                 {%- endif -%}
               </span>
             </span>
@@ -221,10 +245,39 @@
     text-decoration-thickness: 1px;
   }
 
+  /* 价格三件套（2026-10-29 刘工：对齐产品详情页的现价 / 划线原价 / 折扣徽标）。
+     抽屉行窄（360px 抽屉里文字列只剩 ~180px），所以全部按行内小字缩放，
+     不做 PDP 的 1.75rem 大价；换行由 flex-wrap 兜住，徽标绝不裁切。
+     配色全走令牌：划线价用 muted（页头组已按骨架色重算，Noir 下不会消失），
+     徽标用 --color-sale / --color-sale-surface（与 PDP 同一组值，4.91:1）。 */
   .predictive-search__price {
-    font-size: 0.8125rem;
-    color: rgb(0 0 0 / 50%);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
     font-variant-numeric: tabular-nums;
+  }
+
+  .predictive-search__price-current {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-brand);
+  }
+
+  .predictive-search__price-compare {
+    font-size: 0.75rem;
+    color: var(--color-foreground-muted);
+  }
+
+  .predictive-search__price-save {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background-color: var(--color-sale-surface);
+    color: var(--color-sale);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
   }
 
   /* 命中词：加重代替色块（极简、去促销感） */
