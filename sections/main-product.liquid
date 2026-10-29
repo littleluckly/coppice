@@ -1022,10 +1022,13 @@
     padding: 0 clamp(0.5rem, 3vw, 1.5rem) clamp(1rem, 4vh, 2.5rem);
   }
   /* 画布 = 图片以外可点击关闭的区域（灯箱的常规习惯）。
-     用 flex 而不是 grid：grid 的隐式行是内容尺寸（不确定），图片的
-     max-block-size: 100% 会因"百分比无参照"退化成 none，竖版大图直接溢出。
-     flex 容器高度是确定值，百分比才真正生效。 */
+     flex 而非 grid：grid 的隐式行按内容定尺寸，图片的百分比上限会失效。 */
   .product-lightbox__canvas {
+    /* 尺寸容器：让图片能用 cqw / cqh 取到画布的真实宽高。
+       为什么不用百分比——画布高是「1fr 行 → 100%」派生出来的，Chrome 在该链条上
+       把高度当不确定值，max-block-size: 100% 直接失效；实测竖版大图会溢出
+       65px 并被 dialog 的 overflow:hidden 裁掉。cq 单位没有这个问题。 */
+    container-type: size;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1033,12 +1036,15 @@
     min-block-size: 0;
     block-size: 100%;
   }
-  /* 不放大（inline-size: auto 取图片自身宽度），只按可用区域等比收窄 */
+  /* 不放大（inline-size: auto 取图片自身宽度），只按可用区域等比收窄。
+     前两行是百分比兜底（不支持容器查询的老浏览器），后两行才是主力。 */
   .product-lightbox__img {
     inline-size: auto;
     block-size: auto;
     max-inline-size: 100%;
     max-block-size: 100%;
+    max-inline-size: 100cqw;
+    max-block-size: 100cqh;
     object-fit: contain;
   }
 
