@@ -1482,22 +1482,25 @@
   /* ===== 买盒错峰载入（2026-10-29 刘工，参考稿 slideUpFade） =====
      只对右侧买盒做：左侧画廊是 LCP 元素，绝不参与入场动画。
      从 opacity 起步 + 极小位移（6px），把对 LCP / CLS 的影响压到最低。
-     整个规则用 @keyframes 只在「允许动效」时生效，减动效用户看到静态完整内容。
 
      **为什么不在普通 CSS 里写 `animation`**：`animation` 里的 `var()` 缺兜底会
      让整条声明失效（本项目的已知坑，见 hero-slideshow.js 的 toMs()），所以
-     错峰 delay 直接写死，不经过变量。 */
-  @media (prefers-reduced-motion: no-preference) {
-    @keyframes main-product-rise {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+     错峰 delay 直接写死，不经过变量。
+
+     @keyframes 提在 @media 之外：@keyframes 是顶层 at-rule，规范上不应嵌在
+     条件规则里（老引擎/压缩链可能丢）。动画**只在** @media 里被引用，所以
+     「允许动效」之外根本不触发，减动效用户看到静态完整内容。 */
+  @keyframes main-product-rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
     }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
     .main-product__title,
     .main-product__subtitle,
     .main-product__price,
