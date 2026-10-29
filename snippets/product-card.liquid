@@ -2,7 +2,8 @@
   product-card — 商品卡（首页 featured-collection 与集合页共用，task-index T-1.2）。
 
   输出（视觉基准：效果图-首页 Featured Products 区；标签行基准 2026-10-16 刘工参考图）：
-  图 + 收藏心 + 标题 + 规格横排行（宽·排量·动力源）+ 价格（含划线对比价）+ 星级
+  图 + 收藏心 + 标题 + 规格横排行（宽·排量·动力源）+ 价格三件套（现价 / 划线原价 /
+  折扣胶囊 "Save N%"，2026-10-29 对齐产品详情页）+ 星级
   + 规格标签行（胶囊：电池电压·切割宽·操作方式·动力源）+ Compare。
 
   纪律：
@@ -126,12 +127,34 @@
       </ul>
     {%- endif -%}
 
+    {%- comment -%}
+      价格三件套（2026-10-29 刘工：对齐产品详情页）——现价 / 划线原价 / 折扣百分比。
+      现价与划线价绑成 .product-card__price-main 一组（nowrap），折扣胶囊作为整体
+      换到第二行：窄卡（手机两列，卡内容宽约 106px）装不下三件套，
+      绑成组之后换行点在"价格块 / 胶囊"之间，不会把两个价格拆开。
+      折扣缺数据时只出现现价，不留空位、不显示 0%（AGENTS §6）。
+      百分比与 PDP 同一算法（main-product.liquid 顶部同款），两处不会漂。
+    {%- endcomment -%}
+    {%- liquid
+      assign card_has_discount = false
+      assign card_save_percent = 0
+      if product.compare_at_price > product.price
+        assign card_has_discount = true
+        assign card_price_diff = product.compare_at_price | minus: product.price
+        assign card_save_percent = card_price_diff | times: 100.0 | divided_by: product.compare_at_price | round
+      endif
+    -%}
     <p class="product-card__price">
-      {%- if product.compare_at_price > product.price -%}
+      <span class="product-card__price-main">
         <span class="product-card__price-current">{{ product.price | money }}</span>
-        <s class="product-card__price-compare">{{ product.compare_at_price | money }}</s>
-      {%- else -%}
-        <span class="product-card__price-current">{{ product.price | money }}</span>
+        {%- if card_has_discount -%}
+          <s class="product-card__price-compare">{{ product.compare_at_price | money }}</s>
+        {%- endif -%}
+      </span>
+      {%- if card_has_discount -%}
+        <span class="product-card__price-save">
+          {{- 'products.product.save_percent' | t: percent: card_save_percent -}}
+        </span>
       {%- endif -%}
     </p>
 

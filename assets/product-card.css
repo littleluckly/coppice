@@ -87,16 +87,48 @@
 .spec-value--card {
   font-size: inherit;
 }
+/* 价格三件套（2026-10-29 刘工：对齐产品详情页）——现价 / 划线原价 / 折扣胶囊。
+   现价与划线价绑成一组 nowrap；胶囊单独一个 flex 项，空间不够时整体换到第二行。
+   手机两列时卡内容宽只有 ~106px（132 卡 − 12×2 padding − 1×2 border），
+   两个价格 + 胶囊无论如何缩都塞不进一行，所以换行点是设计好的：
+   "价格块 / 胶囊"，绝不把两个价格拆开。 */
 .product-card__price {
   display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.4rem;
   font-weight: 500;
+}
+.product-card__price-main {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  /* 0.3rem 而非 0.4rem：手机 106px 内容宽下"现价 + 划线价"合计 104.8px，
+     0.4rem 会到 106.4px 溢出 0.4px（量出来的，不是估的） */
+  gap: 0.3rem;
+}
+.product-card__price-current {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-brand);
+  font-variant-numeric: tabular-nums;
 }
 .product-card__price-compare {
   font-weight: 400;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
   color: var(--color-foreground-muted);
+}
+/* 折扣胶囊：与 PDP、搜索列表同一组令牌（--color-sale*），4.91:1（BUG-060） */
+.product-card__price-save {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background-color: var(--color-sale-surface);
+  color: var(--color-sale);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 .product-card__rating {
   display: inline-flex;
