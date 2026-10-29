@@ -570,23 +570,29 @@
             {%- continue -%}
 
           {%- when 'pickup' -%}
-            <div class="main-product__block" data-pickup-block aria-live="polite" {{ block.shopify_attributes }}>
-              <pickup-availability
-                class="pickup"
-                data-variant-id="{{ current_variant.id }}"
-                data-section-id="{{ section.id }}"
-                data-url="{{ product.url }}"
-                data-label-checking="{{ 'products.product.pickup_checking' | t }}"
-              >
-                <h2 class="pickup__heading">{{ 'products.product.pickup_heading' | t }}</h2>
-                {%- comment -%}
-                  BUG-053：store_availabilities 的语义是「这个变体在这个 location 有库存记录」，
-                  不等于该 location 开通了自提。官方原文：returned location isn't guaranteed
-                  to offer local pickup，必须先按 pick_up_enabled 过滤，否则会把「有货但不
-                  提供自提」的门店列给顾客。这也是 Dawn 的官方写法（where 过滤器前置）。
-                {%- endcomment -%}
-                {%- assign pickup_items = current_variant.store_availabilities | where: 'pick_up_enabled', true -%}
-                {%- if pickup_items.size > 0 -%}
+            {%- comment -%}
+              BUG-053：store_availabilities 的语义是「这个变体在这个 location 有库存记录」，
+              不等于该 location 开通了自提。官方原文：returned location isn't guaranteed
+              to offer local pickup，必须先按 pick_up_enabled 过滤，否则会把「有货但不
+              提供自提」的门店列给顾客。这也是 Dawn 的官方写法（where 过滤器前置）。
+
+              2026-10-29 刘工：后台关闭「门店自提」配送方式后，过滤结果为空，原来会
+              渲染「Pickup availability / Not available for pickup」这一整块负面提示。
+              改为：无任何可自提门店时，整个 pickup block 不渲染（标题也不出），
+              商品页直接干净。变体切换走 Section Rendering API 回包，走的是同一套
+              服务端逻辑，所以切换后同样自动隐藏。
+            {%- endcomment -%}
+            {%- assign pickup_items = current_variant.store_availabilities | where: 'pick_up_enabled', true -%}
+            {%- if pickup_items.size > 0 -%}
+              <div class="main-product__block" data-pickup-block aria-live="polite" {{ block.shopify_attributes }}>
+                <pickup-availability
+                  class="pickup"
+                  data-variant-id="{{ current_variant.id }}"
+                  data-section-id="{{ section.id }}"
+                  data-url="{{ product.url }}"
+                  data-label-checking="{{ 'products.product.pickup_checking' | t }}"
+                >
+                  <h2 class="pickup__heading">{{ 'products.product.pickup_heading' | t }}</h2>
                   {%- assign any_pickup = false -%}
                   <ul class="pickup__list" role="list">
                     {%- for item in pickup_items -%}
@@ -611,11 +617,9 @@
                   {%- unless any_pickup -%}
                     <p class="pickup__unavailable">{{ 'products.product.pickup_unavailable' | t }}</p>
                   {%- endunless -%}
-                {%- else -%}
-                  <p class="pickup__unavailable">{{ 'products.product.pickup_unavailable' | t }}</p>
-                {%- endif -%}
-              </pickup-availability>
-            </div>
+                </pickup-availability>
+              </div>
+            {%- endif -%}
 
           {%- when 'compare' -%}
             <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>
