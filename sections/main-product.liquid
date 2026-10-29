@@ -1453,44 +1453,54 @@
     color: var(--color-foreground-muted);
   }
 
-  /* 对比入口（compare-button snippet 的样式归属；snippet 不能自带样式块） */
+  /* 对比入口（compare-button snippet 的样式归属；snippet 不能自带样式块）
+     2026-10-29 刘工，参考稿 btn-compare：绿底白字图标方盒 + 文字，
+     hover 图标盒 scale+rotate、文字下划线。 */
   .product-compare__button {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
     min-height: 44px;
-    padding: 0;
+    padding: 0.25rem;
     border: 0;
     background: none;
-    color: var(--color-foreground-muted);
+    color: var(--color-brand);
     font: inherit;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
   }
   .product-compare__box {
     display: grid;
     place-items: center;
-    width: 22px;
-    height: 22px;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 30%, transparent);
-    border-radius: 4px;
-    color: transparent;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  }
-  .product-compare__box svg {
-    width: 14px;
-    height: 14px;
-  }
-  .product-compare__button[aria-pressed='true'] .product-compare__box {
-    border-color: var(--color-brand);
+    width: 32px;
+    height: 32px;
     background-color: var(--color-brand);
     color: var(--color-background);
+    border-radius: 6px;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+  }
+  .product-compare__box svg {
+    width: 16px;
+    height: 16px;
+  }
+  /* hover：图标盒微放大 + 微旋转，文字下划线（参考稿） */
+  .product-compare__button:hover .product-compare__box {
+    transform: scale(1.05) rotate(5deg);
+    background-color: var(--color-brand-accent);
+  }
+  .product-compare__button:hover .product-compare__label {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  /* 选中态（aria-pressed=true）：图标盒反转成白底绿边，文字转深绿 */
+  .product-compare__button[aria-pressed='true'] .product-compare__box {
+    background-color: var(--color-background);
+    color: var(--color-brand);
+    border: 1.5px solid var(--color-brand);
   }
   .product-compare__button[aria-pressed='true'] {
-    color: var(--color-brand);
-  }
-  .product-compare__button:hover .product-compare__box {
-    border-color: var(--color-brand);
+    color: var(--color-brand-accent);
   }
 
   /* 三条决策参数（spec-bullets snippet 的样式归属） */
