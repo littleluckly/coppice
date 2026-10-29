@@ -1479,6 +1479,46 @@
     font-weight: 500;
   }
 
+  /* ===== 买盒错峰载入（2026-10-29 刘工，参考稿 slideUpFade） =====
+     只对右侧买盒做：左侧画廊是 LCP 元素，绝不参与入场动画。
+     从 opacity 起步 + 极小位移（6px），把对 LCP / CLS 的影响压到最低。
+     整个规则用 @keyframes 只在「允许动效」时生效，减动效用户看到静态完整内容。
+
+     **为什么不在普通 CSS 里写 `animation`**：`animation` 里的 `var()` 缺兜底会
+     让整条声明失效（本项目的已知坑，见 hero-slideshow.js 的 toMs()），所以
+     错峰 delay 直接写死，不经过变量。 */
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes main-product-rise {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .main-product__title,
+    .main-product__subtitle,
+    .main-product__price,
+    .main-product__unit-price,
+    .main-product__excerpt,
+    .product-variant,
+    .product-form,
+    .main-product__block {
+      animation: main-product-rise 0.4s ease both;
+    }
+    /* 错峰：标题 → 价格 → 表单 → 信任行，逐级递增 */
+    .main-product__title { animation-delay: 0s; }
+    .main-product__subtitle { animation-delay: 0.05s; }
+    .main-product__price,
+    .main-product__unit-price { animation-delay: 0.1s; }
+    .main-product__excerpt,
+    .product-variant { animation-delay: 0.15s; }
+    .product-form { animation-delay: 0.2s; }
+    .main-product__block { animation-delay: 0.25s; }
+  }
+
   @media (max-width: 749px) {
     .product-form__row {
       flex-wrap: wrap;
