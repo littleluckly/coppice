@@ -844,30 +844,31 @@
     object-fit: contain;
   }
 
-  /* 缩略图媒体角标（2026-10-28）：视频 / 3D 与静态图在 76px 尺度上肉眼无差，
-     必须在缩略图本身就标出来，否则"点下去会播片"只能靠猜。
-     位置与舞台上的播放胶囊同角落（左下），形成同一套心智模型。
-     深底反白，深浅预设下都读得清，不写死任何色值。 */
+  /* 缩略图媒体角标（2026-10-28，第二轮修订）：视频 / 3D 与静态图在 76px 尺度上
+     肉眼无差，必须在缩略图本身就标出来，否则"点下去会播片"只能靠猜。
+     位置压在缩略图正中间、尺寸放大到 32px —— 第一版做在左下角 20px，实际看
+     既看不见也认不出是播放键。中心位置和舞台上的播放按钮完全同构。 */
   .product-gallery__thumb-badge {
     position: absolute;
-    inset-block-end: 4px;
-    inset-inline-start: 4px;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    translate: -50% -50%;
     display: grid;
     place-items: center;
-    inline-size: 20px;
-    block-size: 20px;
+    inline-size: 32px;
+    block-size: 32px;
     border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-foreground) 82%, transparent);
+    background-color: color-mix(in srgb, var(--color-foreground) 80%, transparent);
     color: var(--color-background);
-    font-size: 0.55rem;
+    font-size: 0.68rem;
     font-weight: 700;
     line-height: 1;
     letter-spacing: 0.02em;
     pointer-events: none;
   }
   .product-gallery__thumb-badge svg {
-    inline-size: 12px;
-    block-size: 12px;
+    inline-size: 18px;
+    block-size: 18px;
   }
 
   /* ---- 舞台图放大入口（2026-10-28） ---- */
