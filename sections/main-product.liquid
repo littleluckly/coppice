@@ -821,6 +821,11 @@
     background-color: color-mix(in srgb, var(--color-background) 92%, transparent);
     color: var(--color-foreground);
     cursor: pointer;
+    transition:
+      background-color 0.22s ease,
+      border-color 0.22s ease,
+      color 0.22s ease,
+      box-shadow 0.22s ease;
   }
   .product-gallery__arrow svg {
     width: 18px;
@@ -832,9 +837,17 @@
   .product-gallery__arrow--next {
     inset-inline-end: 0.75rem;
   }
-  .product-gallery__arrow:hover {
+  .product-gallery__arrow:hover,
+  .product-gallery__arrow:focus-visible {
     border-color: var(--color-brand);
-    color: var(--color-brand);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--color-brand) 34%, transparent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .product-gallery__arrow {
+      transition: none;
+    }
   }
   @media (min-width: 750px) {
     .product-gallery__arrow {
