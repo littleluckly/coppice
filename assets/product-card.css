@@ -300,17 +300,20 @@
   /* 光晕垫在图片下面（::before + img 提为定位元素压在其上）：
      浅绿只从图片的透明区域透出（演示店商品图为 koutu alpha webp），
      产品像素零接触；商家传不透明照片时被完全盖住，无副作用——即
-     demo 里"产品浮在光晕上"的结构，遮罩死路（2026-10-17 一二轮实测）。 */
+     demo 里"产品浮在光晕上"的结构，遮罩死路（2026-10-17 一二轮实测）。
+
+     浓度走 --card-glow-1/2/3（2026-10-29 刘工）：浅底/深底两套值定义在
+     snippets/css-variables.liquid。深底（Noir）必须大幅压低——亮 lime 65%
+     在深卡上会化成一整块绿板，产品图反而被埋在绿色里。 */
   .product-card__media::before {
     content: '';
     position: absolute;
     inset: 0;
-    /* --color-brand-light：css-variables.liquid 从品牌色算出的高亮度浅绿 */
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--color-brand-light) 65%, transparent) 0%,
-      color-mix(in srgb, var(--color-brand-light) 32%, transparent) 55%,
-      color-mix(in srgb, var(--color-brand-light) 5%, transparent) 100%
+      var(--card-glow-1) 0%,
+      var(--card-glow-2) 55%,
+      var(--card-glow-3) 100%
     );
     opacity: 0;
     transition: opacity 0.8s ease;

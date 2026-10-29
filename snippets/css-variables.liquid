@@ -81,6 +81,23 @@
         0 10px 20px -12px color-mix(in srgb, var(--color-foreground) 45%, transparent);
     {%- endif -%}
 
+    /* 商品卡图片 hover 光晕（2026-10-29 刘工，Noir 下修正）：
+       机制是「光晕垫在图片下方，只从 koutu 透明区透出」。浅底上浓一点才看得见，
+       但**深底上必须大幅压低**——--color-brand-light 在 Noir 下是从 lime 算出的
+       亮度 0.76 亮荧光绿，65% 铺在深卡上会化成一块刺眼的绿板（实测难看）。
+       判据用内容区 background_color 的亮度（不是骨架色，商品卡在内容区）。 */
+    {%- assign content_luma = settings.background_color | color_brightness | default: 255 -%}
+    {%- if content_luma > 128 -%}
+      --card-glow-1: color-mix(in srgb, var(--color-brand-light) 65%, transparent);
+      --card-glow-2: color-mix(in srgb, var(--color-brand-light) 32%, transparent);
+      --card-glow-3: color-mix(in srgb, var(--color-brand-light) 5%, transparent);
+    {%- else -%}
+      /* 深底：只留一层几乎贴地的微光，产品仍"浮"着，但不再是一片绿 */
+      --card-glow-1: color-mix(in srgb, var(--color-brand-light) 14%, transparent);
+      --card-glow-2: color-mix(in srgb, var(--color-brand-light) 7%, transparent);
+      --card-glow-3: color-mix(in srgb, var(--color-brand-light) 2%, transparent);
+    {%- endif -%}
+
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
   }
 {% endstyle %}
