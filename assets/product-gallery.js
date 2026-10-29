@@ -156,8 +156,10 @@ class ProductGallery extends HTMLElement {
     if (index < 0) return;
 
     this._lightboxIndex = index;
-    this._renderLightbox();
+    // 先打开再填内容：画布是尺寸容器（container-type: size），
+    // display:none 时 cq 单位解析成 0，等它有了尺寸再插图片更稳
     this._lightbox.showModal();
+    this._renderLightbox();
   }
 
   _renderLightbox() {
