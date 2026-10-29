@@ -99,14 +99,43 @@ compare-bar[hidden] {
   display: inline-flex;
   align-items: center;
   min-block-size: 44px;
-  padding: 0 1rem;
-  border-radius: 4px;
-  /* 主操作走品牌色，与商品卡「Add to cart」、勾选框选中态同一套
-     （原来用 foreground 深色，像一条工具条而不是「去看对比」的行动点） */
+  padding: 0 1.25rem;
+  /* 全圆角胶囊 + 扫光 + 光晕，与主产品区加购按钮同款（2026-10-29 刘工统一） */
+  border-radius: 999px;
+  /* 主操作走品牌色，与商品卡「Add to cart」、勾选框选中态同一套 */
   background-color: var(--color-brand);
   color: var(--color-background);
   font-size: 0.8rem;
+  font-weight: 500;
   text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);
+  transition: background-color 0.15s ease, box-shadow 0.2s ease;
+}
+/* 扫光层：hover 时高光从左扫到右 */
+.compare-bar__view::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: -100%;
+  inline-size: 100%;
+  block-size: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-background) 26%, transparent),
+    transparent
+  );
+  transition: inset-inline-start 0.6s ease;
+  pointer-events: none;
+}
+.compare-bar__view:hover::before {
+  inset-inline-start: 100%;
+}
+.compare-bar__view:hover {
+  background-color: var(--color-brand-accent);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 30%, transparent);
 }
 
 .compare-bar__view[aria-disabled='true'] {
