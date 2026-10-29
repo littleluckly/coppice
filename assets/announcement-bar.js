@@ -60,13 +60,16 @@
     let timer = null;
 
     // ---- 关闭（读存储）----
+    // 编辑器画布里不恢复关闭态：否则商家自己点过一次关闭，之后在编辑器里
+    // 就再也看不到这个 section，无从编辑。与 section 内联脚本同一判据。
+    const inDesignMode = Boolean(window.Shopify && window.Shopify.designMode);
     let dismissed = null;
     try {
       dismissed = sessionStorage.getItem(storageKey);
     } catch (error) {
       /* 存储不可用：按未关闭处理 */
     }
-    if (dismissed === '1') root.dataset.announcementClosed = 'true';
+    if (dismissed === '1' && !inDesignMode) root.dataset.announcementClosed = 'true';
 
     // ---- 关闭（写存储）----
     dismissButton?.addEventListener('click', () => {
