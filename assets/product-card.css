@@ -132,15 +132,19 @@
   color: var(--color-foreground-muted);
 }
 
-/* 规格标签行（2026-10-16 刘工参考图）：胶囊标签，纯展示不可点（信息用 span 语义，
+/* 规格胶囊行（2026-10-16 刘工参考图）：胶囊标签，纯展示不可点（信息用 span 语义，
    放 ul/li 里随读屏朗读）。缺值跳项由 Liquid 负责，这里只管形状。
-   2026-10-16 二轮：整体缩小一档（3px 10px / 0.75rem / gap 0.3rem）。
+   2026-10-29 合并：原来的"文字规格行 + 胶囊行"并成这一行，字段变多（最多 6 颗），
+   所以整体再收一档：0.75rem/3px 10px → 0.7rem/2px 8px，gap 0.3 → 0.25rem。
+   实测（卡内容宽 171px，桌面三/四列）：4–5 颗从 3 行降到 2 行；
+   手机两列（内容宽 128–143px）4 颗 3 行，最宽的 "Rear-wheel drive" 102px
+   也不再溢出（旧版 0.75rem 时 112px > 106px 会冲出租胶囊 6px）。
    2026-10-29 刘工：卡片 hover 时胶囊补品牌色底（参考稿 card-tag 的行为）——
    静态是中性淡底，hover 才点亮，让整卡 hover 有一处「品牌色回应」。 */
 .product-card__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  gap: 0.25rem;
   list-style: none;
   padding: 0;
   margin: 0;
@@ -148,13 +152,16 @@
 .product-card__tag {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border: 1px solid color-mix(in srgb, var(--color-foreground) 15%, transparent);
   border-radius: 999px;
   background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--color-foreground-muted);
-  white-space: nowrap;
+  /* 单个值可能比卡还宽（320px 屏的两列卡内容宽仅 108px）：允许在空格/连字符处
+     折行，绝不冲出胶囊。用 normal 而非 nowrap——被钳住时 nowrap 会溢出边框。 */
+  max-inline-size: 100%;
+  text-align: center;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
