@@ -1106,6 +1106,7 @@
   .main-product__title {
     margin: 0 0 0.35rem;
     font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+    font-weight: 700;
     line-height: 1.2;
   }
   .main-product__subtitle {
@@ -1124,21 +1125,21 @@
     margin-block-end: 0.25rem;
   }
   .main-product__price-current {
-    font-size: 1.6rem;
-    font-weight: 500;
-    color: var(--color-foreground);
+    font-size: clamp(1.75rem, 1.5rem + 0.8vw, 2rem);
+    font-weight: 700;
+    color: var(--color-brand);
   }
   .main-product__price-compare {
     color: var(--color-foreground-muted);
-    font-size: 0.95rem;
+    font-size: 1rem;
   }
   .main-product__price-save {
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
-    color: var(--color-brand);
-    font-size: 0.78rem;
-    font-weight: 500;
+    background-color: #ffebeb;
+    color: #d32f2f;
+    font-size: 0.8rem;
+    font-weight: 600;
   }
   .main-product__unit-price {
     margin: 0 0 1rem;
