@@ -21,9 +21,14 @@
  * - Progressive enhancement baseline: the <form action> is a real search URL, so with
  *   JS disabled the search still works. This file only enhances it.
  *
- * - Loading: `aria-busy` is toggled on this element for the duration of the
- *   newest request (CSS paints a thin sweep line); superseded requests never
- *   clear a newer one's loading state (monotonic request token).
+ * - Loading (两层，2026-10-29 刘工："抽屉里搜起来像没反应"）:
+ *     1) 输入框下沿的细扫描线：`aria-busy` 在最新请求的生命周期内挂在当前元素上，
+ *        CSS 挂在 `[aria-busy='true']` 上（**必须写字符串 'true'**——BUG-058：
+ *        `toggleAttribute('aria-busy', true)` 写入的是**空值**，选择器永不命中，
+ *        这条扫描线自 2026-10-10 起一次都没亮过）。
+ *     2) 结果区骨架屏（_queueSkeleton）：面板本来是空的（首查 / 上次查无结果）时，
+ *        延迟 120ms 后铺一组占位行；已有上一轮结果时保持原样不闪。
+ *   superseded requests never clear a newer one's loading state (monotonic request token).
  * - Inline clear button: restored 2026-10-10 (styled to match the drawer's
  *   close button) after the native WebKit search-cancel X proved unstyleable;
  *   the drawer head keeps the only other close icon.
@@ -42,6 +47,12 @@
 class PredictiveSearch extends HTMLElement {
   static DEBOUNCE_MS = 250;
 
+  /**
+   * 骨架屏延迟出现（ms）。快网/命中缓存时 /search/suggest 常在 100ms 内回来，
+   * 不延迟就是"骨架闪一下立刻消失"的视觉噪点。
+   */
+  static SKELETON_DELAY_MS = 120;
+
   /** Section FILE name — what /search/suggest re-renders for the results fragment. */
   static SECTION_ID = 'predictive-search';
 
@@ -55,12 +66,16 @@ class PredictiveSearch extends HTMLElement {
     this._options = [];
     // 递增序号：只有"最新一次请求"才允许关掉 loading（过期请求的 finally 不算数）
     this._requestSeq = 0;
+    // 骨架屏：当前铺在面板里的节点 + 延迟出现的定时器
+    this._skeleton = null;
+    this._skeletonTimer = null;
   }
 
   connectedCallback() {
     this._input = this.querySelector('.predictive-search__input');
     this._results = this.querySelector('.predictive-search__panel');
     this._clearButton = this.querySelector('[data-predictive-search-clear]');
+    this._skeletonTemplate = this.querySelector('[data-predictive-search-skeleton]');
 
     if (!this._input || !this._results) return;
 
@@ -99,9 +114,59 @@ class PredictiveSearch extends HTMLElement {
     this._timer = setTimeout(() => this._fetch(term), PredictiveSearch.DEBOUNCE_MS);
   };
 
-  /** loading 状态：扫描线由 CSS 挂在 [aria-busy] 上（也顺带对读屏声明忙碌） */
+  /** loading 状态：扫描线由 CSS 挂在 [aria-busy='true'] 上（也顺带对读屏声明忙碌）
+   *  注意必须写字符串 'true'，不能用 toggleAttribute —— 它写入的是空值，
+   *  `[aria-busy='true']` 选择器匹配不上（BUG-058，实测 a.matches() 返回 false） */
   _setBusy(busy) {
-    this.toggleAttribute('aria-busy', busy);
+    if (busy) {
+      this.setAttribute('aria-busy', 'true');
+    } else {
+      this.removeAttribute('aria-busy');
+    }
+  }
+
+  /**
+   * 骨架屏排程。三条判据，缺一条都不显示：
+   *   1. 面板当前是空的——已有上一轮结果时保持原样。边搜边把列表换成骨架，
+   *      等于每敲一次都闪一下，比"没有加载反馈"更难受。
+   *   2. 延迟 SKELETON_DELAY_MS 再出现，避开"骨架一闪而过"。
+   *   3. 仍是本次请求（token 校验）——过期请求不许顶掉新请求的骨架。
+   * 骨架是纯视觉占位（aria-hidden），"正在加载"的语义由当前元素的 aria-busy 承担；
+   * 不另加 role="status" 播报——aria-busy=true 的子树上做礼貌播报会被 AT 延后，等于重复。
+   */
+  _queueSkeleton() {
+    if (!this._skeletonTemplate || this._skeleton) return;
+    if (!this._results.hidden) return;
+
+    // 换请求时重排：上一轮排队的定时器记的是旧 token，留着它会在触发时静默失效
+    if (this._skeletonTimer) clearTimeout(this._skeletonTimer);
+
+    const token = this._requestSeq;
+    this._skeletonTimer = setTimeout(() => {
+      this._skeletonTimer = null;
+      if (token !== this._requestSeq || !this._results.hidden) return;
+
+      this._skeleton = this._skeletonTemplate.content.cloneNode(true).firstElementChild;
+      this._results.replaceChildren(this._skeleton);
+      this._results.hidden = false;
+      // 视觉上已经有一块面板在等结果，展开态跟着说实话
+      this._input.setAttribute('aria-expanded', 'true');
+    }, PredictiveSearch.SKELETON_DELAY_MS);
+  }
+
+  /** 摘除骨架（连同排队中的定时器）。面板因此变空就顺手收起，不留一块白板 */
+  _hideSkeleton() {
+    if (this._skeletonTimer) {
+      clearTimeout(this._skeletonTimer);
+      this._skeletonTimer = null;
+    }
+    this._skeleton?.remove();
+    this._skeleton = null;
+
+    if (this._results.childElementCount === 0) {
+      this._results.hidden = true;
+      this._input.setAttribute('aria-expanded', 'false');
+    }
   }
 
   /** 清空按钮：显隐跟随输入框有无内容（hidden 属性驱动，无障碍树同步） */
@@ -203,6 +268,7 @@ class PredictiveSearch extends HTMLElement {
     // loading 从发请求亮到本请求生命周期结束；被更新请求顶替时
     // token 不匹配，finally 不会把新请求的 loading 关掉
     this._setBusy(true);
+    this._queueSkeleton();
     try {
       // 注意：section_id 请求返回的是 HTML（不是 JSON）——官方示例即用 text() + DOMParser
       const response = await fetch(url, { signal: this._controller.signal });
@@ -236,7 +302,11 @@ class PredictiveSearch extends HTMLElement {
       // Either way the form still submits, so we degrade quietly.
       if (error.name !== 'AbortError') this._close();
     } finally {
-      if (token === this._requestSeq) this._setBusy(false);
+      // 只有最新一次请求能收尾：过期请求既不能关别人的扫描线，也不能摘别人的骨架
+      if (token === this._requestSeq) {
+        this._setBusy(false);
+        this._hideSkeleton();
+      }
     }
   }
 
@@ -250,6 +320,7 @@ class PredictiveSearch extends HTMLElement {
   }
 
   _close() {
+    this._hideSkeleton();
     this._results.hidden = true;
     this._results.innerHTML = '';
     this._input.setAttribute('aria-expanded', 'false');

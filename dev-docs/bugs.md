@@ -407,6 +407,30 @@
 - **验证**（无头 Chrome，1280×800，四组对照）：`ann=1` 时新旧判据行为完全一致（@top 不吸、@44 吸）；`ann=0` 时旧判据 @top 与回到顶部后都判成吸住（复现），新判据 @top 不吸、滚 5px 才吸、回顶部取消（修复）。有公告栏的场景零回归。
 - **预防**：**凡「判断元素是否处于吸附/固定状态」的判据，必须同时具备「视觉贴边」与「确实发生位移」两维信息**——`getBoundingClientRect().top` 单独一条永远不够，因为「原生就在那个位置」和「被钳制在那个位置」视觉上无从分辨。可执行做法：① `grep -rn "getBoundingClientRect().top *<=" assets/` 命中的每一处，同行或紧邻必须另有第二个条件（`scrollY`、位移量、或与父容器的相对位置），否则即潜在同类 bug；② 这类判据的测试矩阵**必须包含「目标元素是第一个流内子项（文档 y=0）」这一格**——前面有元素时判据自然通过，恰好把陷阱掩盖掉，本次就是只在有公告栏的布局下验过；③ 用无头 Chrome 断言：`window.scrollTo` 到 0 / 5 / 44 / 200 四个位置各读一次 `classList`，一次性覆盖全部边界。
 
+### BUG-058 · 抽屉搜索从来没有过加载动画：`toggleAttribute('aria-busy', true)` 写入空值，`[aria-busy='true']` 永不命中
+
+- **日期**：2026-10-29 ｜ **状态**：Fixed
+- **现象**：搜索抽屉里输入关键词，`/search/suggest` 请求确实发出去了，但输入框下沿那条"加载扫描线"一次都没出现过；首查时结果面板还是空的，整块区域在响应回来之前**完全静止**——刘工反馈"触发了搜索，没有 loading 效果"。
+- **根因**：`assets/predictive-search.js` 的 `_setBusy()` 写的是 `this.toggleAttribute('aria-busy', busy)`。`Element.toggleAttribute(name, force)` 在 force 为 true 时写入的是**空值属性**（`aria-busy=""`），而 CSS 侧写的是 `[aria-busy='true']`（精确匹配字符串 `true`），两者永不相等 ⇒ 那条 `::after` 扫描线自 2026-10-10 抽屉重构起就是死样式，安静失效了三周。无头 Chrome 实测：`el.toggleAttribute('aria-busy', true)` 之后 `getAttribute()` 返回 `""`、`el.matches("[aria-busy='true']")` 返回 **false**；换 `setAttribute('aria-busy','true')` 后返回 true。同项目的 `faceted-filters.js` 用的是 `setAttribute`，所以集合页的 `[aria-busy='true']` 反馈一直正常——**同一个属性、两种写法、只有一处失效**，从代码上看不出任何异常。
+- **修复**：① `_setBusy()` 改为 `setAttribute('aria-busy','true')` / `removeAttribute('aria-busy')`；② 补一层结果区骨架屏（`_queueSkeleton` / `_hideSkeleton` + `snippets/predictive-search-entry.liquid` 的 `<template data-predictive-search-skeleton>` + `main-nav` 样式块）：只在「面板本来是空的」时出现（已有上一轮结果则保持不闪）、延迟 120ms 出现（避开"骨架一闪而过"）、`prefers-reduced-motion` 关停脉冲、配色从 `--color-foreground` 派生。行尺寸（112px 缩略图 + 两行文字 + 发丝线）与真实结果行同为 137px，换入结果不跳。
+- **预防**：**用属性驱动样式的状态（`[data-x]` / `[aria-x='true']`）一律 `setAttribute(name, '值')`，不用 `toggleAttribute(name, true)`**——后者是"布尔属性"语法糖，只适合 `hidden` / `disabled` 这种按**存在与否**判定的属性，遇到按**值**匹配的选择器必然静默失效（不报错、不警告，theme check 也查不出）。可执行做法：`grep -rn "toggleAttribute(" assets/` 逐处确认目标选择器是 `[x]` 还是 `[x='true']`，后者必须改 `setAttribute`；同时，**新增任何加载/状态样式后必须发一次真实请求验收**（DevTools Network 限速 Slow 3G 更容易看见），只看代码里"选择器写对了"不算——这次的扫描线正是"代码看着对、从没在浏览器里见过它亮"。
+
+### BUG-059 · 深色骨架下搜索抽屉里一片"看不见"：分组标签 / 放大镜 / 占位符 / 发丝线 / 划线价
+
+- **日期**：2026-10-29 ｜ **状态**：Fixed
+- **现象**：Coppice Noir（深色骨架）下打开搜索抽屉，输入框占位符、左侧放大镜图标、结果分组标签（PRODUCTS）、行分隔发丝线全部近乎不可见；给搜索列表补"划线原价"时发现同一处的划线价也读不出来。
+- **根因**：两层，都是"颜色没从令牌派生"。① 这些位置直接写了 `rgb(0 0 0 / 45% | 40% | 25% | 7%)`——黑 alpha 压在 `#0F1012` 上等于没有。② 更隐蔽的一层：**即使改用 `--color-foreground-muted` 也救不了**。自定义属性值里的 `var()` 在「声明它的元素」（`:root`）上就解析完了，`--color-foreground-muted: color-mix(in srgb, var(--color-foreground) 70%, transparent)` 里烤死的是 `:root` 的前景色；`critical.css` 的页头组映射（`.shopify-section-group-header-group, .site-footer`）只翻了 background / foreground / brand，muted 不跟着变。无头 Chrome 实测：在 `--color-foreground:#E9E9EC` 的子树里，继承到的 muted 仍是 `color(srgb 0.2 0.2 0.2 / 0.7)`（=#333），而同一处内联写 `color-mix(... var(--color-foreground) 70% ...)` 算出 `0.9137`（=#E9E9EC）。
+- **修复**：① 搜索组件内 7 处黑 alpha 全部改 `color-mix(in srgb, var(--color-foreground) N%, transparent)`（`main-nav` 3 处：放大镜 45% / 输入框底线 25% / 占位符 40%；`predictive-search` 4 处：分组标签 45% + 发丝线 7%×3）；② `critical.css` 页头组映射里补一行 `--color-foreground-muted` 重算（基于 skeleton-foreground），页头组/页脚内任何消费 muted 的组件从此跟着骨架色走。
+- **预防**：**"改了 `--color-foreground` 就以为派生令牌跟着变"是错的**——凡在 `:root` 用 `var()` 组合出来的派生令牌，重映射父级令牌时必须在同一作用域内一并重算。可执行做法：① `grep -rn "color-foreground-muted:" --include=*.css --include=*.liquid`，每个重映射 `--color-foreground` 的选择器块里都必须同时出现 muted 的重算行；② 深色骨架下验收搜索抽屉，占位符 / 分组标签 / 发丝线 / 划线价四项都要看得见（无头 Chrome 读 computed color 就能验，不必肉眼）；③ 新写颜色一律 `color-mix(... var(--color-*) ...)`，改动文件里 `grep -rnE "rgb\(0 0 0|rgb\(255 255 255"` 必须为零（压商品图元素、投影除外）。
+
+### BUG-060 · 折扣徽标 "Save 5%" 文字对比度 4.35:1，低于 WCAG AA 的 4.5:1
+
+- **日期**：2026-10-29 ｜ **状态**：Fixed
+- **现象**：产品详情页价格行的折扣胶囊是 `#d32f2f` 字压 `#ffebeb` 底。给搜索列表补同一套徽标时顺手算了一次对比度。
+- **根因**：取色凭"红色 = 优惠"的直觉，没算对比度。徽标字号 0.8rem（12.8px），属 WCAG 的**正文小字**，要求 4.5:1，实测只有 **4.35:1**。同时它是硬编码 hex，与"配色唯一出口 `snippets/css-variables.liquid`"的纪律冲突——没有令牌，既不能跟随 preset，也无法在深色骨架下调整。
+- **修复**：新增语义令牌 `--color-sale` / `--color-sale-surface`（固定值、不跟 preset，理由同 `--color-warning`），取值压到 `#c62828` / `#ffebeb` = **4.91:1**（肉眼几乎无色差）；PDP 与搜索列表共用同一组。Noir 下刻意保持同值：浅粉底 + 深红字在深底上对比更高，跟着翻成深红底反而会糊进背景。
+- **预防**：**新增任何彩色小字（徽标 / 胶囊 / 标签 / 划线价）必须当场算对比度**，别等 Lighthouse 兜底。可执行做法：① 手头常备三行相对亮度脚本（本次用 python 算），落色前把 `fg/bg` 丢进去，结果 <4.5 就换色；② 语义色（降价 / 警告 / 成功）一律进 `css-variables.liquid` 成令牌，section 里只允许 `var(--color-*)`，因此 `grep -rnE "color: *#[0-9a-fA-F]{6}" sections` 的新增命中一律视为缺陷。
+
 ## 记录模板（追加新 bug 用）
 
 ```

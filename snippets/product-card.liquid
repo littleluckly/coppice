@@ -2,8 +2,10 @@
   product-card — 商品卡（首页 featured-collection 与集合页共用，task-index T-1.2）。
 
   输出（视觉基准：效果图-首页 Featured Products 区；标签行基准 2026-10-16 刘工参考图）：
-  图 + 收藏心 + 标题 + 规格横排行（宽·排量·动力源）+ 价格（含划线对比价）+ 星级
-  + 规格标签行（胶囊：电池电压·切割宽·操作方式·动力源）+ Compare。
+  图 + 收藏心 + 标题 + 价格三件套（现价 / 划线原价 / 折扣胶囊 "Save N%"，
+  2026-10-29 对齐产品详情页）+ 星级 + 规格胶囊行（动力源 · 电池平台 · 切割宽度 ·
+  排量 · 驱动方式 · 重量，2026-10-29 由"规格行 + 标签行"合并而来，每个字段只出现一次）
+  + Compare。
 
   纪律：
   - 参数行逐项判空：缺值跳项，分隔符自动正确（li+li::before），不留空位（SDD §5.7）
@@ -77,61 +79,34 @@
       <a href="{{ product.url }}">{{ product.title | escape }}</a>
     </h3>
 
-    {%- comment -%} 规格横排行：宽 · 排量 · 动力源（缺值跳项，分隔符由 CSS 补） {%- endcomment -%}
+    {%- comment -%}
+      价格三件套（2026-10-29 刘工：对齐产品详情页）——现价 / 划线原价 / 折扣百分比。
+      现价与划线价绑成 .product-card__price-main 一组（nowrap），折扣胶囊作为整体
+      换到第二行：窄卡（手机两列，卡内容宽约 106px）装不下三件套，
+      绑成组之后换行点在"价格块 / 胶囊"之间，不会把两个价格拆开。
+      折扣缺数据时只出现现价，不留空位、不显示 0%（AGENTS §6）。
+      百分比与 PDP 同一算法（main-product.liquid 顶部同款），两处不会漂。
+    {%- endcomment -%}
     {%- liquid
-      assign has_specs = false
-      if show_width and product.metafields.spec.cutting_width_mm.value != blank
-        assign has_specs = true
-      endif
-      if show_cc and product.metafields.spec.displacement_cc.value != blank
-        assign has_specs = true
-      endif
-      if show_power and product.metafields.spec.power_source.value != blank
-        assign has_specs = true
-      endif
-      if show_weight and product.metafields.spec.weight_kg.value != blank
-        assign has_specs = true
+      assign card_has_discount = false
+      assign card_save_percent = 0
+      if product.compare_at_price > product.price
+        assign card_has_discount = true
+        assign card_price_diff = product.compare_at_price | minus: product.price
+        assign card_save_percent = card_price_diff | times: 100.0 | divided_by: product.compare_at_price | round
       endif
     -%}
-    {%- if has_specs -%}
-      <ul class="product-card__specs" role="list">
-        {%- if show_width -%}
-          {%- assign width_value = product.metafields.spec.cutting_width_mm.value -%}
-          {%- if width_value != blank -%}
-            <li class="product-card__spec">
-              {%- render 'spec-value', value: width_value, unit_type: 'length_mm', spec_class: 'card' -%}
-            </li>
-          {%- endif -%}
-        {%- endif -%}
-        {%- if show_cc -%}
-          {%- assign cc_value = product.metafields.spec.displacement_cc.value -%}
-          {%- if cc_value != blank -%}
-            <li class="product-card__spec">{{ cc_value }} cc</li>
-          {%- endif -%}
-        {%- endif -%}
-        {%- if show_power -%}
-          {%- assign power_value = product.metafields.spec.power_source.value -%}
-          {%- if power_value != blank -%}
-            <li class="product-card__spec">{{ power_value }}</li>
-          {%- endif -%}
-        {%- endif -%}
-        {%- if show_weight -%}
-          {%- assign weight_value = product.metafields.spec.weight_kg.value -%}
-          {%- if weight_value != blank -%}
-            <li class="product-card__spec">
-              {%- render 'spec-value', value: weight_value, unit_type: 'weight_kg', spec_class: 'card' -%}
-            </li>
-          {%- endif -%}
-        {%- endif -%}
-      </ul>
-    {%- endif -%}
-
     <p class="product-card__price">
-      {%- if product.compare_at_price > product.price -%}
+      <span class="product-card__price-main">
         <span class="product-card__price-current">{{ product.price | money }}</span>
-        <s class="product-card__price-compare">{{ product.compare_at_price | money }}</s>
-      {%- else -%}
-        <span class="product-card__price-current">{{ product.price | money }}</span>
+        {%- if card_has_discount -%}
+          <s class="product-card__price-compare">{{ product.compare_at_price | money }}</s>
+        {%- endif -%}
+      </span>
+      {%- if card_has_discount -%}
+        <span class="product-card__price-save">
+          {{- 'products.product.save_percent' | t: percent: card_save_percent -}}
+        </span>
       {%- endif -%}
     </p>
 
@@ -152,42 +127,87 @@
       </a>
     {%- endif -%}
 
-    {%- comment -%} 规格标签行（2026-10-16 刘工参考图）：胶囊标签，纯展示不可点。
-        电池 = platform.battery_platform（'N/A' 跳过）；尺寸 = cutting width（跟
-        show_width 开关、经 spec-value 换算）；操作方式 = spec.drive_type（'N/A' 跳过）；
-        动力源 = spec.power_source（跟 show_power 开关）。缺值跳项，整行可空。 {%- endcomment -%}
+    {%- comment -%}
+      统一胶囊行（2026-10-29 刘工：规格行与标签行合并、全部用胶囊、去重）。
+      原来的两行有一半内容是重复的 —— 切割宽度（同一个 `spec-value`、同一组参数，
+      输出逐字相同）与动力源（同一个 `power_source` 原值）在两行里各出现一次。
+      合并后**每个字段只出现一次**，顺序按买家的决策链：
+        动力源（Gasoline / Battery，最上层的分裂）→ 电池平台（40V）→ 切割宽度
+        → 排量 → 驱动方式 → 重量。
+      开关沿用调用方参数（show_power / show_width / show_cc / show_weight）；
+      电池平台与驱动方式没有开关，只跳 'N/A'。
+      数值型参数按 `> 0` 判，不按 blank：`spec-value` 对 0 输出空串，
+      只判 blank 会留下一个空胶囊（2026-10-29 一并收紧）。
+      缺值跳项，整行可空 —— 11 件配件这六个字段全空，卡片就没有胶囊行。
+    {%- endcomment -%}
     {%- liquid
       assign battery_platform = product.metafields.platform.battery_platform.value
       assign drive_type = product.metafields.spec.drive_type.value
-      assign has_tags = false
+      assign power_value = product.metafields.spec.power_source.value
+      assign width_value = product.metafields.spec.cutting_width_mm.value
+      assign cc_value = product.metafields.spec.displacement_cc.value
+      assign weight_value = product.metafields.spec.weight_kg.value
+
+      assign has_battery = false
       if battery_platform != blank and battery_platform != 'N/A'
-        assign has_tags = true
+        assign has_battery = true
       endif
-      if show_width and product.metafields.spec.cutting_width_mm.value != blank
-        assign has_tags = true
-      endif
+
+      assign has_drive = false
       if drive_type != blank and drive_type != 'N/A'
-        assign has_tags = true
+        assign has_drive = true
       endif
-      if show_power and product.metafields.spec.power_source.value != blank
+
+      assign has_power = false
+      if show_power and power_value != blank
+        assign has_power = true
+      endif
+
+      assign has_width = false
+      if show_width and width_value != blank and width_value > 0
+        assign has_width = true
+      endif
+
+      assign has_cc = false
+      if show_cc and cc_value != blank and cc_value > 0
+        assign has_cc = true
+      endif
+
+      assign has_weight = false
+      if show_weight and weight_value != blank and weight_value > 0
+        assign has_weight = true
+      endif
+
+      assign has_tags = false
+      if has_power or has_battery or has_width or has_cc or has_drive or has_weight
         assign has_tags = true
       endif
     -%}
     {%- if has_tags -%}
       <ul class="product-card__tags" role="list">
-        {%- if battery_platform != blank and battery_platform != 'N/A' -%}
+        {%- if has_power -%}
+          <li class="product-card__tag">{{ power_value }}</li>
+        {%- endif -%}
+        {%- if has_battery -%}
           <li class="product-card__tag">{{ battery_platform }}</li>
         {%- endif -%}
-        {%- if show_width and product.metafields.spec.cutting_width_mm.value != blank -%}
+        {%- if has_width -%}
           <li class="product-card__tag">
-            {%- render 'spec-value', value: product.metafields.spec.cutting_width_mm.value, unit_type: 'length_mm', spec_class: 'card' -%}
+            {%- render 'spec-value', value: width_value, unit_type: 'length_mm', spec_class: 'card' -%}
           </li>
         {%- endif -%}
-        {%- if drive_type != blank and drive_type != 'N/A' -%}
+        {%- if has_cc -%}
+          <li class="product-card__tag">
+            {%- render 'spec-value', value: cc_value, unit_type: 'displacement_cc', spec_class: 'card' -%}
+          </li>
+        {%- endif -%}
+        {%- if has_drive -%}
           <li class="product-card__tag">{{ drive_type }}</li>
         {%- endif -%}
-        {%- if show_power and product.metafields.spec.power_source.value != blank -%}
-          <li class="product-card__tag">{{ product.metafields.spec.power_source.value }}</li>
+        {%- if has_weight -%}
+          <li class="product-card__tag">
+            {%- render 'spec-value', value: weight_value, unit_type: 'weight_kg', spec_class: 'card' -%}
+          </li>
         {%- endif -%}
       </ul>
     {%- endif -%}
