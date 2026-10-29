@@ -1570,17 +1570,15 @@
      必须有实底——否则吸顶时页面内容会透过菜单透出来。
      position: relative 是 mega 面板的锚点（整行宽），不能移到 li / ul 上。
 
-     2026-10-28 刘工：页头与内容区原本同为纯白，两者之间没有任何分界。
-     底色改为 --color-header-surface（snippets/css-variables.liquid 按骨架明暗算出来：
-     浅色 = 品牌色相的极浅绿，深色 = 纯黑），再加一道 1px 发丝线与极淡的下投影。
-     投影只向下、快速衰减，不做四边光晕，避免吸顶时像一张浮起来的卡。
-     移动行（见 989px 断点）必须用同一个变量，两端的观感才会一致。 */
+     2026-10-28 刘工（两轮定稿）：页头与内容区原本同为纯白，没有任何分界。
+     现在底色与投影都由 snippets/css-variables.liquid 按骨架明暗算好：
+       浅色 → 底色 = 背景色（视觉上等于没底色）、不画分隔线，只留一层下投影；
+       深色 → 纯黑底 + 一道亮发丝线 + 更实的投影。
+     两个变量必须成对用，不要在这里写死其中一半——移动行同理。 */
   .main-nav__desktop {
     position: relative;
     background-color: var(--color-header-surface);
-    box-shadow:
-      0 1px 0 color-mix(in srgb, var(--color-foreground) 12%, transparent),
-      0 6px 14px -8px color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    box-shadow: var(--header-shadow);
   }
 
   /* 移动端抽屉相关：桌面隐藏汉堡与 dialog */
@@ -1992,15 +1990,13 @@
       align-items: center;
       /* 移动导航行上下 16px，与桌面行一致（第六轮） */
       padding-block: 1rem;
-      /* 与桌面行同一套分隔（2026-10-28）：底色 + 发丝线 + 极淡下投影，
-         见 .main-nav__desktop 的注释。
+      /* 与桌面行同一套分层（2026-10-28）：底色 + 投影都取 css-variables 里算好的
+         那两个变量，见 .main-nav__desktop 的注释。
          横向内边距一并补上——移动行原先只有 padding-block，汉堡贴死在视口
          左缘；加了色带之后这个贴边会非常显眼，且与其余 section 的内容列不齐。 */
       padding-inline: var(--page-margin);
       background-color: var(--color-header-surface);
-      box-shadow:
-        0 1px 0 color-mix(in srgb, var(--color-foreground) 12%, transparent),
-        0 6px 14px -8px color-mix(in srgb, var(--color-foreground) 20%, transparent);
+      box-shadow: var(--header-shadow);
     }
 
     /* 汉堡居左，搜索图标推到最右 */
