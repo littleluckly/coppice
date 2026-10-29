@@ -17,7 +17,11 @@
     assign group_key = 'generic'
   endif
   assign variance_note = product.metafields.spec.spec_variance_note.value
-  assign spec_caption = label | default: 'sections.product_spec_table.default_heading' | t
+  if label != blank
+    assign spec_caption = label
+  else
+    assign spec_caption = 'sections.product_spec_table.default_heading' | t
+  endif
 -%}
 
 {%- comment -%}
