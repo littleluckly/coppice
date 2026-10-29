@@ -1992,6 +1992,15 @@
       align-items: center;
       /* 移动导航行上下 16px，与桌面行一致（第六轮） */
       padding-block: 1rem;
+      /* 与桌面行同一套分隔（2026-10-28）：浅底 + 发丝线 + 极淡下投影，
+         见 .main-nav__desktop 的注释。
+         横向内边距一并补上——移动行原先只有 padding-block，汉堡贴死在视口
+         左缘；加了色带之后这个贴边会非常显眼，且与其余 section 的内容列不齐。 */
+      padding-inline: var(--page-margin);
+      background-color: color-mix(in srgb, var(--color-foreground) 3.5%, var(--color-background));
+      box-shadow:
+        0 1px 0 color-mix(in srgb, var(--color-foreground) 12%, transparent),
+        0 6px 14px -8px color-mix(in srgb, var(--color-foreground) 20%, transparent);
     }
 
     /* 汉堡居左，搜索图标推到最右 */
