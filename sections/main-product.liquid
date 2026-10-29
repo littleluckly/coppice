@@ -1355,8 +1355,20 @@
     flex-wrap: wrap;
     gap: 0.35rem;
   }
+  /* 多个门店之间留一口气 —— 单行时代靠行距就够，两行式（门店名 + 备货时长）
+     挤在一起会读成一家店的两段 */
+  .pickup__item + .pickup__item {
+    margin-block-start: 0.5rem;
+  }
   .pickup__store {
     color: var(--color-foreground);
+  }
+  /* 备货时长单独占一行（flex-basis: 100% 强制换行）。
+     平台返回的是整句（"Usually ready in 24 hours"），和门店名挤在一行会太长。 */
+  .pickup__time {
+    flex-basis: 100%;
+    font-size: 0.8rem;
+    color: var(--color-foreground-muted);
   }
   .pickup__unavailable {
     margin: 0;
