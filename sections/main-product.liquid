@@ -743,7 +743,8 @@
   /* 舞台封面上的媒体类型按钮（2026-10-28 第二轮修订）：原来也是左下角小胶囊，
      和缩略图角标一样的问题。改成压在封面正中的 64px 圆盘——这是视频封面的
      通行画法，也把"整张封面就是播放键"这件事说清楚了。
-     底板 82% 而不是纯实底：垫着的封面仍要看得出是这台机器。 */
+     底板 92% + 一圈发丝边：封面多为浅底白背景的商品图，纯半透明圆盘在
+     亮部几乎看不出边界（实测边缘只剩投影），必须补一圈描边才立得住。 */
   .product-gallery__deferred-icon {
     position: absolute;
     inset-block-start: 50%;
@@ -754,12 +755,14 @@
     inline-size: 64px;
     block-size: 64px;
     border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-background) 82%, transparent);
+    background-color: color-mix(in srgb, var(--color-background) 92%, transparent);
     color: var(--color-foreground);
     font-size: 0.95rem;
     font-weight: 700;
     letter-spacing: 0.02em;
-    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-foreground) 22%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-foreground) 16%, transparent),
+      0 2px 6px color-mix(in srgb, var(--color-foreground) 22%, transparent);
   }
   .product-gallery__deferred-icon svg {
     inline-size: 26px;
