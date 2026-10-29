@@ -441,6 +441,12 @@
     --collection-left: 320px;
     --banner-h: 650px;
 
+    /* 吸顶偏移 = 吸顶导航行的高度：链接 min-height 44px（border-box，已含
+       自身 0.5rem 上下内边距）+ .main-nav__item 上下 1rem 内边距 × 2 = 76px。
+       announcement bar 不吸顶、随页滚走，不计入。改动导航行内边距后这里要
+       跟着核对（待实测校正： shopify theme dev 里量一下实际行高）。 */
+    --facets-sticky-top: 4.75rem;
+
     /* 首列 = 页面边距（与其余 section 的内容起点对齐），第二列承载整个两栏。
        列宽只在 .collection__layout 里定义一次（--collection-left），避免
        「外层轨道 + 内层列」两处 320px 各写各的。 */
@@ -671,7 +677,7 @@
   }
   .collection__description {
     margin-block-start: 0.5rem;
-    max-width: 46ch;
+    max-width: 60ch;
     font-size: 1.05rem;
     line-height: 1.5;
     color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
@@ -1331,6 +1337,26 @@
       border-radius: 20px;
       background-color: var(--color-background);
       box-shadow: 0 10px 30px rgb(0 0 0 / 4%);
+    }
+    /* ---- 吸顶筛选卡（2026-10-29 刘工）：滚动时筛选卡钉在导航行下方 ----
+       两个前提缺一不可：
+       ① sticky 只在「父盒有富余高度」时有黏附空间（BUG-032 同构教训）——
+          .collection__layout 是 align-items: start，左列原本只有内容自身那么高，
+          必须先把左列拉到与右列等高（align-self: stretch），sticky 才有行程；
+       ② top 避开吸顶导航行（--facets-sticky-top = 76px）。
+       卡片高于视口时改为卡内滚动（max-height + overflow-y）：否则吸顶后
+       卡片底部伸到视口外，下面的筛选组永远够不着。max-height 只在
+       内容超高时才起作用，矮卡片视觉零变化。 */
+    .collection__left {
+      align-self: stretch;
+    }
+    .facets__form-slot {
+      position: sticky;
+      top: var(--facets-sticky-top);
+      max-height: calc(100vh - var(--facets-sticky-top) - 1.5rem);
+      max-height: calc(100dvh - var(--facets-sticky-top) - 1.5rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
     /* 最后一组筛选不再留底边距——卡片内边距已提供呼吸感 */
     .facets__aside .facets__group:last-of-type {

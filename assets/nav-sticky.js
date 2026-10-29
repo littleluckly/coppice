@@ -9,10 +9,19 @@
  * boundingClientRect.top 已经是 0，但 IO 仍按文档布局位置算交集比例，
  * 恒等于 1，threshold 永不跨越，回调在初始那次之后再也不来。此路不通。
  *
- * 判据只有一条且不需要缓存任何位置：
- *   sticky 块的 getBoundingClientRect().top <= 0.5  ⇒  已经贴住视口顶
- * 它读的就是视觉位置，天然自适应公告栏高度变化、是否被关闭、刷新时落在页面
- * 中间等一切情况。
+ * 判据两条，不需要缓存任何位置：
+ *   ① sticky 块的 getBoundingClientRect().top <= 0.5  ⇒  贴住视口顶
+ *   ② window.scrollY > 0.5                            ⇒  页面确实滚动过
+ * 两条同时成立才算吸住。它读的全是实时位置，天然自适应公告栏高度变化、
+ * 是否被关闭、刷新时落在页面中间等一切情况。
+ *
+ * 为什么必须有 ②（BUG-057）：没有公告栏时 .main-nav-section 是 body 的第一个
+ * 流内子项（页头组无包裹层，见 critical.css 的说明），它的文档位置就是 y=0，
+ * 未滚动时 rect.top 也是 0——只凭 ① 会把「本来就在顶部」误判成「被吸住」，
+ * 于是页面停在顶部时阴影也常驻。加 ② 之后语义才对：吸附必然意味着滚动量
+ * 已经越过了元素的原始位置，滚都没滚过就不可能被吸住。
+ * ②不引入缓存，也不需要 offsetTop/offsetParent，因此不受"公告栏被关闭"
+ * "字体加载后行高变高"这类会改变元素原始位置的事件影响。
  *
  * 为什么不在 scroll 里再包一层 requestAnimationFrame：scroll 事件本身就与渲染
  * 帧对齐（每帧至多派发一次），再包 rAF 只会把阴影的出现推迟一帧——滚动停住的
@@ -44,7 +53,10 @@ if (!customElements.get('nav-sticky')) {
       }
 
       _sync() {
-        const stuck = this._target.getBoundingClientRect().top <= 0.5;
+        // 贴顶 + 确实滚动过 = 真的吸住（判据说明见文件头，BUG-057）。
+        // scrollY 是纯读值、不触发布局，因此每帧仍是「一次 rect（会强制布局）
+        // + 一次 scrollY（不会）」，与修改前同一量级。
+        const stuck = this._target.getBoundingClientRect().top <= 0.5 && window.scrollY > 0.5;
         if (stuck !== this._stuck) {
           this._stuck = stuck;
           this._target.classList.toggle('is-stuck', stuck);

@@ -392,6 +392,21 @@
 - **修复**：直出平台原文 `{{ item.pick_up_time | escape }}`（与 Dawn 一致），删掉不再使用的 locale 键 `products.product.pickup_time`；`.pickup__time` 补样式（`flex-basis: 100%` 独占一行 + 0.8rem 弱化色），整句压在门店名下一行不显拥挤。
 - **预防**：**消费平台文本字段前，先看官方文档里的示例值**，再决定要不要包模板；"字段返回什么形态"与"字段叫什么"一样要核实。可执行做法：给 `store_availability` 这类对象写字段消费代码时，把文档示例值贴进代码注释里（本次已在 BUG-054/055 注释中写明示例 `"Usually ready in 24 hours"`）。
 
+### BUG-056 · 关闭过公告栏的访客，每次加载都会看到公告栏先亮一下再消失
+- **日期**：2026-10-29 ｜ **状态**：Fixed
+- **现象**：`announcement-bar` 渲染出来、过一会才消失。只在**点过关**的会话里出现；首次访问（未关闭）不会。
+- **根因**：关闭态靠 `assets/announcement-bar.js`（`defer`）读 `sessionStorage` 后加 `data-announcement-closed`。文件头原注释断言"defer 执行在首屏绘制之前，肉眼不可见"——**这个前提是错的**。`defer` 只保证在 `DOMContentLoaded` 前执行；浏览器解析完 body 前半段（公告栏正是 header group 第一个 section，几乎最先完成解析）就可以先绘制一帧，defer 脚本还在下载队列里排队。于是关闭态用户看到一整条品牌色公告栏闪一下再消失（同时是一次 CLS）。样式侧也救不了：`.announcement-bar` 的 `display:flex` 在 `{% stylesheet %}` 聚合产物里，判定只能在 HTML 层做。
+- **修复**：在 `<aside>` **之前**插一段内联同步脚本（同样由 `section.settings.dismissible` 门控）：读 `sessionStorage`，命中关闭态就把 Shopify 的 section 包裹层 `.shopify-section` 的**内联** `style.display` 设为 `none`。三个细节缺一不可——① 必须**内联**而非 `hidden` 属性：`critical.css` 的 `.shopify-section{display:grid}` 是作者样式，按层叠规则会盖掉 UA 的 `[hidden]{display:none}`；② 必须写在内联样式上，因为脚本执行时 `<aside>` 尚未解析，只有包裹层存在；③ key 由 Liquid 统一渲染进 `data-announcement-key`，`announcement-bar.js` 改从 `dataset` 读，key 不再有两处硬编码。附带：编辑器画布里 `window.Shopify.designMode` 直接跳过，避免商家自己关过一次后永远看不到该 section。无 JS 时整段不执行，公告栏照常显示。
+- **预防**：**「defer 保证首屏绘制前执行」是本项目的高危错误假设，凡依赖它做防闪的都要复查**。可执行做法：① 任何"读存储决定首帧外观"的逻辑，判据是「这段代码是否在目标元素解析前同步执行」，不是「有没有加 defer」；`grep -rn "defer" sections snippets` 逐个确认里面有没有首帧视觉写入；② 用内联样式（`el.style.x`）而不是属性/类名做首帧隐藏，因为属性会输给作者样式；③ 验证方式不是看浏览器正常加载，而是 DevTools → Network 限速 Slow 3G + 硬刷新——首绘被拉长后这类闪跳才稳定复现。
+
+### BUG-057 · 没有公告栏时页头阴影常驻：把「本来就在顶部」当成了「被吸住」
+- **日期**：2026-10-29 ｜ **状态**：Fixed
+- **现象**：桌面端页头吸顶阴影（`.main-nav-section.is-stuck`）只在**有公告栏**的页面上正常——页面停在顶部时无阴影、下滚才浮起。把公告栏删掉（或它的 blocks 为空、或访客点过关闭）之后，页面停在最顶部时阴影也一直挂着。
+- **根因**：`nav-sticky.js` 的唯一判据是 `target.getBoundingClientRect().top <= 0.5`。页头组无包裹层（见 `critical.css` 打头那段说明），公告栏 section 与导航 section 是 `body` 的**直接兄弟**：有公告栏时导航文档位置在 y=44，顶部时 `rect.top=44`；没有公告栏时导航是**第一个流内子项**，文档位置 y=0，顶部时 `rect.top=0` → 判据恒真。`rect.top` 只能证明「贴在视口顶」，无法区分「本来就在顶部」与「从自然位置被吸住」——少了第二维信息。
+- **修复**：判据改为两条同时成立——`rect.top <= 0.5`（贴顶）**且** `window.scrollY > 0.5`（确实滚动过）。语义自洽：吸附必然意味着滚动量越过了元素原始位置，滚都没滚过不可能被吸住。不引入缓存、不用 `offsetTop`/`offsetParent`，因此不受「公告栏被关闭」「字体加载后行高变化」这类会改变元素原始位置的事件影响，也就不存在缓存失效问题。`scrollY` 是纯读值不触发布局，每帧仍是「一次 rect + 一次 scrollY」，开销与修复前同级。
+- **验证**（无头 Chrome，1280×800，四组对照）：`ann=1` 时新旧判据行为完全一致（@top 不吸、@44 吸）；`ann=0` 时旧判据 @top 与回到顶部后都判成吸住（复现），新判据 @top 不吸、滚 5px 才吸、回顶部取消（修复）。有公告栏的场景零回归。
+- **预防**：**凡「判断元素是否处于吸附/固定状态」的判据，必须同时具备「视觉贴边」与「确实发生位移」两维信息**——`getBoundingClientRect().top` 单独一条永远不够，因为「原生就在那个位置」和「被钳制在那个位置」视觉上无从分辨。可执行做法：① `grep -rn "getBoundingClientRect().top *<=" assets/` 命中的每一处，同行或紧邻必须另有第二个条件（`scrollY`、位移量、或与父容器的相对位置），否则即潜在同类 bug；② 这类判据的测试矩阵**必须包含「目标元素是第一个流内子项（文档 y=0）」这一格**——前面有元素时判据自然通过，恰好把陷阱掩盖掉，本次就是只在有公告栏的布局下验过；③ 用无头 Chrome 断言：`window.scrollTo` 到 0 / 5 / 44 / 200 四个位置各读一次 `classList`，一次性覆盖全部边界。
+
 ## 记录模板（追加新 bug 用）
 
 ```
