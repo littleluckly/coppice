@@ -49,21 +49,32 @@
     --color-skeleton-foreground: {{ settings.skeleton_foreground_color | default: settings.foreground_color }};
     --color-skeleton-accent: {{ settings.skeleton_accent_color | default: settings.brand_color }};
 
-    /* 页头底色（2026-10-28 刘工）：不单开设置项，直接跟着骨架明暗走——
-       浅色骨架 → 取品牌色色相、极高明度的淡绿（非常浅的绿，但一眼能看出是"彩色页头"）；
-       深色骨架 → 纯黑，比内容区再暗一档，靠明度差形成分隔。
+    /* 页头分层（2026-10-28 刘工，两轮定稿）：
+       浅色骨架 → 页头**不铺底色、不画分隔线**，只靠一层下投影浮起来；
+       深色骨架 → 纯黑页头 + 一道亮发丝线（黑底上的投影看不出来，只能靠明度差）。
        判据是 color_brightness（0–255），128 为明暗中线；
-       Liquid 的 if 不支持过滤器，所以必须先 assign 再比。
-       两行同写：oklch 相对颜色语法在 Chrome 119 / Safari 16.4 以下整行作废，
-       落到上一行的 color-mix（灰绿，不如下面鲜，但不会变透明——与 --color-brand-light 同一写法）。 */
+       Liquid 的 if 不支持过滤器，所以必须先 assign 亮度再比。
+       注意下面 --header-shadow 里引用的是 var(--color-foreground)：自定义属性是
+       "用到才替换"，在页头组内会解析成骨架前景色，不在 :root 解析——所以不需要
+       在 critical.css 的骨架映射表里再加一条。 */
     {%- assign header_base = settings.skeleton_background_color | default: settings.background_color -%}
     {%- comment -%} 兜底 255：色值取不到时按浅色处理，页头不会在浅底站点上突然变纯黑 {%- endcomment -%}
     {%- assign header_luma = header_base | color_brightness | default: 255 -%}
     {%- if header_luma > 128 -%}
-      --color-header-surface: color-mix(in srgb, var(--color-skeleton-accent) 8%, var(--color-skeleton-background));
-      --color-header-surface: oklch(from var(--color-skeleton-accent) 0.955 0.024 h);
+      {%- comment -%}
+        浅色：底色必须写成背景色而不是 transparent——页头吸顶时要在上方，
+        透明的行会让页面内容从底下透出来（critical 里那句"必须有实底"）。
+        写成 background 色 = 视觉上"没有底色"，同时保持不透明。
+      {%- endcomment -%}
+      --color-header-surface: var(--color-background);
+      --header-shadow:
+        0 2px 6px -2px color-mix(in srgb, var(--color-foreground) 10%, transparent),
+        0 10px 20px -12px color-mix(in srgb, var(--color-foreground) 26%, transparent);
     {%- else -%}
       --color-header-surface: #000000;
+      --header-shadow:
+        0 1px 0 color-mix(in srgb, var(--color-foreground) 22%, transparent),
+        0 10px 20px -12px color-mix(in srgb, var(--color-foreground) 45%, transparent);
     {%- endif -%}
 
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
