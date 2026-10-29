@@ -67,9 +67,13 @@
         写成 background 色 = 视觉上"没有底色"，同时保持不透明。
       {%- endcomment -%}
       --color-header-surface: var(--color-background);
+      /* 浅绿投影（2026-10-29 刘工）：与画廊右侧加购按钮同源的浅绿光晕。
+         色相取 --color-brand-light 而非品牌深绿——白底页头下深绿投影发灰，
+         浅绿才有「浮起来一层光」的通透感。双层结构（近距细影 + 远距大扩散）
+         保持原样，只换颜色；浓度比原灰影（10%/26%）略高，因为浅绿本身更淡。 */
       --header-shadow:
-        0 2px 6px -2px color-mix(in srgb, var(--color-foreground) 10%, transparent),
-        0 10px 20px -12px color-mix(in srgb, var(--color-foreground) 26%, transparent);
+        0 2px 6px -2px color-mix(in srgb, var(--color-brand-light) 20%, transparent),
+        0 10px 20px -12px color-mix(in srgb, var(--color-brand-light) 30%, transparent);
     {%- else -%}
       --color-header-surface: #000000;
       --header-shadow:
