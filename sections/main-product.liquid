@@ -617,7 +617,13 @@
                 data-label-checking="{{ 'products.product.pickup_checking' | t }}"
               >
                 <h2 class="pickup__heading">{{ 'products.product.pickup_heading' | t }}</h2>
-                {%- assign pickup_items = current_variant.store_availabilities -%}
+                {%- comment -%}
+                  BUG-053：store_availabilities 的语义是「这个变体在这个 location 有库存记录」，
+                  不等于该 location 开通了自提。官方原文：returned location isn't guaranteed
+                  to offer local pickup，必须先按 pick_up_enabled 过滤，否则会把「有货但不
+                  提供自提」的门店列给顾客。这也是 Dawn 的官方写法（where 过滤器前置）。
+                {%- endcomment -%}
+                {%- assign pickup_items = current_variant.store_availabilities | where: 'pick_up_enabled', true -%}
                 {%- if pickup_items.size > 0 -%}
                   {%- assign any_pickup = false -%}
                   <ul class="pickup__list" role="list">
@@ -626,9 +632,13 @@
                         {%- assign any_pickup = true -%}
                         <li class="pickup__item">
                           <span class="pickup__store">{{ item.location.name | escape }}</span>
-                          {%- if item.pickup_time != blank -%}
+                          {%- comment -%}
+                            BUG-054：属性名是 pick_up_time（pick 与 up 之间有下划线），
+                            写成 pickup_time 恒为空白 —— 备货时长这一行永远不会渲染。
+                          {%- endcomment -%}
+                          {%- if item.pick_up_time != blank -%}
                             <span class="pickup__time">
-                              {{- 'products.product.pickup_time' | t: time: item.pickup_time -}}
+                              {{- 'products.product.pickup_time' | t: time: item.pick_up_time -}}
                             </span>
                           {%- endif -%}
                         </li>
