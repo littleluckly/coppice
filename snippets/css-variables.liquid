@@ -54,9 +54,9 @@
        深色骨架 → 纯黑页头 + 一道亮发丝线（黑底上的投影看不出来，只能靠明度差）。
        判据是 color_brightness（0–255），128 为明暗中线；
        Liquid 的 if 不支持过滤器，所以必须先 assign 亮度再比。
-       注意下面 --header-shadow 里引用的是 var(--color-foreground)：自定义属性是
-       "用到才替换"，在页头组内会解析成骨架前景色，不在 :root 解析——所以不需要
-       在 critical.css 的骨架映射表里再加一条。 */
+       骨架色彩映射表在 assets/critical.css（页头组/页脚翻转 background/foreground/brand）；
+       --color-brand-light 不在映射表内，所以它始终取 :root 那份（从全局品牌色算）——
+       浅色骨架下它与骨架 accent 同源，视觉一致；深色分支的阴影不用它，无影响。 */
     {%- assign header_base = settings.skeleton_background_color | default: settings.background_color -%}
     {%- comment -%} 兜底 255：色值取不到时按浅色处理，页头不会在浅底站点上突然变纯黑 {%- endcomment -%}
     {%- assign header_luma = header_base | color_brightness | default: 255 -%}
