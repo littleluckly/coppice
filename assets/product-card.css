@@ -68,22 +68,9 @@
   color: inherit;
   text-decoration: none;
 }
-.product-card__specs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  font-size: 0.78rem;
-  /* 2026-10-21：原 60% = #858585 = 3.69:1，小字不过 AA（Lighthouse color-contrast
-     一次挂了 16 个节点）。统一走 --color-foreground-muted（70% ≈ 4.95:1）。 */
-  color: var(--color-foreground-muted);
-}
-.product-card__spec + .product-card__spec::before {
-  content: '·';
-  margin-inline-end: 0.3rem;
-}
+/* 规格胶囊行（2026-10-16 刘工参考图；2026-10-29 与原来的文字规格行合并）：
+   全部参数以胶囊呈现，每个字段只出现一次。原先的 `.product-card__specs` /
+   `.product-card__spec`（小字 + `·` 分隔）已随合并删除，样式不再保留。 */
 .spec-value--card {
   font-size: inherit;
 }
