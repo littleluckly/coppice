@@ -51,6 +51,16 @@
     assign price_diff = current_variant.compare_at_price | minus: current_variant.price
     assign save_percent = price_diff | times: 100.0 | divided_by: current_variant.compare_at_price | round
   endif
+
+  # 媒体框的宽高比（2026-10-28）：取第一张媒体的 preview_image。视频与 3D 也有
+  # preview_image（视频是自动截的封面帧），所以三种类型都有值。
+  # 用 preview_image 而不是原始媒体尺寸：预览图才是页面上真正被看到的那一版。
+  # 取不到时按 1（正方）兜底——宁可方正，也不要让框塌成 0。
+  assign gallery_ratio = 1
+  assign first_media = product.media.first
+  if first_media.preview_image
+    assign gallery_ratio = first_media.preview_image.aspect_ratio
+  endif
 -%}
 
 <script src="{{ 'product-gallery.js' | asset_url }}" defer></script>
@@ -87,7 +97,7 @@
   <div class="main-product__layout">
     <product-gallery class="product-gallery" data-media-count="{{ media_count }}">
       <div class="product-gallery__stage">
-        <ul class="product-gallery__slides" role="list">
+        <ul class="product-gallery__slides" role="list" style="--gallery-ratio: {{ gallery_ratio }}">
           {%- for media in product.media -%}
             {%- assign is_first = false -%}
             {%- if forloop.first -%}{%- assign is_first = true -%}{%- endif -%}
@@ -909,9 +919,11 @@
 
   /* ---- 舞台图放大入口（2026-10-28） ---- */
   .product-gallery__zoom {
-    position: relative;
+    /* 同样铺满媒体框：图片是绝对定位的，按钮不能靠内容撑高（否则塌成 0） */
+    position: absolute;
+    inset: 0;
     display: block;
-    width: 100%;
+    inline-size: 100%;
     padding: 0;
     border: 0;
     background: none;
