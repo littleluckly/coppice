@@ -6,13 +6,13 @@
  *
  * 关键行为：关闭态不闪空条
  *   朴素做法是服务端先渲染、JS 读 localStorage 后再隐藏 —— 关闭状态的用户会先看到
- *   一条公告栏再消失（CLS + 视觉闪跳）。这里的做法相反：
- *   1) Liquid 不输出 hidden，条子正常渲染；
- *   2) CSS 默认不隐藏任何状态；
- *   3) JS 若读到"已关闭"才写 data-announcement--closed，条子才消失。
- *   代价是关闭状态的用户会经历一次"渲染后立刻消失"，但因为 JS 是 defer 的，
- *   这发生在 HTML 解析完成之后、首屏绘制之前，肉眼基本不可见；
- *   而"先隐藏再显示"会让未关闭状态的用户看到空条——那才是更糟的闪跳。
+ *   一条公告栏再消失（CLS + 视觉闪跳）。这里的做法是：
+ *   1) Liquid 照常输出 <aside>（无 JS 时仍可读）；
+ *   2) <aside> 之前一段内联同步脚本在**首次绘制前**读 sessionStorage，
+ *      命中关闭态就把 section 包裹层 style.display 设为 none（BUG-046）；
+ *   3) 本文件（defer）只负责后续交互与"同一次访问里点关闭"这条路径。
+ *   sessionStorage 读两次是有意的：内联那段解决"加载时闪"，这里解决
+ *   "编辑器重新渲染 section / 脚本晚到"时状态补齐，两者都幂等。
  *
  * 关闭持久化（sessionStorage，key 带 section.id）：
  *   用 sessionStorage 而非 localStorage —— 公告是促销内容，关闭是本次会话的
@@ -49,9 +49,12 @@
     const autoplay = root.dataset.announcementAutoplay === 'true';
     const interval = Number(root.dataset.announcementInterval) || 5000;
 
-    // 关闭持久化 key 带 section.id：商家改文案/改 section 后 key 变，
-    // 关闭态自动重置，老访客能看到新公告（官方最佳实践，见文件头注释）。
-    const storageKey = `coppice:announcement:closed:${root.dataset.sectionId || 'default'}`;
+    // 关闭持久化 key 由 Liquid 渲染进 data-announcement-key（与 section 内联脚本同源）：
+    // 商家改文案/改 section 后 key 变，关闭态自动重置，老访客能看到新公告
+    // （官方最佳实践，见文件头注释）。fallback 只为兜住手写 HTML 的场景。
+    const storageKey =
+      root.dataset.announcementKey ||
+      `coppice:announcement:closed:${root.dataset.sectionId || 'default'}`;
 
     let index = 0;
     let timer = null;
