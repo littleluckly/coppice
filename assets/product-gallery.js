@@ -174,7 +174,8 @@ class ProductGallery extends HTMLElement {
       const img = document.createElement('img');
       // 复用舞台图的尺寸档位：srcset 原样搬过来，只把 sizes 撑到视口宽，
       // 浏览器就会按新的显示尺寸重新挑图（通常正好是最大那一档）。
-      img.src = source.getAttribute('src') || '';
+      const src = source.getAttribute('src');
+      if (src) img.setAttribute('src', src);
       const srcset = source.getAttribute('srcset');
       if (srcset) img.setAttribute('srcset', srcset);
       img.setAttribute('sizes', '100vw');
