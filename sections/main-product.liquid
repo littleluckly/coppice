@@ -971,16 +971,29 @@
     color: var(--color-foreground);
     box-shadow: 0 1px 3px color-mix(in srgb, var(--color-foreground) 22%, transparent);
     opacity: 0;
-    transition: opacity 0.18s ease;
+    transition:
+      opacity 0.18s ease,
+      background-color 0.22s ease,
+      color 0.22s ease,
+      box-shadow 0.22s ease;
     pointer-events: none;
   }
   .product-gallery__zoom-hint svg {
     inline-size: 20px;
     block-size: 20px;
   }
+  /* 与画廊左右箭头同一套悬停语言：先显形，再叠主题色实底 + 反白图标 + 品牌色投影 */
   .product-gallery__zoom:hover .product-gallery__zoom-hint,
   .product-gallery__zoom:focus-visible .product-gallery__zoom-hint {
     opacity: 1;
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--color-brand) 34%, transparent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .product-gallery__zoom-hint {
+      transition: none;
+    }
   }
   @media (hover: none) {
     .product-gallery__zoom-hint {
