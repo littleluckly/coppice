@@ -636,45 +636,48 @@
         信任组容器：有 trust block 才渲染。顶线 + 桌面 2 列网格由
         .main-product__trust 承载，移动端退回单列。
       {%- endcomment -%}
-      {%- if trust_blocks.size > 1 -%}
+      {%- assign has_trust = false -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'trust_warranty' or block.type == 'trust_item' -%}
+          {%- assign has_trust = true -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- if has_trust -%}
         <div class="main-product__trust">
-          {%- for idx in trust_blocks -%}
-            {%- if idx != blank -%}
-              {%- assign block = section.blocks[idx] -%}
-              {%- if block.type == 'trust_warranty' -%}
-                {%- assign warranty = product.metafields.spec.warranty_months.value -%}
-                {%- if warranty != blank and warranty != 0 -%}
-                  <div class="trust-item" {{ block.shopify_attributes }}>
-                    <span class="trust-item__icon" aria-hidden="true">
-                      {{- 'icon-warranty.svg' | inline_asset_content -}}
-                    </span>
-                    <span class="trust-item__text">
-                      {%- assign warranty_rest = warranty | modulo: 12 -%}
-                      {%- if warranty_rest == 0 -%}
-                        {%- assign warranty_years = warranty | divided_by: 12 -%}
-                        {{- 'products.product.warranty_years' | t: years: warranty_years -}}
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'trust_warranty' -%}
+              {%- assign warranty = product.metafields.spec.warranty_months.value -%}
+              {%- if warranty != blank and warranty != 0 -%}
+                <div class="trust-item" {{ block.shopify_attributes }}>
+                  <span class="trust-item__icon" aria-hidden="true">
+                    {{- 'icon-warranty.svg' | inline_asset_content -}}
+                  </span>
+                  <span class="trust-item__text">
+                    {%- assign warranty_rest = warranty | modulo: 12 -%}
+                    {%- if warranty_rest == 0 -%}
+                      {%- assign warranty_years = warranty | divided_by: 12 -%}
+                      {{- 'products.product.warranty_years' | t: years: warranty_years -}}
+                    {%- else -%}
+                      {{- 'products.product.warranty_months' | t: months: warranty -}}
+                    {%- endif -%}
+                  </span>
+                </div>
+              {%- endif -%}
+            {%- elsif block.type == 'trust_item' -%}
+              {%- if block.settings.text != blank -%}
+                <div class="trust-item" {{ block.shopify_attributes }}>
+                  <span class="trust-item__icon" aria-hidden="true">
+                    {%- case block.settings.icon -%}
+                      {%- when 'shipping' -%}
+                        {{- 'icon-truck.svg' | inline_asset_content -}}
+                      {%- when 'returns' -%}
+                        {{- 'icon-return.svg' | inline_asset_content -}}
                       {%- else -%}
-                        {{- 'products.product.warranty_months' | t: months: warranty -}}
-                      {%- endif -%}
-                    </span>
-                  </div>
-                {%- endif -%}
-              {%- elsif block.type == 'trust_item' -%}
-                {%- if block.settings.text != blank -%}
-                  <div class="trust-item" {{ block.shopify_attributes }}>
-                    <span class="trust-item__icon" aria-hidden="true">
-                      {%- case block.settings.icon -%}
-                        {%- when 'shipping' -%}
-                          {{- 'icon-truck.svg' | inline_asset_content -}}
-                        {%- when 'returns' -%}
-                          {{- 'icon-return.svg' | inline_asset_content -}}
-                        {%- else -%}
-                          {{- 'icon-warranty.svg' | inline_asset_content -}}
-                      {%- endcase -%}
-                    </span>
-                    <span class="trust-item__text">{{ block.settings.text | escape }}</span>
-                  </div>
-                {%- endif -%}
+                        {{- 'icon-warranty.svg' | inline_asset_content -}}
+                    {%- endcase -%}
+                  </span>
+                  <span class="trust-item__text">{{ block.settings.text | escape }}</span>
+                </div>
               {%- endif -%}
             {%- endif -%}
           {%- endfor -%}
