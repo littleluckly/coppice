@@ -345,10 +345,11 @@
       <h1 class="main-product__title">{{ product.title | escape }}</h1>
 
       {%- comment -%}
-        副标题：不新增字段，由 spec 拼装（拍板 10）——切割宽度/导板 · 操作方式 · 排量/功率。
-        分隔符**前置**（第一项之前为空）——后置写法会在末项缺值时留下一个孤零零的「·」。
+        规格胶囊（2026-10-29 刘工，参考稿 badges）：不新增字段，由 spec 拼装（拍板 10）——
+        切割宽度/导板 · 操作方式 · 排量/功率/电压。原来是「·」拼接成一行灰字，现按参考稿
+        拆成独立的浅绿胶囊，每个字段一个 <span>。缺值字段跳过（不留空胶囊）。
       {%- endcomment -%}
-      {%- capture subtitle -%}
+      {%- capture badges -%}
         {%- assign sub_width = product.metafields.spec.cutting_width_mm.value -%}
         {%- assign sub_bar = product.metafields.spec.bar_length_mm.value -%}
         {%- assign sub_op = product.metafields.spec.operation_type.value -%}
@@ -364,38 +365,29 @@
           {%- assign sub_power_unit = 'displacement_cc' -%}
         {%- endif -%}
 
-        {%- assign sub_sep = '' -%}
-        {%- assign sub_out = '' -%}
-
         {%- if sub_width != blank -%}
-          {%- capture sub_part -%}{%- render 'spec-value', value: sub_width, unit_type: 'length_mm' -%}{%- endcapture -%}
+          <span class="main-product__badge">
+            {{- sub_width | append: 'mm' -}}
+          </span>
         {%- elsif sub_bar != blank -%}
-          {%- capture sub_part -%}{%- render 'spec-value', value: sub_bar, unit_type: 'length_mm' -%}{%- endcapture -%}
-        {%- endif -%}
-        {%- if sub_part != blank -%}
-          {%- assign sub_out = sub_out | append: sub_sep | append: sub_part -%}
-          {%- assign sub_sep = ' · ' -%}
-          {%- assign sub_part = '' -%}
+          <span class="main-product__badge">{{ sub_bar | append: 'mm' }}</span>
         {%- endif -%}
 
         {%- if sub_op != blank and sub_op != 'N/A' -%}
-          {%- assign sub_out = sub_out | append: sub_sep | append: sub_op -%}
-          {%- assign sub_sep = ' · ' -%}
+          <span class="main-product__badge">{{ sub_op }}</span>
         {%- endif -%}
 
         {%- if sub_power != blank -%}
           {%- if sub_power_unit == 'raw' -%}
-            {%- assign sub_out = sub_out | append: sub_sep | append: sub_power -%}
+            <span class="main-product__badge">{{ sub_power }}</span>
           {%- else -%}
-            {%- capture sub_power_part -%}{%- render 'spec-value', value: sub_power, unit_type: sub_power_unit -%}{%- endcapture -%}
-            {%- assign sub_out = sub_out | append: sub_sep | append: sub_power_part -%}
+            <span class="main-product__badge">{{ sub_power }}</span>
           {%- endif -%}
         {%- endif -%}
-        {{- sub_out -}}
       {%- endcapture -%}
-      {%- assign subtitle_text = subtitle | strip_html | strip -%}
-      {%- if subtitle_text != blank -%}
-        <p class="main-product__subtitle">{{ subtitle }}</p>
+      {%- assign badges_text = badges | strip_html | strip -%}
+      {%- if badges_text != blank -%}
+        <div class="main-product__badges">{{ badges }}</div>
       {%- endif -%}
 
       <div class="main-product__price">
