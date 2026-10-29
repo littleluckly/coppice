@@ -53,7 +53,7 @@
       ],
       "settings": {
         "show_breadcrumb": true,
-        "show_description": true,
+        "show_description": false,
         "description_words": 40,
         "show_accelerated_checkout": true,
         "show_payment_terms": true
