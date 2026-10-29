@@ -172,8 +172,8 @@
   }
   .product-supplies__title {
     color: var(--color-foreground);
-    font-size: 0.88rem;
-    font-weight: 500;
+    font-size: 0.94rem;
+    font-weight: 600;
     text-decoration: none;
     line-height: 1.35;
   }
@@ -182,29 +182,34 @@
   }
   .product-supplies__fitment {
     margin: 0;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     color: var(--color-foreground-muted);
   }
   .product-supplies__price {
     margin: 0;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 1rem;
+    font-weight: 700;
+    /* 参考稿 supply-price：品牌绿 */
+    color: var(--color-brand);
   }
   .product-supplies__add {
     margin-block-start: auto;
-    padding-block-start: 0.35rem;
+    padding-block-start: 0.5rem;
   }
   .product-supplies__button {
-    width: 100%;
+    width: auto;
     min-height: 44px;
-    padding: 8px 0.75rem;
-    border: 1px solid var(--color-brand);
-    border-radius: var(--style-border-radius-inputs);
+    padding: 8px 1.5rem;
+    border: 1.5px solid var(--color-brand);
+    /* 参考稿 btn-add-small：全圆角胶囊描边 */
+    border-radius: 999px;
     background-color: transparent;
     color: var(--color-brand);
     font: inherit;
     font-size: 0.85rem;
+    font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
   .product-supplies__button:hover:not(:disabled) {
     background-color: var(--color-brand);
