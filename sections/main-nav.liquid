@@ -2310,7 +2310,8 @@
     /* 图标压在输入框左侧，输入框留出等宽内边距 */
     inset-block-start: 50%;
     translate: 0 -50%;
-    color: rgb(0 0 0 / 45%);
+    /* 2026-10-29：改从 foreground 派生（原 rgb(0 0 0 / 45%) 在深色骨架下不可见，BUG-059） */
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
     background: none;
     border: 0;
     cursor: pointer;
@@ -2331,7 +2332,7 @@
     background-color: var(--color-background);
     /* 极简线型：无框，只有发丝底线；聚焦换品牌色加粗 */
     border: 0;
-    border-block-end: 1px solid rgb(0 0 0 / 25%);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
     border-radius: 0;
     font: inherit;
     font-size: 1.0625rem;
@@ -2346,7 +2347,7 @@
   }
 
   .predictive-search__input::placeholder {
-    color: rgb(0 0 0 / 40%);
+    color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
   }
 
   /* 焦点指示：底线由灰转品牌色并加粗（可见变化，替代外框 outline）。
