@@ -129,6 +129,12 @@
     padding: 0;
     list-style: none;
   }
+  /* 窄屏：横向卡退回单列竖排（图在上、文在下），避免 120px 图挤压文字 */
+  @media (max-width: 749px) {
+    .product-supplies__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   .product-supplies__item {
     display: flex;
     align-items: center;
