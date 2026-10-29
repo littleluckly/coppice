@@ -22,6 +22,12 @@
   资源」的本意是禁止依赖第三方服务）。资源不可用时 `<model-viewer>` 不升级，
   退回封面图，不报错。
 
+  **全屏查看器（2026-10-28，刘工）**：舞台大图包进 `<button>`，点击用原生
+  `<dialog>` + showModal() 打开灯箱（关闭按钮 / `1 / 7` 计数 / 左右箭头 / Esc）。
+  只收图片——视频与 3D 就地播放，塞进灯箱会跟播放器自带控件抢空间。
+  缩略图上视频与 3D 各有一枚角标（76px 尺度下封面图和静态图肉眼无差）。
+  高度约束的踩坑记录见 dev-docs/bugs.md BUG-052（百分比 max-height 在 fr 行里失效）。
+
   JS：product-gallery.js / product-form.js / pickup-availability.js（均为 Custom Element）。
 {% endcomment %}
 
