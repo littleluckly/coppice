@@ -1277,13 +1277,33 @@
   .product-form__terms {
     margin-block-start: 0.75rem;
   }
-  /* Buy it now（Shopify 渲染的动态结账按钮）跟随购买区的胶囊形（2026-10-29）。
-     只覆盖 --unbranded：无品牌结账按钮允许主题调样式；
-     Shop Pay 等品牌按钮（--branded）的平台规范禁止改动，保持原样。
-     参考稿里它是白底描边——那是 unbranded 在无品牌态的默认长相，
-     颜色这里不动，只统一形状。 */
+  /* Buy it now（加速结账按钮）——去底色、描边随品牌色（2026-10-29 刘工）。
+
+     平台事实（shopify.dev / Accelerated checkout）：这组按钮渲染在自定义元素
+     `shopify-accelerated-checkout` 的 **closed shadow DOM** 里，针对内部类名与
+     结构的任何样式都不会生效。官方开放的自定义属性只有这一组：
+       高度 / 圆角 / 投影 / 骨架色 / 购物车布局
+     **没有背景色、没有文字色**——那两项只能在主题设置 Colors 里改（全站按钮一起变）。
+
+     所以这里分两路：
+       1) 圆角 + 内描边走官方属性（box-shadow 冒充 border），稳定生效；
+       2) 去底色用旧版类名兜底——尚未升级到 shadow DOM 的实现会生效，
+          已升级的实现会静默忽略。文字色同理。
+     代价说清楚：若平台已升级，按钮仍是实心底，只有形状变胶囊。
+     真机上确认；实在去不掉只能退一步把描边做粗、让实心与页面更协调。 */
+  .product-form__accelerated shopify-accelerated-checkout {
+    --shopify-accelerated-checkout-button-border-radius: 999px;
+    --shopify-accelerated-checkout-button-block-size: 44px;
+    --shopify-accelerated-checkout-button-box-shadow: inset 0 0 0 1.5px var(--color-brand);
+  }
   .product-form__accelerated .shopify-payment-button__button--unbranded {
     border-radius: 999px;
+    background-color: transparent;
+    color: var(--color-brand);
+    box-shadow: inset 0 0 0 1.5px var(--color-brand);
+  }
+  .product-form__accelerated .shopify-payment-button__button--unbranded:hover:not([disabled]) {
+    background-color: color-mix(in srgb, var(--color-brand) 7%, transparent);
   }
 
   /* 信任行 / 自提 / 对比 */
