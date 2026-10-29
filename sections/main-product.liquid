@@ -31,10 +31,12 @@
   assign form_id = 'product-form-' | append: section.id
 
   assign has_model = false
+  assign image_count = 0
   for media in product.media
     if media.media_type == 'model'
       assign has_model = true
-      break
+    elsif media.media_type == 'image'
+      assign image_count = image_count | plus: 1
     endif
   endfor
 
