@@ -148,7 +148,10 @@
   }
   .product-supplies__item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-foreground) 6%, transparent);
+    /* 浅绿光晕（2026-10-29 刘工）：与画廊右侧加购按钮同款形态
+       （0 6px 20px / 30%），色相取 --color-brand-light 而非品牌深绿——
+       卡片是浅底，深绿投影会发灰，浅绿才有「被点亮」的通透感。 */
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand-light) 30%, transparent);
   }
   .product-supplies__media {
     display: flex;

@@ -239,7 +239,9 @@
   }
   .product-tabs__spec-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    /* 浅绿光晕（2026-10-29 刘工）：与画廊右侧加购按钮同款形态
+       （0 6px 20px / 30%），色相取 --color-brand-light 而非品牌深绿。 */
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand-light) 30%, transparent);
   }
   .product-tabs__spec-card-label {
     font-size: 0.78rem;
