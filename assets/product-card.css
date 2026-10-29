@@ -212,14 +212,16 @@
 
 /* 对比勾选（原 featured-collection 内样式随组件迁移）
    margin-top:auto 仅在自己是卡内最后一个元素时生效（多变体卡没有加购区，
-   由它垫底）；与加购区同现时让位给加购区的 auto，避免平分剩余空间。 */
+   由它垫底）；与加购区同现时让位给加购区的 auto，避免平分剩余空间。
+   2026-10-29 刘工：改成与主产品区「Add to compare」同款结构——图标方盒
+   （.product-compare__box，含上下箭头 icon）+ 文字（.product-compare__label），
+   默认浅色描边方盒、选中深实心、hover 放大旋转 + 文字下划线。 */
 .product-card__compare {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   /* 始终吃掉剩余空间，把自己连同下方的加购区一起压到卡底 ——
-     卡片文字行数不一时，Compare 与 Add to cart 的位置在各卡之间保持齐平。
-     2026-10-25 刘工：原来只在 :last-child 时 auto，有加购区的卡就不贴底了。 */
+     卡片文字行数不一时，Compare 与 Add to cart 的位置在各卡之间保持齐平。 */
   margin-block-start: auto;
   /* 恒定内边距 + 负外边距：冲突时加底色不产生位移，视觉位置与常态一致 */
   padding: 10px 0.5rem;
@@ -229,23 +231,42 @@
   background: none;
   font: inherit;
   font-size: 0.85rem;
-  color: inherit;
+  color: var(--color-brand);
+  font-weight: 600;
   cursor: pointer;
 }
-.product-card__compare::before {
-  content: '';
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid color-mix(in srgb, var(--color-foreground) 40%, transparent);
-  border-radius: 3px;
-  background-color: var(--color-background);
+/* 图标方盒：与主产品区 .product-compare__box 同款（尺寸略小适配卡片） */
+.product-card .product-compare__box {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  color: var(--color-brand);
+  border: 1.5px solid color-mix(in srgb, var(--color-brand) 55%, transparent);
+  border-radius: 6px;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
-.product-card__compare[aria-pressed='true']::before {
-  /* 选中态用品牌色，与下方「Add to cart」同色系 —— 一张卡上的两个主操作
-     视觉上是一套的。未选中态保持中性灰边：那才是「还没激活」的正确信号。 */
+.product-card .product-compare__box svg {
+  width: 14px;
+  height: 14px;
+}
+.product-card__compare:hover .product-compare__box {
+  transform: scale(1.05) rotate(5deg);
   border-color: var(--color-brand);
+}
+.product-card__compare:hover .product-compare__label {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.product-card__compare[aria-pressed='true'] .product-compare__box {
   background-color: var(--color-brand);
-  box-shadow: inset 0 0 0 2.5px var(--color-background);
+  color: var(--color-background);
+  border-color: var(--color-brand);
+}
+.product-card__compare[aria-pressed='true'] {
+  color: var(--color-brand-accent);
 }
 
 /* ===== 3D hover（2026-10-17，参考 dev-docs/local-assets/product-3d.html）=====
