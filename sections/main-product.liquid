@@ -1290,10 +1290,13 @@
     font: inherit;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
     /* 扫光层要压在按钮文字上方，同时裁掉移出按钮的渐变条（参考稿） */
     position: relative;
     overflow: hidden;
+    /* 常驻光晕（2026-10-29 刘工，参考稿 btn-primary box-shadow）：
+       品牌绿投影，hover 时加深扩散。用 color-mix 不硬编码色值。 */
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);
   }
   /* 扫光（2026-10-29 刘工，参考稿 btn-primary::before）：hover 时一条高光
      从左扫到右。纯 hover 触发、不循环，prefers-reduced-motion 下由下面
@@ -1320,6 +1323,8 @@
   .product-form__submit:hover:not(:disabled) {
     background-color: var(--color-brand-accent);
     border-color: var(--color-brand-accent);
+    /* hover 光晕加深扩散（参考稿 btn-primary:hover） */
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 30%, transparent);
   }
   .product-form__submit:disabled {
     border-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
