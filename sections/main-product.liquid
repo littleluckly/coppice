@@ -730,6 +730,11 @@
     border-radius: calc(var(--style-border-radius-inputs) * 1.5);
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
     overflow: hidden;
+    /* 常驻柔和光晕（2026-10-29 刘工，参考稿）：只保留 pulseGlow 的**静态**值——
+       参考稿是 4s 无限循环呼吸，这里去掉循环，留一圈常驻投影让媒体框从浅底里
+       浮出来。不循环：无限装饰动画会踩 prefers-reduced-motion 语义，也跟
+       「大图可点击放大」的交互抢注意力。 */
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--color-brand) 8%, transparent);
     /* 媒体框（2026-10-28 刘工）：所有 slide 共用同一个框，比例取自第一张媒体的
        preview_image（Liquid 写在 ul 的 --gallery-ratio 上）。
        原来每个 slide 按自身比例撑高，切到视频——或切到另一张比例不同的图——
@@ -1243,6 +1248,31 @@
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease;
+    /* 扫光层要压在按钮文字上方，同时裁掉移出按钮的渐变条（参考稿） */
+    position: relative;
+    overflow: hidden;
+  }
+  /* 扫光（2026-10-29 刘工，参考稿 btn-primary::before）：hover 时一条高光
+     从左扫到右。纯 hover 触发、不循环，prefers-reduced-motion 下由下面
+     的媒体查询整体关掉 transition，渐变条不再扫，只剩即时反馈。 */
+  .product-form__submit::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: -100%;
+    inline-size: 100%;
+    block-size: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-background) 26%, transparent),
+      transparent
+    );
+    transition: inset-inline-start 0.6s ease;
+    pointer-events: none;
+  }
+  .product-form__submit:hover:not(:disabled)::before {
+    inset-inline-start: 100%;
   }
   .product-form__submit:hover:not(:disabled) {
     background-color: var(--color-brand-accent);
