@@ -441,6 +441,12 @@
     --collection-left: 320px;
     --banner-h: 650px;
 
+    /* 吸顶偏移 = 吸顶导航行的高度：链接 min-height 44px（border-box，已含
+       自身 0.5rem 上下内边距）+ .main-nav__item 上下 1rem 内边距 × 2 = 76px。
+       announcement bar 不吸顶、随页滚走，不计入。改动导航行内边距后这里要
+       跟着核对（待实测校正： shopify theme dev 里量一下实际行高）。 */
+    --facets-sticky-top: 4.75rem;
+
     /* 首列 = 页面边距（与其余 section 的内容起点对齐），第二列承载整个两栏。
        列宽只在 .collection__layout 里定义一次（--collection-left），避免
        「外层轨道 + 内层列」两处 320px 各写各的。 */
