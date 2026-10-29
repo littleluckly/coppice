@@ -1,0 +1,284 @@
+{% comment %}
+  product-tabs — 产品页「概览 / 规格」Tab 容器（2026-10-29 刘工）。
+
+  参考稿 product-preview-2.html 的 Tabs 区：点击标题切换面板，一次只显示一个。
+  这里把 Overview（富文本描述）与 Specifications（完整规格表）收进两个 Tab，
+  Supplies 保持独立 section（与参考稿一致）。
+
+  **吸顶 + 取消吸顶**（刘工要求，核心行为）：
+    · Tab 标题栏 position: sticky，滚动到它时吸在视口顶部（避开页头）。
+    · 当整个 Tab 容器（含内容面板）滚出屏幕顶部后，标题栏**跟随内容一起滚走**，
+      即「取消吸顶」。这是 position: sticky 的天然语义——sticky 的黏附范围
+      被限制在父容器内，父容器滚出视口时 sticky 子项随之滚出，无需 JS。
+    · **无跳动**：sticky 不改变文档流，吸附/释放只发生在一个滚动帧里，
+      不存在 JS 切换 fixed/static 造成的布局回跳。
+
+  **页头偏移**：吸顶 top 值必须避开页头（页头本身 sticky 在 top:0 且高度随
+  logo/公告栏变化）。由 assets/product-tabs.js 动态测量 .main-nav-section 高度
+  写入 --product-tabs-offset；移动端（< 990px）页头不吸顶，Tab 栏也不吸顶。
+
+  **Tab 切换**：参考稿 switchTab——按钮切 .active（下划线），面板切 .active。
+  无 JS 时两个面板都显示（渐进增强，不藏内容）。
+
+  数据与内容：
+    · Overview 面板 → render product-description-content（image 参数传入）
+    · Specifications 面板 → render product-spec-table-content
+  原 product-description / product-spec-table 两个 section 的内容逻辑已抽到
+  对应 snippet，本 section 只做 Tab 骨架 + 样式 + 切换。
+{% endcomment %}
+
+{%- liquid
+  assign overview_label = section.settings.overview_label
+  if overview_label == blank
+    assign overview_label = 'sections.product_description.default_heading' | t
+  endif
+  assign specs_label = section.settings.specs_label
+  if specs_label == blank
+    assign specs_label = 'sections.product_spec_table.default_heading' | t
+  endif
+
+  assign has_overview = false
+  if product.description != blank
+    assign has_overview = true
+  endif
+-%}
+
+<section class="product-tabs" data-product-tabs>
+  <div class="product-tabs__inner">
+    <div class="product-tabs__nav" role="tablist" aria-label="{{ 'sections.product_tabs.nav_label' | t }}">
+      {%- if has_overview -%}
+        <button
+          type="button"
+          class="product-tabs__tab is-active"
+          role="tab"
+          id="product-tab-overview"
+          aria-selected="true"
+          aria-controls="product-panel-overview"
+          data-product-tab="overview"
+        >
+          {{ overview_label }}
+        </button>
+      {%- endif -%}
+
+      <button
+        type="button"
+        class="product-tabs__tab{% unless has_overview %} is-active{% endunless %}"
+        role="tab"
+        id="product-tab-specs"
+        aria-selected="{% if has_overview %}false{% else %}true{% endif %}"
+        aria-controls="product-panel-specs"
+        data-product-tab="specs"
+      >
+        {{ specs_label }}
+      </button>
+    </div>
+
+    <div class="product-tabs__panels">
+      {%- if has_overview -%}
+        <div
+          class="product-tabs__panel is-active"
+          role="tabpanel"
+          id="product-panel-overview"
+          aria-labelledby="product-tab-overview"
+          data-product-panel="overview"
+        >
+          {% render 'product-description-content', product: product, image: section.settings.image %}
+        </div>
+      {%- endif -%}
+
+      <div
+        class="product-tabs__panel{% unless has_overview %} is-active{% endunless %}"
+        role="tabpanel"
+        id="product-panel-specs"
+        aria-labelledby="product-tab-specs"
+        data-product-panel="specs"
+      >
+        {% render 'product-spec-table-content', product: product %}
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ 'product-tabs.js' | asset_url }}" defer></script>
+</section>
+
+{% stylesheet %}
+  .product-tabs {
+    max-width: var(--page-width);
+    margin-inline: auto;
+    padding-inline: var(--page-margin);
+    padding-block: 2rem 0;
+  }
+  .product-tabs__inner {
+    /* 不设 overflow，sticky 才不被裁 */
+  }
+
+  /* ---- Tab 导航栏（吸顶） ---- */
+  .product-tabs__nav {
+    display: flex;
+    gap: 2rem;
+    /* 导航自身要有实底，否则吸顶时下面内容透出来 */
+    background-color: var(--color-background);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    /* 预留 z-index，低于页头（20），高于内容 */
+    z-index: 10;
+  }
+
+  .product-tabs__tab {
+    position: relative;
+    padding: 0.9rem 0;
+    border: 0;
+    background: none;
+    color: var(--color-foreground-muted);
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  .product-tabs__tab:hover {
+    color: var(--color-foreground);
+  }
+  .product-tabs__tab.is-active {
+    color: var(--color-brand);
+  }
+  /* active 下划线（参考稿 expandLine，静态呈现，不做动画——避免 sticky 吸顶时闪烁） */
+  .product-tabs__tab.is-active::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: -1px;
+    height: 2px;
+    background-color: var(--color-brand);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* ---- 面板 ---- */
+  .product-tabs__panel {
+    display: none;
+    padding-block-start: 1.5rem;
+  }
+  .product-tabs__panel.is-active {
+    display: block;
+  }
+
+  /* ---- Overview 面板内容（原 product-description 样式迁移） ---- */
+  .product-tabs__description {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (min-width: 990px) {
+    .product-tabs__description--split {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 2.5rem;
+    }
+  }
+  .product-tabs__rte {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--color-foreground-muted);
+  }
+  .product-tabs__rte > :first-child {
+    margin-block-start: 0;
+  }
+  .product-tabs__rte > :last-child {
+    margin-block-end: 0;
+  }
+  .product-tabs__rte :is(h2, h3, h4) {
+    margin-block: 1.25rem 0.5rem;
+    color: var(--color-foreground);
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .product-tabs__rte img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--style-border-radius-inputs);
+  }
+  .product-tabs__description-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: calc(var(--style-border-radius-inputs) * 1.5);
+  }
+
+  /* ---- Specifications 面板内容（原 product-spec-table 样式迁移） ---- */
+  .product-tabs__spec-note {
+    font-size: 0.85rem;
+    margin-block-end: 0.5rem;
+  }
+  .product-tabs__spec-note-summary {
+    cursor: pointer;
+    color: var(--color-brand);
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .product-tabs__spec-note-text {
+    margin: 0.35rem 0 0;
+    max-width: 42ch;
+    color: var(--color-foreground-muted);
+    line-height: 1.55;
+  }
+  .product-tabs__spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .product-tabs__spec-row {
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  .product-tabs__spec-label {
+    width: 45%;
+    padding: 0.6rem 0.75rem 0.6rem 0;
+    text-align: start;
+    font-weight: 400;
+    color: var(--color-foreground-muted);
+    vertical-align: top;
+  }
+  .product-tabs__spec-value {
+    padding: 0.6rem 0;
+    color: var(--color-foreground);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  /* ---- 吸顶（仅桌面，与页头 sticky 同断点 990px） ---- */
+  @media screen and (min-width: 990px) {
+    .product-tabs__nav {
+      position: sticky;
+      top: var(--product-tabs-offset, 0);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.product_tabs.name",
+  "tag": "section",
+  "class": "product-tabs-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "overview_label",
+      "label": "t:sections.product_tabs.overview_label"
+    },
+    {
+      "type": "text",
+      "id": "specs_label",
+      "label": "t:sections.product_tabs.specs_label"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:sections.product_tabs.overview_image"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.product_tabs.name"
+    }
+  ]
+}
+{% endschema %}
