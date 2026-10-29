@@ -216,12 +216,26 @@
       {%- if media_count > 1 -%}
         <ul class="product-gallery__thumbs" role="list">
           {%- for media in product.media -%}
+            {%- comment -%}
+              缩略图的可读名要带媒体类型（2026-10-28）：纯图 / 3D / 视频三种缩略图
+              长得一样，只报"2 of 7"读屏用户无从判断点下去会发生什么。
+            {%- endcomment -%}
+            {%- liquid
+              if media.media_type == 'model'
+                assign thumb_label = 'products.product.media_slide_3d' | t: index: forloop.index, total: media_count
+              elsif media.media_type == 'video' or media.media_type == 'external_video'
+                assign thumb_label = 'products.product.media_slide_video' | t: index: forloop.index, total: media_count
+              else
+                assign thumb_label = 'products.product.media_slide' | t: index: forloop.index, total: media_count
+              endif
+            -%}
             <li>
               <button
                 type="button"
                 class="product-gallery__thumb{% if forloop.first %} is-active{% endif %}"
                 data-gallery-thumb="{{ forloop.index0 }}"
-                aria-label="{{ 'products.product.media_slide' | t: index: forloop.index, total: media_count }}"
+                data-media-type="{{ media.media_type }}"
+                aria-label="{{ thumb_label | escape }}"
                 aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
               >
                 {%- if media.preview_image -%}
@@ -236,10 +250,73 @@
                       alt: ''
                   }}
                 {%- endif -%}
+                {%- if media.media_type != 'image' -%}
+                  {%- comment -%}
+                    视频 / 3D 缩略图的角标：76px 的缩略图里，封面和普通图肉眼无差，
+                    不叠一个角标就分不出"这张点下去会播片"。
+                  {%- endcomment -%}
+                  <span class="product-gallery__thumb-badge" aria-hidden="true">
+                    {%- if media.media_type == 'model' -%}
+                      3D
+                    {%- else -%}
+                      {{- 'icon-play.svg' | inline_asset_content -}}
+                    {%- endif -%}
+                  </span>
+                {%- endif -%}
               </button>
             </li>
           {%- endfor -%}
         </ul>
+      {%- endif -%}
+
+      {%- if image_count > 0 -%}
+        {%- comment -%}
+          全屏查看器（2026-10-28）。原生 <dialog> + showModal() 拿焦点锁定、
+          背景 inert、Esc 关闭、::backdrop；scroll-lock 属性触发 critical.css
+          里既有的 html:has(dialog[scroll-lock][open]) 锁滚动。
+
+          只收图片：视频与 3D 在舞台内就地播放，塞进灯箱会和播放器自带控件抢空间。
+          内容（img / 计数文本）由 product-gallery.js 在打开时填，
+          因此标记里不出现任何 src，避免多一次无意义的图片请求。
+        {%- endcomment -%}
+        <dialog
+          class="product-lightbox"
+          data-gallery-lightbox
+          scroll-lock
+          aria-label="{{ 'products.product.media_viewer' | t }}"
+          data-counter-template="{{ 'products.product.media_counter' | t: index: '[index]', total: '[total]' }}"
+        >
+          <div class="product-lightbox__bar">
+            <p class="product-lightbox__counter" data-lightbox-counter aria-live="polite"></p>
+            <button
+              type="button"
+              class="product-lightbox__close"
+              data-lightbox-close
+              aria-label="{{ 'products.product.media_close' | t }}"
+            >
+              {{- 'icon-close.svg' | inline_asset_content -}}
+            </button>
+          </div>
+          <div class="product-lightbox__stage">
+            <button
+              type="button"
+              class="product-lightbox__arrow product-lightbox__arrow--prev"
+              data-lightbox-prev
+              aria-label="{{ 'products.product.media_previous' | t }}"
+            >
+              {{- 'icon-chevron-left.svg' | inline_asset_content -}}
+            </button>
+            <div class="product-lightbox__canvas" data-lightbox-canvas></div>
+            <button
+              type="button"
+              class="product-lightbox__arrow product-lightbox__arrow--next"
+              data-lightbox-next
+              aria-label="{{ 'products.product.media_next' | t }}"
+            >
+              {{- 'icon-chevron-right.svg' | inline_asset_content -}}
+            </button>
+          </div>
+        </dialog>
       {%- endif -%}
     </product-gallery>
 
@@ -740,6 +817,7 @@
   }
   .product-gallery__thumb {
     display: block;
+    position: relative;
     width: 76px;
     padding: 0;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
