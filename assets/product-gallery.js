@@ -148,6 +148,8 @@ class ProductGallery extends HTMLElement {
       return;
     }
     if (!this._lightbox || typeof this._lightbox.showModal !== 'function') return;
+    // 已经打开时再点不重复 showModal（会抛 InvalidStateError）
+    if (this._lightbox.open) return;
 
     const slide = button.closest('.product-gallery__slide');
     const index = this._imageSlides.indexOf(slide);
