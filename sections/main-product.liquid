@@ -926,16 +926,10 @@
   }
 
   /* ===== 全屏查看器（灯箱，2026-10-28） =====
-     控件全部压在商品图上。按配色纪律，纯黑/纯白只有「压商品图的元素」与投影
-     两处例外——这里把例外收成一组局部变量，只在本 dialog 内生效，
-     不外泄到主题其余部分（深色预设下它仍然是黑底，这是刻意的：
-     看大图的背景必须中性，不能跟着品牌色走）。 */
+     底色走 --color-background（参考稿是浅色底，而且这样 Noir 深色预设自动跟随）。
+     控件沿用主题既有的叠加语言：18% 前景色描边 + 品牌色 hover，与舞台箭头同款，
+     不引入第二套按钮外观。 */
   .product-lightbox {
-    --lightbox-surface: rgb(0 0 0 / 94%);
-    --lightbox-foreground: rgb(255 255 255);
-    --lightbox-line: rgb(255 255 255 / 24%);
-    --lightbox-fill: rgb(255 255 255 / 12%);
-
     inset: 0;
     width: 100%;
     max-width: none;
@@ -945,8 +939,8 @@
     margin: 0;
     padding: 0;
     border: 0;
-    background-color: var(--lightbox-surface);
-    color: var(--lightbox-foreground);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
     overflow: hidden;
   }
   /* UA 对未打开的 dialog 已给 display:none，这里显式写一遍：
@@ -959,8 +953,9 @@
     /* 顶栏自适应，舞台吃掉剩余高度（图片按这个高度做 contain） */
     grid-template-rows: auto minmax(0, 1fr);
   }
+  /* 全屏面板本身已铺满视口，backdrop 只在入场/退场那一瞬可见 */
   .product-lightbox::backdrop {
-    background-color: rgb(0 0 0 / 70%);
+    background-color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
   }
 
   .product-lightbox__bar {
@@ -973,11 +968,11 @@
   /* 计数（1 / 7）：等宽数字，翻页时数字不抖 */
   .product-lightbox__counter {
     padding: 0.3rem 0.75rem;
-    border: 1px solid var(--lightbox-line);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
     border-radius: 999px;
     font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
-    color: var(--lightbox-foreground);
+    color: var(--color-foreground);
   }
 
   .product-lightbox__close,
@@ -988,21 +983,22 @@
     inline-size: 44px;
     block-size: 44px;
     padding: 0;
-    border: 1px solid var(--lightbox-line);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
     border-radius: 999px;
     background-color: transparent;
-    color: var(--lightbox-foreground);
+    color: var(--color-foreground);
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   }
+  /* hover 与舞台箭头保持同一套反馈：描边 + 图标转品牌色 */
   .product-lightbox__close:hover,
   .product-lightbox__arrow:hover {
-    background-color: var(--lightbox-fill);
-    border-color: var(--lightbox-foreground);
+    border-color: var(--color-brand);
+    color: var(--color-brand);
   }
   .product-lightbox__close:focus-visible,
   .product-lightbox__arrow:focus-visible {
-    outline: 2px solid var(--lightbox-foreground);
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
   }
   .product-lightbox__close svg,
