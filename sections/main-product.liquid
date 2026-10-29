@@ -1021,14 +1021,19 @@
     min-block-size: 0;
     padding: 0 clamp(0.5rem, 3vw, 1.5rem) clamp(1rem, 4vh, 2.5rem);
   }
-  /* 画布 = 图片以外可点击关闭的区域（灯箱的常规习惯） */
+  /* 画布 = 图片以外可点击关闭的区域（灯箱的常规习惯）。
+     用 flex 而不是 grid：grid 的隐式行是内容尺寸（不确定），图片的
+     max-block-size: 100% 会因"百分比无参照"退化成 none，竖版大图直接溢出。
+     flex 容器高度是确定值，百分比才真正生效。 */
   .product-lightbox__canvas {
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     min-inline-size: 0;
     min-block-size: 0;
     block-size: 100%;
   }
+  /* 不放大（inline-size: auto 取图片自身宽度），只按可用区域等比收窄 */
   .product-lightbox__img {
     inline-size: auto;
     block-size: auto;
