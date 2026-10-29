@@ -633,8 +633,8 @@
                         <li class="pickup__item">
                           <span class="pickup__store">{{ item.location.name | escape }}</span>
                           {%- comment -%}
-                            BUG-054：属性名是 pick_up_time（pick 与 up 之间有下划线），
-                            写成 pickup_time 恒为空白 —— 备货时长这一行永远不会渲染。
+                            BUG-054：时间属性名带下划线（pick + 下划线 + up + 下划线 + time），
+                            漏掉下划线会静默取到空白、整行不渲染。详见 dev-docs/bugs.md。
                           {%- endcomment -%}
                           {%- if item.pick_up_time != blank -%}
                             <span class="pickup__time">
