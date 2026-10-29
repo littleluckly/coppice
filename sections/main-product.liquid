@@ -712,33 +712,49 @@
     border-radius: calc(var(--style-border-radius-inputs) * 1.5);
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
     overflow: hidden;
+    /* 媒体框（2026-10-28 刘工）：所有 slide 共用同一个框，比例取自第一张媒体的
+       preview_image（Liquid 写在 ul 的 --gallery-ratio 上）。
+       原来每个 slide 按自身比例撑高，切到视频——或切到另一张比例不同的图——
+       整块高度跟着变，页面上下跳一截。框定死之后，谁也不许改高度。 */
+    aspect-ratio: var(--gallery-ratio, 1);
+    max-block-size: 78vh;
   }
+  /* 绝对定位铺满媒体框。用 inset 而不是 height: 100%——框高由 aspect-ratio 派生，
+     百分比高度在这条链上会被当不确定值（BUG-052 的同类坑，别再赌）。 */
   .product-gallery__slide {
+    position: absolute;
+    inset: 0;
     margin: 0;
   }
   .product-gallery__slide[hidden] {
     display: none;
   }
+  /* 图片 / 视频 / iframe / 3D 一律铺满同一个框、各自 contain 居中：
+     切媒体时变的只有框里的内容，框本身纹丝不动。 */
   .product-gallery__img,
   .product-gallery__slide :is(video, iframe, model-viewer) {
+    position: absolute;
+    inset: 0;
     display: block;
-    width: 100%;
-    height: auto;
-    max-height: 78vh;
+    inline-size: 100%;
+    block-size: 100%;
     object-fit: contain;
     background-color: var(--color-background);
   }
   .product-gallery__deferred {
-    position: relative;
+    position: absolute;
+    inset: 0;
   }
   .product-gallery__deferred-button {
+    /* 按钮铺满媒体框（不是随内容高）：封面图和播放器都绝对定位在它里面 */
+    position: absolute;
+    inset: 0;
     display: block;
-    width: 100%;
+    inline-size: 100%;
     padding: 0;
     border: 0;
     background: none;
     cursor: pointer;
-    position: relative;
   }
   /* 舞台封面上的媒体类型按钮（2026-10-28 第二轮修订）：原来也是左下角小胶囊，
      和缩略图角标一样的问题。改成压在封面正中的 64px 圆盘——这是视频封面的
