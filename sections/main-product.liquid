@@ -1598,7 +1598,9 @@
     .main-product__excerpt,
     .product-variant,
     .product-form,
-    .main-product__block {
+    .main-product__block,
+    .main-product__specs,
+    .main-product__trust {
       animation: main-product-rise 0.4s ease both;
     }
     /* 错峰：标题 → 价格 → 表单 → 信任行，逐级递增 */
@@ -1610,6 +1612,8 @@
     .product-variant { animation-delay: 0.15s; }
     .product-form { animation-delay: 0.2s; }
     .main-product__block { animation-delay: 0.25s; }
+    .main-product__specs { animation-delay: 0.28s; }
+    .main-product__trust { animation-delay: 0.32s; }
   }
 
   @media (max-width: 749px) {
