@@ -115,6 +115,31 @@
       hidden
     ></div>
   </form>
+
+  {%- comment -%}
+    骨架屏模板（2026-10-29 刘工："触发了搜索没有 loading 效果"）。
+    JS（_queueSkeleton）在**面板本来为空**时延迟 120ms 克隆进上面的结果容器；
+    已有上一轮结果时不动，避免边搜边闪。
+
+    放 <template> 里而不是内联渲染：初始文档零节点、零请求，
+    与抽屉"隐藏组件首次打开才建 DOM"同一取舍（AGENTS §6）。
+    纯视觉占位——aria-hidden，加载语义由 <predictive-search> 的 aria-busy 承担。
+    行尺寸（112px 缩略图 + 两行文字）刻意复刻真实结果行，换入结果时不跳。
+  {%- endcomment -%}
+  <template data-predictive-search-skeleton>
+    <div class="predictive-search__skeleton" aria-hidden="true">
+      <div class="predictive-search__skeleton-heading"></div>
+      {%- for i in (1..5) -%}
+        <div class="predictive-search__skeleton-row">
+          <div class="predictive-search__skeleton-thumb"></div>
+          <div class="predictive-search__skeleton-text">
+            <div class="predictive-search__skeleton-line"></div>
+            <div class="predictive-search__skeleton-line predictive-search__skeleton-line--short"></div>
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+  </template>
 </predictive-search>
 
 {%- comment -%}

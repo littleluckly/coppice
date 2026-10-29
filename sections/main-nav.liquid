@@ -2450,6 +2450,82 @@
   .predictive-search__panel[hidden] {
     display: none;
   }
+
+  /* ---- 结果骨架屏（predictive-search.js 的 _queueSkeleton，2026-10-29） ----
+     只在"面板还是空的"这一刻出现：首次查询，或上一次查无结果。已有上一轮结果时
+     保持原样——边搜边换会把列表闪掉，比没有反馈更难受。
+     尺寸复刻真实结果行（112px 缩略图 + 两行文字 + 发丝线），换入结果时不跳。
+     底色一律从 foreground 派生：黑 alpha 硬编码在 Noir 深底上不可见（BUG-043 教训）。 */
+  .predictive-search__skeleton {
+    padding-block-end: 0.75rem;
+  }
+
+  .predictive-search__skeleton-heading,
+  .predictive-search__skeleton-thumb,
+  .predictive-search__skeleton-line {
+    background-color: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+    animation: predictive-search-skeleton-pulse 1.4s ease-in-out infinite;
+  }
+
+  /* 分组标签占位：对位真实 .predictive-search__heading 的 padding + 行高 */
+  .predictive-search__skeleton-heading {
+    inline-size: 5rem;
+    block-size: 0.5rem;
+    margin: 1.5rem 1.5rem 0.75rem;
+    border-radius: 3px;
+  }
+
+  .predictive-search__skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.75rem 1.5rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 7%, transparent);
+  }
+
+  .predictive-search__skeleton-thumb {
+    flex: 0 0 auto;
+    inline-size: 112px;
+    block-size: 112px;
+  }
+
+  .predictive-search__skeleton-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-inline-size: 0;
+  }
+
+  .predictive-search__skeleton-line {
+    block-size: 0.625rem;
+    inline-size: 70%;
+    border-radius: 3px;
+  }
+
+  .predictive-search__skeleton-line--short {
+    block-size: 0.5rem;
+    inline-size: 30%;
+  }
+
+  @keyframes predictive-search-skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  /* 无障碍红线：脉冲关停，保留静态灰块（仍能读出"这里有内容要来"） */
+  @media (prefers-reduced-motion: reduce) {
+    .predictive-search__skeleton-heading,
+    .predictive-search__skeleton-thumb,
+    .predictive-search__skeleton-line {
+      animation: none;
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
