@@ -124,47 +124,50 @@
   .product-supplies__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+    gap: 1rem;
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  @media (min-width: 750px) {
-    .product-supplies__grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  @media (min-width: 1100px) {
-    .product-supplies__grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
   .product-supplies__item {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    /* 参考稿 supply-card：灰底圆角横向卡，hover 上浮 + 投影 */
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
     border-radius: calc(var(--style-border-radius-inputs) * 1.5);
     min-inline-size: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .product-supplies__item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-foreground) 6%, transparent);
   }
   .product-supplies__media {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 120px;
+    height: 80px;
     border-radius: var(--style-border-radius-inputs);
-    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+    /* 参考稿 supply-img：白底小图 */
+    background-color: var(--color-background);
     overflow: hidden;
   }
   .product-supplies__img {
     display: block;
-    width: 100%;
+    width: 80%;
     height: auto;
-    aspect-ratio: 1;
+    max-height: 100%;
     object-fit: contain;
   }
   .product-supplies__body {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
+    flex: 1;
     min-inline-size: 0;
   }
   .product-supplies__title {
