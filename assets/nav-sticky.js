@@ -9,11 +9,15 @@
  * boundingClientRect.top 已经是 0，但 IO 仍按文档布局位置算交集比例，
  * 恒等于 1，threshold 永不跨越，回调在初始那次之后再也不来。此路不通。
  *
- * 所以退回滚动检测，判据只有一条且不需要任何缓存：
- *   sticky 块的 getBoundingClientRect().top <= 0  ⇒  已经贴住视口顶
+ * 判据只有一条且不需要缓存任何位置：
+ *   sticky 块的 getBoundingClientRect().top <= 0.5  ⇒  已经贴住视口顶
  * 它读的就是视觉位置，天然自适应公告栏高度变化、是否被关闭、刷新时落在页面
- * 中间等一切情况。为控开销：passive scroll + requestAnimationFrame 合帧，
- * 且只在状态翻转时写 class。
+ * 中间等一切情况。
+ *
+ * 为什么不在 scroll 里再包一层 requestAnimationFrame：scroll 事件本身就与渲染
+ * 帧对齐（每帧至多派发一次），再包 rAF 只会把阴影的出现推迟一帧——滚动停住的
+ * 那一刻阴影慢半拍浮起，观感是"闪"。同步判据 + 只在状态翻转时写 class，
+ * 每帧至多一次 rect 读取、至多一次 DOM 写入，开销与 rAF 方案等价。
  *
  * 移动端（< 990px）没有 sticky，CSS 只在该断点消费 is-stuck，此处不判断断点。
  */
@@ -27,18 +31,8 @@ if (!customElements.get('nav-sticky')) {
         this._target = this.closest('.main-nav-section');
         if (!this._target) return;
 
-        this._ticking = false;
         this._stuck = false;
-        this._onScroll = () => {
-          if (this._ticking) return;
-          this._ticking = true;
-          requestAnimationFrame(() => {
-            this._ticking = false;
-            this._sync();
-          });
-        };
-        // resize 后视口高度变化不影响判据本身，但页面可能在旋转/缩放后
-        // 已处于另一状态，补一次同步即可。
+        this._onScroll = () => this._sync();
         window.addEventListener('scroll', this._onScroll, { passive: true });
         window.addEventListener('resize', this._onScroll, { passive: true });
         this._sync();
