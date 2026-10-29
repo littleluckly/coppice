@@ -276,12 +276,18 @@
       return (this.dataset.handle || '').trim();
     }
 
-    /** aria-pressed 跟随清单状态（样式靠 [aria-pressed='true'] 命中） */
+    /** aria-pressed 跟随清单状态（样式靠 [aria-pressed='true'] 命中）；文案同步切换 */
     sync() {
       if (!this.button) return;
       const inList = readList().some((item) => item.h === this.handle);
       this.button.setAttribute('aria-pressed', inList ? 'true' : 'false');
       this.toggleAttribute('data-in-list', inList);
+
+      /* 加入/移除时切文案（2026-10-29 刘工）。data-label-added 缺失时保持原文案，
+         只反映在 aria-pressed 上——文案不是本按钮的生命线，不能因它坏了功能。 */
+      if (this.label && this.labelAdded) {
+        this.label.textContent = inList ? this.labelAdded : this.labelIdle;
+      }
     }
 
     onClick() {
