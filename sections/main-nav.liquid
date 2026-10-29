@@ -2041,6 +2041,13 @@
       z-index: 20;
     }
 
+    /* 吸住才浮投影（2026-10-29 刘工）。is-stuck 由 assets/nav-sticky.js 打上，
+       判据与像素阈值无关，见该文件头部说明。这条必须与上面的 sticky 同处一段：
+       低于 990px 时既没有吸顶，也不该有投影出现/消失的状态切换。 */
+    .main-nav-section.is-stuck .main-nav__desktop {
+      box-shadow: var(--header-shadow);
+    }
+
     /* 桌面端汉堡与抽屉不出现；桌面区是唯一可见部分 */
     .main-nav__desktop {
       display: block;
