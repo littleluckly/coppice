@@ -222,43 +222,46 @@
     color: var(--color-foreground-muted);
     line-height: 1.55;
   }
-  /* 规格卡片网格：2 列，占满内容区（不额外限宽，跟随 .product-tabs 的内容宽度） */
-  .product-tabs__spec-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
+  /* 规格表（2026-10-29 刘工参考图）：圆角外框 + 隔行浅灰（斑马线），
+     左 label 加粗深色 / 右 value 常规灰。border-collapse: separate 是刻意的——
+     collapse 下 border-radius 不生效，圆角外框就做不出来。 */
+  .product-tabs__spec-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: calc(var(--style-border-radius-inputs) * 2.5);
+    /* 裁掉奇偶行底色溢出圆角的部分 */
+    overflow: hidden;
+    font-size: 0.9rem;
   }
-  .product-tabs__spec-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    padding: 1.25rem 1.5rem;
+  /* 斑马线：奇数行浅灰底（截图行为）。用 foreground 低透明派生，
+     Noir 下自动变成深底上的略亮条，不需要第二套值。 */
+  .product-tabs__spec-row:nth-child(odd) {
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
-    border-radius: var(--style-border-radius-inputs);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  .product-tabs__spec-card:hover {
-    transform: translateY(-3px);
-    /* 浅绿光晕（2026-10-29 刘工）：与画廊右侧加购按钮同款形态
-       （0 6px 20px / 30%），色相取 --color-brand-light 而非品牌深绿。 */
-    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand-light) 30%, transparent);
-  }
-  .product-tabs__spec-card-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--color-foreground-muted);
-  }
-  .product-tabs__spec-card-value {
-    font-size: 1rem;
+  .product-tabs__spec-label {
+    width: 45%;
+    padding: 0.9rem 1rem;
+    text-align: start;
+    font-size: 0.9rem;
     font-weight: 600;
     color: var(--color-foreground);
+    vertical-align: top;
   }
-  @media (max-width: 749px) {
-    .product-tabs__spec-grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
+  .product-tabs__spec-value {
+    padding: 0.9rem 1rem;
+    color: var(--color-foreground-muted);
+    overflow-wrap: anywhere;
+  }
+  /* 行分隔线：画在单元格底边，最后一行去掉（separate 模式下 tr 的 border 不可靠） */
+  .product-tabs__spec-label,
+  .product-tabs__spec-value {
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 7%, transparent);
+  }
+  .product-tabs__spec-row:last-child .product-tabs__spec-label,
+  .product-tabs__spec-row:last-child .product-tabs__spec-value {
+    border-block-end: 0;
   }
 
   /* ---- 吸顶（仅桌面，与页头 sticky 同断点 990px） ---- */

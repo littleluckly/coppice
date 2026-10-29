@@ -1384,16 +1384,20 @@
   /* ===== hover 绿色渐变光晕（视觉对齐集合页 product-card 的 hover 反馈）=====
      移植 product-card.css 的 ::before 光晕 + 品牌绿投影。光晕垫在图片下面、
      只从图片透明区域透出（koutu alpha 图可见，不透明图自动隐没），产品像素零接触。
-     仅 hover:hover + pointer:fine 生效。 */
+     仅 hover:hover + pointer:fine 生效。
+
+     2026-10-29 刘工：浓度改走 --card-glow-1/2/3 与 --card-hover-shadow（定义在
+     snippets/css-variables.liquid，按内容区背景明暗分流）。原来这里写死 65%/32%/5%，
+     Noir 浅绿光晕在深底上会化成一块绿板——与产品列表两侧必须同源，改一处即同步。
+     注：mega 面板在页头组内，但 --card-glow-* / --card-hover-shadow 不在骨架映射表，
+     始终取 :root 那份；当前两个 preset 的内容区与骨架同明暗，结果一致。 */
   @media (hover: hover) and (pointer: fine) {
     .main-nav__mega-card-link {
       transition: border-color 0.15s ease, translate 0.15s ease, box-shadow 0.8s ease;
     }
     .main-nav__mega-card-link:hover {
-      /* 品牌绿低透明投影（与 product-card 同款，浅底不显脏） */
-      box-shadow:
-        0 24px 40px -18px color-mix(in srgb, var(--color-brand) 32%, transparent),
-        0 10px 18px -10px rgb(0 0 0 / 12%);
+      /* 与 product-card:hover 同款（浅底品牌绿低透明投影 / 深底压低绿 + 加深黑层） */
+      box-shadow: var(--card-hover-shadow);
     }
     .main-nav__mega-card-media {
       position: relative;
@@ -1402,12 +1406,11 @@
       content: '';
       position: absolute;
       inset: 0;
-      /* --color-brand-light：从品牌色算出的高亮度浅绿，光晕渐变 */
       background: linear-gradient(
         135deg,
-        color-mix(in srgb, var(--color-brand-light) 65%, transparent) 0%,
-        color-mix(in srgb, var(--color-brand-light) 32%, transparent) 55%,
-        color-mix(in srgb, var(--color-brand-light) 5%, transparent) 100%
+        var(--card-glow-1) 0%,
+        var(--card-glow-2) 55%,
+        var(--card-glow-3) 100%
       );
       opacity: 0;
       transition: opacity 0.8s ease;
