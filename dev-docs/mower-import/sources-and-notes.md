@@ -191,6 +191,10 @@
 - 40V、16 in. 导板（→406 mm）、5 年工具保修（60 个月）
 - 重量 11.2 lb：**官方页与第三方评测口径不一致**（第三方实测含电池运转重量 12.8 lb）。取 11.2 lb 作为**裸机值**，文案已写 "bare tool" 并说明含电池另有公布值；**上架前须以包装/手册重量复核**
 - 价格 $279.00：渠道价 $250–$310 波动，取中间价，上架前复核
+- ⚠️ **型号与规格对不上（2026-10-28 复核发现，未改数据）**：Home Depot（美国站与加拿大站）与 RYOBI 手册里 **RY40570 是 10 in. 款**（链速 5.3 mps、裸机 8.6 lb），而本条记的是 16 in. / 406 mm —— 与引用 URL 的 slug `40v-brushless-16-in-cordless-chainsaw` 一致。**两者必有一错**，二选一待拍：
+  - 若以 **16 in. 款**为基线 → `bar_length_mm = 406` 保留，型号与引用链接需改指向 16 in. 的真实型号；
+  - 若以 **RY40570** 为基线 → `bar_length_mm` 应改 **254**、`weight_kg` 应改约 **3.9**（8.6 lb）。
+  - 影响面：`bar_length_mm` 进对比表与产品页规格表，`weight_kg` 进速览卡与对比表——**先定哪条为准，别两头都改**
 
 ### NB-C80B（参数基线：Greenworks 80V CS80L417）
 - 官方：https://www.greenworkstools.com/products/80v-18-2-5kw-cordless-battery-chainsaw-w-1-4ah-battery-2a-charger
@@ -224,7 +228,7 @@
 | 字段 | 留空原因 |
 | --- | --- |
 | `spec.noise_db`（除 NB-T28 外全部 20 台主机） | 厂商官方产品页 / 规格表 / 手册均未公布操作位 dB(A)；第三方零星数值因非官方来源不采用。只有 NB-T28 的基线机型官方给了 LpA 95 dB(A) |
-| `spec.power_w`（除 NB-C80B 外全部 20 台主机） | 汽油机按口径填 cc 不填 W；电池款多数官方未公布电机额定功率，不用电压/安时反推 |
+| `spec.power_w`（6 款电池机） | ⚠️ **已改为「演示合成值」，不是厂商数据（2026-10-28 刘工指示）**：六款基线（Ryobi RY401150US / RY40270 / RY40570、Greenworks MO40L4210 / ST60L254、Kobalt 80V 21"）的官方页与规格表**均只标电压(V)/安时(Ah)/转速，不公布电机额定功率(W)**，用 "26cc gas-equivalent"、"more power than a 170cc gas mower" 这类等效话术代替；第三方数字（聚合页给 RY40570 标 550W、中文经销商给 40V 割草机标 1500W）来源非厂商，不采用。核查通过后由刘工拍定「编个数据填进 CSV」用于演示 → 值定义在 `build_mower_csv.py` 顶部的 `DEMO_POWER_W`（21BS 1100 / 21BP 900 / 21B80 1600 / T40B 500 / T60B 700 / C40B 600），唯一目的是让功率行不空着。**NB-C80B 的 2500W 才是官方值。上架真实店铺前必须替换或整块删除（删掉即回到"留空 + 电压兜底"）。不得当规格引用。** |
 | `spec.spec_variance_note`（全部 21 台主机） | 本文件全部单变体，无"参数随变体变化"场景。多变体示例（含变体行结构 + Option 列写法）属 SDD 演示店 `nb-22sp` 的职责，不在本文件 |
 | `spec.compare_hidden`（全部） | 默认 false，留空即不隐藏 |
 | `acc.consumables`（第一遍全部留空） | 值是**目标商品 handle**，目标必须已在店内 ⇒ 走第二遍。已单独产出 `mower-products-import.pass2-consumables.csv`（19 台主机 → 耗材），见 §5 |

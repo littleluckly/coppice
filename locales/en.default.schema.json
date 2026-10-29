@@ -231,6 +231,115 @@
     },
     "compare_lookup": {
       "name": "Compare lookup"
+    },
+    "main_product": {
+      "name": "Product information",
+      "labels": {
+        "show_breadcrumb": "Show breadcrumb",
+        "show_description": "Show description excerpt",
+        "description_words": "Description length (words)",
+        "show_accelerated_checkout": "Show accelerated checkout",
+        "accelerated_info": "Requires an accelerated checkout method such as Shop Pay. The button styling is controlled by the payment provider and must not be restyled.",
+        "show_payment_terms": "Show payment terms (Shop Pay Installments)"
+      },
+      "headers": {
+        "checkout": "Checkout"
+      },
+      "blocks": {
+        "spec_bullets": {
+          "name": "Spec highlights"
+        },
+        "trust_warranty": {
+          "name": "Warranty badge (from metafield)"
+        },
+        "trust_item": {
+          "name": "Trust badge",
+          "icon": "Icon",
+          "text": "Text",
+          "text_info": "Leave blank to hide this badge. Store policies are the merchant's to state — nothing is written in for you.",
+          "icons": {
+            "shipping": "Shipping",
+            "returns": "Returns",
+            "warranty": "Warranty"
+          }
+        },
+        "pickup": {
+          "name": "Pickup availability"
+        },
+        "compare": {
+          "name": "Add to compare"
+        }
+      }
+    },
+    "product_highlights": {
+      "name": "Product highlights",
+      "blocks": {
+        "platform": {
+          "name": "Battery platform compatibility",
+          "collection": "Link to collection",
+          "collection_info": "Leave blank to link by voltage automatically (40V → collection handle 40v-battery). No matching collection means no link."
+        },
+        "logistics": {
+          "name": "Shipping & delivery",
+          "text_parcel": "Parcel text",
+          "text_oversized": "Oversized text",
+          "text_freight": "Freight text"
+        },
+        "quickview": {
+          "name": "Key specifications",
+          "default_heading": "Key specifications",
+          "row_1": "Row 1",
+          "row_2": "Row 2",
+          "row_3": "Row 3",
+          "row_4": "Row 4",
+          "row_5": "Row 5",
+          "options": {
+            "none": "None",
+            "cutting_width": "Cutting width",
+            "bar_length": "Bar length",
+            "power": "Power (cc / W)",
+            "weight": "Weight",
+            "power_source": "Power source",
+            "operation_type": "Operation type",
+            "drive_type": "Drive type",
+            "area_coverage": "Lawn area",
+            "duty_level": "Duty rating",
+            "noise": "Noise",
+            "warranty": "Warranty"
+          }
+        }
+      },
+      "quickview": {
+        "default_heading": "Key specifications"
+      }
+    },
+    "product_supplies": {
+      "name": "Recommended supplies",
+      "default_heading": "Supplies"
+    },
+    "product_spec_table": {
+      "name": "Full specifications",
+      "default_heading": "Specifications"
+    },
+    "product_description": {
+      "name": "Description",
+      "default_heading": "Overview",
+      "image": "Side image"
+    },
+    "product_recommendations": {
+      "name": "Similar products",
+      "default_heading": "Similar mowers",
+      "limit": "Number of products",
+      "default_heading_generic": "You may also like",
+      "heading_info": "Leave blank to use \"Similar mowers\" for equipment and \"You may also like\" for accessories."
+    },
+    "product_anchor_nav": {
+      "name": "Section anchor bar"
+    },
+    "product_complementary": {
+      "name": "Pairs well with",
+      "default_heading": "Pairs well with",
+      "limit": "Number of products"
     }
   },
   "labels": {

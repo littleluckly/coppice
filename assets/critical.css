@@ -301,3 +301,34 @@ body {
     width: 100%;
     height: auto;
   }
+
+/**
+ * 滚动入场（产品页区块，2026-10-28 刘工要求：去掉 tab，改垂直平铺 + 上滑入场）。
+ *
+ * **无 JS 不隐藏**：初始隐藏态挂在 `[data-reveal-state='pending']` 上，而该属性只由
+ * assets/reveal-on-scroll.js 写入 —— 脚本没跑时区块就是正常显示的。
+ * 只动 opacity / transform，不动盒模型 → 零 CLS。
+ * 时长与缓动刻意偏"沉"（0.5s / 先快后缓），比线性 0.3s 更像内容自己浮上来。
+ */
+[data-reveal-state='pending'] {
+  opacity: 0;
+  transform: translateY(24px);
+  will-change: opacity, transform;
+}
+[data-reveal-state='shown'] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+/* 系统要求减少动效 → 直接给终态，连过渡都不注册 */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal-state='pending'],
+  [data-reveal-state='shown'] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    will-change: auto;
+  }
+}

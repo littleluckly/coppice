@@ -1,0 +1,55 @@
+{% doc %}
+  compare-button — 产品页「Add to compare」入口（task-product T-1.1，SDD §6.2.2）。
+
+  与商品卡的 `<compare-toggle>` 同一套行为（assets/compare.js），差别只在标记与位置：
+  · **视觉**照产品页效果图做成方框，**DOM 用 `<button aria-pressed>`**，不用
+    `<input type="checkbox">` —— 勾选状态由 aria-pressed 表达，样式命中
+    `[aria-pressed='true']`，`:has()` 与读屏都能跟上（2026-10-28 拍板 8）。
+  · 数据属性（group / title / image / url）与 compare.js 完全一致，脚本零改动。
+  · `spec.compare_group` 为空 或 `spec.compare_hidden = TRUE` → **整块不渲染**
+    （与商品卡同判据：不可进对比页的商品不给入口）。
+
+  **样式归属**：本文件不带 `{% stylesheet %}`（snippet 里写样式块会让宿主 section
+  出现第二个样式块，编辑器装载失败）。`.product-compare*` 的样式由调用方 section
+  的 `{% stylesheet %}` 提供。
+
+  依赖：`assets/compare.js` 已在 layout/theme.liquid 全局加载；页头角标由
+  `snippets/compare-entry.liquid` 自行同步，本文件不需额外接线。
+
+  @param {product} product - product 对象（必填）
+{% enddoc %}
+
+{%- liquid
+  assign compare_group = product.metafields.spec.compare_group.value
+  assign compare_hidden = product.metafields.spec.compare_hidden.value
+-%}
+
+{%- if compare_group != blank and compare_hidden != 'TRUE' -%}
+  {%- assign compare_image = '' -%}
+  {%- if product.featured_image -%}
+    {%- assign compare_image = product.featured_image | image_url: width: 480 -%}
+  {%- endif -%}
+
+  <compare-toggle
+    class="product-compare"
+    data-group="{{ compare_group | escape }}"
+    data-handle="{{ product.handle }}"
+    data-title="{{ product.title | escape }}"
+    data-url="{{ product.url }}"
+    {%- if compare_image != '' %}
+      data-image="{{ compare_image }}"
+    {%- endif %}
+    data-max="4"
+    data-label-conflict-cross-group="{{ 'compare.conflict.cross_group' | t }}"
+    data-label-conflict-clear-and-add="{{ 'compare.conflict.clear_and_add' | t }}"
+    data-label-conflict-full="{{ 'compare.conflict.full' | t: max: 4 }}"
+    data-label-conflict-cancel="{{ 'compare.conflict.cancel' | t }}"
+  >
+    <button type="button" class="product-compare__button" aria-pressed="false">
+      <span class="product-compare__box" aria-hidden="true">
+        {{- 'icon-compare.svg' | inline_asset_content -}}
+      </span>
+      <span class="product-compare__label">{{ 'products.product.add_to_compare' | t }}</span>
+    </button>
+  </compare-toggle>
+{%- endif -%}

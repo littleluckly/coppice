@@ -25,14 +25,34 @@ build_mower_csv.py — 生成产品导入 CSV（Coppice SDD §5.9 口径）
 import csv
 import os
 import sys
+from decimal import Decimal, ROUND_HALF_UP
 
-# 官方 product_template.csv 只用于「列名逐字校验」。该文件不在版本库内，
-# 换机后可能不存在 —— 缺失时降级为「跳过逐字校验」，不阻断生成。
+# 官方 product_template.csv 只用于「列名逐字校验」。
+# 2026-10-28 起模板随仓库走（dev-docs/mower-import/product_template.csv），
+# 逐字校验常态生效；仍可用环境变量覆盖。
 TEMPLATE_PATH = os.environ.get(
     "PRODUCT_TEMPLATE_CSV",
-    "/Users/mac/Downloads/product_template.csv",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "product_template.csv"),
 )
 OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mower-products-import.csv")
+
+# ---------------------------------------------------------------- 演示用合成功率（2026-10-28）
+# ⚠️ **这些数字不是厂商数据，是编的。**
+# 六款电池机的官方产品页/规格表一律不公布电机额定功率（只标电压 V / 安时 Ah / 转速；
+# 用 "26cc gas-equivalent"、"more power than a 170cc gas mower" 这类等效话术代替）。
+# 逐款核查记录见 sources-and-notes.md §4。
+# 2026-10-28 刘工指示「编个数据填进 CSV」——目的是演示店里产品页 / 对比表的「功率」行
+# 不空着。取值按平台电压与品类量级排的合理值，只保证彼此不矛盾。
+# **上架真实店铺前必须替换为厂商值，或整块删掉回到"留空 + 电压兜底"。**
+# 不要把这里的数字当规格引用到任何文档、文案或对比表说明里。
+DEMO_POWER_W = {
+    "northbark-nb-21bs": 1100,   # 40V 自走割草机（双电池）
+    "northbark-nb-21bp": 900,    # 40V 推式割草机
+    "northbark-nb-21b80": 1600,  # 80V 自走割草机
+    "northbark-nb-t40b": 500,    # 40V 打草机
+    "northbark-nb-t60b": 700,    # 60V 打草机
+    "northbark-nb-c40b": 600,    # 40V 链锯
+}
 
 # ---------------------------------------------------------------- 列定义
 
@@ -55,6 +75,7 @@ OFFICIAL_KEEP = [
     "Option3 name",
     "Option3 value",
     "Price",
+    "Compare-at price",
     "Charge tax",
     "Inventory tracker",
     "Inventory quantity",
@@ -67,6 +88,24 @@ OFFICIAL_KEEP = [
     "Image position",
     "Image alt text",
 ]
+
+# ---------------------------------------------------------------- 定价规则（2026-10-28 拍板）
+# 主机：现价 = MSRP × 0.95，四舍五入取整到整数美元；Compare-at price = MSRP。
+#       用 Decimal + ROUND_HALF_UP —— 浮点 round() 是银行家舍入，711.55 这类边界会飘。
+#       21 款主机实算徽标恒为 5%（见 dev-docs/task-product.md T-0.2）。
+# 配件：A 方案 —— 不打折，Compare-at price 留空，Price 不动。
+#       理由：配件单价低（$19.99–$42.99），取整误差被放大成 4%/6%/7%，
+#       同店折扣不一致；配件是复购件，5% 折扣伤毛利。
+DISCOUNT_RATE = Decimal("0.95")
+
+
+def price_fields(msrp, is_acc):
+    """按定价规则返回 (Price, Compare-at price)；配件返回 (原价, 空)。"""
+    msrp = Decimal(str(msrp)).quantize(Decimal("0.01"))
+    if is_acc:
+        return f"{msrp:.2f}", ""
+    promo = (msrp * DISCOUNT_RATE).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    return f"{promo:.2f}", f"{msrp:.2f}"
 
 # metafield 23 列（SDD §5.3 全量）。bar_length_mm 只给链锯；cutting_width_mm
 # 给割草机（割台幅宽）与打草机（切割幅度），二者互斥，由 validate() 强制。
@@ -886,6 +925,7 @@ def build_rows():
         # 配件不公布重量 → 变体克重留空（Shopify 允许），不用密度/估值反推
         grams = "" if is_acc else str(lb_to_g(p["weight_lb"]))
         imgs = IMAGES[p["handle"]]
+        price_val, compare_val = price_fields(p["price"], is_acc)
         base = {c: "" for c in OFFICIAL_KEEP}
         base.update({
             "Title": p["title"],
@@ -900,7 +940,8 @@ def build_rows():
             "SKU": p["sku"],
             "Option1 name": "Title",
             "Option1 value": "Default Title",
-            "Price": p["price"],
+            "Price": price_val,
+            "Compare-at price": compare_val,
             "Charge tax": "TRUE",
             "Inventory tracker": "shopify",
             "Inventory quantity": "25",
@@ -931,7 +972,11 @@ def build_rows():
                 "Duty level (product.metafields.spec.duty_level)": p.get("duty", "Residential"),
                 "Compare group (product.metafields.spec.compare_group)": p["compare_group"],
                 "Displacement (cc) (product.metafields.spec.displacement_cc)": _num(p.get("cc")),
-                "Power (W) (product.metafields.spec.power_w)": _num(p.get("power_w")),
+                # power_w：有官方值（NB-C80B 2500W）就用官方；没有的六款用 DEMO_POWER_W
+                # 的演示合成值 → 见文件顶部那段警告，别当规格引用
+                "Power (W) (product.metafields.spec.power_w)": _num(
+                    p.get("power_w") or DEMO_POWER_W.get(p["handle"])
+                ),
                 "Cutting width (mm) (product.metafields.spec.cutting_width_mm)": _num(p.get("cut_mm")),
                 "Bar length (mm) (product.metafields.spec.bar_length_mm)": _num(p.get("bar_mm")),
                 "Weight (kg) (product.metafields.spec.weight_kg)": f"{p['weight_kg']}",
@@ -970,6 +1015,7 @@ def validate(rows):
     skus = set()
     handles = set()
     main_handles = {r["URL handle"] for r in rows if r["SKU"]}
+    acc_handles = {p["handle"] for p in PRODUCTS if p.get("kind") == "acc"}
     for i, row in enumerate(rows):
         if len(row) != n_cols:
             errors.append(f"行 {i+1}: 列数 {len(row)} != {n_cols}")
@@ -1069,6 +1115,31 @@ def validate(rows):
             errors.append(f"行 {i+1}: 割草机/打草机必须填 cutting_width_mm")
         if row["Product category"] != TAXO_CHAINSAW and bl:
             errors.append(f"行 {i+1}: 非链锯填了 bar_length_mm（SDD §5.3：只给链锯）")
+        # 定价规则（2026-10-28 拍板）：主机 = MSRP × 0.95 取整，Compare-at = MSRP；
+        # 配件 A 方案不打折（Compare-at 留空）——低价取整会把 5% 放大成 4%/6%/7%。
+        price = row["Price"]
+        compare = row["Compare-at price"]
+        if not price.replace(".", "").isdigit():
+            errors.append(f"行 {i+1}: Price 非法 '{price}'")
+        elif h in acc_handles:
+            if compare:
+                errors.append(f"行 {i+1}: 配件不应有 Compare-at price（A 方案：配件不打折）")
+        elif not compare.replace(".", "").isdigit():
+            errors.append(f"行 {i+1}: 主机缺 Compare-at price（应回填 MSRP）")
+        else:
+            p_dec, c_dec = Decimal(price), Decimal(compare)
+            if c_dec < p_dec:
+                errors.append(f"行 {i+1}: Compare-at({compare}) 低于 Price({price})")
+            else:
+                back = (p_dec / DISCOUNT_RATE).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+                if abs(back - c_dec) > 1:
+                    errors.append(
+                        f"行 {i+1}: 折扣偏离 5%（Price {price} 回算 MSRP {back}，Compare-at {compare}）"
+                    )
+                else:
+                    pct = ((c_dec - p_dec) / c_dec * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+                    if pct != 5:
+                        warnings.append(f"行 {i+1}: 主机徽标显示 {pct}%（预期 5%，取整导致）")
         # 重量一致性（metafield kg vs 变体克重，±0.3 kg 容差，电池款克重含电池另计）
         # 配件两者都空 → 跳过（不把 "空 vs 空" 当成一致，也不要求配件必须有重量）
         kg_raw = row["Weight (kg) (product.metafields.spec.weight_kg)"]

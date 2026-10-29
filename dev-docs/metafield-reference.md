@@ -148,5 +148,11 @@ Consumables (product.metafields.acc.consumables)
 Fitment note (product.metafields.acc.fitment_note)
 ```
 
-> 实际导入样例见 `dev-docs/mower-import/mower-products-import.csv`（**23 列全量版 = 51 列**，21 款主机覆盖 4 个对比分组：走步/骑乘/打草机/链锯）与配套 `sources-and-notes.md`。
+> 实际导入样例见 `dev-docs/mower-import/mower-products-import.csv`（**52 列** = 官方 29 + metafield 23，21 款主机覆盖 4 个对比分组：走步/骑乘/打草机/链锯）与配套 `sources-and-notes.md`。
 > `cutting_width_mm` 与 `bar_length_mm` 互斥：割草机与打草机填前者，链锯填后者，生成脚本 `build_mower_csv.py` 的 `validate()` 强制。
+
+> **`Compare-at price`（非 metafield，但属导入契约，2026-10-28 增）**：官方列，位于 `Price` 之后。
+> 取值规则：`Compare-at price` = MSRP（即原 `Price`）；`Price` = MSRP × 0.95 四舍五入取整到整数美元 → 21 款主机徽标恒为 5%。
+> **配件 11 款不打折**：`Compare-at price` 留空、`Price` 保持原值（低价商品取整会把 5% 放大成 4%/6%/7%）。
+> 三条断言在 `build_mower_csv.py` 的 `validate()` 里：对比价不得低于现价、回算 MSRP 误差 ≤ $1、配件不得有对比价。
+> 官方模板已入仓：`dev-docs/mower-import/product_template.csv`（脚本默认 `TEMPLATE_PATH`，列名逐字校验常态生效）。

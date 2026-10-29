@@ -10,35 +10,104 @@
 {
   "sections": {
     "main": {
-      "type": "product",
+      "type": "main-product",
+      "blocks": {
+        "spec_bullets": {
+          "type": "spec_bullets"
+        },
+        "trust_warranty": {
+          "type": "trust_warranty"
+        },
+        "trust_shipping": {
+          "type": "trust_item",
+          "settings": {
+            "icon": "shipping",
+            "text": "Free shipping on orders over $99"
+          }
+        },
+        "trust_returns": {
+          "type": "trust_item",
+          "settings": {
+            "icon": "returns",
+            "text": "30-day returns"
+          }
+        },
+        "compare": {
+          "type": "compare"
+        },
+        "pickup": {
+          "type": "pickup"
+        }
+      },
+      "block_order": [
+        "spec_bullets",
+        "trust_warranty",
+        "trust_shipping",
+        "trust_returns",
+        "compare",
+        "pickup"
+      ],
+      "settings": {
+        "show_breadcrumb": true,
+        "show_description": false,
+        "description_words": 40,
+        "show_accelerated_checkout": true,
+        "show_payment_terms": true
+      }
+    },
+    "product-highlights": {
+      "type": "product-highlights",
+      "blocks": {
+        "platform": {
+          "type": "platform_compat"
+        },
+        "logistics": {
+          "type": "logistics"
+        },
+        "quickview": {
+          "type": "spec_quickview"
+        }
+      },
+      "block_order": [
+        "platform",
+        "logistics",
+        "quickview"
+      ],
+      "settings": {}
+    },
+    "product-supplies": {
+      "type": "product-supplies",
+      "settings": {}
+    },
+    "product-spec-table": {
+      "type": "product-spec-table",
+      "settings": {}
+    },
+    "product-recommendations": {
+      "type": "product-recommendations",
       "settings": {}
     },
     "compare-lookup": {
       "type": "compare-lookup",
       "settings": {}
     },
-    "1791511954cea426ef": {
-      "type": "apps",
-      "blocks": {
-        "judge_me_reviews_review_widget_YbzXcw": {
-          "type": "shopify://apps/judge-me-reviews/blocks/review_widget/61ccd3b1-a9f2-4160-9fe9-4fec8413e5d8",
-          "settings": {
-            "review_data": "sample_data",
-            "max_width": 1200,
-            "show_shop_reviews": false,
-            "empty_state": "empty_widget"
-          }
-        }
-      },
-      "block_order": [
-        "judge_me_reviews_review_widget_YbzXcw"
-      ],
+    "product-complementary": {
+      "type": "product-complementary",
+      "settings": {}
+    },
+    "product-description": {
+      "type": "product-description",
       "settings": {}
     }
   },
   "order": [
     "main",
-    "compare-lookup",
-    "1791511954cea426ef"
+    "product-highlights",
+    "product-complementary",
+    "product-description",
+    "product-spec-table",
+    "product-supplies",
+    "product-recommendations",
+    "compare-lookup"
   ]
 }
