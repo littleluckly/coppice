@@ -198,9 +198,6 @@
         "other": "{{ count }} products"
       }
     },
-    "utility_bar": {
-      "label": "Service information"
-    },
     "product_highlights": {
       "heading": "Product highlights",
       "platform": {

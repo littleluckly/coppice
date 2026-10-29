@@ -48,7 +48,7 @@
 | # | 开放项 | **决策** | 落点与代价 |
 | --- | --- | --- | --- |
 | O-1 | 页头是否 sticky | **仅 PC 端 sticky** | 移动端不吸顶。实现：`position: sticky` 必须写在**媒体查询 ≥ 990px 内**，移动端保持静态流。**代价**：需实测移动端浏览器地址栏收起/展开的高度跳变对 CLS 的影响（验收并入 T-3.1） |
-| O-2 | `utility-bar` 是否进 v1.0 | **做**（T-1.2 保留，0.5 计入总额） | 默认加入 group preset；移动端隐藏 |
+| O-2 | `utility-bar` 是否进 v1.0 | ~~**做**~~ **已作废（2026-10-29 整条删除）** | 原决策：默认加入 group preset、移动端隐藏。**现况**：section 已移除，页头组只剩 announcement-bar + main-nav |
 | O-3 | cart 入口行为 | **本期不做 cart 交互**——只做「入口 + 跳 `routes.cart_url`」，**不开抽屉、不做计数联动** | **cart 交互后续单独开任务清单**（抽屉本体 + `<cart-toggle>` + 计数同步 + `cart_action` 配置项一并归入）。**代价**：`<dialog>` 抽屉本期只在导航汉堡处验证过一次，cart 抽屉的无障碍模式要等下轮重新验一次；`cart_action` 设置项本期**不预留**（避免 schema 空占位），下轮加时按 AGENTS §6 一次成型。本期 T-1.6 从 0.5 降到 **0.25 人日** |
 | O-4 | 预测搜索端点 | **HTML 片段端点**：`/search/suggest` + `section_id`（Section Rendering API） | 与官方教程现行方案一致；字段最小化由服务端保证，无 JS 降级路径更短。**必须同步回填 pages-ui §1.1**（其"数据源"列现写 `suggest.json`）→ T-3.2 |
 | O-5 | 汉堡抽屉与桌面下拉是否共用 DOM | **不共用，两套 DOM**；优先保障可访问性，业界/官方有更好方案则按更好方案 | **采用原生 `<dialog>` + `showModal()`**（见下方专项）。`showModal()` 自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`——**不手写焦点陷阱**，可访问性反而更强（人工焦点锁定最常漏 `inert` 与回焦）。代价：两套菜单 DOM 各一份，但移动/桌面互斥渲染，**同屏只存在一套**，不叠加 |
@@ -134,7 +134,7 @@
 - **计数播报只让 JS 填数字，分隔符走 locale**（`general.pagination_separator`）——不用 `data-*` 传 `{{index}}` 占位符，`t:` 过滤器会把它当插值参数，多语言下不可靠。
 - 不自动播放（SDD §7.2 禁伪造紧迫感）；多条时横向滚动 + 手动箭头 + `←/→` 键盘切换；非当前项 `aria-hidden`。
 
-#### T-1.2 `sections/utility-bar.liquid` · 0.5 人日 · 依赖：T-0.1 ✅ O-2 已拍板（做）
+#### T-1.2 ~~`sections/utility-bar.liquid`~~ · 0.5 人日 · 依赖：T-0.1 ✅ 曾完成，**2026-10-29 整条删除**（功能下线；人日是已花掉的时间，不从总额扣回）
 
 - [ ] 售后电话 / 门店自提等短提示，链接块 ×N（`link_list` 或 blocks）
 - [ ] 移动端隐藏（信息在 utility bar 与 footer 重复，移动端占首屏高度不划算）
@@ -400,7 +400,7 @@
 
 #### T-2.1 组装 + skip link · 0.5 人日 · 依赖：T-1.1 ~ T-1.6 ✅ 2026-10-10 完成
 
-- [ ] group 内注册 6 个 section（顺序：announcement-bar → [utility-bar] → main-nav → header-search → account → cart-entry），商家可增删排序（#1 Sections Everywhere，SDD §4.2）
+- [ ] group 内注册 6 个 section（顺序：announcement-bar → ~~[utility-bar]~~ → main-nav → header-search → account → cart-entry）**—— utility-bar 已于 2026-10-29 删除**，商家可增删排序（#1 Sections Everywhere，SDD §4.2）
 - [ ] **不认领 `Coppice` preset 名**（已由首页 hero-slideshow 承担，§0.2）
 - [ ] **skip link**：`layout/theme.liquid` 当前**没有** skip link，而 SDD §8.2 与 AGENTS §8 均要求"必备且聚焦可见"——作为本页组的第一个可聚焦元素补上，`.visually-hidden` → 聚焦时显形
 - [ ] 检查 `theme.liquid` 中 `{% sections 'header-group' %}` 位于 `<body>` 起始——skip link 必须排在 header 之前才符合"跳过导航"语义
@@ -511,7 +511,7 @@ T-3.2 文档回填 0 人日 ✅ 已完成 2026-10-09
 | `sections/main-nav.liquid` | 接收 account / cart 的**标记与样式**；新增 `.main-nav__inner` 三段 grid（菜单 / 搜索占位 / 工具区） |
 | `sections/account.liquid` | **已删除**（标记移到 `snippets/account-entry.liquid`，样式并入 main-nav） |
 | `sections/cart-entry.liquid` | **已删除**（同上，样式并入 main-nav） |
-| `sections/header-group.json` | 从 5 个 section 减为 **3 个**（announcement-bar / utility-bar / main-nav） |
+| `sections/header-group.json` | 从 5 个 section 减为 **3 个**（announcement-bar / utility-bar / main-nav）；**2026-10-29 再减为 2 个**（announcement-bar / main-nav） |
 | `locales/en.default.schema.json` | 两个设置（`customer_account_menu` / `show_follow_on_shop`）迁到 main-nav；删孤儿键 `general.account`、`general.cart_entry` |
 
 ### 关键实现点
@@ -525,7 +525,7 @@ T-3.2 文档回填 0 人日 ✅ 已完成 2026-10-09
 
 ### 代价（商家可感知）
 
-账户与购物车**不再是可单独拖动的 section**——它们随 main-nav 一起。若商家要调整页头构成，只能增删 announcement-bar / utility-bar / main-nav 三者。
+账户与购物车**不再是可单独拖动的 section**——它们随 main-nav 一起。若商家要调整页头构成，只能增删 announcement-bar / main-nav 两者（utility-bar 已于 2026-10-29 删除）。
 
 ### ⚠️ 遗留待办
 

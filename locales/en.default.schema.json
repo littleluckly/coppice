@@ -46,7 +46,6 @@
     "text": "Text",
     "theme": "Theme",
     "typography": "Typography",
-    "utility_bar": "Utility bar",
     "compare": "Compare",
     "compare_groups_header": "Comparison groups",
     "compare_page_header": "Comparison page"
@@ -395,7 +394,6 @@
     "text": "Text",
     "text_style": "Text style",
     "title_override": "Title override",
-    "utility_item": "Item",
     "view_all_label": "'View all' link label",
     "view_all_link": "'View all' link target",
     "skeleton_background": "Header & footer background",

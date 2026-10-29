@@ -33,7 +33,6 @@
 > - **cart 入口**：本期只做入口 + 服务端计数 + 跳 `routes.cart_url`；**不做抽屉 / 计数联动 / 配置项**（后续单独任务清单）。
 > - **搜索联想**：HTML 片段端点 `/search/suggest` + `section_id`（Section Rendering API），非 `suggest.json`；弹层为 **combobox + listbox**（非模态）。
 > - **移动导航**：与桌面菜单**两套 DOM、互斥渲染**；汉堡抽屉用原生 `<dialog>` + `showModal()`（加 `scroll-lock` 属性锁背景滚动），**不手写焦点陷阱**。
-> - **utility-bar**：本期启用，移动端隐藏。
 > - JS 交互组件一律 **Custom Element** 封装（AGENTS.md §6）。
 
 ```
@@ -49,7 +48,6 @@
 | section | 职责 | blocks | 关键设置 | 数据源 |
 | --- | --- | --- | --- | --- |
 | announcement-bar | 通用物流政策横幅 | 文本块 ×N | 可关闭、链接 | settings |
-| utility-bar | 售后电话/门店自提提示（本期启用，移动端隐藏） | — | 链接 ×N | linklists |
 | main-nav | 三级以内下拉；`Shop by Platform` 指向 battery_platform 自动化集合（§4.3/§6.5） | 菜单项 | 菜单选择、下拉样式 | `linklists.main-menu` |
 | header-search | 预测搜索输入（#16 Search + predictive） | — | 展开样式 | `/search/suggest`（Section Rendering API + `section_id`，返回渲染好的 HTML 片段） |
 | account | `<shopify-account>` 原生组件，**桌面与移动均可见**（#22） | — | 登录态样式 | 平台组件 |

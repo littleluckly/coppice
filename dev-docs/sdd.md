@@ -8,7 +8,7 @@
 | 主市场   | 北美（美/加），货币单位与筛选项文案按北美口径                                                      |
 | 技术基线 | Shopify Online Store 2.0，基于官方 Skeleton Theme                                                  |
 | 配套文件 | `AGENTS.md`、`docs/TASKS.md`、`tools/check-theme-name.sh`                                          |
-| 版本     | v4.16（跨组冲突时商品卡按钮**红闪 + 晃动 0.5s**；Compare 与加购区**作为一组压到卡底**，各卡横向齐平）。前版 v4.15（toast **3 秒自动收起**，悬停/聚焦暂停；布局改 grid：图标·文案·关闭同一行、关闭钉右上角、主操作单独一行居中）。前版 v4.14（冲突提示改为**全局 toast**）。前版 v4.13（**去掉服务端默认对比表**：对比页改为纯 JS 渲染 + 空状态，`compare_default_columns` 设置删除；页头图标改为**无选择时不显示**，首次加入先出现图标再播飞入）。前版 v4.12（允许删到空；对比表加纯 CSS 渐显）。前版 v4.11（移动端底部栏**只留胶囊**；对比表头加**移除该列**按钮）。前版 v4.10（底部对比栏改为**常驻可收起**；移动端入口改放 ☰ 抽屉）。前版 v4.9（超范围商品改为**按需补拉**：Section Rendering API 拉单商品规格，实测通过；§6.2.6 更新 + 新增 §6.2.6a）。前版 v4.8（对比功能实现回填：**探测判断改用 `.title != blank`**（`pages[h]` 对不存在页面返回 truthy 空 drop，见 BUG-047）、补齐**商品数据源 = 集合**（Liquid 无法按 metafield 查商品）、三 section 合并为一个 `compare-page`。前版：v4.7（**A4 实测完成**：`pages[handle]` 单次 2.6 μs ⇒ 确认走 `pages` 探测，无需备选；实测方法与踩坑见 `dev-docs/spike-a4.md`。废弃原 B 计划——"存 handle 不查 `pages`"不自洽，不查就无法判断页面存在、退化为 404） |
+| 版本     | v4.17（**删除 `sections/utility-bar.liquid`**：公告栏与导航之间的售后/自提提示条整条下线，`header-group` 只剩 announcement-bar + main-nav）。前版：v4.16（跨组冲突时商品卡按钮**红闪 + 晃动 0.5s**；Compare 与加购区**作为一组压到卡底**，各卡横向齐平）。前版 v4.15（toast **3 秒自动收起**，悬停/聚焦暂停；布局改 grid：图标·文案·关闭同一行、关闭钉右上角、主操作单独一行居中）。前版 v4.14（冲突提示改为**全局 toast**）。前版 v4.13（**去掉服务端默认对比表**：对比页改为纯 JS 渲染 + 空状态，`compare_default_columns` 设置删除；页头图标改为**无选择时不显示**，首次加入先出现图标再播飞入）。前版 v4.12（允许删到空；对比表加纯 CSS 渐显）。前版 v4.11（移动端底部栏**只留胶囊**；对比表头加**移除该列**按钮）。前版 v4.10（底部对比栏改为**常驻可收起**；移动端入口改放 ☰ 抽屉）。前版 v4.9（超范围商品改为**按需补拉**：Section Rendering API 拉单商品规格，实测通过；§6.2.6 更新 + 新增 §6.2.6a）。前版 v4.8（对比功能实现回填：**探测判断改用 `.title != blank`**（`pages[h]` 对不存在页面返回 truthy 空 drop，见 BUG-047）、补齐**商品数据源 = 集合**（Liquid 无法按 metafield 查商品）、三 section 合并为一个 `compare-page`。前版：v4.7（**A4 实测完成**：`pages[handle]` 单次 2.6 μs ⇒ 确认走 `pages` 探测，无需备选；实测方法与踩坑见 `dev-docs/spike-a4.md`。废弃原 B 计划——"存 handle 不查 `pages`"不自洽，不查就无法判断页面存在、退化为 404） |
 
 ---
 
@@ -200,7 +200,7 @@ Theme Store 对所有 Shopify Partner 开放，**个人身份免费注册即可�
 
 ### 4.2 Section Group 与全局组件
 
-- `sections/header-group.json`：公告栏（物流政策）、utility bar、主导航（含动力平台下拉）、搜索、账户组件 `<shopify-account>`、购物车抽屉入口。
+- `sections/header-group.json`：公告栏（物流政策）、主导航（含动力平台下拉）、搜索、账户组件 `<shopify-account>`、购物车抽屉入口。
 - `sections/footer-group.json`：售后与保修说明、耗材分类入口、newsletter、社交图标、支付图标（`enabled_payment_types`，全彩）。
 - 两个 group 都必须渲染在 section groups 内，让商家可动态增删排序。
 
