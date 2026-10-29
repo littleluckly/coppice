@@ -348,6 +348,7 @@
         规格胶囊（2026-10-29 刘工，参考稿 badges）：不新增字段，由 spec 拼装（拍板 10）——
         切割宽度/导板 · 操作方式 · 排量/功率/电压。原来是「·」拼接成一行灰字，现按参考稿
         拆成独立的浅绿胶囊，每个字段一个 <span>。缺值字段跳过（不留空胶囊）。
+        单位换算仍走 spec-value snippet（AGENTS §4 红线，不在这里碰系数）。
       {%- endcomment -%}
       {%- capture badges -%}
         {%- assign sub_width = product.metafields.spec.cutting_width_mm.value -%}
@@ -367,10 +368,12 @@
 
         {%- if sub_width != blank -%}
           <span class="main-product__badge">
-            {{- sub_width | append: 'mm' -}}
+            {%- render 'spec-value', value: sub_width, unit_type: 'length_mm' -%}
           </span>
         {%- elsif sub_bar != blank -%}
-          <span class="main-product__badge">{{ sub_bar | append: 'mm' }}</span>
+          <span class="main-product__badge">
+            {%- render 'spec-value', value: sub_bar, unit_type: 'length_mm' -%}
+          </span>
         {%- endif -%}
 
         {%- if sub_op != blank and sub_op != 'N/A' -%}
@@ -381,7 +384,9 @@
           {%- if sub_power_unit == 'raw' -%}
             <span class="main-product__badge">{{ sub_power }}</span>
           {%- else -%}
-            <span class="main-product__badge">{{ sub_power }}</span>
+            <span class="main-product__badge">
+              {%- render 'spec-value', value: sub_power, unit_type: sub_power_unit -%}
+            </span>
           {%- endif -%}
         {%- endif -%}
       {%- endcapture -%}
