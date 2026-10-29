@@ -1495,10 +1495,12 @@
     place-items: center;
     width: 32px;
     height: 32px;
-    background-color: var(--color-brand);
-    color: var(--color-background);
+    /* 默认：浅色底 + 品牌绿描边（未加入对比时是「待选」态） */
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+    color: var(--color-brand);
+    border: 1.5px solid color-mix(in srgb, var(--color-brand) 55%, transparent);
     border-radius: 6px;
-    transition: transform 0.2s ease, background-color 0.2s ease;
+    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
   }
   .product-compare__box svg {
     width: 16px;
@@ -1507,17 +1509,17 @@
   /* hover：图标盒微放大 + 微旋转，文字下划线（参考稿） */
   .product-compare__button:hover .product-compare__box {
     transform: scale(1.05) rotate(5deg);
-    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand);
   }
   .product-compare__button:hover .product-compare__label {
     text-decoration: underline;
     text-underline-offset: 4px;
   }
-  /* 选中态（aria-pressed=true）：图标盒反转成白底绿边，文字转深绿 */
+  /* 选中态（aria-pressed=true）：图标盒转深色实心，文字转深绿 */
   .product-compare__button[aria-pressed='true'] .product-compare__box {
-    background-color: var(--color-background);
-    color: var(--color-brand);
-    border: 1.5px solid var(--color-brand);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    border-color: var(--color-brand);
   }
   .product-compare__button[aria-pressed='true'] {
     color: var(--color-brand-accent);
