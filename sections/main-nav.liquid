@@ -1578,7 +1578,13 @@
   .main-nav__desktop {
     position: relative;
     background-color: var(--color-header-surface);
-    box-shadow: var(--header-shadow);
+    /* 阴影默认不给（2026-10-29 刘工）：页面停在顶部时，页头与内容区之间应当
+       毫无分界。只在**真的吸住**之后才由 <nav-sticky> 往包裹层打 is-stuck
+       浮起来（规则见下方 min-width: 990px 断点，与 sticky 同处一段）。
+       注意移动端行不受此约束——移动端没有 sticky，也就谈不上「触发」，
+       那一行的阴影保持常驻，否则手机上页头与内容区之间完全没有分界。 */
+    box-shadow: none;
+    transition: box-shadow 0.22s ease;
   }
 
   /* 移动端抽屉相关：桌面隐藏汉堡与 dialog */
