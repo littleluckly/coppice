@@ -9,7 +9,7 @@
  *   一条公告栏再消失（CLS + 视觉闪跳）。这里的做法是：
  *   1) Liquid 照常输出 <aside>（无 JS 时仍可读）；
  *   2) <aside> 之前一段内联同步脚本在**首次绘制前**读 sessionStorage，
- *      命中关闭态就把 section 包裹层 style.display 设为 none（BUG-046）；
+ *      命中关闭态就把 section 包裹层 style.display 设为 none（BUG-056）；
  *   3) 本文件（defer）只负责后续交互与"同一次访问里点关闭"这条路径。
  *   sessionStorage 读两次是有意的：内联那段解决"加载时闪"，这里解决
  *   "编辑器重新渲染 section / 脚本晚到"时状态补齐，两者都幂等。
