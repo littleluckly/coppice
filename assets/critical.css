@@ -150,6 +150,13 @@ body {
   --color-background: var(--color-skeleton-background);
   --color-foreground: var(--color-skeleton-foreground);
   --color-brand: var(--color-skeleton-accent);
+  /* 次级文字色必须在这里**重算一遍**（2026-10-29）：自定义属性值里的 var()
+     在「声明它的元素」（:root）上就解析完了，--color-foreground-muted 里烤进去的
+     是 :root 的前景色。只翻 --color-foreground 不会带着它一起变——深色骨架下
+     它仍是 #333@70%，压在 #0F1012 上等于看不见（无头 Chrome 实测：在翻过的子树里
+     继承值依然是 color(srgb 0.2 0.2 0.2 / 0.7)）。重算后页头组内的 muted 文字
+     （搜索抽屉里的划线价等）才跟得上骨架色。 */
+  --color-foreground-muted: color-mix(in srgb, var(--color-skeleton-foreground) 70%, transparent);
 }
 
 /** Section layout utilities */

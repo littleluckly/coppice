@@ -1185,8 +1185,10 @@
   .main-product__price-save {
     padding: 3px 10px;
     border-radius: 999px;
-    background-color: #ffebeb;
-    color: #d32f2f;
+    /* 折扣色走语义令牌（2026-10-29）：与搜索联想列表共用同一组值，
+       顺带修掉原 #d32f2f/#ffebeb 只有 4.35:1 的对比度不足（现 4.91:1） */
+    background-color: var(--color-sale-surface);
+    color: var(--color-sale);
     font-size: 0.8rem;
     font-weight: 600;
   }
