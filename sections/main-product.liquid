@@ -106,17 +106,34 @@
                       assign img_priority = 'auto'
                     endif
                   -%}
-                  {{
-                    media
-                    | image_url: width: 1600
-                    | image_tag:
-                      loading: img_loading,
-                      fetchpriority: img_priority,
-                      widths: '400,600,800,1200,1600',
-                      sizes: '(min-width: 1100px) 48vw, 100vw',
-                      class: 'product-gallery__img',
-                      alt: media.alt
-                  }}
+                  {%- comment -%}
+                    2026-10-28：舞台图包进按钮——点击进全屏查看器（灯箱）。
+                    用 <button> 而不是给 img 挂 click：键盘可 Tab 到、Enter 可触发，
+                    读屏把它读成"按钮"而不是"图片"（AGENTS §8 只允许原生控件承担交互）。
+                  {%- endcomment -%}
+                  <button
+                    type="button"
+                    class="product-gallery__zoom"
+                    data-gallery-zoom
+                    data-zoom-alt="{{ media.alt | default: product.title | escape }}"
+                    aria-haspopup="dialog"
+                    aria-label="{{ 'products.product.media_expand' | t }}"
+                  >
+                    {{
+                      media
+                      | image_url: width: 1600
+                      | image_tag:
+                        loading: img_loading,
+                        fetchpriority: img_priority,
+                        widths: '400,600,800,1200,1600',
+                        sizes: '(min-width: 1100px) 48vw, 100vw',
+                        class: 'product-gallery__img',
+                        alt: media.alt
+                    }}
+                    <span class="product-gallery__zoom-hint" aria-hidden="true">
+                      {{- 'icon-expand.svg' | inline_asset_content -}}
+                    </span>
+                  </button>
                 {%- when 'video', 'external_video', 'model' -%}
                   {%- comment -%}
                     非图片媒体：先给封面 + 播放/3D 按钮，真正的播放器在首次激活时
@@ -172,7 +189,7 @@
             data-gallery-prev
             aria-label="{{ 'products.product.media_previous' | t }}"
           >
-            {{- 'icon-arrow-left.svg' | inline_asset_content -}}
+            {{- 'icon-chevron-left.svg' | inline_asset_content -}}
           </button>
           <button
             type="button"
