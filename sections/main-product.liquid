@@ -635,11 +635,12 @@
                           {%- comment -%}
                             BUG-054：时间属性名带下划线（pick + 下划线 + up + 下划线 + time），
                             漏掉下划线会静默取到空白、整行不渲染。详见 dev-docs/bugs.md。
+                            BUG-055：pick_up_time 返回的已是完整句子（"Usually ready in 24
+                            hours"，商家可在后台改），不能再套 "Ready in {{ time }}"，
+                            否则重复前缀。直出原文，与 Dawn 一致。
                           {%- endcomment -%}
                           {%- if item.pick_up_time != blank -%}
-                            <span class="pickup__time">
-                              {{- 'products.product.pickup_time' | t: time: item.pick_up_time -}}
-                            </span>
+                            <span class="pickup__time">{{ item.pick_up_time | escape }}</span>
                           {%- endif -%}
                         </li>
                       {%- endif -%}

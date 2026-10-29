@@ -125,7 +125,6 @@
       "warranty_years": "{{ years }}-year warranty",
       "warranty_months": "{{ months }}-month warranty",
       "pickup_heading": "Pickup availability",
-      "pickup_time": "Ready in {{ time }}",
       "pickup_unavailable": "Not available for pickup",
       "pickup_checking": "Checking availability",
       "media_slide": "{{ index }} of {{ total }}",
