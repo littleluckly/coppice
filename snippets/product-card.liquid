@@ -78,55 +78,6 @@
       <a href="{{ product.url }}">{{ product.title | escape }}</a>
     </h3>
 
-    {%- comment -%} 规格横排行：宽 · 排量 · 动力源（缺值跳项，分隔符由 CSS 补） {%- endcomment -%}
-    {%- liquid
-      assign has_specs = false
-      if show_width and product.metafields.spec.cutting_width_mm.value != blank
-        assign has_specs = true
-      endif
-      if show_cc and product.metafields.spec.displacement_cc.value != blank
-        assign has_specs = true
-      endif
-      if show_power and product.metafields.spec.power_source.value != blank
-        assign has_specs = true
-      endif
-      if show_weight and product.metafields.spec.weight_kg.value != blank
-        assign has_specs = true
-      endif
-    -%}
-    {%- if has_specs -%}
-      <ul class="product-card__specs" role="list">
-        {%- if show_width -%}
-          {%- assign width_value = product.metafields.spec.cutting_width_mm.value -%}
-          {%- if width_value != blank -%}
-            <li class="product-card__spec">
-              {%- render 'spec-value', value: width_value, unit_type: 'length_mm', spec_class: 'card' -%}
-            </li>
-          {%- endif -%}
-        {%- endif -%}
-        {%- if show_cc -%}
-          {%- assign cc_value = product.metafields.spec.displacement_cc.value -%}
-          {%- if cc_value != blank -%}
-            <li class="product-card__spec">{{ cc_value }} cc</li>
-          {%- endif -%}
-        {%- endif -%}
-        {%- if show_power -%}
-          {%- assign power_value = product.metafields.spec.power_source.value -%}
-          {%- if power_value != blank -%}
-            <li class="product-card__spec">{{ power_value }}</li>
-          {%- endif -%}
-        {%- endif -%}
-        {%- if show_weight -%}
-          {%- assign weight_value = product.metafields.spec.weight_kg.value -%}
-          {%- if weight_value != blank -%}
-            <li class="product-card__spec">
-              {%- render 'spec-value', value: weight_value, unit_type: 'weight_kg', spec_class: 'card' -%}
-            </li>
-          {%- endif -%}
-        {%- endif -%}
-      </ul>
-    {%- endif -%}
-
     {%- comment -%}
       价格三件套（2026-10-29 刘工：对齐产品详情页）——现价 / 划线原价 / 折扣百分比。
       现价与划线价绑成 .product-card__price-main 一组（nowrap），折扣胶囊作为整体
