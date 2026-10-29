@@ -1205,7 +1205,9 @@
     display: inline-flex;
     align-items: stretch;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
-    border-radius: var(--style-border-radius-inputs);
+    /* 全圆角（2026-10-29 刘工，参考稿）：购买区三个控件统一胶囊形。
+       overflow: hidden 保留——两端按钮的 hover 底色靠它裁进圆角里。 */
+    border-radius: 999px;
     overflow: hidden;
     flex: 0 0 auto;
   }
@@ -1242,7 +1244,8 @@
     min-height: 44px;
     padding: 10px 1.25rem;
     border: 1px solid var(--color-brand);
-    border-radius: var(--style-border-radius-inputs);
+    /* 全圆角胶囊（2026-10-29 刘工），与数量选择器、Buy it now 同一套形状 */
+    border-radius: 999px;
     background-color: var(--color-brand);
     color: var(--color-background);
     font: inherit;
@@ -1273,6 +1276,14 @@
   .product-form__accelerated,
   .product-form__terms {
     margin-block-start: 0.75rem;
+  }
+  /* Buy it now（Shopify 渲染的动态结账按钮）跟随购买区的胶囊形（2026-10-29）。
+     只覆盖 --unbranded：无品牌结账按钮允许主题调样式；
+     Shop Pay 等品牌按钮（--branded）的平台规范禁止改动，保持原样。
+     参考稿里它是白底描边——那是 unbranded 在无品牌态的默认长相，
+     颜色这里不动，只统一形状。 */
+  .product-form__accelerated .shopify-payment-button__button--unbranded {
+    border-radius: 999px;
   }
 
   /* 信任行 / 自提 / 对比 */
