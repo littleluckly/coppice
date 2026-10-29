@@ -173,11 +173,19 @@
                       </span>
                     </button>
                     <template>
+                      {%- comment -%}
+                        自动播放（2026-10-28）：这段 <template> 只在用户点过缩略图 / 箭头
+                        之后才被实例化，属于用户手势触发，浏览器允许带声开播；页面加载时
+                        不实例化，所以不会出现"一进商品页就自己响"。
+                        原生 <video> 由 product-gallery.js 显式调 play()（可捕获拒绝后
+                        降级静音重试）；iframe 没法调 play()，只能把 autoplay 写进 URL
+                        （官方写法：external_video_url: autoplay: 1 | external_video_tag）。
+                      {%- endcomment -%}
                       {%- case media.media_type -%}
                         {%- when 'video' -%}
                           {{ media | video_tag: controls: true, playsinline: true, preload: 'metadata' }}
                         {%- when 'external_video' -%}
-                          {{ media | external_video_tag }}
+                          {{ media | external_video_url: autoplay: 1 | external_video_tag }}
                         {%- when 'model' -%}
                           {{ media | model_viewer_tag }}
                       {%- endcase -%}
@@ -732,23 +740,30 @@
     cursor: pointer;
     position: relative;
   }
+  /* 舞台封面上的媒体类型按钮（2026-10-28 第二轮修订）：原来也是左下角小胶囊，
+     和缩略图角标一样的问题。改成压在封面正中的 64px 圆盘——这是视频封面的
+     通行画法，也把"整张封面就是播放键"这件事说清楚了。
+     底板 82% 而不是纯实底：垫着的封面仍要看得出是这台机器。 */
   .product-gallery__deferred-icon {
     position: absolute;
-    inset-block-end: 1rem;
-    inset-inline-start: 1rem;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    translate: -50% -50%;
     display: grid;
     place-items: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding-inline: 0.75rem;
+    inline-size: 64px;
+    block-size: 64px;
     border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-background) 88%, transparent);
+    background-color: color-mix(in srgb, var(--color-background) 82%, transparent);
     color: var(--color-foreground);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     box-shadow: 0 1px 3px color-mix(in srgb, var(--color-foreground) 22%, transparent);
   }
   .product-gallery__deferred-icon svg {
-    width: 20px;
-    height: 20px;
+    inline-size: 26px;
+    block-size: 26px;
   }
 
   .product-gallery__arrow {
