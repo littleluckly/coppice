@@ -135,8 +135,11 @@ class PredictiveSearch extends HTMLElement {
    * 不另加 role="status" 播报——aria-busy=true 的子树上做礼貌播报会被 AT 延后，等于重复。
    */
   _queueSkeleton() {
-    if (!this._skeletonTemplate || this._skeleton || this._skeletonTimer) return;
+    if (!this._skeletonTemplate || this._skeleton) return;
     if (!this._results.hidden) return;
+
+    // 换请求时重排：上一轮排队的定时器记的是旧 token，留着它会在触发时静默失效
+    if (this._skeletonTimer) clearTimeout(this._skeletonTimer);
 
     const token = this._requestSeq;
     this._skeletonTimer = setTimeout(() => {
