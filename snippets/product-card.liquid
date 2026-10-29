@@ -4,7 +4,7 @@
   输出（视觉基准：效果图-首页 Featured Products 区；标签行基准 2026-10-16 刘工参考图）：
   图 + 收藏心 + 标题 + 规格横排行（宽·排量·动力源）+ 价格三件套（现价 / 划线原价 /
   折扣胶囊 "Save N%"，2026-10-29 对齐产品详情页）+ 星级
-  + 规格标签行（胶囊：电池电压·切割宽·操作方式·动力源）+ Compare。
+  + 规格标签行（胶囊：电池电压·操作方式，只放规格行里没有的信息）+ Compare。
 
   纪律：
   - 参数行逐项判空：缺值跳项，分隔符自动正确（li+li::before），不留空位（SDD §5.7）
@@ -176,9 +176,14 @@
     {%- endif -%}
 
     {%- comment -%} 规格标签行（2026-10-16 刘工参考图）：胶囊标签，纯展示不可点。
-        电池 = platform.battery_platform（'N/A' 跳过）；尺寸 = cutting width（跟
-        show_width 开关、经 spec-value 换算）；操作方式 = spec.drive_type（'N/A' 跳过）；
-        动力源 = spec.power_source（跟 show_power 开关）。缺值跳项，整行可空。 {%- endcomment -%}
+        2026-10-29 去重（刘工拍板方案 A）：胶囊只留**规格行里没有的**信息 ——
+          电池平台 = platform.battery_platform（'N/A' 跳过）
+          操作方式 = spec.drive_type（'N/A' 跳过）
+        切割宽度与动力源原本也在这里，但它们与上方 .product-card__specs 逐字重复
+        （宽度同一个 spec-value、动力源同一个原值），构成同卡重复展示，已移除。
+        代价（按演示店数据量过）：32 个商品里 17 张卡没有胶囊行（6 台主机
+        无电池且无驱动方式 + 11 件配件本就没有这两项）——配件不显示等级是合理的。
+        缺值跳项，整行可空。 {%- endcomment -%}
     {%- liquid
       assign battery_platform = product.metafields.platform.battery_platform.value
       assign drive_type = product.metafields.spec.drive_type.value
@@ -186,13 +191,7 @@
       if battery_platform != blank and battery_platform != 'N/A'
         assign has_tags = true
       endif
-      if show_width and product.metafields.spec.cutting_width_mm.value != blank
-        assign has_tags = true
-      endif
       if drive_type != blank and drive_type != 'N/A'
-        assign has_tags = true
-      endif
-      if show_power and product.metafields.spec.power_source.value != blank
         assign has_tags = true
       endif
     -%}
@@ -201,16 +200,8 @@
         {%- if battery_platform != blank and battery_platform != 'N/A' -%}
           <li class="product-card__tag">{{ battery_platform }}</li>
         {%- endif -%}
-        {%- if show_width and product.metafields.spec.cutting_width_mm.value != blank -%}
-          <li class="product-card__tag">
-            {%- render 'spec-value', value: product.metafields.spec.cutting_width_mm.value, unit_type: 'length_mm', spec_class: 'card' -%}
-          </li>
-        {%- endif -%}
         {%- if drive_type != blank and drive_type != 'N/A' -%}
           <li class="product-card__tag">{{ drive_type }}</li>
-        {%- endif -%}
-        {%- if show_power and product.metafields.spec.power_source.value != blank -%}
-          <li class="product-card__tag">{{ product.metafields.spec.power_source.value }}</li>
         {%- endif -%}
       </ul>
     {%- endif -%}
