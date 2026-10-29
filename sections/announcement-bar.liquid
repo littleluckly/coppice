@@ -5,8 +5,12 @@
   - Dismissal persists in sessionStorage, NOT localStorage: a closed promotional banner
     is a temporary intent, and localStorage would hide the message from returning
     visitors forever even after the merchant changes the copy.
-  - To avoid an empty bar flashing before the script has read storage, the bar renders
-    visible and the script marks it hidden only when dismissal is actually recorded.
+  - 关闭态的判定必须发生在**浏览器首次绘制之前**，否则关闭过的访客每次加载都会
+    看到公告栏亮一下再消失（BUG-046）。曾经的假设「defer 脚本在首屏绘制前执行」
+    是错的：defer 只保证在 DOMContentLoaded 前跑，浏览器可以先绘制已解析部分。
+    现在改为 <aside> 之前的一段内联同步脚本——它执行时 aside 还没解析出来，
+    因此改动落在包裹层 .shopify-section 的内联 style 上（见文件内注释）。
+    未关闭的访客因此不会看到空条：条子始终照常渲染，只有确实已关闭才不绘制。
   - Multiple messages scroll horizontally. Manual controls (prev/next) always work.
     Auto-rotate is a merchant setting (off by default, per Shopify's accessibility
     guidance). When on, it pauses on hover/focus, stops after the visitor takes over
@@ -28,12 +32,43 @@
 -%}
 
 {%- if has_blocks -%}
+  {%- comment -%}
+    防闪（BUG-046）：必须在浏览器首次绘制前决定这次要不要画公告栏。
+    放在 <aside> 之前同步执行 —— 此时 aside 尚未解析，唯一能落状态的地方是
+    Shopify 的 section 包裹层 div.shopify-section。
+    用 style.display 而不是 hidden 属性：critical.css 里 .shopify-section{display:grid}
+    是作者样式，会盖掉 UA 的 [hidden]{display:none}，属性失效但内联样式不会。
+    key 与 <aside data-announcement-key> 同源，均由 Liquid 渲染。
+    无 JS 时本段不执行、公告栏照常显示（设计如此）；编辑器画布里跳过，
+    免得商家自己关过一次就再也看不到它、没法编辑。
+  {%- endcomment -%}
+  {%- if section.settings.dismissible -%}
+    <script>
+      (function () {
+        var script = document.currentScript;
+        if (!script) return;
+        /* 编辑器中恒显示，否则商家被自己的 sessionStorage 挡在外面 */
+        if (window.Shopify && window.Shopify.designMode) return;
+        var closed = false;
+        try {
+          closed = window.sessionStorage.getItem('coppice:announcement:closed:{{ section.id }}') === '1';
+        } catch (error) {
+          closed = false;
+        }
+        if (!closed) return;
+        var host = script.closest('.shopify-section') || script.parentElement;
+        if (host) host.style.display = 'none';
+      })();
+    </script>
+  {%- endif -%}
+
   <aside
     class="announcement-bar full-width"
     role="region"
     aria-label="{{ 'sections.announcement_bar.label' | t }}"
     data-announcement
     data-section-id="{{ section.id }}"
+    data-announcement-key="coppice:announcement:closed:{{ section.id }}"
     data-announcement-autoplay="{{ section.settings.autoplay }}"
     data-announcement-interval="{{ section.settings.autoplay_interval }}"
   >
