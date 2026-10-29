@@ -566,13 +566,8 @@
       {%- endcomment -%}
       {%- for block in section.blocks -%}
         {%- case block.type -%}
-          {%- when 'trust_warranty', 'trust_item' -%}
+          {%- when 'trust_warranty', 'trust_item', 'spec_bullets' -%}
             {%- continue -%}
-
-          {%- when 'spec_bullets' -%}
-            <div class="main-product__block" {{ block.shopify_attributes }}>
-              {% render 'spec-bullets', product: product %}
-            </div>
 
           {%- when 'pickup' -%}
             <div class="main-product__block" data-pickup-block aria-live="polite" {{ block.shopify_attributes }}>
@@ -630,15 +625,33 @@
       {%- endfor -%}
 
       {%- comment -%}
-        信任组容器：有 trust block 才渲染。顶线 + 桌面 2 列网格由
-        .main-product__trust 承载，移动端退回单列。
+        决策参数 + 信任组（2026-10-29 刘工）：spec_bullets 与 trust 项都抽到买盒底部，
+        spec-bullets 在信任组上方，各带顶线分隔（参考稿把决策参数和信任行都放在
+        购买区下半部）。spec_bullets 的 shopify_attributes 只在下面渲染一次
+        （主循环里已 continue 跳过）。
       {%- endcomment -%}
+      {%- assign has_spec = false -%}
       {%- assign has_trust = false -%}
       {%- for block in section.blocks -%}
-        {%- if block.type == 'trust_warranty' or block.type == 'trust_item' -%}
+        {%- if block.type == 'spec_bullets' -%}
+          {%- assign has_spec = true -%}
+        {%- elsif block.type == 'trust_warranty' or block.type == 'trust_item' -%}
           {%- assign has_trust = true -%}
         {%- endif -%}
       {%- endfor -%}
+
+      {%- if has_spec -%}
+        <div class="main-product__specs">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'spec_bullets' -%}
+              <div {{ block.shopify_attributes }}>
+                {% render 'spec-bullets', product: product %}
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
       {%- if has_trust -%}
         <div class="main-product__trust">
           {%- for block in section.blocks -%}
@@ -1503,7 +1516,9 @@
     color: var(--color-brand-accent);
   }
 
-  /* 三条决策参数（spec-bullets snippet 的样式归属） */
+  /* 三条决策参数（spec-bullets snippet 的样式归属）
+     2026-10-29 刘工，改成与信任项一致的样式：图标品牌绿 + hover 缩放旋转，
+     文字 hover 转品牌绿（参考稿 trust-item）。 */
   .spec-bullets {
     display: grid;
     gap: 0.4rem;
@@ -1517,11 +1532,20 @@
     gap: 0.5rem;
     font-size: 0.88rem;
     color: var(--color-foreground-muted);
+    transition: color 0.2s ease;
+  }
+  .spec-bullets__item:hover {
+    color: var(--color-brand);
   }
   .spec-bullets__icon {
     display: grid;
     place-items: center;
     flex: 0 0 auto;
+    color: var(--color-brand);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .spec-bullets__item:hover .spec-bullets__icon {
+    transform: scale(1.25) rotate(5deg);
   }
   .spec-bullets__icon svg {
     width: 18px;
