@@ -557,52 +557,28 @@
         {%- endform -%}
       </product-form>
 
+      {%- comment -%}
+        信任行（2026-10-29 刘工，参考稿 trust-features）：trust_warranty 与 trust_item
+        两类 block 抽出来渲染进同一个网格容器，做成「顶线分隔 + 桌面 2 列」的信任区。
+        其余 block（spec_bullets / pickup / compare）仍在主流程里自由排序。
+
+        代价（有意，说清楚）：trust 类 block 会被「吸」进信任组，不再能和
+        compare / pickup 交错排序——信任项本来就是一个视觉单元，聚组更符合设计意图；
+        组内顺序仍由拖拽决定，Sections Everywhere 的增删不受影响。
+      {%- endcomment -%}
+      {%- assign trust_blocks = section.blocks | where: 'type', 'trust_warranty' -%}
+      {%- assign trust_item_blocks = section.blocks | where: 'type', 'trust_item' -%}
+      {%- assign trust_blocks = trust_blocks | concat: trust_item_blocks -%}
+
       {%- for block in section.blocks -%}
         {%- case block.type -%}
+          {%- when 'trust_warranty', 'trust_item' -%}
+            {%- continue -%}
+
           {%- when 'spec_bullets' -%}
             <div class="main-product__block" {{ block.shopify_attributes }}>
               {% render 'spec-bullets', product: product %}
             </div>
-
-          {%- when 'trust_warranty' -%}
-            {%- assign warranty = product.metafields.spec.warranty_months.value -%}
-            {%- if warranty != blank and warranty != 0 -%}
-              <div class="main-product__block" {{ block.shopify_attributes }}>
-                <div class="trust-item">
-                  <span class="trust-item__icon" aria-hidden="true">
-                    {{- 'icon-warranty.svg' | inline_asset_content -}}
-                  </span>
-                  <span class="trust-item__text">
-                    {%- assign warranty_rest = warranty | modulo: 12 -%}
-                    {%- if warranty_rest == 0 -%}
-                      {%- assign warranty_years = warranty | divided_by: 12 -%}
-                      {{- 'products.product.warranty_years' | t: years: warranty_years -}}
-                    {%- else -%}
-                      {{- 'products.product.warranty_months' | t: months: warranty -}}
-                    {%- endif -%}
-                  </span>
-                </div>
-              </div>
-            {%- endif -%}
-
-          {%- when 'trust_item' -%}
-            {%- if block.settings.text != blank -%}
-              <div class="main-product__block" {{ block.shopify_attributes }}>
-                <div class="trust-item">
-                  <span class="trust-item__icon" aria-hidden="true">
-                    {%- case block.settings.icon -%}
-                      {%- when 'shipping' -%}
-                        {{- 'icon-truck.svg' | inline_asset_content -}}
-                      {%- when 'returns' -%}
-                        {{- 'icon-return.svg' | inline_asset_content -}}
-                      {%- else -%}
-                        {{- 'icon-warranty.svg' | inline_asset_content -}}
-                    {%- endcase -%}
-                  </span>
-                  <span class="trust-item__text">{{ block.settings.text | escape }}</span>
-                </div>
-              </div>
-            {%- endif -%}
 
           {%- when 'pickup' -%}
             <div class="main-product__block" data-pickup-block aria-live="polite" {{ block.shopify_attributes }}>
@@ -658,6 +634,52 @@
             </div>
         {%- endcase -%}
       {%- endfor -%}
+
+      {%- comment -%}
+        信任组容器：有 trust block 才渲染。顶线 + 桌面 2 列网格由
+        .main-product__trust 承载，移动端退回单列。
+      {%- endcomment -%}
+      {%- if trust_blocks.size > 0 -%}
+        <div class="main-product__trust">
+          {%- for block in trust_blocks -%}
+            {%- if block.type == 'trust_warranty' -%}
+              {%- assign warranty = product.metafields.spec.warranty_months.value -%}
+              {%- if warranty != blank and warranty != 0 -%}
+                <div class="trust-item" {{ block.shopify_attributes }}>
+                  <span class="trust-item__icon" aria-hidden="true">
+                    {{- 'icon-warranty.svg' | inline_asset_content -}}
+                  </span>
+                  <span class="trust-item__text">
+                    {%- assign warranty_rest = warranty | modulo: 12 -%}
+                    {%- if warranty_rest == 0 -%}
+                      {%- assign warranty_years = warranty | divided_by: 12 -%}
+                      {{- 'products.product.warranty_years' | t: years: warranty_years -}}
+                    {%- else -%}
+                      {{- 'products.product.warranty_months' | t: months: warranty -}}
+                    {%- endif -%}
+                  </span>
+                </div>
+              {%- endif -%}
+            {%- elsif block.type == 'trust_item' -%}
+              {%- if block.settings.text != blank -%}
+                <div class="trust-item" {{ block.shopify_attributes }}>
+                  <span class="trust-item__icon" aria-hidden="true">
+                    {%- case block.settings.icon -%}
+                      {%- when 'shipping' -%}
+                        {{- 'icon-truck.svg' | inline_asset_content -}}
+                      {%- when 'returns' -%}
+                        {{- 'icon-return.svg' | inline_asset_content -}}
+                      {%- else -%}
+                        {{- 'icon-warranty.svg' | inline_asset_content -}}
+                    {%- endcase -%}
+                  </span>
+                  <span class="trust-item__text">{{ block.settings.text | escape }}</span>
+                </div>
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
     </div>
   </div>
 </section>
@@ -1341,6 +1363,17 @@
   /* 信任行 / 自提 / 对比 */
   .main-product__block {
     margin-block-start: 0.75rem;
+  }
+  /* 信任组容器（2026-10-29 刘工，参考稿 trust-features）：顶线分隔 + 桌面 2 列。
+     参考稿是 2×2 固定网格，这里信任项数量可变，所以用 auto-fit 的响应式两列：
+     桌面端每列最小 ~14rem 时自然分两列，窄了退单列。 */
+  .main-product__trust {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.75rem 1rem;
+    margin-block-start: 1.25rem;
+    padding-block-start: 1.25rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
   }
   .trust-item {
     display: flex;
