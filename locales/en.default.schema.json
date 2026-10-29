@@ -326,6 +326,13 @@
       "default_heading": "Overview",
       "image": "Side image"
     },
+    "product_tabs": {
+      "name": "Product tabs",
+      "nav_label": "Tabs accessible name",
+      "overview_label": "Overview tab label",
+      "specs_label": "Specifications tab label",
+      "overview_image": "Overview image"
+    },
     "product_recommendations": {
       "name": "Similar products",
       "default_heading": "Similar mowers",
