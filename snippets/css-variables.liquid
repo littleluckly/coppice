@@ -49,6 +49,22 @@
     --color-skeleton-foreground: {{ settings.skeleton_foreground_color | default: settings.foreground_color }};
     --color-skeleton-accent: {{ settings.skeleton_accent_color | default: settings.brand_color }};
 
+    /* 页头底色（2026-10-28 刘工）：不单开设置项，直接跟着骨架明暗走——
+       浅色骨架 → 取品牌色色相、极高明度的淡绿（非常浅的绿，但一眼能看出是"彩色页头"）；
+       深色骨架 → 纯黑，比内容区再暗一档，靠明度差形成分隔。
+       判据是 color_brightness（0–255），128 为明暗中线；
+       Liquid 的 if 不支持过滤器，所以必须先 assign 再比。
+       两行同写：oklch 相对颜色语法在 Chrome 119 / Safari 16.4 以下整行作废，
+       落到上一行的 color-mix（灰绿，不如下面鲜，但不会变透明——与 --color-brand-light 同一写法）。 */
+    {%- assign header_base = settings.skeleton_background_color | default: settings.background_color -%}
+    {%- assign header_luma = header_base | color_brightness -%}
+    {%- if header_luma > 128 -%}
+      --color-header-surface: color-mix(in srgb, var(--color-skeleton-accent) 8%, var(--color-skeleton-background));
+      --color-header-surface: oklch(from var(--color-skeleton-accent) 0.955 0.024 h);
+    {%- else -%}
+      --color-header-surface: #000000;
+    {%- endif -%}
+
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
   }
 {% endstyle %}

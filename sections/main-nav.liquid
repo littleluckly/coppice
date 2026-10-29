@@ -1570,14 +1570,14 @@
      必须有实底——否则吸顶时页面内容会透过菜单透出来。
      position: relative 是 mega 面板的锚点（整行宽），不能移到 li / ul 上。
 
-     2026-10-28 刘工：页头与下方内容区原本同为纯白，两者之间没有任何分界，
-     产品页上看不出页头在哪结束。行底改成「前景色 3.5% 压在背景上」的浅底 +
-     一道 1px 发丝线 + 极淡的下投影（只向下、快速衰减）。
-     三个值全部从令牌派生，Noir 深色骨架下自动翻转——禁止硬编码 #F7F7F5 之类。
-     移动行（见下方 989px 断点）用同一套值，两端的观感必须一致。 */
+     2026-10-28 刘工：页头与内容区原本同为纯白，两者之间没有任何分界。
+     底色改为 --color-header-surface（snippets/css-variables.liquid 按骨架明暗算出来：
+     浅色 = 品牌色相的极浅绿，深色 = 纯黑），再加一道 1px 发丝线与极淡的下投影。
+     投影只向下、快速衰减，不做四边光晕，避免吸顶时像一张浮起来的卡。
+     移动行（见 989px 断点）必须用同一个变量，两端的观感才会一致。 */
   .main-nav__desktop {
     position: relative;
-    background-color: color-mix(in srgb, var(--color-foreground) 3.5%, var(--color-background));
+    background-color: var(--color-header-surface);
     box-shadow:
       0 1px 0 color-mix(in srgb, var(--color-foreground) 12%, transparent),
       0 6px 14px -8px color-mix(in srgb, var(--color-foreground) 20%, transparent);
