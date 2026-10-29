@@ -47,10 +47,10 @@ class ProductGallery extends HTMLElement {
     if (next) next.addEventListener('click', () => this._step(1), { signal });
 
     this._thumbs.forEach((thumb, i) =>
-      thumb.addEventListener('click', () => this.show(i), { signal })
+      thumb.addEventListener('click', () => this.show(i, true), { signal })
     );
     this._dots.forEach((dot, i) =>
-      dot.addEventListener('click', () => this.show(i), { signal })
+      dot.addEventListener('click', () => this.show(i, true), { signal })
     );
 
     this.querySelectorAll('[data-gallery-zoom]').forEach((button) =>
@@ -92,10 +92,16 @@ class ProductGallery extends HTMLElement {
     const count = this._slides.length;
     if (count < 2) return;
     const nextIndex = (this._index + delta + count) % count;
-    this.show(nextIndex);
+    this.show(nextIndex, true);
   }
 
-  show(index) {
+  /**
+   * @param {number} index  目标 slide
+   * @param {boolean} play  这一张是用户**显式选的**（缩略图 / 圆点 / 箭头 / 横滑）
+   *                        → 落到视频就直接开播。变体联动与灯箱关闭后的回填不传，
+   *                        它们不是"我要看这个视频"的意图，停在封面等用户点播放。
+   */
+  show(index, play = false) {
     if (index < 0 || index >= this._slides.length) return;
     this._index = index;
 
@@ -105,7 +111,9 @@ class ProductGallery extends HTMLElement {
       // 用 hidden 而非 display:none 内联样式：读屏与焦点顺序一起走
       if (active) {
         slide.removeAttribute('hidden');
-        this._activateDeferred(slide.querySelector('[data-deferred-media]'));
+        const holder = slide.querySelector('[data-deferred-media]');
+        this._activateDeferred(holder);
+        if (play) this._playMedia(holder);
       } else {
         slide.setAttribute('hidden', '');
         // 离场即暂停正在播放的媒体，避免多帧同时播放（官方 UX 要求）
