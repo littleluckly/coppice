@@ -221,12 +221,11 @@
     color: var(--color-foreground-muted);
     line-height: 1.55;
   }
-  /* 规格卡片网格：2 列、max-width 限宽靠左（参考稿 900px），不撑满整页 */
+  /* 规格卡片网格：2 列，占满内容区（不额外限宽，跟随 .product-tabs 的内容宽度） */
   .product-tabs__spec-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
-    max-width: 900px;
   }
   .product-tabs__spec-card {
     display: flex;
