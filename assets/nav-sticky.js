@@ -4,16 +4,18 @@
  * 需求：页头下方的投影只在**真的吸住时**才出现——页面停在顶部时页头与内容区
  * 之间干干净净，往下滚才浮起来。
  *
- * 判据不能写成「滚动了多少像素」：吸顶的触发点取决于页头上方还压着多少东西
- * （公告栏在不在、有没有被关掉），任何固定阈值都会在某种配置下错位。
+ * 为什么不用 IntersectionObserver：实测（2026-10-29，无头 Chrome）Chrome 对
+ * position: sticky 元素的交集计算**不把吸附位移算进去**——吸住后
+ * boundingClientRect.top 已经是 0，但 IO 仍按文档布局位置算交集比例，
+ * 恒等于 1，threshold 永不跨越，回调在初始那次之后再也不来。此路不通。
  *
- * 这里改为观察吸顶块本身：root 顶部收进 1px、threshold 拉到 1，即要求整块
- * **完全可见**才算「未吸住」。吸住那一刻，块顶边正好压在那条 -1px 边界之外，
- * 条件立即不成立——这个判据不需要知道任何初始位置，所以刷新时落在页面中间、
- * 或公告栏后来被关掉，都不会算错。
+ * 所以退回滚动检测，判据只有一条且不需要任何缓存：
+ *   sticky 块的 getBoundingClientRect().top <= 0  ⇒  已经贴住视口顶
+ * 它读的就是视觉位置，天然自适应公告栏高度变化、是否被关闭、刷新时落在页面
+ * 中间等一切情况。为控开销：passive scroll + requestAnimationFrame 合帧，
+ * 且只在状态翻转时写 class。
  *
- * 代价（如实说明）：若吸顶块的高度超过视口，threshold 1 永远不成立，会退化成
- * 恒显示阴影。页头只有一行菜单，不会出现这种情况，故不做兜底。
+ * 移动端（< 990px）没有 sticky，CSS 只在该断点消费 is-stuck，此处不判断断点。
  */
 if (!customElements.get('nav-sticky')) {
   customElements.define(
@@ -22,22 +24,36 @@ if (!customElements.get('nav-sticky')) {
       connectedCallback() {
         // sticky 挂在 Shopify 的 section 包裹层上（schema "class"，见 BUG-032），
         // 本元素是它的后代，状态类也必须打在那个包裹层上。
-        const target = this.closest('.main-nav-section');
-        if (!target) return;
+        this._target = this.closest('.main-nav-section');
+        if (!this._target) return;
 
-        this._observer = new IntersectionObserver(
-          ([entry]) => {
-            target.classList.toggle('is-stuck', !entry.isIntersecting);
-          },
-          { threshold: [1], rootMargin: '-1px 0px 0px 0px' }
-        );
-        this._observer.observe(target);
+        this._ticking = false;
+        this._stuck = false;
+        this._onScroll = () => {
+          if (this._ticking) return;
+          this._ticking = true;
+          requestAnimationFrame(() => {
+            this._ticking = false;
+            this._sync();
+          });
+        };
+        // resize 后视口高度变化不影响判据本身，但页面可能在旋转/缩放后
+        // 已处于另一状态，补一次同步即可。
+        window.addEventListener('scroll', this._onScroll, { passive: true });
+        window.addEventListener('resize', this._onScroll, { passive: true });
+        this._sync();
       }
 
       disconnectedCallback() {
-        if (this._observer) {
-          this._observer.disconnect();
-          this._observer = null;
+        window.removeEventListener('scroll', this._onScroll);
+        window.removeEventListener('resize', this._onScroll);
+      }
+
+      _sync() {
+        const stuck = this._target.getBoundingClientRect().top <= 0.5;
+        if (stuck !== this._stuck) {
+          this._stuck = stuck;
+          this._target.classList.toggle('is-stuck', stuck);
         }
       }
     }
