@@ -1,8 +1,9 @@
 # Coppice 产品 Metafield 速查表
 
-> 来源：`dev-docs/sdd.md` v4.2 §5.2–§5.7 ｜ 整理日期：2026-09-29
-> 共 **23 个字段**（spec 16 + platform 1 + logistics 4 + acc 2），全部为 **Product metafield**。
+> 来源：`dev-docs/sdd.md` v4.2 §5.2–§5.7 ｜ 整理日期：2026-09-29 ｜ 更新：2026-10-29（新增 §六 集合 metafield 5 个）
+> 商品侧 **23 个字段**（spec 16 + platform 1 + logistics 4 + acc 2），全部为 **Product metafield**；§六 另有 **5 个 Collection metafield**。
 > CSV 列头格式：`显示名 (product.metafields.命名空间.key)`；CSV 导入前必须先建 metafield 定义（§5.8）。
+> **定义必须商家手工建**：主题包带不了 metafield 定义（含集合那 5 个），这是装完主题后的第一件事。
 
 ---
 
@@ -156,3 +157,62 @@ Fitment note (product.metafields.acc.fitment_note)
 > **配件 11 款不打折**：`Compare-at price` 留空、`Price` 保持原值（低价商品取整会把 5% 放大成 4%/6%/7%）。
 > 三条断言在 `build_mower_csv.py` 的 `validate()` 里：对比价不得低于现价、回算 MSRP 误差 ≤ $1、配件不得有对比价。
 > 官方模板已入仓：`dev-docs/mower-import/product_template.csv`（脚本默认 `TEMPLATE_PATH`，列名逐字校验常态生效）。
+
+---
+
+## 六、集合 metafield（2026-10-29 新增，命名空间 `custom`）
+
+> 集合页横幅的「每集合专属」通道。**共 5 个字段，全部为 Collection metafield，File > Image / 单行文本。**
+> ⚠️ **主题包带不了 metafield 定义**（平台限制：主题只能用 standard definitions 与资源属性做默认值，`custom.*` 必须在后台手工建）⇒ 装完主题这两个/三个输入框**不存在**，商家必须先按下表建定义。这是本方案唯一的前置配置成本。
+
+| # | 字段 key | 类型 | 控制什么 | 为空时回落 |
+| - | -------- | ---- | -------- | ---------- |
+| 1 | `custom.banner_background` | `file_reference`（File > Image） | 每个集合的横幅底图（风景/场景照） | section 设置 `banner_background_image` → `collection.image` |
+| 2 | `custom.banner_product` | `file_reference`（File > Image） | 每个集合的横幅产品岛（透明底抠图 PNG/WebP） | section 设置 `banner_product_image` → **不渲染岛**（退化为纯风景横幅） |
+| 3 | `custom.banner_highlight_1` | `single_line_text_field` | 左列标题卡下第 1 条亮点 | **不渲染**（无兜底） |
+| 4 | `custom.banner_highlight_2` | `single_line_text_field` | 第 2 条亮点 | 同上 |
+| 5 | `custom.banner_highlight_3` | `single_line_text_field` | 第 3 条亮点 | 同上 |
+
+### 取值链规则（`sections/collection.liquid`）
+
+**图"取第一个非空"**：集合 metafield → section 设置 → 资源自带字段（仅底图有 `collection.image` 兜底）。
+
+**亮点"全空即不渲染"**（2026-10-29 刘工定）：`banner_highlight_1..3` 任意一条有值就按填的渲染，**三条全空则整块不输出**——没有默认文案、没有 block 兜底。
+
+> 这条是刻意的取舍：原先的 `banner_feature` blocks 是模板级、全站集合共用一份，割草机的三条亮点会原样出现在配件页。留它当兜底等于"给了一个错的默认值"，所以 2026-10-29 整组删除（schema / 模板 JSON / locale 同步清干净）。
+> **代价**：装完主题、还没建定义没填值时，集合页标题卡下方是空的。这是预期行为，不是 bug。
+
+**`banner_highlight_*` 的填写格式**：`图标|文案`，图标位填**一个 emoji**，例如
+
+```
+📏|21–42 in Decks
+⚡|Gas or Battery
+🛞|Push to Riding
+```
+
+- 竖线前 = 图标位，渲染进一个白色圆底里（`aria-hidden`，不读屏）。多个 emoji 会挤爆圆，只能一个
+- 竖线后 = 文案（渲染时 `escape`，限宽 `9ch`，建议 ≤18 字符）
+- **不写竖线** = 整条当文案、不渲染圆和图标（合法降级，不是错误）
+- 竖线在但图标位留空 = 同上
+- 允许只填 1 或 2 条（空字段跳过，不留空壳）
+
+> **为什么是 emoji 而不是 SVG 图标集**（2026-10-30 刘工拍板）：曾做过 key → `assets/icon-*.svg` 的双轨映射，最终全部删除，回归 emoji。理由是录入成本——商人要记 key 表还不如直接贴 emoji。代价要认：emoji 是彩色卡通的，与全站 1.5 描边的线性图标不在一个视觉体系里；白色圆底能压住一部分，但压不住色彩。
+> **想改回线性图标**：在 `sections/collection.liquid` 的渲染处按 key 分派 `assets/icon-*.svg`（`inline_asset_content`），那张映射表已随本次改动删除，需要重建。
+
+### 必须知道的三条坑
+
+1. **空值判定不能写 `if array`** —— Liquid 里空数组是 truthy。代码用的是逐条 `!= blank` + `has_mf_highlights` 布尔（同 BUG-047 的 `pages[h]` 教训）。
+2. **`.value` 返回的是 media 对象不是 image** —— 必须 `preview_image` 归一化，否则 `.width` / `.height` / `.alt` 全空、`image_tag` 尺寸失效。只有图（#1/#2）涉及，文本字段不受影响。
+3. **改键名必须同步改代码** —— metafield 键名拼错不会报错，只会静默取空、页面照旧（表现是"填了没反应"）。键名出现在 `sections/collection.liquid` 的取值链注释块里，改一处即改全。
+
+### 演示店清单（4 个集合各填一套）
+
+| 集合 | banner_background | banner_product | highlight_1..3 |
+| ---- | ----------------- | -------------- | -------------- |
+| 割草机（mowers） | 草坪场景 | 割草机抠图 | 待填（品类卖点） |
+| 打草机（trimmers） | 庭院场景 | 打草机抠图 | 待填 |
+| 链锯（chainsaws） | 林地场景 | 链锯抠图 | 待填 |
+| 配件（accessories） | 工具台场景 | 可留空 | 待填（或只填 2 条） |
+
+> **批量录入通道**：商品 CSV 支持 metafield 列，但**集合没有经过实测的原生批量导入**（集合 CSV 是否支持 `collection.metafields.*` 列头待实测）。当前按后台「集合 → 元字段」手工填，4 个集合 × 5 字段 ≈ 20 次录入。
+

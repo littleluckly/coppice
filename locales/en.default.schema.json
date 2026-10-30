@@ -174,11 +174,6 @@
         "banner_background_info": "The landscape or lifestyle photo behind the product. A collection metafield (custom.banner_background) takes priority over this setting; if neither is set, the collection image is used.",
         "banner_product_image": "Banner product cut-out",
         "banner_product_info": "A product image with a transparent background (PNG or WebP) that floats in front of the photo. A collection metafield (custom.banner_product) takes priority over this setting. Leave both empty for a photo-only banner.",
-        "show_banner_badge": "Show banner badge card",
-        "show_banner_badge_info": "Frosted card on the right of the banner. The card also stays hidden when its title is empty.",
-        "banner_badge_eyebrow": "Banner badge label",
-        "banner_badge_title": "Banner badge title",
-        "banner_badge_info": "Small frosted card on the right of the banner. Leave the title empty to hide the card.",
         "show_sort": "Show sort",
         "show_quick_add": "Show quick add on product cards",
         "quick_add_info": "Only single-variant products get an Add to cart button; sold out shows disabled.",
@@ -192,21 +187,8 @@
         "card_specs": "Product card specs"
       },
       "paragraphs": {
-        "banner_images": "The banner is built from two images: a background photo behind, and a transparent product cut-out floating in front of it."
-      },
-      "blocks": {
-        "banner_feature": {
-          "name": "Banner highlight",
-          "settings": {
-            "icon": {
-              "label": "Icon",
-              "info": "A single emoji or symbol, shown in the brand color above the text. Leave empty for text only."
-            },
-            "text": {
-              "label": "Text"
-            }
-          }
-        }
+        "banner_images": "The banner is built from two images: a background photo behind, and a transparent product cut-out floating in front of it.",
+        "banner_highlights": "Highlights under the title come from this collection's metafields custom.banner_highlight_1 to 3, written as icon|text (for example: 🌿|Low emissions). Each collection has its own. Nothing is shown when all three are empty."
       },
       "presets": {
         "default": "Collection"

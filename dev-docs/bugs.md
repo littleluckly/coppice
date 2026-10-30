@@ -431,6 +431,14 @@
 - **修复**：新增语义令牌 `--color-sale` / `--color-sale-surface`（固定值、不跟 preset，理由同 `--color-warning`），取值压到 `#c62828` / `#ffebeb` = **4.91:1**（肉眼几乎无色差）；PDP 与搜索列表共用同一组。Noir 下刻意保持同值：浅粉底 + 深红字在深底上对比更高，跟着翻成深红底反而会糊进背景。
 - **预防**：**新增任何彩色小字（徽标 / 胶囊 / 标签 / 划线价）必须当场算对比度**，别等 Lighthouse 兜底。可执行做法：① 手头常备三行相对亮度脚本（本次用 python 算），落色前把 `fg/bg` 丢进去，结果 <4.5 就换色；② 语义色（降价 / 警告 / 成功）一律进 `css-variables.liquid` 成令牌，section 里只允许 `var(--color-*)`，因此 `grep -rnE "color: *#[0-9a-fA-F]{6}" sections` 的新增命中一律视为缺陷。
 
+### BUG-061 · 集合页横幅两张图可能整条丢失 `alt` 属性（不是 `alt=""`，是压根没有）
+
+- **日期**：2026-10-29 ｜ **状态**：Fixed（做集合 metafield 亮点时排查发现）
+- **现象**：源图没填 alt 时，输出的 `<img>` 连 `alt` 属性都没有。Lighthouse a11y 的 `image-alt` 是"有属性才算过"，缺失直接判失败——空了不算，无属性才算错。
+- **根因**：`image_tag` 对空 alt 的处理与 HTML 直觉相反——**它会把 `alt` 属性整条省掉**，而不是输出 `alt=""`。`hero-slideshow.liquid` 早前踩过并加了 `capture → unless contains ' alt=' → replace` 的兜底，但 `collection.liquid` 是后来（2026-10-20）新写 banner 时没照抄；产品岛的 alt 当时靠 `banner_badge_title` 兜底侥幸有值。
+- **修复**：① 底图改为 capture 后检测，缺 `alt=` 就 `replace: '<img ', '<img alt="" '`（底图是装饰图，空 alt 是正确语义）；② 产品岛 alt 的兜底源 `banner_badge_title` 随毛玻璃小卡一起下线，改用 `collection.title`（每页不同、语义正确，比空 alt 强，也不用商品标题那种同页重复的兜底）。
+- **预防**：**任何 `image_tag` 输出点都必须走 capture+unless 模式**，不能凭"我传了 alt 参数"就放心——传空等于没传。可执行做法：① `grep -rn "image_tag" sections snippets` 逐处确认是否在 `<capture>` 内且带 `contains ' alt='` 检查，新写的一律照抄 `hero-slideshow.liquid` 的形态；② 验收时把图 alt 清空再抓一次 HTML，`grep -o '<img[^>]*>'` 必须每张都有 `alt=`；③ 这条也写进交付文档的 a11y 检查清单。
+
 ## 记录模板（追加新 bug 用）
 
 ```

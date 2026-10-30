@@ -56,6 +56,23 @@
   if banner_image and section.settings.show_banner
     assign has_banner = true
   endif
+  # 亮点行取值链（2026-10-29 刘工拍板：3 个独立集合 metafield 字段）：
+  #   custom.banner_highlight_1..3（单行文本，格式「图标|文案」；不带竖线 → 整条当文案、无图标）。
+  #   三条全空 = 亮点区整个不输出（**没有任何兜底**，2026-10-29 刘工：不要默认值）。
+  #   ⚠️ 必须逐条判 != blank：Liquid 里空数组是 truthy，写 `if arr` 会漏判。
+  #   ⚠️ 拼成数组再 split，只是为了让渲染侧只留一份 <li> 模版（Liquid 没有
+  #      compact，空条目只能在遍历时跳过）。
+  assign mf_h1 = collection.metafields.custom.banner_highlight_1.value | default: '' | strip
+  assign mf_h2 = collection.metafields.custom.banner_highlight_2.value | default: '' | strip
+  assign mf_h3 = collection.metafields.custom.banner_highlight_3.value | default: '' | strip
+  assign mf_highlights = mf_h1 | append: ';;;' | append: mf_h2 | append: ';;;' | append: mf_h3 | split: ';;;'
+  assign has_mf_highlights = false
+  for item in mf_highlights
+    if item != blank
+      assign has_mf_highlights = true
+      break
+    endif
+  endfor
 -%}
 
 <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
@@ -103,15 +120,39 @@
       <div class="collection__left">
         <div class="collection__intro">
           {{ intro_content }}
-          {%- if section.blocks.size > 0 -%}
+          {%- if has_mf_highlights -%}
+            {%- comment -%}
+              亮点只来自集合 metafield（2026-10-29 刘工：全空就不展示，不要默认值）。
+              原先的 banner_feature blocks 已整组删除——它是模板级、全站集合共用一份，
+              割草机的三条亮点会原样出现在配件页；留着当兜底等于"给了个错的默认值"。
+              三条全空 = 这段整个不输出（不留空 <ul>），标题卡自然上收。
+            {%- endcomment -%}
             <ul class="collection__features" role="list">
-              {%- for block in section.blocks -%}
-                {%- if block.type == 'banner_feature' and block.settings.text != blank -%}
-                  <li class="collection__feature" {{ block.shopify_attributes }}>
-                    {%- if block.settings.icon != blank -%}
-                      <span class="collection__feature-icon" aria-hidden="true">{{ block.settings.icon }}</span>
+              {%- for fh in mf_highlights -%}
+                {%- if fh == blank -%}
+                  {%- continue -%}
+                {%- endif -%}
+                {%- comment -%}
+                  「图标|文案」只按**第一根**竖线拆（slice + join 把余下的拼回去）：
+                  商家写「🔋|Runtime up to 60 | 90 min」时后半截不能丢。
+                  没有竖线 = 整条是文案、不渲染图标列；竖线在、图标位空 = 同理。
+                {%- endcomment -%}
+                {%- assign fh_pair = fh | split: '|' -%}
+                {%- if fh_pair.size > 1 -%}
+                  {%- assign fh_icon = fh_pair[0] | strip -%}
+                  {%- assign fh_text = fh_pair | slice: 1, fh_pair.size | join: '|' | strip -%}
+                {%- else -%}
+                  {%- assign fh_icon = '' -%}
+                  {%- assign fh_text = fh | strip -%}
+                {%- endif -%}
+                {%- if fh_text != blank -%}
+                  <li class="collection__feature">
+                    {%- if fh_icon != blank -%}
+                      <span class="collection__feature-badge" aria-hidden="true">
+                        <span class="collection__feature-emoji">{{ fh_icon | escape }}</span>
+                      </span>
                     {%- endif -%}
-                    <span class="collection__feature-text">{{ block.settings.text | escape }}</span>
+                    <span class="collection__feature-text">{{ fh_text | escape }}</span>
                   </li>
                 {%- endif -%}
               {%- endfor -%}
@@ -182,15 +223,17 @@
             assign island = collection.metafields.custom.banner_product.value
             assign island = island.preview_image | default: island
             assign island = island | default: section.settings.banner_product_image
-            assign island_alt = island.alt | default: section.settings.banner_badge_title
-            assign island_alt = island_alt | default: ''
+            assign island_alt = island.alt | default: collection.title
           -%}
           {%- comment -%}
-            横幅四层（2026-10-20，参数 1:1 对齐参考稿，勿改层级）：
+            横幅三层（2026-10-20，参数 1:1 对齐参考稿，勿改层级）：
             ① 风景底图（LCP：eager + fetchpriority high；mask 向左渐显，
                透明处透出页面色）→ ② 异形遮罩（页面色 + 圆弧边界，只压底图、
-               不碰产品岛）→ ③ 产品悬浮岛（alpha 抠图，仅岛图取值链有值时渲染）
-               → ④ 毛玻璃小卡（两个文本设置，标题空则整卡不渲染）。
+               不碰产品岛）→ ③ 产品悬浮岛（alpha 抠图，仅岛图取值链有值时渲染）。
+            ④ 毛玻璃小卡已于 2026-10-29 整块下线（刘工拍板）：它写的是品类专属
+            文案（Popular Choice / Self-Propelled Mowers），却只能是模板级，
+            全站集合共用一份 → 配件页也挂割草机徽标。要么 metafield 化、要么删，
+            选了删：横幅信息由「集合名（h1 已在左列）+ 三条亮点」承担已足够。
           {%- endcomment -%}
           {%- comment -%}
             根节点是 tilt-element（assets/tilt-element.js）：整块横幅 = 触发区
@@ -207,19 +250,31 @@
             data-tilt-scale="1.02"
             data-tilt-perspective="1200"
           >
-            {{
-              banner_image
-              | image_url: width: 2400
-              | image_tag:
-                class: 'collection__banner-bg',
-                widths: '750, 1100, 1500, 2000, 2400',
-                sizes: '(min-width: 990px) 70vw, 100vw',
-                width: banner_image.width,
-                height: banner_image.height,
-                loading: 'eager',
-                fetchpriority: 'high',
-                alt: banner_alt
-            }}
+            {%- comment -%}
+              底图是纯装饰（图里没有文字没说的信息）⇒ alt 恒为空。但 image_tag
+              在 alt 为空时会把 alt 属性整条吞掉（不是输出 alt=""），Lighthouse
+              直接判「image elements do not have [alt] attributes」——所以捕获
+              后补一次。同一写法见 hero-slideshow.liquid。
+            {%- endcomment -%}
+            {%- capture banner_bg_img -%}
+              {{
+                banner_image
+                | image_url: width: 2400
+                | image_tag:
+                  class: 'collection__banner-bg',
+                  widths: '750, 1100, 1500, 2000, 2400',
+                  sizes: '(min-width: 990px) 70vw, 100vw',
+                  width: banner_image.width,
+                  height: banner_image.height,
+                  loading: 'eager',
+                  fetchpriority: 'high',
+                  alt: banner_alt
+              }}
+            {%- endcapture -%}
+            {%- unless banner_bg_img contains ' alt=' -%}
+              {%- assign banner_bg_img = banner_bg_img | replace: '<img ', '<img alt="" ' -%}
+            {%- endunless -%}
+            {{ banner_bg_img }}
             <div class="collection__banner-mask" aria-hidden="true"></div>
             {%- if island -%}
               {{
@@ -234,18 +289,6 @@
                   loading: 'eager',
                   alt: island_alt
               }}
-            {%- endif -%}
-            {%- comment -%}
-              ④ 毛玻璃小卡：两个文本设置 + 一个总开关（2026-10-20 刘工要求可关）。
-              开关关掉则不渲染；开关开着但标题为空时同样不渲染（避免只留一个 eyebrow 空卡）。
-            {%- endcomment -%}
-            {%- if section.settings.show_banner_badge and section.settings.banner_badge_title != blank -%}
-              <div class="collection__banner-badge">
-                {%- if section.settings.banner_badge_eyebrow != blank -%}
-                  <p class="collection__banner-badge-eyebrow">{{ section.settings.banner_badge_eyebrow | escape }}</p>
-                {%- endif -%}
-                <p class="collection__banner-badge-title">{{ section.settings.banner_badge_title | escape }}</p>
-              </div>
             {%- endif -%}
           </tilt-element>
         {%- endif -%}
@@ -488,33 +531,50 @@
      侵入效果消失、h1 折行、亮点竖排（2026-10-20 实渲染抓到）。
      移动端另有 width: 100% 的覆盖，小屏不会溢出。 */
   .collection__intro {
-    width: 560px;
+    width: 570px;
     padding-block-start: 10px;
     margin-block-end: 50px;
   }
-  /* 亮点行（blocks：图标 + 文案，参考稿「Quieter Operation」那一条） */
+  /* 亮点行（2026-10-30 按设计稿改版）：白色圆底 + 线性图标 + 右侧两行深绿文案。
+     参数取自参考稿比例：圆 3.5rem、图标 1.5rem、字 0.95rem/600、圆与文字间距 14px。
+     投影用 brand 的 color-mix 而不是黑——这里没有"压照片"的需求，不必动黑色例外。 */
   .collection__features {
     display: flex;
     flex-wrap: wrap;
-    gap: 30px;
+    gap: 28px 40px;
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 24px 0 0 0;
   }
   .collection__feature {
-    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.95rem;
+    font-weight: 600;
     line-height: 1.3;
-    color: color-mix(in srgb, var(--color-foreground) 85%, transparent);
-  }
-  .collection__feature-icon {
-    display: block;
-    margin-block-end: 5px;
-    font-size: 1.25rem;
     color: var(--color-brand);
+  }
+  .collection__feature-badge {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    inline-size: 3.5rem;
+    block-size: 3.5rem;
+    border-radius: 50%;
+    background-color: var(--color-background);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--color-brand) 8%, transparent);
+    color: var(--color-brand);
+  }
+  /* 圆内图标 = 商家填的 emoji（2026-10-30 刘工定：纯 emoji，不引入 SVG 图标集）。
+     字号按圆直径的 ~44% 取，居中由父级 grid 的 place-items 负责。 */
+  .collection__feature-emoji {
+    font-size: 1.75rem;
+    line-height: 1;
   }
   .collection__feature-text {
     display: block;
-    max-width: 9ch;
+    max-inline-size: 9ch;
   }
   /* 无横幅：标题卡不再越界（没有横幅可压，越界会盖到产品网格上） */
   .collection--no-banner .collection__intro {
@@ -530,12 +590,13 @@
   }
 
   /* ===================================================================
-     横幅四层（参数 1:1 对齐参考稿，勿改层级与取值——2026-10-20 第三轮）
+     横幅三层（参数 1:1 对齐参考稿，勿改层级与取值——2026-10-20 第三轮）
      ① 底图（mask 向左渐显，透明处透出 --collection-surface）
      ② 异形遮罩（页面色 + 圆弧边界；只压底图，不碰产品岛——「光晕只能垫底」
         那条纪律针对的是产品图，这里不适用）
      ③ 产品悬浮岛（alpha 抠图，drop-shadow 是配色纪律的合法例外：永远黑）
-     ④ 毛玻璃小卡（背景色 85% 透明，backdrop-filter 毛玻璃）
+     ④ 毛玻璃小卡 2026-10-29 已整块下线（品类文案不能模板级共用），连同
+        其 CSS 一起删干净，不是 display:none。
      =================================================================== */
   .collection__banner {
     /* 根元素是 tilt-element 自定义元素（默认 display:inline，会塌掉宽高）——
@@ -605,28 +666,6 @@
     .collection__banner-island {
       transition: none;
     }
-  }
-  .collection__banner-badge {
-    position: absolute;
-    top: 45%;
-    right: 5%;
-    z-index: 4;
-    padding: 20px 30px;
-    border-radius: 20px;
-    background-color: color-mix(in srgb, var(--color-background) 85%, transparent);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 30px rgb(0 0 0 / 8%);
-  }
-  .collection__banner-badge-eyebrow {
-    margin-block-end: 5px;
-    font-size: 0.78rem;
-    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
-  }
-  .collection__banner-badge-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    line-height: 1.25;
   }
 
   /* 产品区：与横幅同底色，padding 参考稿 40px */
@@ -1357,6 +1396,28 @@
       max-height: calc(100dvh - var(--facets-sticky-top) - 1.5rem);
       overflow-y: auto;
       overscroll-behavior: contain;
+      /* 卡内滚动条默认隐形：thumb 全透明（透明色不改变占位，布局稳定），
+         悬停卡片或键盘焦点进入筛选控件时浮现（focus-within 兜键盘用户，
+         纯 hover 显隐对 Tab 导航是死路）。占位 10px 仍在，卡片宽度不跳。 */
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+    .facets__form-slot:hover,
+    .facets__form-slot:focus-within {
+      scrollbar-color: color-mix(in srgb, var(--color-foreground) 30%, transparent) transparent;
+    }
+    /* webkit 兜底同逻辑（全局滚动条的标准/私有分工在这里重演一遍） */
+    .facets__form-slot::-webkit-scrollbar-thumb {
+      background-color: transparent;
+    }
+    .facets__form-slot:hover::-webkit-scrollbar-thumb,
+    .facets__form-slot:focus-within::-webkit-scrollbar-thumb {
+      background-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+    }
+    /* 悬停的是 thumb 本身时再加深一档（同全局 55%）；写在最后，
+       同特异性下覆盖上面的容器悬停规则 */
+    .facets__form-slot::-webkit-scrollbar-thumb:hover {
+      background-color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
     }
     /* 最后一组筛选不再留底边距——卡片内边距已提供呼吸感 */
     .facets__aside .facets__group:last-of-type {
@@ -1412,6 +1473,22 @@
       font-size: clamp(1.75rem, 8vw, 2.25rem);
       letter-spacing: -0.01em;
     }
+    /* 亮点行收圆：390px 下 3.5rem 圆 + 两列文字的条宽 ≈160px，三条放不进 350px，
+       必然 wrap；缩到 3rem、gap 收紧，尽量让它是 2+1 而不是三条各占一行。 */
+    .collection__features {
+      gap: 20px 24px;
+    }
+    .collection__feature {
+      gap: 12px;
+      font-size: 0.875rem;
+    }
+    .collection__feature-badge {
+      inline-size: 3rem;
+      block-size: 3rem;
+    }
+    .collection__feature-emoji {
+      font-size: 1.375rem;
+    }
     .collection__banner {
       height: 500px;
     }
@@ -1428,17 +1505,6 @@
     .collection__banner-island {
       width: 90%;
       left: 50%;
-    }
-    /* 横幅小卡下移贴边：390px 视口下 top:45% + right:5% 会顶到岛的投影上 */
-    .collection__banner-badge {
-      top: auto;
-      bottom: 48px;
-      right: 12px;
-      padding: 14px 18px;
-      border-radius: 14px;
-    }
-    .collection__banner-badge-title {
-      font-size: 0.95rem;
     }
     .collection__content {
       padding: 20px;
@@ -1529,25 +1595,8 @@
       "info": "t:sections.collection.labels.banner_product_info"
     },
     {
-      "type": "checkbox",
-      "id": "show_banner_badge",
-      "label": "t:sections.collection.labels.show_banner_badge",
-      "info": "t:sections.collection.labels.show_banner_badge_info",
-      "default": true
-    },
-    {
-      "type": "text",
-      "id": "banner_badge_eyebrow",
-      "label": "t:sections.collection.labels.banner_badge_eyebrow",
-      "info": "t:sections.collection.labels.banner_badge_info",
-      "default": "Popular Choice"
-    },
-    {
-      "type": "text",
-      "id": "banner_badge_title",
-      "label": "t:sections.collection.labels.banner_badge_title",
-      "info": "t:sections.collection.labels.banner_badge_info",
-      "default": "Self-Propelled Mowers"
+      "type": "paragraph",
+      "content": "t:sections.collection.paragraphs.banner_highlights"
     },
     {
       "type": "range",
@@ -1604,53 +1653,9 @@
       "default": false
     }
   ],
-  "blocks": [
-    {
-      "type": "banner_feature",
-      "name": "t:sections.collection.blocks.banner_feature.name",
-      "settings": [
-        {
-          "type": "text",
-          "id": "icon",
-          "label": "t:sections.collection.blocks.banner_feature.settings.icon.label",
-          "info": "t:sections.collection.blocks.banner_feature.settings.icon.info"
-        },
-        {
-          "type": "text",
-          "id": "text",
-          "label": "t:sections.collection.blocks.banner_feature.settings.text.label",
-          "default": "Quieter Operation"
-        }
-      ]
-    }
-  ],
-  "max_blocks": 4,
   "presets": [
     {
-      "name": "t:sections.collection.presets.default",
-      "blocks": [
-        {
-          "type": "banner_feature",
-          "settings": {
-            "icon": "🔊",
-            "text": "Quieter Operation"
-          }
-        },
-        {
-          "type": "banner_feature",
-          "settings": {
-            "icon": "🍃",
-            "text": "Lower Emissions"
-          }
-        },
-        {
-          "type": "banner_feature",
-          "settings": {
-            "icon": "🔋",
-            "text": "Longer Runtime"
-          }
-        }
-      ]
+      "name": "t:sections.collection.presets.default"
     }
   ]
 }

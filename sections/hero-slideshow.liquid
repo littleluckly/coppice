@@ -197,11 +197,11 @@
             {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
               <div class="hero-slideshow__line" style="--line-index: {{ line_index }};">
                 <div class="hero-slideshow__cta-row">
-                  <a class="hero-slideshow__cta" href="{{ block.settings.button_link }}">
+                  <a class="hero-slideshow__cta btn-solid" href="{{ block.settings.button_link }}">
                     {{ block.settings.button_label | escape }}
                   </a>
                   {%- if block.settings.button_label_2 != blank and block.settings.button_link_2 != blank -%}
-                    <a class="hero-slideshow__cta hero-slideshow__cta--secondary" href="{{ block.settings.button_link_2 }}">
+                    <a class="hero-slideshow__cta btn-solid btn-solid--quiet" href="{{ block.settings.button_link_2 }}">
                       {{ block.settings.button_label_2 | escape }}
                     </a>
                   {%- endif -%}
@@ -444,36 +444,19 @@
     gap: 0.875rem;
     margin-block-start: 1.75rem;
   }
+  /* 主 CTA：形状 / 配色 / 光晕 / 扫光 / 过渡 / reduce 处理全部来自
+     assets/critical.css 的 .btn-solid（2026-10-29 收敛，此前是四份拷贝）。
+     这里只保留 hero 自己的尺寸与排版差异：padding 更大、字号略大、字重 600
+     —— hero 是页面级主行动，比卡内加购按钮重一档是刻意的。 */
   .hero-slideshow__cta {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 44px;
     padding: 0.875rem 1.75rem;
-    background-color: var(--color-brand);
-    /* 用背景色当前景色，而不是硬编码 #fff：Noir preset 下品牌色是亮 lime，
-       白字压亮绿读不出来（对比度不达 AA）；换成背景色后浅色底仍是白字、
-       Noir 下自动变深字，两端都成立。 */
-    color: var(--color-background);
     font-size: 0.9375rem;
     font-weight: 600;
     line-height: 1;
     text-decoration: none;
-    border-radius: var(--style-border-radius-inputs);
-    transition: background-color 0.3s ease;
-  }
-  .hero-slideshow__cta:hover {
-    background-color: var(--color-brand-accent);
-  }
-  .hero-slideshow__cta--secondary {
-    background-color: var(--color-background);
-    color: var(--color-brand);
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
-  }
-  .hero-slideshow__cta--secondary:hover {
-    background-color: var(--color-background);
-    color: var(--color-brand-accent);
-    border-color: var(--color-brand-accent);
   }
   .hero-slideshow__cta:focus-visible {
     outline: 2px solid var(--color-brand-accent);
@@ -760,9 +743,16 @@
       margin-block-start: 1rem;
     }
     /* 按钮压在照片上，必须自己「站得住」：品牌深绿实心一旦压在深绿机身上就没了边界
-       （投影是配色纪律里的合法例外，永远黑）。只加到移动端，桌面按钮在浅底上不需要。 */
-    .hero-slideshow__cta {
-      box-shadow: 0 8px 20px rgb(0 0 0 / 22%);
+       （投影是配色纪律里的合法例外，永远黑）。只加到移动端，桌面按钮在浅底上不需要。
+       2026-10-29：基础样式的品牌绿光晕保留，与这层黑投影叠在一起——
+       整条 box-shadow 会被覆盖，所以这两层必须一起写。 */
+    /* 选择器写成 `.hero-slideshow .hero-slideshow__cta`（0,2,0）而不是单类：
+       box-shadow 要盖掉 critical.css 里 .btn-solid 的那一条，靠源序不可靠
+       （section 样式与 critical.css 的注入先后由平台决定），靠特异性才稳。 */
+    .hero-slideshow .hero-slideshow__cta {
+      box-shadow:
+        0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent),
+        0 8px 20px rgb(0 0 0 / 22%);
     }
     /* 标题改白。这是「压在照片上」的元素 —— 配色纪律里的合法硬编码例外，不跟
        --color-foreground 走：变量在 Noir preset 下是浅灰、浅色 preset 下是深灰，

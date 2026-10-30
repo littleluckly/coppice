@@ -11,40 +11,9 @@
   "sections": {
     "main": {
       "type": "collection",
-      "blocks": {
-        "highlight_aE7iQu": {
-          "type": "banner_feature",
-          "settings": {
-            "icon": "🔊",
-            "text": "Quieter Operation"
-          }
-        },
-        "highlight_Ya9mKd": {
-          "type": "banner_feature",
-          "settings": {
-            "icon": "🍃",
-            "text": "Lower Emissions"
-          }
-        },
-        "highlight_Rt3vNp": {
-          "type": "banner_feature",
-          "settings": {
-            "icon": "🔋",
-            "text": "Longer Runtime"
-          }
-        }
-      },
-      "block_order": [
-        "highlight_aE7iQu",
-        "highlight_Ya9mKd",
-        "highlight_Rt3vNp"
-      ],
       "settings": {
         "show_banner": true,
         "banner_background_image": "shopify://shop_images/banner-bg.png",
-        "show_banner_badge": false,
-        "banner_badge_eyebrow": "Popular Choice",
-        "banner_badge_title": "Self-Propelled Mowers",
         "products_per_page": 8,
         "show_sort": true,
         "show_quick_add": true,

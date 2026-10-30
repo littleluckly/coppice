@@ -261,7 +261,7 @@
           <input type="hidden" name="quantity" value="1">
           <button
             type="submit"
-            class="product-card__add"
+            class="product-card__add btn-solid"
             {% unless product.available %}disabled{% endunless %}
             data-added-label="{{ 'products.product_card.added' | t }}"
             data-added-message="{{ 'products.product_card.added_message' | t: title: product.title }}"

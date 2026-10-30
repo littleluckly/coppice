@@ -68,7 +68,7 @@
                 <input type="hidden" name="quantity" value="1" data-supply-qty data-supply-id="{{ item_variant.id }}">
                 <button
                   type="submit"
-                  class="product-supplies__button"
+                  class="product-supplies__button btn-solid"
                   {% unless item.available %}
                     disabled
                   {% endunless %}
@@ -94,7 +94,7 @@
       <supplies-bundle class="product-supplies__bundle">
         <button
           type="button"
-          class="product-supplies__bundle-button"
+          class="product-supplies__bundle-button btn-solid"
           data-bundle-add
           data-adding-label="{{ 'sections.product_supplies.bundle_adding' | t }}"
           data-added-label="{{ 'sections.product_supplies.bundle_added' | t }}"
@@ -205,58 +205,14 @@
     margin-block-start: auto;
     padding-block-start: 0.5rem;
   }
+  /* 形状 / 配色 / 光晕 / 扫光 / 过渡 / 禁用态 / data-state 全部收敛到
+     assets/critical.css 的 .btn-solid（2026-10-29）；这里只留尺寸差异 */
   .product-supplies__button {
     width: auto;
-    min-height: 44px;
     padding: 8px 1.5rem;
-    border: 1px solid var(--color-brand);
-    /* 全圆角胶囊 + 扫光 + 光晕，与主产品区加购按钮同款（2026-10-29 刘工统一） */
-    border-radius: 999px;
-    background-color: var(--color-brand);
-    color: var(--color-background);
     font: inherit;
     font-size: 0.85rem;
     font-weight: 500;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);
-    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
-  }
-  .product-supplies__button::before {
-    content: '';
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: -100%;
-    inline-size: 100%;
-    block-size: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      color-mix(in srgb, var(--color-background) 26%, transparent),
-      transparent
-    );
-    transition: inset-inline-start 0.6s ease;
-    pointer-events: none;
-  }
-  .product-supplies__button:hover:not(:disabled)::before {
-    inset-inline-start: 100%;
-  }
-  .product-supplies__button:hover:not(:disabled) {
-    background-color: var(--color-brand-accent);
-    border-color: var(--color-brand-accent);
-    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 30%, transparent);
-  }
-  .product-supplies__button:disabled {
-    border-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
-    background-color: transparent;
-    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
-    cursor: not-allowed;
-  }
-  .product-supplies__button[data-state='added'] {
-    background-color: var(--color-brand-accent);
-    border-color: var(--color-brand-accent);
-    color: var(--color-background);
   }
   .product-supplies__bundle {
     display: flex;
@@ -265,20 +221,12 @@
     gap: 0.75rem;
     margin-block-start: 1rem;
   }
+  /* 套装按钮原来漏了胶囊化与光晕（border-radius 还是输入框圆角），
+     收敛时一并跟上 .btn-solid */
   .product-supplies__bundle-button {
-    min-height: 44px;
     padding: 10px 1.25rem;
-    border: 1px solid var(--color-brand);
-    border-radius: var(--style-border-radius-inputs);
-    background-color: var(--color-brand);
-    color: var(--color-background);
     font: inherit;
     font-weight: 500;
-    cursor: pointer;
-  }
-  .product-supplies__bundle-button[data-state='added'] {
-    background-color: var(--color-brand-accent);
-    border-color: var(--color-brand-accent);
   }
   .product-supplies__status {
     margin: 0;
