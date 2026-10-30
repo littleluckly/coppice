@@ -523,7 +523,7 @@
 
             <button
               type="submit"
-              class="product-form__submit"
+              class="product-form__submit btn-solid"
               data-add-button
               data-added-label="{{ 'products.product.added' | t }}"
               data-added-message="{{ 'products.product.added_message' | t: title: product.title }}"
@@ -1297,63 +1297,13 @@
     appearance: none;
     margin: 0;
   }
+  /* 形状 / 配色 / 光晕 / 扫光 / 过渡 / 禁用态 / data-state 全部收敛到
+     assets/critical.css 的 .btn-solid（2026-10-29）；这里只留工具栏布局差异 */
   .product-form__submit {
     flex: 1 1 auto;
-    min-height: 44px;
     padding: 10px 1.25rem;
-    border: 1px solid var(--color-brand);
-    /* 全圆角胶囊（2026-10-29 刘工），与数量选择器、Buy it now 同一套形状 */
-    border-radius: 999px;
-    background-color: var(--color-brand);
-    color: var(--color-background);
     font: inherit;
     font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
-    /* 扫光层要压在按钮文字上方，同时裁掉移出按钮的渐变条（参考稿） */
-    position: relative;
-    overflow: hidden;
-    /* 常驻光晕（2026-10-29 刘工，参考稿 btn-primary box-shadow）：
-       品牌绿投影，hover 时加深扩散。用 color-mix 不硬编码色值。 */
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);
-  }
-  /* 扫光（2026-10-29 刘工，参考稿 btn-primary::before）：hover 时一条高光
-     从左扫到右。纯 hover 触发、不循环，prefers-reduced-motion 下由下面
-     的媒体查询整体关掉 transition，渐变条不再扫，只剩即时反馈。 */
-  .product-form__submit::before {
-    content: '';
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: -100%;
-    inline-size: 100%;
-    block-size: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      color-mix(in srgb, var(--color-background) 26%, transparent),
-      transparent
-    );
-    transition: inset-inline-start 0.6s ease;
-    pointer-events: none;
-  }
-  .product-form__submit:hover:not(:disabled)::before {
-    inset-inline-start: 100%;
-  }
-  .product-form__submit:hover:not(:disabled) {
-    background-color: var(--color-brand-accent);
-    border-color: var(--color-brand-accent);
-    /* hover 光晕加深扩散（参考稿 btn-primary:hover） */
-    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 30%, transparent);
-  }
-  .product-form__submit:disabled {
-    border-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
-    background-color: transparent;
-    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
-    cursor: not-allowed;
-  }
-  .product-form__submit[data-state='added'] {
-    background-color: var(--color-brand-accent);
-    border-color: var(--color-brand-accent);
   }
   .product-form__status {
     margin: 0.5rem 0 0;
