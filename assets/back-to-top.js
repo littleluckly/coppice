@@ -28,7 +28,6 @@ class BackToTop extends HTMLElement {
     this.controller = new AbortController();
     const { signal } = this.controller;
 
-    this.button = button;
     window.addEventListener('scroll', () => this.requestSync(), { passive: true, signal });
     window.addEventListener('resize', () => this.requestSync(), { passive: true, signal });
     button.addEventListener('click', () => this.scrollToTop(), { signal });
