@@ -444,12 +444,18 @@
     gap: 0.875rem;
     margin-block-start: 1.75rem;
   }
+  /* 主 CTA：与产品卡加购按钮（.product-card__add）和产品页加购（.product-form__submit）
+     同一套处理（2026-10-29 刘工：首页 hero 按钮要跟加购按钮一样的效果）——
+     全圆角胶囊 + 常驻品牌绿光晕 + hover 加深扩散 + 从左到右扫光。
+     三处写法刻意一致，改一处记得同步另两处（未来可抽成共享类）。 */
   .hero-slideshow__cta {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 44px;
     padding: 0.875rem 1.75rem;
+    border: 1px solid var(--color-brand);
+    border-radius: 999px;
     background-color: var(--color-brand);
     /* 用背景色当前景色，而不是硬编码 #fff：Noir preset 下品牌色是亮 lime，
        白字压亮绿读不出来（对比度不达 AA）；换成背景色后浅色底仍是白字、
@@ -459,25 +465,72 @@
     font-weight: 600;
     line-height: 1;
     text-decoration: none;
-    border-radius: var(--style-border-radius-inputs);
-    transition: background-color 0.3s ease;
+    /* 扫光层要裁在按钮内 + 压住文字层级 */
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.2s ease;
+  }
+  /* 扫光：hover 时一条高光从左扫到右，与加购按钮同层同节奏（0.6s ease） */
+  .hero-slideshow__cta::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: -100%;
+    inline-size: 100%;
+    block-size: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-background) 26%, transparent),
+      transparent
+    );
+    transition: inset-inline-start 0.6s ease;
+    pointer-events: none;
+  }
+  .hero-slideshow__cta:hover::before {
+    inset-inline-start: 100%;
   }
   .hero-slideshow__cta:hover {
     background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 30%, transparent);
   }
+  /* 次级 CTA：形状跟上（同为胶囊），配色保持安静。
+     扫光给它换成品牌色淡染 —— 白底按钮上扫一条"背景色"等于什么都没发生。 */
   .hero-slideshow__cta--secondary {
     background-color: var(--color-background);
     color: var(--color-brand);
     border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    box-shadow: none;
+  }
+  .hero-slideshow__cta--secondary::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-brand) 10%, transparent),
+      transparent
+    );
   }
   .hero-slideshow__cta--secondary:hover {
     background-color: var(--color-background);
     color: var(--color-brand-accent);
     border-color: var(--color-brand-accent);
+    box-shadow: none;
   }
   .hero-slideshow__cta:focus-visible {
     outline: 2px solid var(--color-brand-accent);
     outline-offset: 2px;
+  }
+  /* 无障碍：扫光是纯装饰过渡，reduce 下直接关掉（只保留即时颜色反馈） */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-slideshow__cta,
+    .hero-slideshow__cta::before {
+      transition: none;
+    }
   }
 
   /* ===== 切换控件：去容器的极简指示器 =====
@@ -760,9 +813,13 @@
       margin-block-start: 1rem;
     }
     /* 按钮压在照片上，必须自己「站得住」：品牌深绿实心一旦压在深绿机身上就没了边界
-       （投影是配色纪律里的合法例外，永远黑）。只加到移动端，桌面按钮在浅底上不需要。 */
+       （投影是配色纪律里的合法例外，永远黑）。只加到移动端，桌面按钮在浅底上不需要。
+       2026-10-29：基础样式的品牌绿光晕保留，与这层黑投影叠在一起——
+       整条 box-shadow 会被覆盖，所以这两层必须一起写。 */
     .hero-slideshow__cta {
-      box-shadow: 0 8px 20px rgb(0 0 0 / 22%);
+      box-shadow:
+        0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent),
+        0 8px 20px rgb(0 0 0 / 22%);
     }
     /* 标题改白。这是「压在照片上」的元素 —— 配色纪律里的合法硬编码例外，不跟
        --color-foreground 走：变量在 Noir preset 下是浅灰、浅色 preset 下是深灰，
