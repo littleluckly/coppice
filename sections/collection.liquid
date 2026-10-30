@@ -56,6 +56,23 @@
   if banner_image and section.settings.show_banner
     assign has_banner = true
   endif
+  # 亮点行取值链（2026-10-29 刘工拍板：3 个独立集合 metafield 字段）：
+  #   custom.banner_highlight_1..3（单行文本，格式「图标|文案」；不带竖线 → 整条当文案、无图标）。
+  #   任意一条有值即完全接管，三条全空才回落 section blocks（preset 里那三条通用亮点）。
+  #   ⚠️ 必须逐条判 != blank：Liquid 里空数组是 truthy，写 `if arr` 会漏判。
+  #   ⚠️ 拼成数组再 split，只是为了让渲染侧只留一份 <li> 模版（Liquid 没有
+  #      compact，空条目只能在遍历时跳过）。
+  assign mf_h1 = collection.metafields.custom.banner_highlight_1.value | default: '' | strip
+  assign mf_h2 = collection.metafields.custom.banner_highlight_2.value | default: '' | strip
+  assign mf_h3 = collection.metafields.custom.banner_highlight_3.value | default: '' | strip
+  assign mf_highlights = mf_h1 | append: ';;;' | append: mf_h2 | append: ';;;' | append: mf_h3 | split: ';;;'
+  assign has_mf_highlights = false
+  for item in mf_highlights
+    if item != blank
+      assign has_mf_highlights = true
+      break
+    endif
+  endfor
 -%}
 
 <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
@@ -103,7 +120,42 @@
       <div class="collection__left">
         <div class="collection__intro">
           {{ intro_content }}
-          {%- if section.blocks.size > 0 -%}
+          {%- if has_mf_highlights -%}
+            {%- comment -%}
+              集合 metafield 接管（2026-10-29）：只要有一条有值就完全替代 blocks。
+              两套并存会让「改了 block 却没反应」变成解不开的谜——宁可一刀切，
+              唯一的例外是三条全空（新装主题 / 没建定义的商家）才看 blocks。
+              为什么不能只靠 blocks：blocks 存在模板 JSON 里，全站集合共用一份，
+              割草机的三条亮点会原样出现在配件页。
+            {%- endcomment -%}
+            <ul class="collection__features" role="list">
+              {%- for fh in mf_highlights -%}
+                {%- if fh == blank -%}
+                  {%- continue -%}
+                {%- endif -%}
+                {%- comment -%}
+                  「图标|文案」按竖线拆。没有竖线 = 整条是文案、不渲染图标列；
+                  竖线在、图标位留空 = 同理。这样商家写最省事的纯文案也不会出错。
+                {%- endcomment -%}
+                {%- assign fh_pair = fh | split: '|' -%}
+                {%- if fh_pair.size > 1 -%}
+                  {%- assign fh_icon = fh_pair[0] | strip -%}
+                  {%- assign fh_text = fh_pair[1] | strip -%}
+                {%- else -%}
+                  {%- assign fh_icon = '' -%}
+                  {%- assign fh_text = fh | strip -%}
+                {%- endif -%}
+                {%- if fh_text != blank -%}
+                  <li class="collection__feature">
+                    {%- if fh_icon != blank -%}
+                      <span class="collection__feature-icon" aria-hidden="true">{{ fh_icon | escape }}</span>
+                    {%- endif -%}
+                    <span class="collection__feature-text">{{ fh_text | escape }}</span>
+                  </li>
+                {%- endif -%}
+              {%- endfor -%}
+            </ul>
+          {%- elsif section.blocks.size > 0 -%}
             <ul class="collection__features" role="list">
               {%- for block in section.blocks -%}
                 {%- if block.type == 'banner_feature' and block.settings.text != blank -%}
@@ -182,8 +234,7 @@
             assign island = collection.metafields.custom.banner_product.value
             assign island = island.preview_image | default: island
             assign island = island | default: section.settings.banner_product_image
-            assign island_alt = island.alt | default: section.settings.banner_badge_title
-            assign island_alt = island_alt | default: ''
+            assign island_alt = island.alt | default: collection.title
           -%}
           {%- comment -%}
             横幅四层（2026-10-20，参数 1:1 对齐参考稿，勿改层级）：
