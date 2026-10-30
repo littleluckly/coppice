@@ -389,8 +389,10 @@ body {
  *   <button class="btn-solid product-form__submit">Add to cart</button>
  *   <a class="btn-solid btn-solid--quiet hero-slideshow__cta">Learn more</a>
  *
- * ⚠️ 本文件先于 section 的 {% stylesheet %} 产物注入。局部类若要改颜色，
- * 必须靠更高特异性（.a.b）而不是靠源序；纯尺寸差异不受影响。
+ * ⚠️ 覆盖规则：局部类要改这里定义的东西（颜色 / 阴影），**别赌注入顺序**——
+ * section 的 {% stylesheet %} 产物与 critical.css 谁先到由平台决定。
+ * 用更高特异性（`.hero-slideshow .hero-slideshow__cta`，0,2,0）写覆盖，
+ * 或者把变体也放进本文件（同文件内靠源序就够，如 .btn-solid--quiet）。
  */
 .btn-solid {
   position: relative;

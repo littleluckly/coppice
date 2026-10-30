@@ -746,7 +746,10 @@
        （投影是配色纪律里的合法例外，永远黑）。只加到移动端，桌面按钮在浅底上不需要。
        2026-10-29：基础样式的品牌绿光晕保留，与这层黑投影叠在一起——
        整条 box-shadow 会被覆盖，所以这两层必须一起写。 */
-    .hero-slideshow__cta {
+    /* 选择器写成 `.hero-slideshow .hero-slideshow__cta`（0,2,0）而不是单类：
+       box-shadow 要盖掉 critical.css 里 .btn-solid 的那一条，靠源序不可靠
+       （section 样式与 critical.css 的注入先后由平台决定），靠特异性才稳。 */
+    .hero-slideshow .hero-slideshow__cta {
       box-shadow:
         0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent),
         0 8px 20px rgb(0 0 0 / 22%);
