@@ -70,6 +70,12 @@ class BackToTop extends HTMLElement {
 
     window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'auto' : 'smooth' });
 
+    /* 下一帧再对一次状态：reduce 下是瞬时归位，这一帧 scrollY 已经是 0，按钮当场收起；
+       平滑滚动时这一帧才刚起步、仍是"在页尾"，按钮留在原地，后续 scroll 事件接手。
+       不这么做就得赌"归位一定伴随 scroll 事件"——瞬时跳转在部分实现里只补发一次事件，
+       漏掉就留下一个已经没用的浮层。 */
+    requestAnimationFrame(() => this.sync());
+
     const target =
       document.querySelector('.main-nav__logo') || document.getElementById('MainContent');
     if (!target) return;
