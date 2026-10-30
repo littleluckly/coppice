@@ -1396,6 +1396,28 @@
       max-height: calc(100dvh - var(--facets-sticky-top) - 1.5rem);
       overflow-y: auto;
       overscroll-behavior: contain;
+      /* 卡内滚动条默认隐形：thumb 全透明（透明色不改变占位，布局稳定），
+         悬停卡片或键盘焦点进入筛选控件时浮现（focus-within 兜键盘用户，
+         纯 hover 显隐对 Tab 导航是死路）。占位 10px 仍在，卡片宽度不跳。 */
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+    .facets__form-slot:hover,
+    .facets__form-slot:focus-within {
+      scrollbar-color: color-mix(in srgb, var(--color-foreground) 30%, transparent) transparent;
+    }
+    /* webkit 兜底同逻辑（全局滚动条的标准/私有分工在这里重演一遍） */
+    .facets__form-slot::-webkit-scrollbar-thumb {
+      background-color: transparent;
+    }
+    .facets__form-slot:hover::-webkit-scrollbar-thumb,
+    .facets__form-slot:focus-within::-webkit-scrollbar-thumb {
+      background-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+    }
+    /* 悬停的是 thumb 本身时再加深一档（同全局 55%）；写在最后，
+       同特异性下覆盖上面的容器悬停规则 */
+    .facets__form-slot::-webkit-scrollbar-thumb:hover {
+      background-color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
     }
     /* 最后一组筛选不再留底边距——卡片内边距已提供呼吸感 */
     .facets__aside .facets__group:last-of-type {
