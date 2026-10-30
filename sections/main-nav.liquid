@@ -221,7 +221,6 @@
                       <div class="main-nav__mega-content">
                         {%- for child in link.links -%}
                           {%- liquid
-                            assign child_title = child.title | strip
                             assign mega_collection = blank
                             if child.type == 'collection_link' and child.object != blank
                               assign mega_collection = child.object
