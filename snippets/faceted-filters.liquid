@@ -9,6 +9,10 @@
   - 数据一律来自 filter / filter_value 对象（param_name / value / count / active / url_to_remove），
     主题零筛选逻辑、不发明参数名。
   - 0 值防御：count == 0 且未激活的值不渲染（平台 Empty values=Hide 之外的双保险）。
+  - N/A 防御（2026-10-30 刘工）：label == 'N/A' 且未激活的值不渲染——N/A 是数据口径里
+    「该维度不适用」的合法值（SDD §5.3 值域），平台会把它当真实选项带 count 渲染，
+    但消费者不需要按「不适用」筛选。已激活的 N/A 保留渲染（否则列表里找不到反选入口）。
+    全组可见值为 0 时整组不渲染（避免只剩组标题）。
   - 无 JS：原生 GET 表单 + 应用按钮整页提交，URL 可分享、刷新保留。
 
   @param {object} filters - filter 对象数组：collection.filters 或 search.filters（必填）
