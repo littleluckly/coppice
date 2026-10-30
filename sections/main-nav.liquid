@@ -1349,7 +1349,8 @@
 
   .main-nav__mega-card-link:hover {
     border-color: color-mix(in srgb, var(--color-foreground) 20%, transparent);
-    translate: 0 -2px;
+    /* 上浮量走全站卡签名（2026-10-30）：与商品卡 / 配件卡同一个 -2px */
+    translate: 0 var(--card-hover-lift);
   }
 
   /* 图在卡内上缘，跟随卡圆角内缩 */
@@ -1392,10 +1393,13 @@
      始终取 :root 那份；当前两个 preset 的内容区与骨架同明暗，结果一致。 */
   @media (hover: hover) and (pointer: fine) {
     .main-nav__mega-card-link {
-      transition: border-color 0.15s ease, translate 0.15s ease, box-shadow 0.8s ease;
+      /* 0.8s → 0.2s（2026-10-30）：投影换成全站卡签名后拍子必须同步，
+         否则同一组值在 mega 面板里慢四倍 */
+      transition: border-color 0.15s ease, translate 0.15s ease, box-shadow 0.2s ease;
     }
     .main-nav__mega-card-link:hover {
-      /* 与 product-card:hover 同款（浅底品牌绿低透明投影 / 深底压低绿 + 加深黑层） */
+      /* 与 product-card:hover 同源（--card-hover-shadow / --card-hover-lift，
+         口径见 snippets/css-variables.liquid） */
       box-shadow: var(--card-hover-shadow);
     }
     .main-nav__mega-card-media {
