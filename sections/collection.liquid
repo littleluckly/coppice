@@ -1454,6 +1454,23 @@
       font-size: clamp(1.75rem, 8vw, 2.25rem);
       letter-spacing: -0.01em;
     }
+    /* 亮点行收圆：390px 下 3.5rem 圆 + 两列文字的条宽 ≈160px，三条放不进 350px，
+       必然 wrap；缩到 3rem、gap 收紧，尽量让它是 2+1 而不是三条各占一行。 */
+    .collection__features {
+      gap: 20px 24px;
+    }
+    .collection__feature {
+      gap: 12px;
+      font-size: 0.875rem;
+    }
+    .collection__feature-badge {
+      inline-size: 3rem;
+      block-size: 3rem;
+    }
+    .collection__feature-badge svg {
+      inline-size: 1.375rem;
+      block-size: 1.375rem;
+    }
     .collection__banner {
       height: 500px;
     }
