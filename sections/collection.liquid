@@ -134,13 +134,14 @@
                   {%- continue -%}
                 {%- endif -%}
                 {%- comment -%}
-                  「图标|文案」按竖线拆。没有竖线 = 整条是文案、不渲染图标列；
-                  竖线在、图标位留空 = 同理。这样商家写最省事的纯文案也不会出错。
+                  「图标|文案」只按**第一根**竖线拆（slice + join 把余下的拼回去）：
+                  商家写「🔋|Runtime up to 60 | 90 min」时后半截不能丢。
+                  没有竖线 = 整条是文案、不渲染图标列；竖线在、图标位空 = 同理。
                 {%- endcomment -%}
                 {%- assign fh_pair = fh | split: '|' -%}
                 {%- if fh_pair.size > 1 -%}
                   {%- assign fh_icon = fh_pair[0] | strip -%}
-                  {%- assign fh_text = fh_pair[1] | strip -%}
+                  {%- assign fh_text = fh_pair | slice: 1, fh_pair.size | join: '|' | strip -%}
                 {%- else -%}
                   {%- assign fh_icon = '' -%}
                   {%- assign fh_text = fh | strip -%}
