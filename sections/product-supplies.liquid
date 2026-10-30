@@ -141,14 +141,17 @@
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
     border-radius: calc(var(--style-border-radius-inputs) * 1.5);
     min-inline-size: 0;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: translate 0.2s ease, box-shadow 0.2s ease;
   }
   .product-supplies__item:hover {
-    transform: translateY(-2px);
-    /* 浅绿光晕（2026-10-29 刘工）：与画廊右侧加购按钮同款形态
-       （0 6px 20px / 30%），色相取 --color-brand-light 而非品牌深绿——
-       卡片是浅底，深绿投影会发灰，浅绿才有「被点亮」的通透感。 */
-    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand-light) 30%, transparent);
+    /* 2026-10-30：这套 hover 升格为「全站卡签名」，参数已收敛到
+       snippets/css-variables.liquid（--card-hover-lift / --card-hover-shadow），
+       商品卡与 mega 菜单产品卡同源消费。此处不再持有字面值，改一处即全站同步。
+       原始依据（2026-10-29 刘工）：与画廊右侧加购按钮同款形态（0 6px 20px / 30%），
+       色相取 --color-brand-light 而非品牌深绿——卡片是浅底，深绿投影会发灰，
+       浅绿才有「被点亮」的通透感。 */
+    translate: 0 var(--card-hover-lift);
+    box-shadow: var(--card-hover-shadow);
   }
   .product-supplies__media {
     display: flex;
