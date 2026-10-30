@@ -148,7 +148,9 @@
                 {%- if fh_text != blank -%}
                   <li class="collection__feature">
                     {%- if fh_icon != blank -%}
-                      <span class="collection__feature-icon" aria-hidden="true">{{ fh_icon | escape }}</span>
+                      <span class="collection__feature-badge" aria-hidden="true">
+                        {%- render 'collection-feature-icon', icon: fh_icon -%}
+                      </span>
                     {%- endif -%}
                     <span class="collection__feature-text">{{ fh_text | escape }}</span>
                   </li>
@@ -533,29 +535,49 @@
     padding-block-start: 10px;
     margin-block-end: 50px;
   }
-  /* 亮点行（blocks：图标 + 文案，参考稿「Quieter Operation」那一条） */
+  /* 亮点行（2026-10-30 按设计稿改版）：白色圆底 + 线性图标 + 右侧两行深绿文案。
+     参数取自参考稿比例：圆 3.5rem、图标 1.5rem、字 0.95rem/600、圆与文字间距 14px。
+     投影用 brand 的 color-mix 而不是黑——这里没有"压照片"的需求，不必动黑色例外。 */
   .collection__features {
     display: flex;
     flex-wrap: wrap;
-    gap: 30px;
+    gap: 28px 40px;
     list-style: none;
     padding: 0;
     margin: 0;
   }
   .collection__feature {
-    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.95rem;
+    font-weight: 600;
     line-height: 1.3;
-    color: color-mix(in srgb, var(--color-foreground) 85%, transparent);
-  }
-  .collection__feature-icon {
-    display: block;
-    margin-block-end: 5px;
-    font-size: 1.25rem;
     color: var(--color-brand);
+  }
+  .collection__feature-badge {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    inline-size: 3.5rem;
+    block-size: 3.5rem;
+    border-radius: 50%;
+    background-color: var(--color-background);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--color-brand) 12%, transparent);
+    color: var(--color-brand);
+  }
+  .collection__feature-badge svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+  /* emoji 回退：没有对应 key 时图标位原样显示 emoji，塞进同一个圆里 */
+  .collection__feature-emoji {
+    font-size: 1.375rem;
+    line-height: 1;
   }
   .collection__feature-text {
     display: block;
-    max-width: 9ch;
+    max-inline-size: 9ch;
   }
   /* 无横幅：标题卡不再越界（没有横幅可压，越界会盖到产品网格上） */
   .collection--no-banner .collection__intro {
