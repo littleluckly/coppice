@@ -48,7 +48,17 @@
   endcase
 -%}
 {%- if icon_asset != '' -%}
-  {{- icon_asset | inline_asset_content -}}
+  {%- comment -%}
+    capture 一层再判空：inline_asset_content 的入参是运行时字符串，正常；
+    但资产被删/改名时它会输出空 —— 直接 `{{ ... }}` 的结果就是白圆里什么都没有。
+    所以拿不到内容就回落 emoji，宁可图标风格不统一，也不要一个空圆圈。
+  {%- endcomment -%}
+  {%- capture icon_svg -%}{{ icon_asset | inline_asset_content }}{%- endcapture -%}
+  {%- if icon_svg == blank -%}
+    <span class="collection__feature-emoji">{{ icon | escape }}</span>
+  {%- else -%}
+    {{ icon_svg }}
+  {%- endif -%}
 {%- else -%}
   <span class="collection__feature-emoji">{{ icon | escape }}</span>
 {%- endif -%}
