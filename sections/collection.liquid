@@ -660,28 +660,6 @@
       transition: none;
     }
   }
-  .collection__banner-badge {
-    position: absolute;
-    top: 45%;
-    right: 5%;
-    z-index: 4;
-    padding: 20px 30px;
-    border-radius: 20px;
-    background-color: color-mix(in srgb, var(--color-background) 85%, transparent);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 30px rgb(0 0 0 / 8%);
-  }
-  .collection__banner-badge-eyebrow {
-    margin-block-end: 5px;
-    font-size: 0.78rem;
-    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
-  }
-  .collection__banner-badge-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    line-height: 1.25;
-  }
 
   /* 产品区：与横幅同底色，padding 参考稿 40px */
   .collection__content {
@@ -1483,17 +1461,6 @@
       width: 90%;
       left: 50%;
     }
-    /* 横幅小卡下移贴边：390px 视口下 top:45% + right:5% 会顶到岛的投影上 */
-    .collection__banner-badge {
-      top: auto;
-      bottom: 48px;
-      right: 12px;
-      padding: 14px 18px;
-      border-radius: 14px;
-    }
-    .collection__banner-badge-title {
-      font-size: 0.95rem;
-    }
     .collection__content {
       padding: 20px;
     }
@@ -1583,25 +1550,8 @@
       "info": "t:sections.collection.labels.banner_product_info"
     },
     {
-      "type": "checkbox",
-      "id": "show_banner_badge",
-      "label": "t:sections.collection.labels.show_banner_badge",
-      "info": "t:sections.collection.labels.show_banner_badge_info",
-      "default": true
-    },
-    {
-      "type": "text",
-      "id": "banner_badge_eyebrow",
-      "label": "t:sections.collection.labels.banner_badge_eyebrow",
-      "info": "t:sections.collection.labels.banner_badge_info",
-      "default": "Popular Choice"
-    },
-    {
-      "type": "text",
-      "id": "banner_badge_title",
-      "label": "t:sections.collection.labels.banner_badge_title",
-      "info": "t:sections.collection.labels.banner_badge_info",
-      "default": "Self-Propelled Mowers"
+      "type": "paragraph",
+      "content": "t:sections.collection.paragraphs.banner_highlights"
     },
     {
       "type": "range",
