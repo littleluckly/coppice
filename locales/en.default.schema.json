@@ -188,21 +188,7 @@
       },
       "paragraphs": {
         "banner_images": "The banner is built from two images: a background photo behind, and a transparent product cut-out floating in front of it.",
-        "banner_highlights": "Highlights under the title come from the collection metafields custom.banner_highlight_1 to 3, one per line, written as icon|text (for example: 🌿|Low emissions). They are per collection. The highlight blocks below are only used when all three metafields are empty."
-      },
-      "blocks": {
-        "banner_feature": {
-          "name": "Fallback highlight",
-          "settings": {
-            "icon": {
-              "label": "Icon",
-              "info": "A single emoji or symbol, shown in the brand color above the text. Leave empty for text only."
-            },
-            "text": {
-              "label": "Text"
-            }
-          }
-        }
+        "banner_highlights": "Highlights under the title come from this collection's metafields custom.banner_highlight_1 to 3, written as icon|text (for example: 🌿|Low emissions). Each collection has its own. Nothing is shown when all three are empty."
       },
       "presets": {
         "default": "Collection"
