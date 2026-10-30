@@ -69,6 +69,12 @@
     <script src="{{ 'reveal-on-scroll.js' | asset_url }}" defer></script>
 
     {% comment %}
+      回到顶部按钮（2026-10-30）：全站浮层，行为在脚本里、样式在 critical.css。
+      与底部对比条共用右下角，避让靠 CSS :has()，不靠这里排顺序。
+    {% endcomment %}
+    <script src="{{ 'back-to-top.js' | asset_url }}" defer></script>
+
+    {% comment %}
       Main landmark — the skip link target. The id here and the href in
       snippets/skip-link.liquid must stay in sync.
 

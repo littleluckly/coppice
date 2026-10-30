@@ -492,3 +492,99 @@ body {
     transition: none;
   }
 }
+
+/**
+ * 回到顶部按钮 — 全站浮层（2026-10-30，snippets/back-to-top.liquid + assets/back-to-top.js）
+ *
+ * **为什么放在 critical.css 而不是独立 .css**：默认态就是隐藏（`visibility: hidden`）。
+ * 拆成独立请求时样式晚到，按钮会在页面顶部先闪一下再消失——这种闪烁比省 1 KB 难看得多。
+ *
+ * **与底部对比条的避让**：两者共用右下角，靠 `:has()` 让位，不用 JS 量高度。
+ * 对比条占位高度是确定的（见 assets/compare.css）：
+ *   · 胶囊态（移动端恒为此态 / 桌面收起）= 1rem 底边距 + 44px 胶囊 = 60px
+ *   · 桌面展开整条 = 0.6rem × 2 内边距 + 44px 主按钮 + 1px 上边线 ≈ 64px
+ * 所以按钮只要分别贴到 4.5rem / 4.75rem，两态都留出 ≥ 11px 间隙。
+ * **这两个数值是唯一的耦合点**：对比条改高度时，这里必须跟着改。
+ * 安全区（env）在两侧同时出现，会自动抵消——对比条自身的内边距已经把 Home 指示条
+ * 计入自己的高度，按钮再加一份只影响自己的间距，不会叠出双倍空隙。
+ */
+back-to-top {
+  position: fixed;
+  /* 逻辑属性：RTL 下自动翻到左边，与对比条胶囊同侧（那里是 flex-end） */
+  inset-inline-end: 1rem;
+  inset-block-end: calc(1rem + env(safe-area-inset-bottom));
+  z-index: 39; /* 低于对比条(40)、页头(50)、toast(60)：万一压上，让它们赢 */
+  display: block; /* 自定义元素默认 inline，fixed 定位在 inline 盒上不可靠 */
+}
+
+/* 对比条在场（移动端胶囊 / 桌面收起）→ 让开一个胶囊 */
+html:has(compare-bar:not([hidden])) back-to-top {
+  inset-block-end: calc(4.5rem + env(safe-area-inset-bottom));
+}
+
+/* 桌面展开整条 → 再抬高一点。移动端对比条恒为胶囊，不参与这条 */
+@media (min-width: 768px) {
+  html:has(compare-bar:not([hidden]):not([data-collapsed])) back-to-top {
+    inset-block-end: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}
+
+.back-to-top__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 触摸目标 ≥ 44（AGENTS §8） */
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+  border-radius: 50%;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  /* 与对比条胶囊同一套浮起感：同一屏里两块浮层不该有两种投影语言 */
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--color-foreground) 16%, transparent);
+  cursor: pointer;
+  opacity: 0;
+  /* visibility 而非 display：visibility: hidden 会一并移出 tab 序列，
+     不会留下「看不见却能聚焦」的幽灵焦点；display 则会让过渡失效 */
+  visibility: hidden;
+  translate: 0 8px;
+  transition:
+    opacity 0.25s ease,
+    translate 0.25s ease,
+    /* visibility 是离散过渡：显→隐时它能撑到 0.25s 结束后才翻转，淡出才看得见 */
+    visibility 0.25s,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+back-to-top[data-visible] .back-to-top__button {
+  opacity: 1;
+  visibility: visible;
+  translate: 0 0;
+}
+
+.back-to-top__button svg {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+}
+
+@media (hover: hover) {
+  .back-to-top__button:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 22%, transparent);
+  }
+}
+
+/* reduce：连位移都不注册，只剩即时显隐（按钮本身是功能，不能藏） */
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top__button {
+    transition: none;
+    translate: none;
+  }
+  back-to-top[data-visible] .back-to-top__button {
+    translate: none;
+  }
+}
