@@ -237,11 +237,14 @@
             assign island_alt = island.alt | default: collection.title
           -%}
           {%- comment -%}
-            横幅四层（2026-10-20，参数 1:1 对齐参考稿，勿改层级）：
+            横幅三层（2026-10-20，参数 1:1 对齐参考稿，勿改层级）：
             ① 风景底图（LCP：eager + fetchpriority high；mask 向左渐显，
                透明处透出页面色）→ ② 异形遮罩（页面色 + 圆弧边界，只压底图、
-               不碰产品岛）→ ③ 产品悬浮岛（alpha 抠图，仅岛图取值链有值时渲染）
-               → ④ 毛玻璃小卡（两个文本设置，标题空则整卡不渲染）。
+               不碰产品岛）→ ③ 产品悬浮岛（alpha 抠图，仅岛图取值链有值时渲染）。
+            ④ 毛玻璃小卡已于 2026-10-29 整块下线（刘工拍板）：它写的是品类专属
+            文案（Popular Choice / Self-Propelled Mowers），却只能是模板级，
+            全站集合共用一份 → 配件页也挂割草机徽标。要么 metafield 化、要么删，
+            选了删：横幅信息由「集合名（h1 已在左列）+ 三条亮点」承担已足够。
           {%- endcomment -%}
           {%- comment -%}
             根节点是 tilt-element（assets/tilt-element.js）：整块横幅 = 触发区
@@ -258,19 +261,31 @@
             data-tilt-scale="1.02"
             data-tilt-perspective="1200"
           >
-            {{
-              banner_image
-              | image_url: width: 2400
-              | image_tag:
-                class: 'collection__banner-bg',
-                widths: '750, 1100, 1500, 2000, 2400',
-                sizes: '(min-width: 990px) 70vw, 100vw',
-                width: banner_image.width,
-                height: banner_image.height,
-                loading: 'eager',
-                fetchpriority: 'high',
-                alt: banner_alt
-            }}
+            {%- comment -%}
+              底图是纯装饰（图里没有文字没说的信息）⇒ alt 恒为空。但 image_tag
+              在 alt 为空时会把 alt 属性整条吞掉（不是输出 alt=""），Lighthouse
+              直接判「image elements do not have [alt] attributes」——所以捕获
+              后补一次。同一写法见 hero-slideshow.liquid。
+            {%- endcomment -%}
+            {%- capture banner_bg_img -%}
+              {{
+                banner_image
+                | image_url: width: 2400
+                | image_tag:
+                  class: 'collection__banner-bg',
+                  widths: '750, 1100, 1500, 2000, 2400',
+                  sizes: '(min-width: 990px) 70vw, 100vw',
+                  width: banner_image.width,
+                  height: banner_image.height,
+                  loading: 'eager',
+                  fetchpriority: 'high',
+                  alt: banner_alt
+              }}
+            {%- endcapture -%}
+            {%- unless banner_bg_img contains ' alt=' -%}
+              {%- assign banner_bg_img = banner_bg_img | replace: '<img ', '<img alt="" ' -%}
+            {%- endunless -%}
+            {{ banner_bg_img }}
             <div class="collection__banner-mask" aria-hidden="true"></div>
             {%- if island -%}
               {{
@@ -285,18 +300,6 @@
                   loading: 'eager',
                   alt: island_alt
               }}
-            {%- endif -%}
-            {%- comment -%}
-              ④ 毛玻璃小卡：两个文本设置 + 一个总开关（2026-10-20 刘工要求可关）。
-              开关关掉则不渲染；开关开着但标题为空时同样不渲染（避免只留一个 eyebrow 空卡）。
-            {%- endcomment -%}
-            {%- if section.settings.show_banner_badge and section.settings.banner_badge_title != blank -%}
-              <div class="collection__banner-badge">
-                {%- if section.settings.banner_badge_eyebrow != blank -%}
-                  <p class="collection__banner-badge-eyebrow">{{ section.settings.banner_badge_eyebrow | escape }}</p>
-                {%- endif -%}
-                <p class="collection__banner-badge-title">{{ section.settings.banner_badge_title | escape }}</p>
-              </div>
             {%- endif -%}
           </tilt-element>
         {%- endif -%}
