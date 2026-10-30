@@ -15,22 +15,22 @@
         "highlight_aE7iQu": {
           "type": "banner_feature",
           "settings": {
-            "icon": "🔊",
-            "text": "Quieter Operation"
+            "icon": "🔋",
+            "text": "Gas & Electric Power"
           }
         },
         "highlight_Ya9mKd": {
           "type": "banner_feature",
           "settings": {
-            "icon": "🍃",
-            "text": "Lower Emissions"
+            "icon": "🔄",
+            "text": "2-in-1 Functionality"
           }
         },
         "highlight_Rt3vNp": {
           "type": "banner_feature",
           "settings": {
-            "icon": "🔋",
-            "text": "Longer Runtime"
+            "icon": "💪",
+            "text": " Ergonomic Balance"
           }
         }
       },
