@@ -17,6 +17,9 @@
     "refresh_page": "Choosing a selection results in a full page refresh.",
     "skip_to_text": "Skip to content"
   },
+  "back_to_top": {
+    "label": "Back to top"
+  },
   "blog": {
     "article_comments": "Comments",
     "article_metadata_html": "{{ date }} by {{ author }}",
