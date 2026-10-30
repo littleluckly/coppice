@@ -1,0 +1,54 @@
+{%- comment -%}
+  集合页亮点图标（2026-10-30）。
+
+  输入 = 集合 metafield `custom.banner_highlight_N` 里「图标|文案」的图标位。
+    · 命中下面的 key → 内联 assets/icon-*.svg（与全站同一套描边图标：24 视框、
+      stroke 1.5、currentColor，因此颜色跟着外层 color 走）
+    · 没命中 → 当作 emoji 原样输出，塞进同一个白圆里
+
+  为什么保留 emoji 通道：商家不看文档也会写 emoji，硬塞 key 只会让「填了没反应」。
+  两套并存，视觉上 SVG 更贴设计稿，emoji 可用但风格会飘。
+
+  key 一律小写、不空格、不连字符。新增图标在这里加一行 when + 一个 assets/icon-*.svg。
+{%- endcomment -%}
+{%- liquid
+  assign icon_key = icon | strip | downcase
+  assign icon_asset = ''
+  case icon_key
+    when 'battery', 'power'
+      assign icon_asset = 'icon-battery.svg'
+    when 'width', 'deck', 'size'
+      assign icon_asset = 'icon-spec-width.svg'
+    when 'bar', 'guide-bar'
+      assign icon_asset = 'icon-spec-bar.svg'
+    when 'drive', 'push', 'steer'
+      assign icon_asset = 'icon-spec-drive.svg'
+    when 'mower', 'mowing'
+      assign icon_asset = 'icon-mower.svg'
+    when 'trimmer', 'trim'
+      assign icon_asset = 'icon-trimmer.svg'
+    when 'chainsaw', 'saw'
+      assign icon_asset = 'icon-chainsaw.svg'
+    when 'leaf', 'emissions', 'green'
+      assign icon_asset = 'icon-leaf.svg'
+    when 'tree', 'wood'
+      assign icon_asset = 'icon-tree.svg'
+    when 'accessories', 'parts', 'wrench'
+      assign icon_asset = 'icon-accessories.svg'
+    when 'wear', 'return', 'cycle'
+      assign icon_asset = 'icon-return.svg'
+    when 'warranty', 'shield'
+      assign icon_asset = 'icon-warranty.svg'
+    when 'truck', 'shipping', 'delivery'
+      assign icon_asset = 'icon-truck.svg'
+    when 'compare'
+      assign icon_asset = 'icon-compare.svg'
+    when 'engine', 'gas'
+      assign icon_asset = 'icon-spec-engine.svg'
+  endcase
+-%}
+{%- if icon_asset != '' -%}
+  {{- icon_asset | inline_asset_content -}}
+{%- else -%}
+  <span class="collection__feature-emoji">{{ icon | escape }}</span>
+{%- endif -%}
