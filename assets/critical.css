@@ -375,3 +375,118 @@ body {
     will-change: auto;
   }
 }
+
+/**
+ * 实心主按钮 — 全站加购 / 主 CTA 的唯一形状出口（2026-10-29 收敛）
+ *
+ * 这套处理原先有四份拷贝：产品页加购 `.product-form__submit`、商品卡加购
+ * `.product-card__add`、配件区 `.product-supplies__button` / `__bundle-button`、
+ * 首页 hero `.hero-slideshow__cta`。靠注释"改一处记得同步别处"维持必然漂移
+ * （配件区的套装按钮就已经漏了胶囊化和光晕）。现在形状 / 配色 / 光晕 / 扫光 /
+ * 过渡只写在这里；各 section 自己的类只保留尺寸、排版、布局差异。
+ *
+ * 用法：
+ *   <button class="btn-solid product-form__submit">Add to cart</button>
+ *   <a class="btn-solid btn-solid--quiet hero-slideshow__cta">Learn more</a>
+ *
+ * ⚠️ 本文件先于 section 的 {% stylesheet %} 产物注入。局部类若要改颜色，
+ * 必须靠更高特异性（.a.b）而不是靠源序；纯尺寸差异不受影响。
+ */
+.btn-solid {
+  position: relative;
+  /* 扫光带移出按钮的部分必须裁掉，否则会扫到隔壁元素上 */
+  overflow: hidden;
+  /* 触摸目标 ≥ 44（AGENTS §8） */
+  min-height: 44px;
+  border: 1px solid var(--color-brand);
+  /* 全圆角胶囊：与数量选择器、Buy it now 同一套形状 */
+  border-radius: 999px;
+  background-color: var(--color-brand);
+  /* 用背景色当前景色而非硬编码 #fff：Noir 下品牌色是亮 lime，
+     白字压亮绿不达 AA；换成背景色后浅色底仍是白字、Noir 下自动变深字 */
+  color: var(--color-background);
+  cursor: pointer;
+  /* 常驻光晕：品牌色投影（color-mix 派生，不硬编码色值） */
+  box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+/* 扫光：hover 时一条高光从左扫到右。纯 hover 触发、不循环。 */
+.btn-solid::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: -100%;
+  inline-size: 100%;
+  block-size: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-background) 26%, transparent),
+    transparent
+  );
+  transition: inset-inline-start 0.6s ease;
+  pointer-events: none;
+}
+.btn-solid:hover::before {
+  inset-inline-start: 100%;
+}
+
+.btn-solid:hover:not(:disabled) {
+  background-color: var(--color-brand-accent);
+  border-color: var(--color-brand-accent);
+  /* hover 光晕加深扩散 */
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 30%, transparent);
+}
+
+.btn-solid:disabled {
+  border-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
+  background-color: transparent;
+  color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  cursor: not-allowed;
+}
+
+/* 加购结果态：由 JS 写 data-state（product-form.js / quick-add.js / supplies.js） */
+.btn-solid[data-state='added'] {
+  background-color: var(--color-brand-accent);
+  border-color: var(--color-brand-accent);
+  color: var(--color-background);
+}
+.btn-solid[data-state='pending'] {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* 次级变体：白底品牌字。形状与节奏跟主按钮同一套，配色安静。
+   扫光换成品牌色淡染 —— 白底按钮上扫一条"背景色"等于什么都没发生。 */
+.btn-solid--quiet {
+  background-color: var(--color-background);
+  color: var(--color-brand);
+  border-color: color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  box-shadow: none;
+}
+.btn-solid--quiet::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-brand) 10%, transparent),
+    transparent
+  );
+}
+.btn-solid--quiet:hover:not(:disabled) {
+  background-color: var(--color-background);
+  color: var(--color-brand-accent);
+  border-color: var(--color-brand-accent);
+  box-shadow: none;
+}
+
+/* 无障碍：扫光是纯装饰过渡，reduce 下不注册（只留即时颜色反馈） */
+@media (prefers-reduced-motion: reduce) {
+  .btn-solid,
+  .btn-solid::before {
+    transition: none;
+  }
+}
