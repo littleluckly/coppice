@@ -59,6 +59,10 @@
         "show_payment_terms": true
       }
     },
+    "product-anchor-nav": {
+      "type": "product-anchor-nav",
+      "settings": {}
+    },
     "product-highlights": {
       "type": "product-highlights",
       "blocks": {
@@ -135,6 +139,7 @@
   },
   "order": [
     "main",
+    "product-anchor-nav",
     "product-highlights",
     "product-complementary",
     "product-description",

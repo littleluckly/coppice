@@ -1,0 +1,174 @@
+{% comment %}
+  product-anchor-nav — 产品页右侧悬浮锚点导航（2026-11-02 刘工）。
+
+  **范围**：只在产品详情页（`enabled_on.templates: ["product"]`），由编辑器可增删；
+  桌面 ≥ 990px、且页面**确实能滚动**时才出现（短页面不出现）。
+
+  **锚点指向三个内容分区**：Overview / Specifications / Supplies。
+  ID 由各自 section 输出（`#product-overview` / `#product-specs` / `#product-supplies`）；
+  商家删掉某个 section（或该商品没有耗材）时，脚本会把对应链接摘掉，剩不到 2 项
+  则整条导航不出现。
+
+  **为什么用原生 `<a href="#id">` 而不是 JS 滚动**：
+    · 键盘 / 屏幕阅读器 / 右键新标签 / 无 JS 全部照常工作；
+    · 浏览器自己处理 URL hash 与焦点移交，不用手写 pushState + focus 补丁。
+  平滑滚动与「吸顶页头不遮标题」由 CSS 的 `scroll-behavior` / `scroll-padding-top`
+  完成，脚本只提供页头高度（`--anchor-nav-offset`）和当前分区状态。
+
+  **命中区只有页边距那条缝**：链接 24×44（WCAG 2.2 目标尺寸下限 24×24），
+  靠 `inset-inline-end` 贴视口右缘，不压住内容列的可点区域；标签文字默认
+  `opacity: 0` 悬停/聚焦才浮出——`opacity` 不会把文字摘出无障碍树，链接始终有可读名称。
+
+  视觉：竖排三条短横（10×2px），当前分区与 hover/focus 变长到 20px 并转品牌色；
+  不做背景色块，避免在浅底商品页多出一层浮起的"卡片"。
+{% endcomment %}
+
+<product-anchor-nav class="product-anchor-nav">
+  <nav class="product-anchor-nav__nav" aria-label="{{ 'sections.product_anchor_nav.label' | t }}">
+    <ul class="product-anchor-nav__list" role="list">
+      <li>
+        <a class="product-anchor-nav__link" href="#product-overview" data-anchor-link="product-overview">
+          <span class="product-anchor-nav__label">{{ 'sections.product_anchor_nav.overview' | t }}</span>
+          <span class="product-anchor-nav__mark" aria-hidden="true"></span>
+        </a>
+      </li>
+      <li>
+        <a class="product-anchor-nav__link" href="#product-specs" data-anchor-link="product-specs">
+          <span class="product-anchor-nav__label">{{ 'sections.product_anchor_nav.specs' | t }}</span>
+          <span class="product-anchor-nav__mark" aria-hidden="true"></span>
+        </a>
+      </li>
+      <li>
+        <a class="product-anchor-nav__link" href="#product-supplies" data-anchor-link="product-supplies">
+          <span class="product-anchor-nav__label">{{ 'sections.product_anchor_nav.supplies' | t }}</span>
+          <span class="product-anchor-nav__mark" aria-hidden="true"></span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+</product-anchor-nav>
+
+<script src="{{ 'product-anchor-nav.js' | asset_url }}" defer></script>
+
+{% stylesheet %}
+  product-anchor-nav {
+    position: fixed;
+    inset-block-start: 50%;
+    /* 页边距默认只有 20px：轨道贴在视口右缘，只占这条缝 */
+    inset-inline-end: max(0.5rem, env(safe-area-inset-right, 0px));
+    translate: 0 -50%;
+    /* 页头 20 / 浮层 39+：导航夹在内容与页头之间，任何浮层都能压住它 */
+    z-index: 15;
+    /* 默认不渲染；脚本量到「页面能滚动」才打开（短页面不出现） */
+    display: none;
+  }
+
+  @media screen and (min-width: 990px) {
+    product-anchor-nav[data-scrollable] {
+      display: block;
+    }
+  }
+
+  .product-anchor-nav__list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .product-anchor-nav__link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    /* 命中区 24×44：够 WCAG 2.2 的 24px 下限，又不侵入内容列 */
+    inline-size: 24px;
+    block-size: 44px;
+  }
+
+  .product-anchor-nav__mark {
+    display: block;
+    inline-size: 10px;
+    block-size: 2px;
+    border-radius: 1px;
+    /* 55% 前景色 ≈ 3.3:1（白底），过非文本控件的 3:1 线 */
+    background-color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+    transition: inline-size 0.2s ease, background-color 0.2s ease;
+  }
+
+  .product-anchor-nav__link:hover .product-anchor-nav__mark,
+  .product-anchor-nav__link:focus-visible .product-anchor-nav__mark {
+    inline-size: 20px;
+    background-color: var(--color-brand);
+  }
+
+  /* 当前分区：由脚本打 aria-current="location" */
+  .product-anchor-nav__link[aria-current] .product-anchor-nav__mark {
+    inline-size: 20px;
+    background-color: var(--color-brand);
+  }
+
+  .product-anchor-nav__label {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: calc(100% + 0.5rem);
+    translate: 0 -50%;
+    white-space: nowrap;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    box-shadow: 0 2px 10px rgb(0 0 0 / 18%);
+    font-size: 0.8rem;
+    line-height: 1.3;
+    /* 只淡出，不用 display/visibility：那两者会把链接的可读名称一起摘掉 */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .product-anchor-nav__link:hover .product-anchor-nav__label,
+  .product-anchor-nav__link:focus-visible .product-anchor-nav__label {
+    opacity: 1;
+  }
+
+  /* 锚点落位避开吸顶页头；只在桌面生效（移动端页头不吸顶） */
+  @media screen and (min-width: 990px) {
+    html:has(product-anchor-nav[data-scrollable]) {
+      scroll-padding-top: calc(var(--anchor-nav-offset, 5rem) + 0.5rem);
+    }
+  }
+
+  /* 平滑滚动词典式降级：系统要求减少动效时保持瞬间跳转 */
+  @media screen and (min-width: 990px) and (prefers-reduced-motion: no-preference) {
+    html:has(product-anchor-nav[data-scrollable]) {
+      scroll-behavior: smooth;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-anchor-nav__mark,
+    .product-anchor-nav__label {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.product_anchor_nav.name",
+  "tag": "div",
+  "class": "product-anchor-nav-section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [],
+  "presets": [
+    {
+      "name": "t:sections.product_anchor_nav.name"
+    }
+  ]
+}
+{% endschema %}
