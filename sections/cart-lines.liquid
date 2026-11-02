@@ -215,11 +215,17 @@
     font-size: 0.8125rem;
     color: var(--color-foreground-muted);
   }
+  /* 物流徽标：与规格胶囊同一套尺寸（padding 2px 8px / 999px / 0.7rem），
+     只换配色——黄底是警示语义（大件交付条件），不能退成中性灰。
+     两枚标签同高同圆角，并排时是一条整齐的标签带，而不是两种形状拼在一起。 */
   .cart-line__logistics-tag {
-    padding: 0.1rem 0.45rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 500;
+    line-height: 1.4;
     color: var(--color-warning-on);
     background-color: var(--color-warning);
   }
