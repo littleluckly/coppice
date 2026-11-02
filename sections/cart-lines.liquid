@@ -169,17 +169,14 @@
     padding: 0;
     list-style: none;
   }
-  .cart-line__meta li {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 15%, transparent);
-    border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
-    font-size: 0.7rem;
-    color: var(--color-foreground-muted);
-    max-inline-size: 100%;
-    text-align: center;
+  /* 悬停反馈：与商品卡 `.product-card:hover .product-card__tag` 逐值一致
+     （品牌色 12% 底 / 32% 描边 / 品牌字色）。挂在整个行上而不是胶囊自己身上，
+     因为商品卡也是"鼠标进卡就亮"——两者对顾客是同一件事：这一组参数属于这条商品。
+     触屏没有 hover，不会出现点一下变绿又留在那儿的状态。 */
+  .cart-line:hover .cart-line__meta li {
+    background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-brand) 32%, transparent);
+    color: var(--color-brand);
   }
 
   .cart-line__plan,
