@@ -21,6 +21,7 @@
   class="cart-lines"
   data-cart-section="{{ section.id }}"
   data-cart-change-url="{{ routes.cart_change_url }}.js"
+  data-cart-update-url="{{ routes.cart_update_url }}.js"
   data-cart-live-template="{{ 'cart.total_updated' | t: total: '[total]' }}"
   data-cart-product-ids="{{ cart.items | map: 'product_id' | join: ',' }}"
   data-error-message="{{ 'products.product_card.add_error' | t }}"
@@ -55,8 +56,26 @@
       </ul>
 
       {%- comment -%}
-        无 JS 的「Update」按钮：JS 环境下藏起来（数量变化即提交），
-        但**不能从 DOM 移除**——移除后键盘/无 JS 用户就没有提交路径了。
+        订单备注（官方 Cart page 硬项 "Cart notes"）。放在行项之后、提交按钮之前。
+        无 JS：随表单 POST 一起提交（name="note" 是平台约定的字段名）。
+        有 JS：失焦即保存，由 cart-items 里发 /cart/update.js —— 不弹任何提示，
+        顾客不需要为「填了个备注」再点一次保存。
+      {%- endcomment -%}
+      <div class="cart-lines__note">
+        <label class="cart-lines__note-label" for="CartNote">{{ 'cart.note_label' | t }}</label>
+        <textarea
+          id="CartNote"
+          class="cart-lines__note-input"
+          name="note"
+          rows="3"
+          placeholder="{{ 'cart.note_placeholder' | t }}"
+          data-cart-note
+        >{{ cart.note }}</textarea>
+      </div>
+
+      {%- comment -%}
+        无 JS 的「Update」按钮：JS 环境下数量变化即提交，这个按钮仍然保留——
+        它同时承担「备注改完点一下保存」的兜底语义。
       {%- endcomment -%}
       <div class="cart-lines__actions">
         <button type="submit" name="update" class="btn-solid btn-solid--quiet cart-lines__update">
@@ -274,6 +293,30 @@
   }
   .cart-line__remove:hover {
     color: var(--color-sale);
+  }
+
+  .cart-lines__note {
+    display: grid;
+    gap: 0.35rem;
+    padding-block-start: 1.25rem;
+  }
+  .cart-lines__note-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .cart-lines__note-input {
+    inline-size: 100%;
+    max-inline-size: 34rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
+    border-radius: 8px;
+    background-color: var(--color-background);
+    color: inherit;
+    font: inherit;
+    resize: vertical;
+  }
+  .cart-lines__note-input::placeholder {
+    color: var(--color-foreground-muted);
   }
 
   .cart-lines__actions {
