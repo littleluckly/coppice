@@ -1,0 +1,275 @@
+/**
+ * cart-line — 购物车单行的通用外观（snippets/cart-line.liquid 的配套样式）。
+ *
+ * 为什么是独立 .css 而不是某个 section 的 {% stylesheet %}：
+ * 同一个行项同时出现在购物车页表格和全站抽屉里，而抽屉挂在 layout 上。
+ * section 的样式块只在那个 section 存在时加载，抽屉拿不到——按 AGENTS.md §6 的判据，
+ * 这是"跨 section 全局功能"，该拆独立文件。
+ *
+ * 这里只定义**卡片态**（窄列 + 堆叠），因为它要同时服务窄屏表格和抽屉。
+ * 购物车页桌面的四列表格由 sections/cart-lines.liquid 覆盖列定义。
+ * 想在该文件里覆盖时记得写 grid-template-areas: none —— 区域名会锁死列数，
+ * 只改 grid-template-columns 会整块失效。
+ */
+
+.cart-line {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  grid-template-areas:
+    'media info'
+    'media price'
+    'media qty'
+    'media total';
+  align-items: start;
+  gap: 0.45rem 0.75rem;
+  padding-block: 1rem;
+}
+
+.cart-line__media a {
+  display: block;
+}
+.cart-line__media img,
+.cart-line__placeholder {
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+}
+
+.cart-line__media {
+  grid-area: media;
+}
+
+.cart-line__info {
+  grid-area: info;
+  /* grid/flex item 的自动最小尺寸会按 min-content 撑开——长标题必须截断这个传导 */
+  min-inline-size: 0;
+  display: grid;
+  justify-items: start;
+  gap: 0.3rem;
+  align-content: start;
+}
+.cart-line__title {
+  font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+}
+.cart-line__title:hover {
+  color: var(--color-brand);
+}
+
+/* 规格胶囊：与商品卡 product-card__tag 同一套参数（padding 2px 8px / 999px /
+   前景色 3% 底 / 15% 描边 / 0.7rem）。两个页面出现同一种"参数标签"时长得一样，
+   顾客才不用重新学一遍哪个是参数、哪个是按钮。 */
+.cart-line__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cart-line__meta li {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 15%, transparent);
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
+  font-size: 0.7rem;
+  color: var(--color-foreground-muted);
+  max-inline-size: 100%;
+  text-align: center;
+}
+
+/* 悬停反馈：与商品卡 `.product-card:hover .product-card__tag` 逐值一致
+   （品牌色 12% 底 / 32% 描边 / 品牌字色）。挂在整个行上而不是胶囊自己身上，
+   因为商品卡也是"鼠标进卡就亮"——两者对顾客是同一件事：这一组参数属于这条商品。
+   触屏没有 hover，不会出现点一下变绿又留在那儿的状态。 */
+.cart-line:hover .cart-line__meta li {
+  background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-brand) 32%, transparent);
+  color: var(--color-brand);
+}
+
+.cart-line__plan,
+.cart-line__discount,
+.cart-line__stock {
+  font-size: 0.8125rem;
+}
+.cart-line__plan {
+  color: var(--color-brand);
+}
+.cart-line__discount {
+  color: var(--color-sale);
+}
+.cart-line__stock {
+  color: var(--color-brand);
+}
+
+.cart-line__logistics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--color-foreground-muted);
+}
+/* 物流徽标 / 超卖提示：与规格胶囊同一套尺寸（padding 2px 8px / 999px / 0.7rem），
+   只换配色——黄底是"这条不是普通交付"的语义，不能退成中性灰。
+   两枚标签同高同圆角，并排时是一条整齐的标签带，而不是两种形状拼在一起。 */
+:is(.cart-line__logistics-tag, .cart-line__backorder) {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-warning-on);
+  background-color: var(--color-warning);
+}
+
+/* ---- 单价 / 数量 / 行小计 ---- */
+.cart-line__price {
+  grid-area: price;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.cart-line__price-compare,
+.cart-line__total-compare {
+  font-size: 0.8125rem;
+  color: var(--color-foreground-muted);
+}
+.cart-line__unit {
+  /* 单位价另起一行，不跟价格抢横向空间 */
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--color-foreground-muted);
+}
+
+.cart-line__qty {
+  grid-area: qty;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
+  border-radius: 999px;
+  background-color: var(--color-background);
+}
+.cart-line__qty-btn {
+  /* 触摸目标 44×44（AGENTS.md §8 / SDD §8.2） */
+  inline-size: 44px;
+  block-size: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 999px;
+}
+.cart-line__qty-btn:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
+}
+.cart-line__qty-btn:disabled {
+  color: color-mix(in srgb, var(--color-foreground) 35%, transparent);
+  cursor: not-allowed;
+}
+.cart-line__qty-input {
+  inline-size: 2.75rem;
+  block-size: 44px;
+  border: 0;
+  background: none;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  /* 原生数字输入的上下箭头挤在 44px 内会压住数字 */
+  appearance: textfield;
+}
+.cart-line__qty-input::-webkit-outer-spin-button,
+.cart-line__qty-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.cart-line__total {
+  grid-area: total;
+  justify-self: end;
+  align-self: center;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-line__remove {
+  /* 44px 的高度已经带来上下各 ~13px 的内边距，再叠 gap 会显得离徽标太远；
+     这里不再额外加外边距，靠信息区自己的 gap 控制。 */
+  min-block-size: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--color-foreground-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cart-line__remove:hover {
+  color: var(--color-sale);
+}
+
+/* ---- 超量/失败态 ----
+   请求失败时 JS 给行加 data-cart-error：数量框描边与行小计转红，并插一条
+   role="alert" 的说明（内容来自 Shopify 返回的 description，例如
+   "You can only add 25 ... to your cart"，比通用文案有用得多）。
+   红色一直保留到顾客下一次动这一行——错误不应该自己消失，否则顾客回来时
+   只会看到一个静静回退的数字，误以为是自己手滑。 */
+.cart-line[data-cart-error] .cart-line__qty {
+  border-color: var(--color-sale);
+  background-color: color-mix(in srgb, var(--color-sale) 6%, transparent);
+}
+.cart-line[data-cart-error] .cart-line__total-value {
+  color: var(--color-sale);
+}
+.cart-line__error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-sale);
+}
+
+/* 晃动 1 秒：幅度逐段递减，收尾自然停住（等幅晃动看久了像卡住）。
+   只晃一次，靠 data-cart-shake 挂载，JS 在动画结束后摘掉属性，
+   下次失败才会重新触发。 */
+@keyframes cart-line-shake {
+  0%, 100% { translate: 0 0; }
+  12% { translate: -6px 0; }
+  24% { translate: 6px 0; }
+  38% { translate: -5px 0; }
+  52% { translate: 4px 0; }
+  66% { translate: -3px 0; }
+  80% { translate: 2px 0; }
+  92% { translate: -1px 0; }
+}
+.cart-line[data-cart-error][data-cart-shake] .cart-line__qty {
+  animation: cart-line-shake 1s ease-in-out;
+}
+/* reduce：晃动是纯装饰，去掉；红色描边与文字提示保留（那是信息本身） */
+@media (prefers-reduced-motion: reduce) {
+  .cart-line[data-cart-error][data-cart-shake] .cart-line__qty {
+    animation: none;
+  }
+}
+
+/* 抽屉里行项更窄：图缩到 64px，标题与胶囊都可能换行，间距再收一点 */
+.cart-drawer .cart-line {
+  grid-template-columns: 64px minmax(0, 1fr);
+  padding-block: 0.85rem;
+}
