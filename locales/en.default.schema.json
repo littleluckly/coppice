@@ -357,7 +357,8 @@
       },
       "labels": {
         "enable_personalized": "Match recommendations to the cart",
-        "enable_personalized_info": "Tries product-specific complementary recommendations first and falls back to the collection below. Requires the merchant to configure complementary products in Search & Discovery."
+        "enable_personalized_info": "Tries product-specific complementary recommendations first and falls back to the collection below. Requires the merchant to configure complementary products in Search & Discovery.",
+        "collection_info": "Fallback list. Shown when personalised recommendations are unavailable — point it at the accessories collection so the cart keeps selling consumables."
       }
     }
   },

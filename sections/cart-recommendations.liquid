@@ -1,0 +1,179 @@
+{% comment %}
+  购物车补充建议（pages-ui §10 · task-cart T-1.5 · SDD §6.3）。
+
+  两条路径（刘工 2026-11-02 定 D-4）：
+    A 服务端先渲染商家指定的集合——**这条必须永远能出结果**，它是无 JS 与
+      "未配置 complementary" 时的全部内容。
+    B 有 JS 且有车内商品时，向 /recommendations/products 要"与该商品互补"的推荐，
+      拿到就替换 A。拿不到（空 / 失败 / 未配置 Search & Discovery）→ 保持 A，不闪烁。
+
+  选品取向：默认指向**配件集合**。参考图那种"再卖一台割草机"与本主题
+  「主机 + 耗材」的客单价结构相悖——买完割草机的人下一次要的是刀片，不是第二台割草机。
+
+  排除逻辑：已在车内的商品不再推荐（服务端与 JS 替换后都生效，因为推荐接口
+  渲染同一个 section 时 `cart` 依然可用）。
+{% endcomment %}
+
+{%- liquid
+  assign rec_collection = section.settings.collection
+  assign rec_limit = section.settings.products_to_show | default: 4
+  assign rec_pool = rec_limit | plus: cart.item_count
+  if rec_pool > 12
+    assign rec_pool = 12
+  endif
+
+  assign rec_cart_ids = cart.items | map: 'product_id'
+
+  comment
+    种子商品优先取车内第一台"主机"（有 acc.consumables 的），
+    配件在 complementary 关系里通常是叶子节点，拿它当种子基本要不到东西。
+  endcomment
+  assign rec_seed_id = ''
+  for rec_seed_item in cart.items
+    if rec_seed_item.product.metafields.acc.consumables.value != blank
+      assign rec_seed_id = rec_seed_item.product.id
+      break
+    endif
+  endfor
+  if rec_seed_id == '' and cart.item_count > 0
+    assign rec_seed_id = cart.items.first.product.id
+  endif
+-%}
+
+{%- if rec_collection != blank and rec_collection.products_count > 0 -%}
+  {%- comment -%} product-card 的三个依赖：样式 + 收藏 + 快速加购 + 倾斜 {%- endcomment -%}
+  {{ 'product-card.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
+  <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+  <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
+
+  <div
+    class="cart-recommendations"
+    data-cart-recommendations
+    data-section-id="{{ section.id }}"
+    data-seed-product-id="{{ rec_seed_id }}"
+    data-limit="{{ rec_limit }}"
+    data-root="{{ routes.root_url }}"
+    {%- unless section.settings.enable_personalized %} data-personalized="false"{% endunless %}
+  >
+    {%- if section.settings.heading != blank -%}
+      <h2 class="cart-recommendations__heading">{{ section.settings.heading | escape }}</h2>
+    {%- endif -%}
+
+    <ul class="cart-recommendations__grid" role="list" data-cart-recommendations-grid>
+      {%- assign rec_output_count = 0 -%}
+      {%- for rec_product in rec_collection.products limit: rec_pool -%}
+        {%- if rec_cart_ids contains rec_product.id -%}
+          {%- continue -%}
+        {%- endif -%}
+        {%- if rec_output_count >= rec_limit -%}
+          {%- break -%}
+        {%- endif -%}
+        <li class="cart-recommendations__item" data-recommendation-id="{{ rec_product.id }}">
+          {%- render 'product-card',
+            product: rec_product,
+            lazy: true,
+            quick_add: true,
+            show_width: false,
+            show_cc: false,
+            show_power: true,
+            show_weight: false,
+            sizes: '(min-width: 990px) 22vw, (min-width: 750px) 32vw, 72vw'
+          -%}
+        </li>
+        {%- assign rec_output_count = rec_output_count | plus: 1 -%}
+      {%- endfor -%}
+    </ul>
+  </div>
+
+  <script src="{{ 'cart-recommendations.js' | asset_url }}" defer></script>
+{%- endif -%}
+
+{% stylesheet %}
+  .cart-recommendations {
+    padding-block-start: 0.5rem;
+  }
+  .cart-recommendations__heading {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-block-end: 0.85rem;
+  }
+  .cart-recommendations__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 750px) {
+    .cart-recommendations__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  /* 窄屏横滑：露出 1.2 张卡暗示还能滑，避免"只看到两张"的误解 */
+  @media (max-width: 749px) {
+    .cart-recommendations__grid {
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      grid-auto-columns: 72%;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding-block-end: 0.5rem;
+      scrollbar-width: thin;
+    }
+    .cart-recommendations__item {
+      scroll-snap-align: start;
+    }
+  }
+
+  /* 个性化结果替换的过渡：不做淡入淡出会闪一下（图片重新加载） */
+  .cart-recommendations[data-personalizing] .cart-recommendations__grid {
+    opacity: 0.35;
+    transition: opacity 0.2s ease;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.cart_recommendations.name",
+  "tag": "section",
+  "class": "cart-recommendations-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "t:sections.cart_recommendations.defaults.heading"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:sections.cart_recommendations.labels.collection_info"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "min": 2,
+      "max": 8,
+      "step": 2,
+      "label": "t:labels.products_to_show",
+      "default": 4
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_personalized",
+      "label": "t:sections.cart_recommendations.labels.enable_personalized",
+      "info": "t:sections.cart_recommendations.labels.enable_personalized_info",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.cart_recommendations.name"
+    }
+  ]
+}
+{% endschema %}
