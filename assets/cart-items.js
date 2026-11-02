@@ -91,6 +91,7 @@ class CartItems extends HTMLElement {
     this._inflight.set(lineKey, controller);
 
     const focus = this._captureFocus(source);
+    this._clearLineError(source);
     this.setAttribute('aria-busy', 'true');
 
     try {
@@ -125,13 +126,22 @@ class CartItems extends HTMLElement {
       this._announceCount(cart.item_count);
     } catch (error) {
       if (error.name === 'AbortError') return;
+
+      /* 回滚到修改前的数量：服务端没收下这个值，输入框就不该留着它 */
       if (previousQuantity !== null && previousQuantity !== undefined && source) {
         const input = source.matches('[data-cart-qty-input]')
           ? source
           : source.closest('.cart-line')?.querySelector('[data-cart-qty-input]');
         if (input) input.value = previousQuantity;
       }
-      this._announceMessage(this.dataset.errorMessage);
+
+      /* Shopify 的 422 会带 description（"You can only add 25 ... to your cart"），
+         那才是顾客需要看的话；只有拿不到时才退回通用文案。 */
+      const reason = error.message || '';
+      const message = reason.startsWith('cart change failed') ? this.dataset.errorMessage : reason;
+
+      this._showLineError(source, message);
+      this._announceMessage(message);
     } finally {
       if (this._inflight.get(lineKey) === controller) this._inflight.delete(lineKey);
       this.removeAttribute('aria-busy');

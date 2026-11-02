@@ -242,10 +242,10 @@
     font-size: 0.8125rem;
     color: var(--color-foreground-muted);
   }
-  /* 物流徽标：与规格胶囊同一套尺寸（padding 2px 8px / 999px / 0.7rem），
-     只换配色——黄底是警示语义（大件交付条件），不能退成中性灰。
+  /* 物流徽标 / 超卖提示：与规格胶囊同一套尺寸（padding 2px 8px / 999px / 0.7rem），
+     只换配色——黄底是"这条不是普通交付"的语义，不能退成中性灰。
      两枚标签同高同圆角，并排时是一条整齐的标签带，而不是两种形状拼在一起。 */
-  .cart-line__logistics-tag {
+  :is(.cart-line__logistics-tag, .cart-line__backorder) {
     display: inline-flex;
     align-items: center;
     padding: 2px 8px;
@@ -343,6 +343,48 @@
   }
   .cart-line__remove:hover {
     color: var(--color-sale);
+  }
+
+  /* ---- 超量/失败态 ----
+     请求失败时 JS 给行加 data-cart-error：数量框描边与行小计转红，并插一条
+     role="alert" 的说明（内容来自 Shopify 返回的 description，例如
+     "You can only add 25 ... to your cart"，比通用文案有用得多）。
+     红色一直保留到顾客下一次动这一行——错误不应该自己消失，否则顾客回来时
+     只会看到一个静静回退的数字，误以为是自己手滑。 */
+  .cart-line[data-cart-error] .cart-line__qty {
+    border-color: var(--color-sale);
+    background-color: color-mix(in srgb, var(--color-sale) 6%, transparent);
+  }
+  .cart-line[data-cart-error] .cart-line__total-value {
+    color: var(--color-sale);
+  }
+  .cart-line__error {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-sale);
+  }
+
+  /* 晃动 1 秒：幅度逐段递减，收尾自然停住（等幅晃动看久了像卡住）。
+     只晃一次，靠 data-cart-shake 挂载，JS 在动画结束后摘掉属性，
+     下次失败才会重新触发。 */
+  @keyframes cart-line-shake {
+    0%, 100% { translate: 0 0; }
+    12% { translate: -6px 0; }
+    24% { translate: 6px 0; }
+    38% { translate: -5px 0; }
+    52% { translate: 4px 0; }
+    66% { translate: -3px 0; }
+    80% { translate: 2px 0; }
+    92% { translate: -1px 0; }
+  }
+  .cart-line[data-cart-error][data-cart-shake] .cart-line__qty {
+    animation: cart-line-shake 1s ease-in-out;
+  }
+  /* reduce：晃动是纯装饰，去掉；红色描边与文字提示保留（那是信息本身） */
+  @media (prefers-reduced-motion: reduce) {
+    .cart-line[data-cart-error][data-cart-shake] .cart-line__qty {
+      animation: none;
+    }
   }
 
   .cart-lines__note {
