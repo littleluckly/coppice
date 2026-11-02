@@ -2025,9 +2025,14 @@
       box-shadow: var(--header-shadow);
     }
 
-    /* 汉堡居左，搜索图标推到最右 */
+    /* 汉堡居左，(搜索 + 购物车) 推到最右 */
     .main-nav__search-toggle--mobile {
       margin-inline-start: auto;
+    }
+
+    /* 两个 44px 触摸目标相邻，留一点缝避免误触 */
+    .main-nav__mobile .cart-entry {
+      margin-inline-start: 0.35rem;
     }
 
     .main-nav__burger {
