@@ -190,12 +190,18 @@
     inline-size: auto;
   }
 
-  /* 桌面吸顶。5.5rem 与产品页锚点导航的落点（88px）同一口径，
-     意味着它正好让开吸住的页头；页头将来变高需要同步这个值。 */
+  /* 桌面吸顶。两个前提缺一不可：
+     ① 外层 section 包装必须 stretch 到整行高度（见 critical.css）——容器不比
+        元素高，sticky 就没有移动空间；
+     ② 本卡片要 align-self: start 而不是被拉伸，否则它的高度等于容器高度，
+        同样粘不住。
+     5.5rem 与产品页锚点导航的落点（88px）同一口径，正好让开吸住的页头；
+     页头将来变高需要同步这个值。 */
   @media (min-width: 990px) {
     .cart-summary {
       position: sticky;
       inset-block-start: 5.5rem;
+      align-self: start;
       max-block-size: calc(100svh - 6.5rem);
       overflow-y: auto;
     }

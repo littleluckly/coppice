@@ -645,6 +645,10 @@ back-to-top[data-visible] .back-to-top__button {
   }
   .template-cart .cart-summary-section {
     grid-column: 2;
+    /* 关键：grid item 的高度默认按内容收缩，容器不给高度，里面的 sticky 就
+       "无处可粘"——滚动时摘要卡直接跟着走。stretch 让包装层占满整行高度，
+       sticky 才有位移空间。 */
+    align-self: stretch;
   }
   /* 汇总条与推荐位各占一整行：跨两栏 = 内容区通栏，但不超出内容区 */
   .template-cart .cart-banner-section,
