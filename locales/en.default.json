@@ -68,7 +68,9 @@
     "product": "Product",
     "price": "Price",
     "backorder": "Backordered — ships when restocked",
-    "partial_backorder": "{{ available }} in stock · rest backordered"
+    "partial_backorder": "{{ available }} in stock · rest backordered",
+    "close": "Close",
+    "view_cart": "View cart"
   },
   "collections": {
     "title": "Collections",
