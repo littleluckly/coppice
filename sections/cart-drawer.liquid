@@ -26,6 +26,8 @@
   data-root="{{ routes.root_url }}"
 >
   <dialog class="cart-drawer__dialog" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
+    {%- comment -%} 移动端底部抽屉的抓手横线（桌面隐藏）。纯装饰，不参与交互 {%- endcomment -%}
+    <div class="cart-drawer__grabber" aria-hidden="true"></div>
     <div class="cart-drawer__panel">
       <div class="cart-drawer__header">
         <h2 class="cart-drawer__title" id="CartDrawerTitle-{{ section.id }}">
@@ -247,6 +249,85 @@
     .cart-drawer__dialog {
       transition: none;
       translate: 0 0;
+    }
+  }
+
+  .cart-drawer__grabber {
+    display: none;
+  }
+
+  /* ---- 移动端：底部通栏上滑 ----
+     与集合页筛选面板同一套动效（sections/collection.liquid 的 .facets__dialog）：
+     通栏、顶部圆角、translateY(100%) 滑入、遮罩淡入、抓手横线。
+     两处用同一组参数，顾客在不同页面看到的是同一种"从底部拉起"的手感。
+
+     为什么用 animation 而不是 transition：dialog 关闭即 display:none，
+     transition 没有可过渡的起点；animation 在 [open] 出现时从头播，正好。 */
+  @media (max-width: 749px) {
+    .cart-drawer__dialog {
+      inset-block: auto 0;
+      inset-inline: 0;
+      inline-size: 100vw;
+      /* max-inline-size 必须显式覆盖：UA 对 dialog:modal 默认
+         max-width: calc((100% - 6px) - 2em)，不覆盖时 width:100vw 会被钳窄 */
+      max-inline-size: 100vw;
+      block-size: auto;
+      max-block-size: 85vh;
+      margin: 0;
+      border-radius: 16px 16px 0 0;
+      /* 桌面那套右侧滑入在底部抽屉里没有意义，关掉 */
+      translate: none;
+      transition: none;
+    }
+    .cart-drawer__dialog[open] {
+      display: flex;
+      flex-direction: column;
+      animation: cart-drawer-slide-up 0.28s ease-out;
+    }
+    .cart-drawer__dialog[open]::backdrop {
+      animation: cart-drawer-backdrop-in 0.28s ease-out;
+    }
+    @keyframes cart-drawer-slide-up {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+    @keyframes cart-drawer-backdrop-in {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* flex 链：抓手 → 面板；滚动仍只发生在 .cart-drawer__body */
+    .cart-drawer__panel {
+      flex: 1 1 auto;
+      min-block-size: 0;
+      block-size: auto;
+    }
+
+    .cart-drawer__grabber {
+      display: block;
+      flex-shrink: 0;
+      inline-size: 40px;
+      block-size: 5px;
+      margin: 0.6rem auto 0;
+      border-radius: 999px;
+      background-color: color-mix(in srgb, var(--color-foreground) 15%, transparent);
+    }
+  }
+
+  /* 移动端 + reduce：滑入直接出现（媒体查询条件合并写，不嵌套——嵌套 @media
+     在老浏览器里会被整段丢弃） */
+  @media (max-width: 749px) and (prefers-reduced-motion: reduce) {
+    .cart-drawer__dialog[open],
+    .cart-drawer__dialog[open]::backdrop {
+      animation: none;
     }
   }
 {% endstylesheet %}
