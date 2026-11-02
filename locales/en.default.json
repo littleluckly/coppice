@@ -66,7 +66,9 @@
     "note_label": "Order note",
     "note_placeholder": "Delivery instructions or anything else we should know",
     "product": "Product",
-    "price": "Price"
+    "price": "Price",
+    "backorder": "Backordered — ships when restocked",
+    "partial_backorder": "{{ available }} in stock now, the rest ships when restocked"
   },
   "collections": {
     "title": "Collections",

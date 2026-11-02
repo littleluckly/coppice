@@ -50,6 +50,21 @@
     endif
 
     comment
+      超卖提示：允许超卖、且库存少于本行数量时，告诉顾客其中一部分要等补货。
+      三个前提缺一不可——inventory_management 不是 shopify 的商品不跟踪库存，
+      这时 inventory_quantity 恒为 0，只判 policy 会把它们全部误标成缺货。
+    endcomment
+    assign line_variant = item.variant
+    assign line_is_backorder = false
+    assign line_backorder_available = 0
+    if line_variant.inventory_management == 'shopify' and line_variant.inventory_policy == 'continue'
+      if line_variant.inventory_quantity < item.quantity
+        assign line_is_backorder = true
+        assign line_backorder_available = line_variant.inventory_quantity
+      endif
+    endif
+
+    comment
       官方 Cart page 要求展示 options_with_values。Default Title 是「无选项」的占位值，
       展示它等于在顾客面前写一句 Default Title。
     endcomment
@@ -145,6 +160,21 @@
       {%- endcomment -%}
       {%- if show_stock and item.variant.available and item.variant.inventory_policy != 'continue' -%}
         <p class="cart-line__stock">{{ 'cart.in_stock' | t }}</p>
+      {%- endif -%}
+
+      {%- comment -%}
+        超卖提示：与 In stock 互斥（前者要求未开超卖，这里要求开了超卖），
+        所以一行里不会同时出现两个库存相关的标签。
+        inventory_quantity 为负（已经卖穿）时只说"补货后发货"，不报负数。
+      {%- endcomment -%}
+      {%- if line_is_backorder -%}
+        <p class="cart-line__backorder">
+          {%- if line_backorder_available > 0 -%}
+            {{- 'cart.partial_backorder' | t: available: line_backorder_available -}}
+          {%- else -%}
+            {{- 'cart.backorder' | t -}}
+          {%- endif -%}
+        </p>
       {%- endif -%}
 
       {%- for line_discount in item.line_level_discount_allocations -%}
