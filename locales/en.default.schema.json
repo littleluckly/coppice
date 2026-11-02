@@ -48,7 +48,8 @@
     "typography": "Typography",
     "compare": "Compare",
     "compare_groups_header": "Comparison groups",
-    "compare_page_header": "Comparison page"
+    "compare_page_header": "Comparison page",
+    "cart_drawer": "Cart drawer"
   },
   "sections": {
     "hero_slideshow": {
