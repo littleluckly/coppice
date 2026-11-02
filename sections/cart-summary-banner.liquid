@@ -1,0 +1,110 @@
+{% comment %}
+  大件物流汇总条（pages-ui §10 · task-cart T-1.4 · SDD §6.4）。
+
+  判定：遍历车内商品，任一 `logistics.shipping_class` 为 Oversized / Freight LTL 才出现。
+  纯小件购物车 → **整节不输出**（连包裹元素都不要：空的 section 包装会在栅格里
+  留出一行 1.5rem 的 gap，视觉上是一道莫名其妙的白缝）。
+
+  文案纪律（SDD §6.4 验收线）：只能描述"需要什么交付条件"，**不能出现任何运费金额**
+  或时效承诺；结尾的「最终运费与时效以结账为准」不可删。
+{% endcomment %}
+
+{%- liquid
+  assign banner_has_freight = false
+  assign banner_has_oversized = false
+
+  for banner_item in cart.items
+    assign banner_class = banner_item.product.metafields.logistics.shipping_class.value
+    if banner_class == 'Freight LTL'
+      assign banner_has_freight = true
+    elsif banner_class == 'Oversized'
+      assign banner_has_oversized = true
+    endif
+  endfor
+
+  assign banner_is_visible = false
+  if banner_has_freight or banner_has_oversized
+    assign banner_is_visible = true
+  endif
+-%}
+
+{%- if banner_is_visible -%}
+  {%- liquid
+    assign banner_text = section.settings.oversized_text
+    if banner_has_freight
+      if section.settings.freight_text != blank
+        assign banner_text = section.settings.freight_text
+      else
+        assign banner_text = 'cart.freight_notice' | t
+      endif
+    endif
+    if banner_text == blank
+      assign banner_text = 'cart.oversized_notice' | t
+    endif
+  -%}
+
+  <div class="cart-banner" data-cart-section="{{ section.id }}" role="status">
+    <span class="cart-banner__icon" aria-hidden="true">
+      {{- 'icon-truck.svg' | inline_asset_content -}}
+    </span>
+    <p class="cart-banner__text">{{ banner_text | escape }}</p>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+  .cart-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-warning) 55%, transparent);
+    border-radius: 10px;
+    background-color: color-mix(in srgb, var(--color-warning) 14%, transparent);
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+  .cart-banner__icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    inline-size: 20px;
+    block-size: 20px;
+    color: var(--color-warning-on);
+  }
+  .cart-banner__icon svg {
+    inline-size: 20px;
+    block-size: 20px;
+  }
+  .cart-banner__text {
+    margin: 0;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.cart_summary_banner.name",
+  "tag": "section",
+  "class": "cart-banner-section",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:sections.cart_summary_banner.labels.notice_info"
+    },
+    {
+      "type": "textarea",
+      "id": "oversized_text",
+      "label": "t:sections.cart_summary_banner.labels.oversized_text"
+    },
+    {
+      "type": "textarea",
+      "id": "freight_text",
+      "label": "t:sections.cart_summary_banner.labels.freight_text"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.cart_summary_banner.name"
+    }
+  ]
+}
+{% endschema %}
