@@ -404,18 +404,70 @@
     text-decoration: none;
   }
 
-  /* ---- 窄屏：图与文字上下不再并排，数字区换到标题下方 ---- */
-  @media (max-width: 749px) {
+  /* ---- 桌面：四列表格 ---- */
+  @media (min-width: 750px) {
+    .cart-lines__head,
     .cart-line {
-      grid-template-columns: 80px minmax(0, 1fr);
+      grid-template-columns: 96px minmax(0, 1fr) 120px 132px 100px;
+      gap: 1rem;
     }
-    .cart-line__body {
-      flex-direction: column;
-      gap: 0.75rem;
+    .cart-lines__head {
+      display: grid;
+      align-items: end;
+      padding-block: 0.9rem 0.6rem;
+      border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+      font-size: 0.8125rem;
+      color: var(--color-foreground-muted);
     }
-    .cart-line__numbers {
-      align-items: stretch;
-      inline-size: 100%;
+    /* Product 标签盖住「图 + 信息」两列，左对齐到容器内边 */
+    .cart-lines__head-product {
+      grid-column: 1 / span 2;
+    }
+    .cart-line {
+      /* 数值列在整行高度里居中：信息区通常最高（标题 + 徽标 + 移除），
+         让价格与数量停在视觉中线上，而不是被 Remove 拖到底部 */
+      align-items: center;
+    }
+    .cart-line__qty,
+    .cart-line__total {
+      justify-self: start;
+    }
+  }
+
+  /* ---- 窄屏：退化为卡片（图在左跨多行，右侧依次堆） ---- */
+  @media (max-width: 749px) {
+    .cart-lines__table {
+      border: 0;
+      border-radius: 0;
+      padding-inline: 0;
+    }
+    .cart-line {
+      grid-template-columns: 80px minmax(0, 1fr) auto;
+      grid-template-areas:
+        'media info info'
+        'media price price'
+        'media qty total';
+      align-items: start;
+      row-gap: 0.45rem;
+    }
+    .cart-line__media {
+      grid-area: media;
+    }
+    .cart-line__info {
+      grid-area: info;
+    }
+    .cart-line__price {
+      grid-area: price;
+    }
+    .cart-line__qty {
+      grid-area: qty;
+      justify-self: start;
+    }
+    .cart-line__total {
+      grid-area: total;
+      /* 与小计并排：数量在左、行小计贴右，顾客一眼能看出"这个数量 = 这个金额" */
+      justify-self: end;
+      align-self: center;
     }
   }
 {% endstylesheet %}
