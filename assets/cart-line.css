@@ -14,12 +14,13 @@
 
 .cart-line {
   display: grid;
-  grid-template-columns: 80px minmax(0, 1fr);
+  /* 卡片态统一三列：数量靠左、行小计贴右，同处一行。
+     两者各占一行时每行白吃 40px，窄屏和抽屉都受不了。 */
+  grid-template-columns: 80px minmax(0, 1fr) auto;
   grid-template-areas:
-    'media info'
-    'media price'
-    'media qty'
-    'media total';
+    'media info info'
+    'media price price'
+    'media qty total';
   align-items: start;
   gap: 0.45rem 0.75rem;
   padding-block: 1rem;
@@ -268,13 +269,8 @@
   }
 }
 
-/* 抽屉里行项更窄：图缩到 64px，数量与行小计并作一行（数量靠左、金额贴右），
-   否则三个数字各占一行，416px 宽的抽屉里每行要吃掉 200px。 */
+/* 抽屉里行项更窄：图缩到 64px，其余沿用上面的三列卡片态 */
 .cart-drawer .cart-line {
   grid-template-columns: 64px minmax(0, 1fr) auto;
-  grid-template-areas:
-    'media info info'
-    'media price price'
-    'media qty total';
   padding-block: 0.85rem;
 }
