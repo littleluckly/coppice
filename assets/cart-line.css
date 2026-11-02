@@ -268,8 +268,13 @@
   }
 }
 
-/* 抽屉里行项更窄：图缩到 64px，标题与胶囊都可能换行，间距再收一点 */
+/* 抽屉里行项更窄：图缩到 64px，数量与行小计并作一行（数量靠左、金额贴右），
+   否则三个数字各占一行，416px 宽的抽屉里每行要吃掉 200px。 */
 .cart-drawer .cart-line {
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'media info info'
+    'media price price'
+    'media qty total';
   padding-block: 0.85rem;
 }
