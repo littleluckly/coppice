@@ -146,8 +146,14 @@ class CartItems extends HTMLElement {
 
   _render(sections) {
     Object.entries(sections).forEach(([id, html]) => {
-      if (!html) return;
       const target = document.querySelector(`[data-cart-section="${id}"]`);
+
+      /* 返回空字符串 = 该 section 现在不该出现（例：大件商品被移出，
+         物流汇总条整节不输出）。旧节点必须主动摘掉，否则提示条会赖在页面上。 */
+      if (!html) {
+        if (target) target.remove();
+        return;
+      }
       if (!target) return;
 
       const parsed = new DOMParser().parseFromString(html, 'text/html');
