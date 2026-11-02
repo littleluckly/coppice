@@ -240,11 +240,6 @@
     gap: 0.4rem;
     flex: 0 0 auto;
   }
-  .cart-line__controls {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
   .cart-line__price {
     display: flex;
     align-items: baseline;
@@ -315,6 +310,8 @@
   }
 
   .cart-line__remove {
+    /* 信息区里的最后一个动作，与上方徽标拉开一点，避免看起来像徽标的一部分 */
+    margin-block-start: 0.15rem;
     min-block-size: 44px;
     display: inline-flex;
     align-items: center;
@@ -398,10 +395,6 @@
     .cart-line__numbers {
       align-items: stretch;
       inline-size: 100%;
-    }
-    .cart-line__controls {
-      /* 窄屏：数量靠左、移除靠右，中间留空，避免两者贴在一起误触 */
-      justify-content: space-between;
     }
   }
 {% endstylesheet %}

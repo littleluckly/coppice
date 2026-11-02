@@ -147,6 +147,23 @@
             -}}
           </p>
         {%- endfor -%}
+
+        {%- comment -%}
+          移除放在信息区末尾（物流徽标下方）：删掉一件商品是对"这件东西"的否定，
+          不是对价格的操作，靠商品本身比靠在数量旁边更合语义（2026-11-02 刘工）。
+          用 <a href="{{ item.url_to_remove }}">：无 JS 时 GET 直接生效（渐进增强底线），
+          有 JS 时由 cart-items 拦截改走 /cart/change.js。
+          可访问名带商品名——屏幕阅读器在列表里听到十几遍「Remove」无法定位是哪一行。
+        {%- endcomment -%}
+        <a
+          class="cart-line__remove"
+          href="{{ item.url_to_remove }}"
+          data-cart-remove
+          data-line-key="{{ item.key }}"
+          aria-label="{{ 'cart.remove_item' | t: title: line_product.title }}"
+        >
+          {{ 'cart.remove' | t }}
+        </a>
       </div>
 
       <div class="cart-line__numbers">
@@ -170,59 +187,40 @@
           </p>
         {%- endif -%}
 
-        {%- comment -%}
-          数量与移除并排：两者都是 44px 高的触摸目标，各自独占一行等于每行白送
-          44px + 间距。并排之后右侧从 5 项降到 4 项，行高回到由左侧信息决定的水平。
-          移除用 <a href="{{ item.url_to_remove }}">：无 JS 时 GET 直接生效（渐进增强底线），
-          有 JS 时由 cart-items 拦截改走 /cart/change.js。
-          可访问名带商品名——屏幕阅读器在列表里听到十几遍「Remove」无法定位是哪一行。
-        {%- endcomment -%}
-        <div class="cart-line__controls">
-          <div class="cart-line__qty">
-            <button
-              type="button"
-              class="cart-line__qty-btn"
-              data-cart-qty="-1"
-              aria-controls="CartLineQty-{{ item.key }}"
-              aria-label="{{ 'cart.decrease_quantity' | t }}"
-            >
-              <span aria-hidden="true">−</span>
-            </button>
-
-            <label class="visually-hidden" for="CartLineQty-{{ item.key }}">{{ 'cart.quantity' | t }}</label>
-            <input
-              id="CartLineQty-{{ item.key }}"
-              class="cart-line__qty-input"
-              type="number"
-              name="updates[]"
-              value="{{ item.quantity }}"
-              min="0"
-              step="1"
-              inputmode="numeric"
-              data-cart-qty-input
-              data-line-key="{{ item.key }}"
-            >
-
-            <button
-              type="button"
-              class="cart-line__qty-btn"
-              data-cart-qty="1"
-              aria-controls="CartLineQty-{{ item.key }}"
-              aria-label="{{ 'cart.increase_quantity' | t }}"
-            >
-              <span aria-hidden="true">+</span>
-            </button>
-          </div>
-
-          <a
-            class="cart-line__remove"
-            href="{{ item.url_to_remove }}"
-            data-cart-remove
-            data-line-key="{{ item.key }}"
-            aria-label="{{ 'cart.remove_item' | t: title: line_product.title }}"
+        <div class="cart-line__qty">
+          <button
+            type="button"
+            class="cart-line__qty-btn"
+            data-cart-qty="-1"
+            aria-controls="CartLineQty-{{ item.key }}"
+            aria-label="{{ 'cart.decrease_quantity' | t }}"
           >
-            {{ 'cart.remove' | t }}
-          </a>
+            <span aria-hidden="true">−</span>
+          </button>
+
+          <label class="visually-hidden" for="CartLineQty-{{ item.key }}">{{ 'cart.quantity' | t }}</label>
+          <input
+            id="CartLineQty-{{ item.key }}"
+            class="cart-line__qty-input"
+            type="number"
+            name="updates[]"
+            value="{{ item.quantity }}"
+            min="0"
+            step="1"
+            inputmode="numeric"
+            data-cart-qty-input
+            data-line-key="{{ item.key }}"
+          >
+
+          <button
+            type="button"
+            class="cart-line__qty-btn"
+            data-cart-qty="1"
+            aria-controls="CartLineQty-{{ item.key }}"
+            aria-label="{{ 'cart.increase_quantity' | t }}"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
         </div>
 
         <p class="cart-line__total">
