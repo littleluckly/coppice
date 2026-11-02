@@ -397,8 +397,9 @@
     font-weight: 500;
   }
   .cart-lines__note-input {
+    /* 占满表格内宽（2026-11-02 刘工）：原先限了 34rem，右侧空出一大块，
+       与上方行项的右边界对不上。去掉上限，宽度交给外层 grid。 */
     inline-size: 100%;
-    max-inline-size: 34rem;
     padding: 0.6rem 0.75rem;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
     border-radius: 8px;
