@@ -87,16 +87,31 @@ class CartDrawer extends HTMLElement {
         `${window.location.pathname}?sections=${encodeURIComponent(id)}`,
         { headers: { Accept: 'application/json' } }
       );
-      if (!response.ok) return;
 
-      const payload = await response.json();
+      const payload = response.ok ? await response.json() : null;
       const html = payload && payload[id];
-      if (!html) return;
 
-      const parsed = new DOMParser().parseFromString(html, 'text/html');
-      const next = parsed.querySelector(`[data-cart-section="${id}"]`);
-      const current = this.querySelector(`[data-cart-section="${id}"]`);
-      if (next && current) current.replaceWith(next);
+      if (html) {
+        const parsed = new DOMParser().parseFromString(html, 'text/html');
+        const next = parsed.querySelector(`[data-cart-section="${id}"]`);
+        const current = this.querySelector(`[data-cart-section="${id}"]`);
+        if (next && current) current.replaceWith(next);
+        return;
+      }
+
+      /* 拿不到渲染结果（例如这个静态 section 不被 Section Rendering 覆盖）时，
+         用 /cart.js 核对一次数量：对不上就退回购物车页，
+         绝不让顾客加了东西却看到抽屉里写着"购物车是空的"。 */
+      const cart = await fetch(`${this.dataset.root || '/'}cart.js`, {
+        headers: { Accept: 'application/json' },
+      }).then((r) => (r.ok ? r.json() : null));
+
+      if (cart && typeof cart.item_count === 'number') {
+        const shown = Number((this.querySelector('[data-cart-drawer-count]')?.textContent || '').replace(/\D/g, ''));
+        if (shown !== cart.item_count && this.dataset.cartUrl) {
+          window.location.href = this.dataset.cartUrl;
+        }
+      }
     } catch (error) {
       /* 刷新失败不打扰顾客：抽屉里已有的内容仍然可用，只是可能不是最新 */
       if (error.name !== 'AbortError') return;

@@ -19,7 +19,12 @@
 <script src="{{ 'cart-drawer.js' | asset_url }}" defer></script>
 {{ 'cart-line.css' | asset_url | stylesheet_tag }}
 
-<cart-drawer class="cart-drawer" data-section-id="{{ section.id }}">
+<cart-drawer
+  class="cart-drawer"
+  data-section-id="{{ section.id }}"
+  data-cart-url="{{ routes.cart_url }}"
+  data-root="{{ routes.root_url }}"
+>
   <dialog class="cart-drawer__dialog" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
     <div class="cart-drawer__panel">
       <div class="cart-drawer__header">
