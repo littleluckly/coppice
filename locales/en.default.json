@@ -64,7 +64,9 @@
     "in_stock": "In stock",
     "update_cart": "Update cart",
     "note_label": "Order note",
-    "note_placeholder": "Delivery instructions or anything else we should know"
+    "note_placeholder": "Delivery instructions or anything else we should know",
+    "product": "Product",
+    "price": "Price"
   },
   "collections": {
     "title": "Collections",
