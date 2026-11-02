@@ -133,10 +133,17 @@
         </p>
       {%- endif -%}
 
-      {%- comment -%} 库存状态（真实数据）：仅在可加购时给正向标注。
-          留空而不是标「Out of stock」——购物车里已售罄的语义已由结账拦截表达，
-          这里再标一次等于在顾客购物车里喊「你买不了」。 {%- endcomment -%}
-      {%- if show_stock and item.variant.available -%}
+      {%- comment -%}
+        库存状态：只在**真的还有货**时标注。
+        `variant.available` 单独用会误报——允许超卖（inventory_policy = continue）的变体
+        库存为 0 时它仍返回 true，于是清空的货架上也亮着 In stock。
+        多一个 `inventory_policy != 'continue'` 就把这类变体排除了，且不必依赖
+        `inventory_quantity`（那个值在 storefront 有缓存，且多 location 下是汇总数，
+        拿来判断"有货"不如这组组合可靠）。
+        本身已售罄的行不标任何东西——购物车里的售罄语义由结账拦截表达，
+        再在顾客车里喊一句「你买不了」没有帮助。
+      {%- endcomment -%}
+      {%- if show_stock and item.variant.available and item.variant.inventory_policy != 'continue' -%}
         <p class="cart-line__stock">{{ 'cart.in_stock' | t }}</p>
       {%- endif -%}
 
