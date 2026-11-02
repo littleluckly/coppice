@@ -60,7 +60,6 @@
     "liftgate_note": "Liftgate required",
     "lead_time": "Ships in {{ days }} days",
     "recommendations": "You may also like",
-    "price_was": "Regular price {{ price }}",
     "total_updated": "Cart total updated: {{ total }}",
     "in_stock": "In stock",
     "update_cart": "Update cart"
