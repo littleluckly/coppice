@@ -29,6 +29,7 @@ class CartItems extends HTMLElement {
     const { signal } = this._controller;
     this.addEventListener('click', this._onClick, { signal });
     this.addEventListener('input', this._onInput, { signal });
+    this.addEventListener('focusout', this._onNoteBlur, { signal });
   }
 
   disconnectedCallback() {
@@ -134,6 +135,40 @@ class CartItems extends HTMLElement {
     } finally {
       if (this._inflight.get(lineKey) === controller) this._inflight.delete(lineKey);
       this.removeAttribute('aria-busy');
+    }
+  }
+
+  /** 订单备注：失焦即存（官方 Cart page 硬项）。不弹提示、不打断。 */
+  _onNoteBlur = (event) => {
+    const note = event.target.closest('[data-cart-note]');
+    if (!note) return;
+    if (note.value === note.defaultValue) return;
+    this._saveNote(note);
+  };
+
+  async _saveNote(note) {
+    const url = this.dataset.cartUpdateUrl;
+    if (!url) return;
+
+    /* /cart/update.js 是「替换」语义：只传 note 会把行项清空。
+       所以必须把当前每行数量一起带上——这也是平台文档要求的用法。 */
+    const updates = {};
+    this.querySelectorAll('[data-cart-qty-input]').forEach((input) => {
+      const quantity = parseInt(input.value, 10);
+      if (!Number.isNaN(quantity)) updates[input.dataset.lineKey] = quantity;
+    });
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ note: note.value, updates }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      note.defaultValue = note.value;
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      this._announceMessage(this.dataset.errorMessage);
     }
   }
 
