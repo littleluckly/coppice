@@ -152,7 +152,10 @@
   /* ---- 桌面：四列表格 ----
      覆盖 cart-line.css 的卡片态。列宽写死是为了表头与每行严格对齐——
      用 auto 时，一行有折扣、一行没有，整张表就会左右错位。
-     `grid-template-areas: none` 不能省：区域名会锁死列数，只改 columns 会整块失效。 */
+
+     ⚠️ 这里必须**重写 areas 成 5 列一行**，不能只写 grid-template-areas: none：
+     子项身上带着 `grid-area: media/info/price/qty/total`，一旦区域名不存在，
+     所有子项会全部落进同一个格子，画面就是"标题、价格、数量叠在商品图上"。 */
   @media (min-width: 750px) {
     .cart-lines__head,
     .cart-lines .cart-line {
@@ -160,7 +163,7 @@
       gap: 1rem;
     }
     .cart-lines .cart-line {
-      grid-template-areas: none;
+      grid-template-areas: 'media info price qty total';
       align-items: center;
       /* 数值列在整行高度里居中：信息区通常最高（标题 + 徽标 + 移除） */
       padding-block: 1.25rem;
