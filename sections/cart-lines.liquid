@@ -224,13 +224,20 @@
     background-color: var(--color-warning);
   }
 
-  /* ---- 价格 / 数量 / 小计 ---- */
+  /* ---- 价格 / 数量 / 小计 ----
+     纵向列而不是 grid：数量与移除同排后，剩余四项高度接近，flex 的间距比 grid
+     更容易压紧。数量与移除并排是这次瘦身的关键（各占一行等于每行多出 44px）。 */
   .cart-line__numbers {
-    display: grid;
-    justify-items: end;
-    align-content: start;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
     gap: 0.4rem;
     flex: 0 0 auto;
+  }
+  .cart-line__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
   }
   .cart-line__price {
     display: flex;
@@ -383,21 +390,12 @@
       gap: 0.75rem;
     }
     .cart-line__numbers {
-      justify-items: start;
-      grid-template-columns: auto auto;
-      align-items: center;
+      align-items: stretch;
+      inline-size: 100%;
+    }
+    .cart-line__controls {
+      /* 窄屏：数量靠左、移除靠右，中间留空，避免两者贴在一起误触 */
       justify-content: space-between;
-    }
-    .cart-line__qty {
-      grid-column: 1;
-    }
-    .cart-line__total {
-      grid-column: 2;
-      justify-self: end;
-    }
-    .cart-line__remove {
-      grid-column: 1 / -1;
-      justify-self: start;
     }
   }
 {% endstylesheet %}
