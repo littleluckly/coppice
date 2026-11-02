@@ -46,43 +46,58 @@
       </a>
     </div>
   {%- else -%}
-    <form id="cart-form" class="cart-lines__form" action="{{ routes.cart_url }}" method="post" novalidate>
-      <ul class="cart-lines__list" role="list">
-        {%- for item in cart.items -%}
-          <li class="cart-lines__item" data-line-key="{{ item.key }}">
-            {%- render 'cart-line', item: item, show_stock: section.settings.show_stock -%}
-          </li>
-        {%- endfor -%}
-      </ul>
-
-      {%- comment -%}
-        订单备注（官方 Cart page 硬项 "Cart notes"）。放在行项之后、提交按钮之前。
-        无 JS：随表单 POST 一起提交（name="note" 是平台约定的字段名）。
-        有 JS：失焦即保存，由 cart-items 里发 /cart/update.js —— 不弹任何提示，
-        顾客不需要为「填了个备注」再点一次保存。
-      {%- endcomment -%}
-      <div class="cart-lines__note">
-        <label class="cart-lines__note-label" for="CartNote">{{ 'cart.note_label' | t }}</label>
-        <textarea
-          id="CartNote"
-          class="cart-lines__note-input"
-          name="note"
-          rows="3"
-          placeholder="{{ 'cart.note_placeholder' | t }}"
-          data-cart-note
-        >{{ cart.note }}</textarea>
+    {%- comment -%}
+      桌面表头（2026-11-02 刘工参考图）：Product / Price / Quantity / Total 四列。
+      `aria-hidden` 是有意的——每个数值列在 cart-line 里都带一个 visually-hidden
+      的列名，表头只是给眼睛看的，否则屏幕阅读器会把列名念两遍。
+      窄屏整块隐藏（行变成卡片，四列对齐失去意义）。
+    {%- endcomment -%}
+    <div class="cart-lines__table">
+      <div class="cart-lines__head" aria-hidden="true">
+        <span class="cart-lines__head-product">{{ 'cart.product' | t }}</span>
+        <span class="cart-lines__head-price">{{ 'cart.price' | t }}</span>
+        <span class="cart-lines__head-qty">{{ 'cart.quantity' | t }}</span>
+        <span class="cart-lines__head-total">{{ 'cart.total' | t }}</span>
       </div>
 
-      {%- comment -%}
-        无 JS 的「Update」按钮：JS 环境下数量变化即提交，这个按钮仍然保留——
-        它同时承担「备注改完点一下保存」的兜底语义。
-      {%- endcomment -%}
-      <div class="cart-lines__actions">
-        <button type="submit" name="update" class="btn-solid btn-solid--quiet cart-lines__update">
-          {{- 'cart.update_cart' | t -}}
-        </button>
-      </div>
-    </form>
+      <form id="cart-form" class="cart-lines__form" action="{{ routes.cart_url }}" method="post" novalidate>
+        <ul class="cart-lines__list" role="list">
+          {%- for item in cart.items -%}
+            <li class="cart-lines__item" data-line-key="{{ item.key }}">
+              {%- render 'cart-line', item: item, show_stock: section.settings.show_stock -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+
+        {%- comment -%}
+          订单备注（官方 Cart page 硬项 "Cart notes"）。放在行项之后、提交按钮之前。
+          无 JS：随表单 POST 一起提交（name="note" 是平台约定的字段名）。
+          有 JS：失焦即保存，由 cart-items 里发 /cart/update.js —— 不弹任何提示，
+          顾客不需要为「填了个备注」再点一次保存。
+        {%- endcomment -%}
+        <div class="cart-lines__note">
+          <label class="cart-lines__note-label" for="CartNote">{{ 'cart.note_label' | t }}</label>
+          <textarea
+            id="CartNote"
+            class="cart-lines__note-input"
+            name="note"
+            rows="3"
+            placeholder="{{ 'cart.note_placeholder' | t }}"
+            data-cart-note
+          >{{ cart.note }}</textarea>
+        </div>
+
+        {%- comment -%}
+          无 JS 的「Update」按钮：JS 环境下数量变化即提交，这个按钮仍然保留——
+          它同时承担「备注改完点一下保存」的兜底语义。
+        {%- endcomment -%}
+        <div class="cart-lines__actions">
+          <button type="submit" name="update" class="btn-solid btn-solid--quiet cart-lines__update">
+            {{- 'cart.update_cart' | t -}}
+          </button>
+        </div>
+      </form>
+    </div>
   {%- endif -%}
 </cart-items>
 
