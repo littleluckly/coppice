@@ -390,7 +390,10 @@
   .cart-lines__note {
     display: grid;
     gap: 0.35rem;
-    padding-block-start: 1.25rem;
+    /* 与上方商品行分开：备注是订单级信息，不跟着某件商品走。
+       没有这条线时它紧贴最后一行，读起来像"表格的第 5 行"。 */
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    padding-block: 1.25rem 0.5rem;
   }
   .cart-lines__note-label {
     font-size: 0.875rem;
