@@ -310,8 +310,8 @@
   }
 
   .cart-line__remove {
-    /* 信息区里的最后一个动作，与上方徽标拉开一点，避免看起来像徽标的一部分 */
-    margin-block-start: 0.15rem;
+    /* 44px 的高度已经带来上下各 ~13px 的内边距，再叠 gap 会显得离徽标太远；
+       这里不再额外加外边距，靠信息区自己的 gap 控制。 */
     min-block-size: 44px;
     display: inline-flex;
     align-items: center;
