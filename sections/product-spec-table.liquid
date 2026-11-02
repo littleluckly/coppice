@@ -1,11 +1,22 @@
 {% comment %}
-  product-spec-table — 完整规格表（task-product T-2.4）。
+  product-spec-table — 产品页「Specifications」完整规格表（task-product T-2.4）。
 
-  **行定义不另建**：直接复用对比页的 `compare-row-keys` / `compare-cell` / `compare-row-label`。
-  产品页与对比页若各维护一份字段表，改一处忘一处，两张表迟早对不上（这是本文件最重要的约束）。
+  **独立分区**（2026-11-02 刘工）：与 `product-supplies` 同一套形态——section 标题 +
+  内容，纯垂直平铺、无 tab、无吸顶、无 JS。2026-10-29 曾与 Overview 合并成
+  `product-tabs` 的两个 tab，现已拆回两个独立 section；整页顺序
+  Overview → Specifications → Supplies。
 
-  缺值规则与对比表相反、与产品页一致：**该行不出现**（对比表要显示 —，因为表格行是固定的）。
-  `spec.spec_variance_note` 非空 → 表头出提示按钮（`<details>`，天然无 JS 可展开）。
+  **行定义不另建**：直接复用对比页的 `compare-row-keys` / `compare-cell` /
+  `compare-row-label`。产品页与对比页若各维护一份字段表，改一处忘一处，
+  两张表迟早对不上（这是本文件最重要的约束）。
+
+  缺值规则与对比表相反：**该行不出现**（对比表要显示 —，因为表格行是固定的）。
+  `spec.spec_variance_note` 非空 → 标题行右侧出「Why specs can vary」提示
+  （`<details>`，天然无 JS 可展开）；整表无行 → section 不输出。
+
+  表格样式（2026-10-29 刘工参考图）：圆角外框 + 隔行浅灰（斑马线），
+  左 label 加粗深色 / 右 value 常规灰。`border-collapse: separate` 是刻意的——
+  collapse 下 border-radius 不生效，圆角外框就做不出来。
 {% endcomment %}
 
 {%- liquid
@@ -16,6 +27,7 @@
   endif
 
   assign variance_note = product.metafields.spec.spec_variance_note.value
+
   assign heading = section.settings.heading
   if heading == blank
     assign heading = 'sections.product_spec_table.default_heading' | t
@@ -55,6 +67,7 @@
   <section class="product-spec-table" id="product-specs" data-reveal>
     <div class="product-spec-table__head">
       <h2 class="product-spec-table__heading">{{ heading }}</h2>
+
       {%- if variance_note != blank -%}
         <details class="product-spec-table__note">
           <summary class="product-spec-table__note-summary">
@@ -64,6 +77,7 @@
         </details>
       {%- endif -%}
     </div>
+
     <table class="product-spec-table__table">
       <caption class="visually-hidden">{{ product.title | escape }} — {{ heading }}</caption>
       <tbody>
@@ -75,9 +89,6 @@
 
 {% stylesheet %}
   .product-spec-table {
-    max-width: var(--page-width);
-    margin-inline: auto;
-    padding-inline: var(--page-margin);
     padding-block: 2rem 0;
   }
   .product-spec-table__head {
@@ -112,26 +123,42 @@
   }
   .product-spec-table__table {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 0.88rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: calc(var(--style-border-radius-inputs) * 2.5);
+    /* 裁掉奇偶行底色溢出圆角的部分 */
+    overflow: hidden;
+    font-size: 0.9rem;
   }
-  .product-spec-table__row {
-    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  /* 斑马线：奇数行浅灰底（参考图行为）。用 foreground 低透明派生，
+     Noir 下自动变成深底上的略亮条，不需要第二套值。 */
+  .product-spec-table__row:nth-child(odd) {
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
   }
   .product-spec-table__label {
     width: 45%;
-    padding: 0.6rem 0.75rem 0.6rem 0;
+    padding: 0.9rem 1rem;
     text-align: start;
-    font-weight: 400;
-    color: var(--color-foreground-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-foreground);
     vertical-align: top;
   }
   .product-spec-table__value {
-    padding: 0.6rem 0;
-    color: var(--color-foreground);
-    font-weight: 500;
+    padding: 0.9rem 1rem;
+    color: var(--color-foreground-muted);
     /* 长值（如 "166 cc / 2500 W"）不把表格撑破 */
     overflow-wrap: anywhere;
+  }
+  /* 行分隔线：画在单元格底边，最后一行去掉（separate 模式下 tr 的 border 不可靠） */
+  .product-spec-table__label,
+  .product-spec-table__value {
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 7%, transparent);
+  }
+  .product-spec-table__row:last-child .product-spec-table__label,
+  .product-spec-table__row:last-child .product-spec-table__value {
+    border-block-end: 0;
   }
 {% endstylesheet %}
 

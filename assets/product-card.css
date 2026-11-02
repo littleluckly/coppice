@@ -272,12 +272,15 @@
    卡面深底上光晕/投影同样成立。仅 hover:hover + pointer:fine 生效。 */
 @media (hover: hover) and (pointer: fine) {
   .product-card {
-    transition: box-shadow 0.8s ease;
+    /* 2026-10-30 刘工：卡级 hover 改用配件卡 product-supplies__item 那套
+       ——上浮 2px + 0 6px 20px 浅绿光晕，0.2s（原 0.8s 的 24px 大投影已撤，
+       两个值都收敛在 snippets/css-variables.liquid：--card-hover-lift /
+       --card-hover-shadow）。用 translate 而非 transform：3D 倾斜是
+       tilt-element 写在图片上的 inline transform，卡级不占 transform 互不覆盖。 */
+    transition: translate 0.2s ease, box-shadow 0.2s ease;
   }
   .product-card:hover {
-    /* 浅底用品牌绿低透明投影（demo 的深黑投影在白底上会显脏）；
-       深底（Noir）改用压低的绿 + 加深黑层，否则荧光绿会在深页上烧出一圈绿边。
-       两套值定义在 snippets/css-variables.liquid 的 --card-hover-shadow。 */
+    translate: 0 var(--card-hover-lift);
     box-shadow: var(--card-hover-shadow);
   }
   .product-card__media {
@@ -304,7 +307,9 @@
       var(--card-glow-3) 100%
     );
     opacity: 0;
-    transition: opacity 0.8s ease;
+    /* 0.2s 跟随卡级上浮的新节拍（原 0.8s）：光晕比卡慢四倍时，
+       hover 瞬间会出现"卡已抬起、绿还没上来"的错拍感。 */
+    transition: opacity 0.2s ease;
     pointer-events: none;
   }
   .product-card__media img {

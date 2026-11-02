@@ -37,7 +37,7 @@
 | --- | --- | --- | --- |
 | 1 | `Compatible with 40V Platform` 卡 | 卡保留，但**读 `platform.battery_platform`，空值整卡不渲染**——演示款 NB-21P 是汽油机（`battery_platform` 为空），该卡在演示店不出现 | 效果图把电池卡贴在油机上，属数据错误 |
 | 2 | `⭐4.9 (126)` + `Reviews` tab | 均不渲染 | 无评论数据源；依赖 App 撞红线（拍板 3/4） |
-| 3 | `Overview / Specifications / What's Included / Reviews` 四 tab | **纯垂直平铺，无 tab、无锚点条**；**tab 名直接复用为分块标题**：规格表 = `Specifications`、耗材块 = `Supplies`（描述块 `Overview` 已于 2026-10-28 移除，见 T-2.5）。区块进视口时从下方 24px 淡入（`data-reveal` + `reveal-on-scroll.js`） | `What's Included` 无 metafield；`Reviews` 无数据；锚点条在 2026-10-28 二次拍板中被砍（拍板 4） |
+| 3 | `Overview / Specifications / What's Included / Reviews` 四 tab | **纯垂直平铺，无 tab、无锚点条**；**tab 名直接复用为分块标题**：规格表 = `Specifications`、耗材块 = `Supplies`（描述块 `Overview` 已恢复：2026-10-28 v1.11 加回全文，2026-11-02 起与规格表一起拆回独立 section）。区块进视口时从下方 24px 淡入（`data-reveal` + `reveal-on-scroll.js`） | `What's Included` 无 metafield；`Reviews` 无数据；锚点条在 2026-10-28 二次拍板中被砍（拍板 4） |
 | 4 | 两个 `Frequently Bought Together` | `Recommended Supplies` + `Similar Mowers` | 命名重复且语义不符（拍板 6） |
 | 5 | 耗材三张卡：刀片 / 2L Oil / Engine Oil | 只渲染 `acc.consumables` 里实际挂载的（NB-21P = 1 件刀片）；机油类商品**不做**（已拍板） | 无数据 + 品类已否决 |
 | 6 | `Shipping & Delivery` 同时列 Parcel 与 Freight | 只出当前商品的 `shipping_class` 一档 | 字段是单值枚举（拍板 9） |
@@ -365,7 +365,7 @@
 | T-2.2 | `sections/product-highlights.liquid` + `assets/icon-battery.svg` |
 | T-2.3 | `sections/product-supplies.liquid`（耗材）+ `sections/product-complementary.liquid`（互补整机）+ `assets/supplies.js` + `assets/product-recommendations.js` |
 | T-2.4 | `sections/product-spec-table.liquid` |
-| T-2.5 | `sections/product-description.liquid`（**本模板未启用**，文件保留 + preset 可加回） |
+| T-2.5 | `sections/product-description.liquid`（2026-11-02 起在模板中启用，独立分区） |
 | T-2.6 | `sections/product-recommendations.liquid` + `assets/product-recommendations.js` |
 | T-3.1 | `templates/product.json`（8 个 section 全接）+ 两个 locale 文件 |
 | 共享件 | `snippets/spec-value.liquid`（+`displacement_cc`/`power_w`、`.0` 清洗）、`snippets/compare-cell.liquid`（`.0` 清洗） |
@@ -421,6 +421,7 @@
 | 2026-10-28 | v1.1 | 补两条裁定：① 折扣 = MSRP × 0.95 **取整到整数美元**，21 款主机实算全部正好 5%（明细表进 T-0.2）；11 款配件取整后有 4 款显示 4%/6%/7% → **三选一待拍**（推荐 A：配件不打折）。② judge.me 已在后台卸载 → T-0.3 去掉"先卸载"前置，改为直接改文件 + 复核；风险 4 降级、新增风险 9（列名未经官方模板逐字校验）与风险 10（取整误差） |
 | 2026-10-28 | v1.2 | ① 配件定 A 方案（不打折），T-0.2 三选一结案。② 官方模板入仓 `dev-docs/mower-import/product_template.csv`，脚本 `TEMPLATE_PATH` 改指向它、逐字校验常态生效；列名确认 `Compare-at price`。③ 脚本已改并重生成 CSV（52 列 / 32 款 / 53 行 / 0 错 0 警），定价走 `Decimal + ROUND_HALF_UP`，`validate()` 三条断言经反向测试确认会拦。④ 风险 9/10 关闭，新增风险 11（重导覆盖库存与图片）。导入动作仍待刘工执行 |
 | 2026-10-28 | v1.3 | 编码启动（刘工确认已导入 CSV）。① T-0.3 完成：`product.json` 移除 judge.me `apps` 块。② T-1.1 完成：`snippets/compare-button.liquid`（`<compare-toggle>` + `<button aria-pressed>`，复用 compare.js 契约，脚本零改动）。③ T-1.3 完成：`snippets/spec-bullets.liquid` + 4 个规格图标；顺带扩展 `spec-value` 的 `displacement_cc` / `power_w` 两种单位（原缺动力换算出口）。④ locale 加 6 键，`check-locale-keys.py` 0 错；`shopify theme check` **0 error**（3 warning：1 条既有 `UnusedAssign` + 2 条新 snippet 未接线的 `OrphanedSnippet`，接线后消失）。⑤ 待确认：cc 不转 cu in 的口径偏离 |
+| 2026-11-02 | v1.12 | **取消 Tab，回到纯垂直平铺**（刘工）：`product-tabs` 拆回 `sections/product-description.liquid`（Overview）与 `sections/product-spec-table.liquid`（Specifications）两个独立 section，与 `product-supplies` 同一形态（标题 1.25rem/500、段距 2rem、`data-reveal`）；`product.json` 顺序 main → 互补 → Overview → Specifications → Supplies → 推荐；删除 `sections/product-tabs.liquid` / `assets/product-tabs.js` / `snippets/product-description-content.liquid` / `snippets/product-spec-table-content.liquid`，并清掉两个 locale 文件里的 `product_tabs` 键；规格表保留 2026-10-29 的圆角斑马线样式，「Why specs can vary」提示回到标题行右侧 |
 | 2026-10-28 | v1.11 | **改为"关摘要、留全文"**（刘工按推荐方案定稿）：`main-product` 的 `show_description` 设 `false`，`product-description` 加回模板并排在 `Specifications` 之前；页面上描述只出现一次，且是富文本全文。**根因订正**：重复不是模板缺陷——演示数据描述仅 38 词，而摘要是 `truncatewords: 40`，阈值比正文还长，摘要==全文。描述写长后（≥120 词）可重新打开摘要。`product.json` 回到 8 个 section |
 | 2026-10-28 | v1.10 | **移除 Overview 描述块**（刘工：与买盒价格下方的描述重复）。`product.json` 从 8 个 section 降到 7 个；`sections/product-description.liquid` 保留（带 preset，商家可加回）。**已知代价**：页面只剩买盒里 38 词的纯文本摘要，富文本全文不再输出——若要两全，改为关闭 `main-product` 的 `show_description` 再把本 section 加回 |
 | 2026-10-28 | v1.9 | **拆两个位置 + 顺序调整**（刘工拍定）：① 耗材区与互补区拆成 `product-supplies` / `product-complementary` 两个独立 section——前者排 Specifications 之后，后者排在概览之前紧跟买盒，两者互斥；② **Specifications 移到 Supplies 之前**；③ 新增 `sections.product_complementary` locale 键，删掉废弃的 `product_supplies.complementary_heading` / `fallback` / `fallback_info`；④ **推荐区标题随品类自适应**（主机 Similar mowers / 配件 You may also like），并去掉该设置项的 schema 默认值——否则 Liquid 兜底分支永不执行。实测：主机页 Overview → Specifications → Supplies；配件页 Pairs well with → Overview |

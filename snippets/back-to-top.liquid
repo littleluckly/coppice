@@ -1,0 +1,30 @@
+{% doc %}
+  back-to-top — 全站「回到顶部」按钮（2026-10-30）。
+
+  **为什么是 snippet + 独立脚本，而不是某个 section 的部件**：它是全站浮层，
+  和底部对比条同级——首页 / 集合页 / 产品页 / 搜索页都要有，不能让开关跟着
+  某个 section 走，所以挂在 layout/theme.liquid。
+
+  · **纯增强**：无 JS 时保持隐藏（critical.css 的默认态就是 `visibility: hidden`），
+    不进 tab 序列、不拦内容。滚动与平滑滚动本就依赖脚本，藏起来比留一个点不动的
+    装饰物诚实。
+  · **不抢对比条**：两者都在右下角，靠 critical.css 里的 `:has()` 让位，
+    对比条出现时按钮整体上移一个胶囊高度。**位置不用 JS 算**，省一条监听。
+  · **图标**：`icon-arrow-up.svg`，描边 1.6（显式写死，不跟 `--icon-stroke-width`——
+    这个变量全仓没有定义点，跟着它等于依赖一个永久的无效值）。
+
+  **样式归属**：本文件不带 `{% stylesheet %}`。snippet 里写样式块会让宿主 section
+  出现第二个样式块，编辑器装载该 section 时整段失败（见 AGENTS §6）。
+  样式在 assets/critical.css 的「回到顶部」段，行为在 assets/back-to-top.js。
+{% enddoc %}
+
+<back-to-top>
+  <button
+    type="button"
+    class="back-to-top__button"
+    data-back-to-top
+    aria-label="{{ 'back_to_top.label' | t }}"
+  >
+    {{- 'icon-arrow-up.svg' | inline_asset_content -}}
+  </button>
+</back-to-top>
