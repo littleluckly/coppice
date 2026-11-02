@@ -17,6 +17,10 @@
 {%- liquid
   assign rec_collection = section.settings.collection
   assign rec_limit = section.settings.products_to_show | default: 4
+  assign rec_heading = section.settings.heading
+  if rec_heading == blank
+    assign rec_heading = 'cart.recommendations' | t
+  endif
   assign rec_pool = rec_limit | plus: cart.item_count
   if rec_pool > 12
     assign rec_pool = 12
@@ -56,9 +60,7 @@
     data-root="{{ routes.root_url }}"
     {%- unless section.settings.enable_personalized %} data-personalized="false"{% endunless %}
   >
-    {%- if section.settings.heading != blank -%}
-      <h2 class="cart-recommendations__heading">{{ section.settings.heading | escape }}</h2>
-    {%- endif -%}
+    <h2 class="cart-recommendations__heading">{{ rec_heading | escape }}</h2>
 
     <ul class="cart-recommendations__grid" role="list" data-cart-recommendations-grid>
       {%- assign rec_output_count = 0 -%}
