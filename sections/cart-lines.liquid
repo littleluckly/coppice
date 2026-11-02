@@ -121,22 +121,39 @@
     margin-inline-start: 0.35em;
   }
 
+  /* 桌面表格容器：表头与所有行同处一个圆角框内，与右侧摘要卡共用一套卡片语言 */
+  .cart-lines__table {
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 12px;
+    padding-inline: 1.25rem;
+    padding-block-end: 0.25rem;
+  }
+  .cart-lines__head {
+    /* 只在桌面出现；窄屏行变卡片，四列对齐已无意义 */
+    display: none;
+  }
+
   .cart-lines__list {
     list-style: none;
     margin: 0;
     padding: 0;
+  }
+  /* 行之间画分隔线，首行不画——首行的上边界由表头的下边线负责 */
+  .cart-lines__item + .cart-lines__item {
     border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
   }
-  .cart-lines__item {
-    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
-  }
 
-  /* ---- 单行 ---- */
+  /* ---- 单行 ----
+     桌面是 5 个平级子项对应 4 个可见列（图片与信息同属 Product 列）：
+     96px 图 | 1fr 信息 | 120px 单价 | 132px 数量 | 100px 行小计。
+     列宽写死是为了表头与每行严格对齐——用 auto 时，一行有折扣、一行没有，
+     整张表就会左右错位。 */
   .cart-line {
     display: grid;
     grid-template-columns: 96px minmax(0, 1fr);
-    gap: 1rem;
+    gap: 0.75rem;
     padding-block: 1.25rem;
+    align-items: start;
   }
   .cart-line__media a {
     display: block;
@@ -151,11 +168,6 @@
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
   }
 
-  .cart-line__body {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-  }
   .cart-line__info {
     /* grid/flex item 的自动最小尺寸会按 min-content 撑开——长标题必须截断这个传导 */
     min-inline-size: 0;
@@ -245,20 +257,12 @@
     background-color: var(--color-warning);
   }
 
-  /* ---- 价格 / 数量 / 小计 ----
-     纵向列而不是 grid：数量与移除同排后，剩余四项高度接近，flex 的间距比 grid
-     更容易压紧。数量与移除并排是这次瘦身的关键（各占一行等于每行多出 44px）。 */
-  .cart-line__numbers {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.4rem;
-    flex: 0 0 auto;
-  }
+  /* ---- 单价 / 数量 / 行小计 ---- */
   .cart-line__price {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 0.4rem;
+    gap: 0.15rem 0.4rem;
     font-variant-numeric: tabular-nums;
   }
   .cart-line__price-compare,
@@ -267,6 +271,8 @@
     color: var(--color-foreground-muted);
   }
   .cart-line__unit {
+    /* 单位价另起一行，不跟价格抢横向空间 */
+    flex-basis: 100%;
     font-size: 0.75rem;
     color: var(--color-foreground-muted);
   }
