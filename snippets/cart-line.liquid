@@ -18,10 +18,21 @@
 {%- else -%}
   {%- liquid
     assign line_product = item.product
-    assign line_variant_title = item.variant.title
     assign line_power = line_product.metafields.spec.power_source.value
     assign line_width = line_product.metafields.spec.cutting_width_mm.value
     assign line_bar = line_product.metafields.spec.bar_length_mm.value
+
+    comment
+      官方 Cart page 要求展示 options_with_values。Default Title 是「无选项」的占位值，
+      展示它等于在顾客面前写一句 Default Title。
+    endcomment
+    assign line_has_options = false
+    for line_option in item.options_with_values
+      if line_option.value != 'Default Title'
+        assign line_has_options = true
+        break
+      endif
+    endfor
 
     assign line_shipping_class = line_product.metafields.logistics.shipping_class.value
     assign line_lead_time = line_product.metafields.logistics.lead_time_days.value
@@ -49,16 +60,27 @@
     不让副标题变成长串（集合页商品卡「每个字段只出现一次」的同一口径）。
   {%- endcomment -%}
   {%- capture line_meta -%}
-    {%- if line_variant_title != blank and line_variant_title != 'Default Title' -%}
-      <li>{{ line_variant_title | escape }}</li>
-    {%- endif -%}
+    {%- comment -%}
+      ① 选项值（官方硬项 options_with_values）。逐项输出 value，不拼 name——
+         顾客认的是 "21 in"，不是 "Size: 21 in"。
+      ② 动力源是品类级信息（Gasoline / Battery），选项里通常没有，补上。
+      ③ 尺寸只在**没有选项**时兜底：有选项时选项值本身就含尺寸，
+         再输出一遍就是同一件事说两次。
+    {%- endcomment -%}
+    {%- for line_option in item.options_with_values -%}
+      {%- if line_option.value != 'Default Title' -%}
+        <li>{{ line_option.value | escape }}</li>
+      {%- endif -%}
+    {%- endfor -%}
     {%- if line_power != blank -%}
       <li>{{ line_power | escape }}</li>
     {%- endif -%}
-    {%- if line_width != blank -%}
-      <li>{% render 'spec-value', value: line_width, unit_type: 'length_mm' %}</li>
-    {%- elsif line_bar != blank -%}
-      <li>{% render 'spec-value', value: line_bar, unit_type: 'length_mm' %}</li>
+    {%- if line_has_options == false -%}
+      {%- if line_width != blank -%}
+        <li>{% render 'spec-value', value: line_width, unit_type: 'length_mm' %}</li>
+      {%- elsif line_bar != blank -%}
+        <li>{% render 'spec-value', value: line_bar, unit_type: 'length_mm' %}</li>
+      {%- endif -%}
     {%- endif -%}
   {%- endcapture -%}
 
