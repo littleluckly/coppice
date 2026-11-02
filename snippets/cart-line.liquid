@@ -1,0 +1,211 @@
+{% doc %}
+  cart-line — 购物车单行（sections/cart-lines.liquid 调用；将来的购物车抽屉复用同一份）。
+
+  刻意**不输出 `<li>`**：外层列表语义由调用方给（页内是 `<ul>`，抽屉里可能是 `<div>`）。
+  根节点 `.cart-line` 带 `data-line-key`，assets/cart-items.js 靠它定位行、保持焦点。
+
+  信息优先级（窄屏先牺牲谁）：
+    必留 —— 标题 / 数量 / 行小计 / 移除
+    可折 —— 规格副标题、单位价、订阅计划、物流徽标
+  三者任一缺数据 → 该块整块不渲染，不留空壳、不显示 0（AGENTS.md §6、SDD §5.7）。
+
+  @param {line_item} item - cart.items 中的一项（必填）；无值时不渲染
+  @param {boolean} [show_stock] - true → 可加购时渲染「In stock」；缺省不渲染
+{% enddoc %}
+
+{%- if item == blank -%}
+  {%- comment -%} 空行不渲染：调用方循环里不会传 blank，但抽屉侧可能条件渲染 {%- endcomment -%}
+{%- else -%}
+  {%- liquid
+    assign line_product = item.product
+    assign line_variant_title = item.variant.title
+    assign line_power = line_product.metafields.spec.power_source.value
+    assign line_width = line_product.metafields.spec.cutting_width_mm.value
+    assign line_bar = line_product.metafields.spec.bar_length_mm.value
+
+    assign line_shipping_class = line_product.metafields.logistics.shipping_class.value
+    assign line_lead_time = line_product.metafields.logistics.lead_time_days.value
+    assign line_liftgate = line_product.metafields.logistics.needs_liftgate.value
+
+    assign line_has_price_discount = false
+    if item.original_price > item.final_price
+      assign line_has_price_discount = true
+    endif
+
+    assign line_has_line_discount = false
+    if item.original_line_price > item.final_line_price
+      assign line_has_line_discount = true
+    endif
+
+    assign line_is_oversized = false
+    if line_shipping_class == 'Oversized' or line_shipping_class == 'Freight LTL'
+      assign line_is_oversized = true
+    endif
+  -%}
+
+  {%- comment -%}
+    规格副标题：变体标题（非默认时）+ 动力源 + 一个尺寸。
+    尺寸二选一：割草机看切割宽度，链锯看导板长度——两者都有值时只取第一个，
+    不让副标题变成长串（集合页商品卡「每个字段只出现一次」的同一口径）。
+  {%- endcomment -%}
+  {%- capture line_meta -%}
+    {%- if line_variant_title != blank and line_variant_title != 'Default Title' -%}
+      <li>{{ line_variant_title | escape }}</li>
+    {%- endif -%}
+    {%- if line_power != blank -%}
+      <li>{{ line_power | escape }}</li>
+    {%- endif -%}
+    {%- if line_width != blank -%}
+      <li>{% render 'spec-value', value: line_width, unit_type: 'length_mm' %}</li>
+    {%- elsif line_bar != blank -%}
+      <li>{% render 'spec-value', value: line_bar, unit_type: 'length_mm' %}</li>
+    {%- endif -%}
+  {%- endcapture -%}
+
+  <div class="cart-line" data-line-key="{{ item.key }}">
+    <div class="cart-line__media">
+      {%- if item.image -%}
+        <a href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+          {{
+            item.image
+            | image_url: width: 288
+            | image_tag:
+              widths: '96, 144, 192, 288',
+              sizes: '96px',
+              loading: 'lazy',
+              alt: item.image.alt
+          }}
+        </a>
+      {%- else -%}
+        {{ 'product-1' | placeholder_svg_tag: 'cart-line__placeholder' }}
+      {%- endif -%}
+    </div>
+
+    <div class="cart-line__body">
+      <div class="cart-line__info">
+        <a class="cart-line__title" href="{{ item.url }}">{{ line_product.title | escape }}</a>
+
+        {%- if line_meta != blank -%}
+          <ul class="cart-line__meta" role="list">{{ line_meta }}</ul>
+        {%- endif -%}
+
+        {%- comment -%} 订阅计划（强制项 #17）：有 allocation 才出现，不显示「无」 {%- endcomment -%}
+        {%- if item.selling_plan_allocation != blank -%}
+          <p class="cart-line__plan">
+            {{- 'cart.selling_plan' | t: name: item.selling_plan_allocation.selling_plan.name -}}
+          </p>
+        {%- endif -%}
+
+        {%- comment -%} 物流行级提示（SDD §6.4）：未配置 metafield → 整块不渲染 {%- endcomment -%}
+        {%- if line_is_oversized -%}
+          <p class="cart-line__logistics">
+            <span class="cart-line__logistics-tag">{{ line_shipping_class | escape }}</span>
+            {%- if line_liftgate -%}
+              <span>{{ 'cart.liftgate_note' | t }}</span>
+            {%- endif -%}
+            {%- if line_lead_time > 0 -%}
+              <span>{{ 'cart.lead_time' | t: days: line_lead_time }}</span>
+            {%- endif -%}
+          </p>
+        {%- endif -%}
+
+        {%- comment -%} 库存状态（真实数据）：仅在可加购时给正向标注。
+            留空而不是标「Out of stock」——购物车里已售罄的语义已由结账拦截表达，
+            这里再标一次等于在顾客购物车里喊「你买不了」。 {%- endcomment -%}
+        {%- if show_stock and item.variant.available -%}
+          <p class="cart-line__stock">{{ 'cart.in_stock' | t }}</p>
+        {%- endif -%}
+
+        {%- for line_discount in item.line_level_discount_allocations -%}
+          {%- assign line_discount_amount = line_discount.amount | money -%}
+          <p class="cart-line__discount">
+            {{-
+              'cart.line_discount'
+              | t: title: line_discount.discount_application.title, amount: line_discount_amount
+            -}}
+          </p>
+        {%- endfor -%}
+      </div>
+
+      <div class="cart-line__numbers">
+        <p class="cart-line__price">
+          {%- if line_has_price_discount -%}
+            <s class="cart-line__price-compare">{{ item.original_price | money }}</s>
+            <span class="cart-line__price-current">{{ item.final_price | money }}</span>
+          {%- else -%}
+            <span class="cart-line__price-current">{{ item.final_price | money }}</span>
+          {%- endif -%}
+        </p>
+
+        {%- comment -%} 单位价（强制项 #19）：只在商品设置了单位价格时出现 {%- endcomment -%}
+        {%- if item.unit_price_measurement != blank -%}
+          {%- assign line_unit_price = item.unit_price | money -%}
+          {%- assign line_unit_label = item.unit_price_measurement.reference_value
+            | append: item.unit_price_measurement.reference_unit
+          -%}
+          <p class="cart-line__unit">
+            {{- 'cart.unit_price' | t: price: line_unit_price, unit: line_unit_label -}}
+          </p>
+        {%- endif -%}
+
+        <div class="cart-line__qty">
+          <button
+            type="button"
+            class="cart-line__qty-btn"
+            data-cart-qty="-1"
+            aria-controls="CartLineQty-{{ item.key }}"
+            aria-label="{{ 'cart.decrease_quantity' | t }}"
+          >
+            <span aria-hidden="true">−</span>
+          </button>
+
+          <label class="visually-hidden" for="CartLineQty-{{ item.key }}">{{ 'cart.quantity' | t }}</label>
+          <input
+            id="CartLineQty-{{ item.key }}"
+            class="cart-line__qty-input"
+            type="number"
+            name="updates[]"
+            value="{{ item.quantity }}"
+            min="0"
+            step="1"
+            inputmode="numeric"
+            data-cart-qty-input
+            data-line-key="{{ item.key }}"
+          >
+
+          <button
+            type="button"
+            class="cart-line__qty-btn"
+            data-cart-qty="1"
+            aria-controls="CartLineQty-{{ item.key }}"
+            aria-label="{{ 'cart.increase_quantity' | t }}"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+        </div>
+
+        <p class="cart-line__total">
+          {%- if line_has_line_discount -%}
+            <s class="cart-line__total-compare">{{ item.original_line_price | money }}</s>
+          {%- endif -%}
+          <span>{{ item.final_line_price | money }}</span>
+        </p>
+
+        {%- comment -%}
+          移除用 <a href="{{ item.url_to_remove }}">：无 JS 时 GET 直接生效（渐进增强底线），
+          有 JS 时由 cart-items 拦截改走 /cart/change.js。
+          可访问名带商品名——屏幕阅读器在列表里听到十几遍「Remove」无法定位是哪一行。
+        {%- endcomment -%}
+        <a
+          class="cart-line__remove"
+          href="{{ item.url_to_remove }}"
+          data-cart-remove
+          data-line-key="{{ item.key }}"
+          aria-label="{{ 'cart.remove_item' | t: title: line_product.title }}"
+        >
+          {{ 'cart.remove' | t }}
+        </a>
+      </div>
+    </div>
+  </div>
+{%- endif -%}
