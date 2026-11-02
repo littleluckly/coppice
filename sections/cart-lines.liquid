@@ -158,19 +158,28 @@
     color: var(--color-brand);
   }
 
+  /* 规格胶囊：与商品卡 product-card__tag 同一套参数（padding 2px 8px / 999px /
+     前景色 3% 底 / 15% 描边 / 0.7rem）。两个页面出现同一种"参数标签"时长得一样，
+     顾客才不用重新学一遍哪个是参数、哪个是按钮。 */
   .cart-line__meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.25rem;
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 0.8125rem;
-    color: var(--color-foreground-muted);
   }
-  .cart-line__meta li + li::before {
-    content: '·';
-    margin-inline-end: 0.35rem;
+  .cart-line__meta li {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 15%, transparent);
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
+    font-size: 0.7rem;
+    color: var(--color-foreground-muted);
+    max-inline-size: 100%;
+    text-align: center;
   }
 
   .cart-line__plan,
