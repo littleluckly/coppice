@@ -62,7 +62,9 @@
     "recommendations": "You may also like",
     "total_updated": "Cart total updated: {{ total }}",
     "in_stock": "In stock",
-    "update_cart": "Update cart"
+    "update_cart": "Update cart",
+    "note_label": "Order note",
+    "note_placeholder": "Delivery instructions or anything else we should know"
   },
   "collections": {
     "title": "Collections",
