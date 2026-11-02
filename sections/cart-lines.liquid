@@ -16,6 +16,11 @@
   defer：解析完成后执行，不阻塞首屏。
 {% endcomment -%}
 <script src="{{ 'cart-items.js' | asset_url }}" defer></script>
+{%- comment -%}
+  行项样式独立成 assets/cart-line.css：抽屉（layout 级）与购物车页共用同一份行项，
+  section 的样式块只在 section 存在时加载，抽屉拿不到。
+{%- endcomment -%}
+{{ 'cart-line.css' | asset_url | stylesheet_tag }}
 
 <cart-items
   class="cart-lines"
@@ -121,7 +126,8 @@
     margin-inline-start: 0.35em;
   }
 
-  /* 桌面表格容器：表头与所有行同处一个圆角框内，与右侧摘要卡共用一套卡片语言 */
+  /* 桌面表格容器：表头与所有行同处一个圆角框内，与右侧摘要卡共用一套卡片语言。
+     行项自身的通用外观在 assets/cart-line.css，这里只管表格专属的骨架。 */
   .cart-lines__table {
     border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
     border-radius: 12px;
@@ -143,247 +149,48 @@
     border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
   }
 
-  /* ---- 单行 ----
-     桌面是 5 个平级子项对应 4 个可见列（图片与信息同属 Product 列）：
-     96px 图 | 1fr 信息 | 120px 单价 | 132px 数量 | 100px 行小计。
-     列宽写死是为了表头与每行严格对齐——用 auto 时，一行有折扣、一行没有，
-     整张表就会左右错位。 */
-  .cart-line {
-    display: grid;
-    grid-template-columns: 96px minmax(0, 1fr);
-    gap: 0.75rem;
-    padding-block: 1.25rem;
-    align-items: start;
-  }
-  .cart-line__media a {
-    display: block;
-  }
-  .cart-line__media img,
-  .cart-line__placeholder {
-    inline-size: 100%;
-    block-size: auto;
-    aspect-ratio: 1;
-    object-fit: contain;
-    border-radius: 8px;
-    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
-  }
-
-  .cart-line__info {
-    /* grid/flex item 的自动最小尺寸会按 min-content 撑开——长标题必须截断这个传导 */
-    min-inline-size: 0;
-    display: grid;
-    justify-items: start;
-    gap: 0.3rem;
-    align-content: start;
-  }
-  .cart-line__title {
-    font-weight: 500;
-    color: inherit;
-    text-decoration: none;
-  }
-  .cart-line__title:hover {
-    color: var(--color-brand);
+  /* ---- 桌面：四列表格 ----
+     覆盖 cart-line.css 的卡片态。列宽写死是为了表头与每行严格对齐——
+     用 auto 时，一行有折扣、一行没有，整张表就会左右错位。
+     `grid-template-areas: none` 不能省：区域名会锁死列数，只改 columns 会整块失效。 */
+  @media (min-width: 750px) {
+    .cart-lines__head,
+    .cart-lines .cart-line {
+      grid-template-columns: 96px minmax(0, 1fr) 120px 132px 100px;
+      gap: 1rem;
+    }
+    .cart-lines .cart-line {
+      grid-template-areas: none;
+      align-items: center;
+      /* 数值列在整行高度里居中：信息区通常最高（标题 + 徽标 + 移除） */
+      padding-block: 1.25rem;
+    }
+    .cart-lines__head {
+      display: grid;
+      align-items: end;
+      padding-block: 0.9rem 0.6rem;
+      border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+      font-size: 0.8125rem;
+      color: var(--color-foreground-muted);
+    }
+    /* Product 标签盖住「图 + 信息」两列，左对齐到容器内边 */
+    .cart-lines__head-product {
+      grid-column: 1 / span 2;
+    }
+    /* 表格里数值列一律左对齐到列首；卡片态的 justify-self: end 在这里不要 */
+    .cart-lines .cart-line__qty,
+    .cart-lines .cart-line__total {
+      justify-self: start;
+    }
   }
 
-  /* 规格胶囊：与商品卡 product-card__tag 同一套参数（padding 2px 8px / 999px /
-     前景色 3% 底 / 15% 描边 / 0.7rem）。两个页面出现同一种"参数标签"时长得一样，
-     顾客才不用重新学一遍哪个是参数、哪个是按钮。 */
-  .cart-line__meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .cart-line__meta li {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 15%, transparent);
-    border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
-    font-size: 0.7rem;
-    color: var(--color-foreground-muted);
-    max-inline-size: 100%;
-    text-align: center;
-  }
-
-  /* 悬停反馈：与商品卡 `.product-card:hover .product-card__tag` 逐值一致
-     （品牌色 12% 底 / 32% 描边 / 品牌字色）。挂在整个行上而不是胶囊自己身上，
-     因为商品卡也是"鼠标进卡就亮"——两者对顾客是同一件事：这一组参数属于这条商品。
-     触屏没有 hover，不会出现点一下变绿又留在那儿的状态。 */
-  .cart-line:hover .cart-line__meta li {
-    background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
-    border-color: color-mix(in srgb, var(--color-brand) 32%, transparent);
-    color: var(--color-brand);
-  }
-
-  .cart-line__plan,
-  .cart-line__discount,
-  .cart-line__stock {
-    font-size: 0.8125rem;
-  }
-  .cart-line__plan {
-    color: var(--color-brand);
-  }
-  .cart-line__discount {
-    color: var(--color-sale);
-  }
-  .cart-line__stock {
-    color: var(--color-brand);
-  }
-
-  .cart-line__logistics {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.8125rem;
-    color: var(--color-foreground-muted);
-  }
-  /* 物流徽标 / 超卖提示：与规格胶囊同一套尺寸（padding 2px 8px / 999px / 0.7rem），
-     只换配色——黄底是"这条不是普通交付"的语义，不能退成中性灰。
-     两枚标签同高同圆角，并排时是一条整齐的标签带，而不是两种形状拼在一起。 */
-  :is(.cart-line__logistics-tag, .cart-line__backorder) {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    line-height: 1.4;
-    color: var(--color-warning-on);
-    background-color: var(--color-warning);
-  }
-
-  /* ---- 单价 / 数量 / 行小计 ---- */
-  .cart-line__price {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.15rem 0.4rem;
-    font-variant-numeric: tabular-nums;
-  }
-  .cart-line__price-compare,
-  .cart-line__total-compare {
-    font-size: 0.8125rem;
-    color: var(--color-foreground-muted);
-  }
-  .cart-line__unit {
-    /* 单位价另起一行，不跟价格抢横向空间 */
-    flex-basis: 100%;
-    font-size: 0.75rem;
-    color: var(--color-foreground-muted);
-  }
-
-  .cart-line__qty {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
-    border-radius: 999px;
-    background-color: var(--color-background);
-  }
-  .cart-line__qty-btn {
-    /* 触摸目标 44×44（AGENTS.md §8 / SDD §8.2） */
-    inline-size: 44px;
-    block-size: 44px;
-    display: grid;
-    place-items: center;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-    font-size: 1rem;
-    line-height: 1;
-    cursor: pointer;
-    border-radius: 999px;
-  }
-  .cart-line__qty-btn:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
-  }
-  .cart-line__qty-btn:disabled {
-    color: color-mix(in srgb, var(--color-foreground) 35%, transparent);
-    cursor: not-allowed;
-  }
-  .cart-line__qty-input {
-    inline-size: 2.75rem;
-    block-size: 44px;
-    border: 0;
-    background: none;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
-    /* 原生数字输入的上下箭头挤在 44px 内会压住数字 */
-    appearance: textfield;
-  }
-  .cart-line__qty-input::-webkit-outer-spin-button,
-  .cart-line__qty-input::-webkit-inner-spin-button {
-    appearance: none;
-    margin: 0;
-  }
-
-  .cart-line__total {
-    display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .cart-line__remove {
-    /* 44px 的高度已经带来上下各 ~13px 的内边距，再叠 gap 会显得离徽标太远；
-       这里不再额外加外边距，靠信息区自己的 gap 控制。 */
-    min-block-size: 44px;
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.8125rem;
-    color: var(--color-foreground-muted);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-  .cart-line__remove:hover {
-    color: var(--color-sale);
-  }
-
-  /* ---- 超量/失败态 ----
-     请求失败时 JS 给行加 data-cart-error：数量框描边与行小计转红，并插一条
-     role="alert" 的说明（内容来自 Shopify 返回的 description，例如
-     "You can only add 25 ... to your cart"，比通用文案有用得多）。
-     红色一直保留到顾客下一次动这一行——错误不应该自己消失，否则顾客回来时
-     只会看到一个静静回退的数字，误以为是自己手滑。 */
-  .cart-line[data-cart-error] .cart-line__qty {
-    border-color: var(--color-sale);
-    background-color: color-mix(in srgb, var(--color-sale) 6%, transparent);
-  }
-  .cart-line[data-cart-error] .cart-line__total-value {
-    color: var(--color-sale);
-  }
-  .cart-line__error {
-    margin: 0;
-    font-size: 0.8125rem;
-    color: var(--color-sale);
-  }
-
-  /* 晃动 1 秒：幅度逐段递减，收尾自然停住（等幅晃动看久了像卡住）。
-     只晃一次，靠 data-cart-shake 挂载，JS 在动画结束后摘掉属性，
-     下次失败才会重新触发。 */
-  @keyframes cart-line-shake {
-    0%, 100% { translate: 0 0; }
-    12% { translate: -6px 0; }
-    24% { translate: 6px 0; }
-    38% { translate: -5px 0; }
-    52% { translate: 4px 0; }
-    66% { translate: -3px 0; }
-    80% { translate: 2px 0; }
-    92% { translate: -1px 0; }
-  }
-  .cart-line[data-cart-error][data-cart-shake] .cart-line__qty {
-    animation: cart-line-shake 1s ease-in-out;
-  }
-  /* reduce：晃动是纯装饰，去掉；红色描边与文字提示保留（那是信息本身） */
-  @media (prefers-reduced-motion: reduce) {
-    .cart-line[data-cart-error][data-cart-shake] .cart-line__qty {
-      animation: none;
+  /* ---- 窄屏：表格容器退成通栏，行本身就是卡片 ---- */
+  @media (max-width: 749px) {
+    .cart-lines__table {
+      border: 0;
+      border-radius: 0;
+      padding-inline: 0;
+      padding-block-end: 0;
     }
   }
 
@@ -400,8 +207,7 @@
     font-weight: 500;
   }
   .cart-lines__note-input {
-    /* 占满表格内宽（2026-11-02 刘工）：原先限了 34rem，右侧空出一大块，
-       与上方行项的右边界对不上。去掉上限，宽度交给外层 grid。 */
+    /* 占满表格内宽：原先限了 34rem，与上方行项的右边界对不上 */
     inline-size: 100%;
     padding: 0.6rem 0.75rem;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
@@ -448,73 +254,6 @@
     display: inline-flex;
     align-items: center;
     text-decoration: none;
-  }
-
-  /* ---- 桌面：四列表格 ---- */
-  @media (min-width: 750px) {
-    .cart-lines__head,
-    .cart-line {
-      grid-template-columns: 96px minmax(0, 1fr) 120px 132px 100px;
-      gap: 1rem;
-    }
-    .cart-lines__head {
-      display: grid;
-      align-items: end;
-      padding-block: 0.9rem 0.6rem;
-      border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
-      font-size: 0.8125rem;
-      color: var(--color-foreground-muted);
-    }
-    /* Product 标签盖住「图 + 信息」两列，左对齐到容器内边 */
-    .cart-lines__head-product {
-      grid-column: 1 / span 2;
-    }
-    .cart-line {
-      /* 数值列在整行高度里居中：信息区通常最高（标题 + 徽标 + 移除），
-         让价格与数量停在视觉中线上，而不是被 Remove 拖到底部 */
-      align-items: center;
-    }
-    .cart-line__qty,
-    .cart-line__total {
-      justify-self: start;
-    }
-  }
-
-  /* ---- 窄屏：退化为卡片（图在左跨多行，右侧依次堆） ---- */
-  @media (max-width: 749px) {
-    .cart-lines__table {
-      border: 0;
-      border-radius: 0;
-      padding-inline: 0;
-    }
-    .cart-line {
-      grid-template-columns: 80px minmax(0, 1fr) auto;
-      grid-template-areas:
-        'media info info'
-        'media price price'
-        'media qty total';
-      align-items: start;
-      row-gap: 0.45rem;
-    }
-    .cart-line__media {
-      grid-area: media;
-    }
-    .cart-line__info {
-      grid-area: info;
-    }
-    .cart-line__price {
-      grid-area: price;
-    }
-    .cart-line__qty {
-      grid-area: qty;
-      justify-self: start;
-    }
-    .cart-line__total {
-      grid-area: total;
-      /* 与小计并排：数量在左、行小计贴右，顾客一眼能看出"这个数量 = 这个金额" */
-      justify-self: end;
-      align-self: center;
-    }
   }
 {% endstylesheet %}
 
