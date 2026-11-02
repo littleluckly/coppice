@@ -45,11 +45,24 @@
 -%}
 
 {%- if rec_collection != blank and rec_collection.products_count > 0 -%}
-  {%- comment -%} product-card 的三个依赖：样式 + 收藏 + 快速加购 + 倾斜 {%- endcomment -%}
-  {{ 'product-card.css' | asset_url | stylesheet_tag }}
-  <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
-  <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
-  <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
+  {%- comment -%}
+    先数一遍可输出的商品：集合里的东西可能已经全在车内（比如就 4 款配件、
+    顾客全买了），那样标题下面挂一个空网格比不显示更难看。
+    集合对象已在内存里，第二遍循环不产生额外请求。
+  {%- endcomment -%}
+  {%- assign rec_available = 0 -%}
+  {%- for rec_probe in rec_collection.products limit: rec_pool -%}
+    {%- unless rec_cart_ids contains rec_probe.id -%}
+      {%- assign rec_available = rec_available | plus: 1 -%}
+    {%- endunless -%}
+  {%- endfor -%}
+
+  {%- if rec_available > 0 -%}
+    {%- comment -%} product-card 的三个依赖：样式 + 收藏 + 快速加购 + 倾斜 {%- endcomment -%}
+    {{ 'product-card.css' | asset_url | stylesheet_tag }}
+    <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
+    <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+    <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
 
   <div
     class="cart-recommendations"
@@ -89,6 +102,7 @@
   </div>
 
   <script src="{{ 'cart-recommendations.js' | asset_url }}" defer></script>
+  {%- endif -%}
 {%- endif -%}
 
 {% stylesheet %}

@@ -28,8 +28,9 @@
     assign summary_note = summary_shipping_note | default: summary_tax_note
   -%}
 
-  <aside class="cart-summary" data-cart-section="{{ section.id }}" aria-labelledby="CartSummaryHeading">
-    <h2 class="cart-summary__heading" id="CartSummaryHeading">{{ summary_heading | escape }}</h2>
+  {%- assign summary_heading_id = 'CartSummaryHeading-' | append: section.id -%}
+  <aside class="cart-summary" data-cart-section="{{ section.id }}" aria-labelledby="{{ summary_heading_id }}">
+    <h2 class="cart-summary__heading" id="{{ summary_heading_id }}">{{ summary_heading | escape }}</h2>
 
     <dl class="cart-summary__rows">
       <div class="cart-summary__row">

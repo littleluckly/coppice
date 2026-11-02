@@ -1,7 +1,7 @@
 {% doc %}
   cart-line — 购物车单行（sections/cart-lines.liquid 调用；将来的购物车抽屉复用同一份）。
 
-  刻意**不输出 `<li>`**：外层列表语义由调用方给（页内是 `<ul>`，抽屉里可能是 `<div>`）。
+  刻意**不输出 li 元素**：外层列表语义由调用方给（页内是 ul，抽屉里可能是 div）。
   根节点 `.cart-line` 带 `data-line-key`，assets/cart-items.js 靠它定位行、保持焦点。
 
   信息优先级（窄屏先牺牲谁）：
