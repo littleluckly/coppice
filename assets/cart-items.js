@@ -35,6 +35,7 @@ class CartItems extends HTMLElement {
   disconnectedCallback() {
     this._controller.abort();
     clearTimeout(this._timer);
+    clearTimeout(this._shakeTimer);
     this._inflight.forEach((controller) => controller.abort());
     this._inflight.clear();
   }
@@ -180,6 +181,51 @@ class CartItems extends HTMLElement {
       if (error.name === 'AbortError') return;
       this._announceMessage(this.dataset.errorMessage);
     }
+  }
+
+  /**
+   * 行内失败提示：数量框/小计转红 + 晃动 1 秒 + 一条 role="alert" 的说明。
+   *
+   * 为什么不是只播报 aria-live：那只对屏幕阅读器有效，看得见的顾客会看到
+   * 数字自己弹回去，以为点错了或者页面卡了。红色保留到下一次操作，
+   * 晃动只播一次（动画结束摘属性，否则同一行连续失败时第二次不会动）。
+   */
+  _showLineError(source, message) {
+    const line = source && source.closest ? source.closest('.cart-line') : null;
+    if (!line) return;
+
+    line.dataset.cartError = '';
+    line.dataset.cartShake = '';
+
+    let note = line.querySelector('[data-cart-line-error]');
+    if (!note) {
+      note = document.createElement('p');
+      note.className = 'cart-line__error';
+      note.setAttribute('role', 'alert');
+      note.dataset.cartLineError = '';
+      /* 插在信息区末尾（Remove 之后），避免多出来的节点打乱 5 列 grid */
+      const container = line.querySelector('.cart-line__info') || line;
+      container.appendChild(note);
+    }
+    note.textContent = message || '';
+
+    window.clearTimeout(this._shakeTimer);
+    this._shakeTimer = window.setTimeout(() => {
+      /* 只摘晃动标记：红色与说明保留到顾客下一次动这一行
+         （_clearLineError 负责收尾），错误不该自己消失 */
+      line.removeAttribute('data-cart-shake');
+    }, 1000);
+  }
+
+  /** 顾客下一次动这一行时清账：红色与说明都不该跨操作残留 */
+  _clearLineError(source) {
+    const line = source && source.closest ? source.closest('.cart-line') : null;
+    if (!line) return;
+    window.clearTimeout(this._shakeTimer);
+    delete line.dataset.cartError;
+    delete line.dataset.cartShake;
+    const note = line.querySelector('[data-cart-line-error]');
+    if (note) note.remove();
   }
 
   /** 本页所有参与刷新的 section id（各自用 Liquid 输出在 data-cart-section 上） */
