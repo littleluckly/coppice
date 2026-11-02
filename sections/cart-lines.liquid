@@ -22,8 +22,10 @@
   data-cart-section="{{ section.id }}"
   data-cart-change-url="{{ routes.cart_change_url }}.js"
   data-cart-live-template="{{ 'cart.total_updated' | t: total: '[total]' }}"
+  data-cart-product-ids="{{ cart.items | map: 'product_id' | join: ',' }}"
+  data-error-message="{{ 'products.product_card.add_error' | t }}"
 >
-  <h1 class="cart-lines__title">
+  <h1 class="cart-lines__title" tabindex="-1">
     {{ 'cart.title' | t }}
     {%- if cart.item_count > 0 -%}
       <span class="cart-lines__count" aria-hidden="true">({{ cart.item_count }})</span>
