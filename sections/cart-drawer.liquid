@@ -107,8 +107,13 @@
     inset-inline-start: auto;
     inline-size: min(26rem, 100%);
     max-inline-size: 100%;
-    block-size: 100%;
-    max-block-size: 100%;
+    /* 用 dvh 而不是 100%：移动端 100% 会按 layout viewport 算（含地址栏的高度），
+       内容比可见区域高时 dialog 自己就溢出了，页面上会多出一根外层滚动条。 */
+    block-size: 100dvh;
+    max-block-size: 100dvh;
+    /* 兜住 dialog 自身的溢出：滚动只允许发生在 .cart-drawer__body 里，
+       否则就是"内层滚列表、外层滚整个面板"的两根滚动条。 */
+    overflow: hidden;
     margin: 0;
     padding: 0;
     border: 0;
@@ -178,6 +183,8 @@
   .cart-drawer__body {
     min-block-size: 0;
     overflow-y: auto;
+    /* 滚到底不把滚动传给背景页（移动端尤其明显：列表滑完接着整页跟着滑） */
+    overscroll-behavior: contain;
     padding-inline: 1.25rem;
   }
   .cart-drawer__list {
