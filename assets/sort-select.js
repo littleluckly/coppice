@@ -30,6 +30,11 @@ const CHECK_SVG =
    所以形状得手工对齐——改动其中一处时另一处要跟着改。 */
 const CHEVRON_SVG =
   '<svg class="facets__sort-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>';
+/* 关闭 X 与筛选抽屉/购物车抽屉用的是同一文件 assets/icon-close.svg
+   （服务端 inline），这里 JS 构建只能手抄同一组几何参数——同 CHEVRON_SVG
+   的纪律，改其中一处时另一处要跟着改（2026-11-03 三面板关闭钮统一）。 */
+const CLOSE_SVG =
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18 18 6M6 6l12 12"/></svg>';
 
 class FacetSort extends HTMLElement {
   _abort = null;
@@ -160,6 +165,15 @@ class FacetSort extends HTMLElement {
       head.appendChild(title);
       sheet.setAttribute('aria-labelledby', title.id);
     }
+    /* X 图标关闭钮（2026-11-03 刘工：与筛选抽屉、购物车抽屉三处统一）。
+       文案走宿主 data-label-close（JS 拿不到 | t 翻译，data-* 传参是
+       compare.js / cart-badge.js 的既有惯例），缺失时英文兜底。 */
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'facets__sort-sheet-close';
+    closeBtn.setAttribute('aria-label', this.dataset.labelClose || 'Close');
+    closeBtn.innerHTML = CLOSE_SVG;
+    head.appendChild(closeBtn);
     sheet.appendChild(head);
 
     const body = document.createElement('div');
@@ -287,6 +301,12 @@ class FacetSort extends HTMLElement {
     /* 下拉手势刚结束：浏览器还会补一个 click，落点可能正好在某个选项上——
        不挡掉的话，「往下拽到一半又弹回」会顺手把排序改掉。 */
     if (this._dragEndedAt && performance.now() < this._dragEndedAt) return;
+    /* 头部行是拖拽热区，关闭钮在它里面：点按（无位移）不会触发拖拽收起，
+       这里显式接住 click 关面板（与遮罩点击同走 _closePanel 收口状态） */
+    if (event.target.closest('.facets__sort-sheet-close')) {
+      this._closePanel();
+      return;
+    }
     if (event.target.closest('.facets__sort-btn')) {
       this._open ? this._closePanel() : this._openPanel();
       return;

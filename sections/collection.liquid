@@ -184,7 +184,10 @@
                     <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
                       {{ 'collections.sort.label' | t }}
                     </label>
-                    <facet-sort class="facets__sort-select">
+                    <facet-sort
+                      class="facets__sort-select"
+                      data-label-close="{{ 'navigation.close' | t }}"
+                    >
                       <select
                         id="SortBy-{{ section.id }}"
                         name="sort_by"
@@ -325,7 +328,10 @@
                 <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
                   {{ 'collections.sort.label' | t }}
                 </label>
-                <facet-sort class="facets__sort-select">
+                <facet-sort
+                  class="facets__sort-select"
+                  data-label-close="{{ 'navigation.close' | t }}"
+                >
                   <select id="SortBy-{{ section.id }}" name="sort_by" data-facets-sort>
                     {%- for option in collection.sort_options -%}
                       <option
