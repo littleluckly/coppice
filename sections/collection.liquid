@@ -1728,19 +1728,21 @@
     .collection:not(.collection--no-banner) .collection__feature {
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       text-align: center;
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
+      line-height: 1.25;
       color: color-mix(in srgb, #fff 92%, transparent);
     }
-    /* 线描圆比原来的白底实心圆更小：参考图 26px、我们是 emoji 需要空间，
-       取 40px——再大就会把横幅顶高、也更像「按钮」而不像标注。 */
+    /* 线描圆 36px、标签 12px：遮罩只有 55% 宽，三条要点必须排得进这条列
+       （52% ≈ 203px / 3 = 67px 一列）。40px 圆 + 13px 字会掉成 2+1，
+       第三条孤零零一行，跟参考图的「三并排」不是一回事。 */
     .collection:not(.collection--no-banner) .collection__feature-badge {
-      inline-size: 2.5rem;
-      block-size: 2.5rem;
+      inline-size: 2.25rem;
+      block-size: 2.25rem;
     }
     .collection:not(.collection--no-banner) .collection__feature-emoji {
-      font-size: 1.25rem;
+      font-size: 1.125rem;
     }
     .collection:not(.collection--no-banner) .collection__feature-badge {
       background-color: transparent;
@@ -1755,6 +1757,8 @@
       max-inline-size: 52%;
       padding-block-start: 20px;
       margin-block-start: 20px;
+      gap: 14px 10px;
+      justify-content: space-between;
     }
     .collection:not(.collection--no-banner) .collection__features::before {
       content: '';
