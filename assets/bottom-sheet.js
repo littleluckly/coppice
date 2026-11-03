@@ -99,8 +99,10 @@ class BottomSheet extends HTMLElement {
     } else {
       dialog.classList.add('is-close-anim');
       const onAnimEnd = (event) => {
-        /* ::backdrop 的动画也以 dialog 为 target，按 keyframes 名字区分 */
-        if (event.animationName !== 'sheet-slide-down') return;
+        /* 只认面板自身的动画：::backdrop 的淡出同样以 dialog 为 target，
+           靠 pseudoElement 区分——不绑死 keyframes 名字，方向（下滑 / 右滑）
+           与时长交给宿主 CSS 决定 */
+        if (event.pseudoElement) return;
         dialog.removeEventListener('animationend', onAnimEnd);
         finish();
       };
@@ -149,7 +151,8 @@ class BottomSheet extends HTMLElement {
       dialog.classList.remove('is-entering');
     };
     const onEnd = (event) => {
-      if (event.animationName !== 'sheet-slide-up') return;
+      /* 同上：只看面板自己的动画，::backdrop 的淡入不参与 */
+      if (event.pseudoElement) return;
       stop();
     };
     dialog.addEventListener('animationend', onEnd);

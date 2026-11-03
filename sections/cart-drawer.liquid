@@ -27,10 +27,10 @@
 >
   {%- comment -%}
     抽屉开合交给 <bottom-sheet>（2026-11-03 刘工）：滑入 / 滑出 / Esc 收口由组件
-    统一负责。media 限定移动端——桌面是右侧滑出的窄栏，"向下滑出"没有语义，
-    桌面维持原来的 translate 过渡（见下方样式块）。组件 display:contents，不占位。
+    统一负责。移动端向下滑（组件默认 keyframes），桌面从右滑入、向右滑出
+    （本 section 的 @media (min-width: 990px) 覆盖动画名）；组件 display:contents，不占位。
   {%- endcomment -%}
-  <bottom-sheet media="(max-width: 989.98px)">
+  <bottom-sheet>
   <dialog class="cart-drawer__dialog" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
     {%- comment -%} 移动端底部抽屉的抓手横线（桌面隐藏）。纯装饰，不参与交互 {%- endcomment -%}
     <div class="cart-drawer__grabber" aria-hidden="true"></div>
@@ -128,15 +128,39 @@
     border: 0;
     background-color: var(--color-background);
     color: var(--color-foreground);
-    /* 从右侧滑入：translate 由 [open] 驱动，关闭时没有过渡（原生 dialog 关闭即隐藏） */
-    translate: 100% 0;
-    transition: translate 0.25s ease;
-  }
-  .cart-drawer__dialog[open] {
-    translate: 0 0;
+    /* 开合动效不在这里写：由 <bottom-sheet> 组件加 .is-entering / .is-close-anim，
+       桌面方向在下方 @media 里覆盖成右滑。
+       原先这里是 translate + transition——播不出来：dialog 从 display:none
+       打开的同一帧里 transition 没有起点，视觉上就是闪现（2026-11-03 修）。 */
   }
   .cart-drawer__dialog::backdrop {
     background-color: rgb(0 0 0 / 40%);
+  }
+  /* 桌面：从右滑入 / 向右滑出（组件默认是"下滑"，这里覆盖两个动画名）。
+     选择器比 critical.css 的 `bottom-sheet > dialog.is-*` 多一个类，压得住。 */
+  @media (min-width: 990px) {
+    .cart-drawer__dialog.is-entering {
+      animation: cart-drawer-slide-in-end 0.28s ease-out;
+    }
+    .cart-drawer__dialog.is-close-anim {
+      animation: cart-drawer-slide-out-end 0.22s ease-in forwards;
+    }
+    @keyframes cart-drawer-slide-in-end {
+      from {
+        transform: translateX(100%);
+      }
+      to {
+        transform: translateX(0);
+      }
+    }
+    @keyframes cart-drawer-slide-out-end {
+      from {
+        transform: translateX(0);
+      }
+      to {
+        transform: translateX(100%);
+      }
+    }
   }
 
   .cart-drawer__panel {
