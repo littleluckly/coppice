@@ -957,6 +957,11 @@
     }
     .facets__sort-sheet-head {
       flex-shrink: 0;
+      /* 头行 = 标题 + 关闭钮两端对齐（同筛选抽屉的 .facets__mobile-head） */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
       /* 上内边距交给抓手的外边距（0.9rem），与筛选面板的头行同一个节奏 */
       padding: 0 1.25rem 0.5rem;
       border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
@@ -964,6 +969,8 @@
       touch-action: none;
       user-select: none;
     }
+    /* 关闭钮本体（.facets__sort-sheet-close）与筛选抽屉的 .facets__close
+       共用上面那条统一规则，这里不重复定义。 */
     .facets__sort-sheet-title {
       margin: 0;
       font-size: 1rem;
@@ -1500,14 +1507,32 @@
     font-size: 1rem;
     font-weight: 600;
   }
-  .facets__close {
-    min-height: 44px;
-    padding: 8px 0.75rem;
+  /* 面板关闭钮（2026-11-03 刘工：筛选抽屉 / 排序底部面板 / 购物车抽屉三处
+     统一成 X 图标）。几何与购物车抽屉的 .cart-drawer__close 逐值同参：
+     44px 圆形热区、18px 图标、悬停 6% 前景色浅底。原先筛选抽屉这里是
+     文字钮「Done」，排序面板没有关闭钮——三处一个来源才算统一。 */
+  .facets__close,
+  .facets__sort-sheet-close {
+    inline-size: 44px;
+    block-size: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
     border: none;
     background: none;
     font: inherit;
-    color: var(--color-brand-accent);
+    color: inherit;
     cursor: pointer;
+    border-radius: 999px;
+  }
+  .facets__close:hover,
+  .facets__sort-sheet-close:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+  .facets__close svg,
+  .facets__sort-sheet-close svg {
+    inline-size: 18px;
+    block-size: 18px;
   }
 
   /* 桌面两栏：纯 CSS 媒体查询，不依赖 JS（无 JS 也能筛选——应用按钮整页 GET 提交）。
