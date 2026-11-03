@@ -170,9 +170,16 @@ class FacetSort extends HTMLElement {
     sheet.addEventListener('click', (event) => {
       if (event.target === sheet) sheet.close();
     });
-    /* Esc / 遮罩 / 选项选中之外的关闭路径都收敛到 _closePanel，
-       保证 _open 状态与 DOM 位置一起复位 */
+    /* 下拉收起：热区 = 抓手 + 头部行（样式里给了 touch-action:none） */
+    sheet.addEventListener('pointerdown', this._onSheetDragStart);
+    /* Esc / 遮罩 / 选项选中 / 下拉越界之外的关闭路径都收敛到 _closePanel，
+       保证 _open 状态与 DOM 位置一起复位。
+       顺带把拖拽留下的内联样式清零——动画要用 animation:none 压住才能拖，
+       不清掉的话下次打开不会重新播滑入。 */
     sheet.addEventListener('close', () => {
+      sheet.style.animation = '';
+      sheet.style.transform = '';
+      sheet.style.transition = '';
       if (this._open) this._closePanel(true);
     });
 
@@ -268,6 +275,9 @@ class FacetSort extends HTMLElement {
 
   _onClick = (event) => {
     if (!this._built || this._btn.hidden) return;
+    /* 下拉手势刚结束：浏览器还会补一个 click，落点可能正好在某个选项上——
+       不挡掉的话，「往下拽到一半又弹回」会顺手把排序改掉。 */
+    if (this._dragEndedAt && performance.now() < this._dragEndedAt) return;
     if (event.target.closest('.facets__sort-btn')) {
       this._open ? this._closePanel() : this._openPanel();
       return;
@@ -328,6 +338,67 @@ class FacetSort extends HTMLElement {
     /* 面板是模态的，遮罩点击由 dialog 自己的监听处理（target 是 dialog 本身，
        而 dialog 在 this 内部，这里本来也不会命中） */
     if (this._open && !this.contains(event.target)) this._closePanel(false);
+  };
+
+  /**
+   * 下拉收起（与集合页筛选面板同一套手感）。
+   * 热区只有抓手与头部行（样式里给了 touch-action:none）；选项列表不参与——
+   * 那里的手势属于滚动，抢过来顾客就没法翻长列表了。
+   * 越过阈值（面板高的 30%，至少 120px）→ 关闭；未过 → 弹回原位。
+   *
+   * 拖动期间必须把 animation 压成 none：开面板时的滑入动画优先级高于内联
+   * transform，不压掉的话写 transform 也不动。清理由 close 事件统一收口。
+   */
+  _onSheetDragStart = (event) => {
+    if (event.button > 0) return;
+    const sheet = this._sheet;
+    if (!sheet || !sheet.open) return;
+
+    const handle = event.target.closest('.facets__grabber, .facets__sort-sheet-head');
+    if (!handle) return;
+
+    const startY = event.clientY;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let moved = false;
+
+    const onMove = (moveEvent) => {
+      const dy = moveEvent.clientY - startY;
+      if (dy <= 0) return; /* 只响应下拉 */
+      moved = moved || dy > 8;
+      sheet.style.animation = 'none';
+      sheet.style.transition = 'none';
+      sheet.style.transform = `translateY(${dy}px)`;
+    };
+
+    const onEnd = (endEvent) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+
+      const dy = endEvent.clientY - startY;
+      const dismissAt = Math.max(120, sheet.offsetHeight * 0.3);
+
+      if (moved && dy > dismissAt) {
+        this._dragEndedAt = performance.now() + 350;
+        sheet.close();
+        return;
+      }
+
+      /* 弹回：animation 保持 none 直到关闭，避免回弹结束后又重播一次滑入 */
+      if (moved && !reduce) sheet.style.transition = 'transform 0.22s ease-out';
+      sheet.style.transform = '';
+      window.setTimeout(
+        () => {
+          if (moved && !reduce) sheet.style.transition = '';
+        },
+        moved && !reduce ? 240 : 0
+      );
+      if (moved) this._dragEndedAt = performance.now() + 350;
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
   };
 
   _onMq = () => {
