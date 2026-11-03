@@ -1689,9 +1689,11 @@
        用 --collection-surface 而不是写死白：Noir 深色预设下自动变成
        「深底 + 浅色字」，不需要第二套规则（黑色遮罩那版必须写死 #000，
        是因为照片不跟预设翻转，两者性质不同）。
-       实测（隐藏文字后量描述框内背景亮度，描述色 = 前景 62%）：
-       左缘近似纯页面色，对比度 5.6:1；最亮处 4.1:1 —— 比黑遮罩那版稳，
-       因为深字压浅底本来就是更容易的方向。 */
+       左缘不满格（88%）是刻意的：满格就是一块纯白，照片全被抹掉；
+       88% 还能透出纹理，字也照样立得住。
+       实测（隐藏文字后量描述框背景）：标题 10.7:1（最差）、描述 3.7:1。
+       描述卡在 3.7 不是遮罩的问题——描述色本身是「前景 62%」，
+       压在纯白上也只有 3.8:1；要上 AA 得改描述色（全站级），不是改这里。 */
     .collection:not(.collection--no-banner) .collection__intro::before {
       content: '';
       position: absolute;
@@ -1700,9 +1702,9 @@
       pointer-events: none;
       background: linear-gradient(
         to right,
-        var(--collection-surface) 0%,
-        color-mix(in srgb, var(--collection-surface) 93%, transparent) 55%,
-        transparent 80%
+        color-mix(in srgb, var(--collection-surface) 88%, transparent) 0%,
+        color-mix(in srgb, var(--collection-surface) 78%, transparent) 55%,
+        transparent 82%
       );
     }
     /* 文字不再翻白：遮罩是页面色，深字/浅字交给预设自己决定，
