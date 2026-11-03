@@ -1329,13 +1329,25 @@
      user-select:none 防鼠标拖拽时选中标题文字。 */
   .facets__dialog .facets__grabber {
     flex-shrink: 0;
-    width: 40px;
-    height: 5px;
+    /* 2026-11-03 刘工：手指经常抓不到。视觉条 40×5 → 56×6，
+       命中区再用伪元素扩到约 120×38——按 Apple/Material 的口径，
+       可点区域至少 44px 见方，光靠 5px 高的条子必然抓不稳。
+       视觉上仍是"细横线"，不会变成一条粗杠。 */
+    position: relative;
+    width: 56px;
+    height: 6px;
     margin: 0 auto 0.9rem;
     border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-foreground) 15%, transparent);
+    background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
     touch-action: none;
     user-select: none;
+  }
+  /* 只吃指针、不参与绘制。命中区落在标题行正上方，那里没有可点控件，
+     不会遮住关闭按钮（它在头部行最右侧）。 */
+  .facets__dialog .facets__grabber::after {
+    content: '';
+    position: absolute;
+    inset: -16px -32px;
   }
   .facets__dialog .facets__mobile-head {
     touch-action: none; /* 头部行也是拖拽热区 */
@@ -1557,9 +1569,15 @@
       clip-path: inset(50%);
       white-space: nowrap;
     }
+    /* 高度与 Filters 按钮对齐（原 40px，比相邻的 Filters 矮 4px）；
+       限宽防长排序名把计数挤下整行——按钮分支是移动端的实际形态，
+       select 分支只在无 JS 时出现，两者限同一档。 */
     .collection__toolbar .facets__sort-card select {
-      min-height: 40px;
+      min-height: 44px;
       max-width: 40vw;
+    }
+    .collection__toolbar .facets__sort-btn {
+      max-width: 44vw;
     }
     /* 抽屉 / 无 JS 流内：排序卡在筛选卡顶部（.facets__sort-slot 已给分隔线），
        这里只把 form 退回 block，不再重复画一条线。 */
