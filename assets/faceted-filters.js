@@ -241,6 +241,8 @@ class CollectionFacets extends HTMLElement {
   connectedCallback() {
     this._sectionId = this.dataset.sectionId;
     this._dialog = document.getElementById(`FacetsDialog-${this._sectionId}`);
+    /* 开合行为组件（bottom-sheet.js）：dialog 的包裹层，找不到就退回原生开合 */
+    this._sheetEl = this._dialog?.closest('bottom-sheet') || null;
     /* 无筛选集合没有筛选表单，但排序 select 仍在工具条——控制器照常激活 */
     if (
       !this.querySelector('[data-facets-form]') &&
@@ -263,7 +265,6 @@ class CollectionFacets extends HTMLElement {
       this._dialog.addEventListener('change', this._onChange, { signal });
       this._dialog.addEventListener('click', this._onClick, { signal });
       this._dialog.addEventListener('close', this._onDialogClose, { signal });
-      this._dialog.addEventListener('cancel', this._onDialogCancel, { signal });
       this._dialog.addEventListener('pointerdown', this._onDragStart, { signal });
     }
 
@@ -321,12 +322,14 @@ class CollectionFacets extends HTMLElement {
       return;
     }
     if (event.target.closest('[data-facets-close]')) {
-      this._closeDialogAnimated();
+      this._closeSheet();
       return;
     }
-    /* 点遮罩关闭：target 是 dialog 本体即背景点击（对齐 nav-drawer 行为） */
+    /* 点遮罩关闭：target 是 dialog 本体即背景点击（对齐 nav-drawer 行为）。
+       遮罩策略留在宿主而非组件：这里将来若有防误触判断（如拖拽补发的 click），
+       属于本面板的私事，组件只管收到 close() 后怎么滑出去。 */
     if (event.target === this._dialog) {
-      this._closeDialogAnimated();
+      this._closeSheet();
       return;
     }
     /* 已选标签 / 清除全部：拦截站内跳转改走局部更新。
@@ -359,7 +362,7 @@ class CollectionFacets extends HTMLElement {
       const form = this._findForm();
       if (form) {
         const requestUrl = this._buildUrl(form.action, new FormData(form));
-        if (this._dialog?.open) this._closeDialogAnimated();
+        if (this._dialog?.open) this._closeSheet();
         this._load(requestUrl);
       }
     }
@@ -573,68 +576,30 @@ class CollectionFacets extends HTMLElement {
 
   _openDialog() {
     if (!this._dialog) return;
-    /* 收起动画进行中又被打开：作废未完成的关闭（finish 的代次校验让它空转），
-       并清掉关闭路径留下的标记——否则 is-closing 还挂着，滑入会被下滑动画顶掉 */
-    this._closing = false;
-    this._closeGen = (this._closeGen || 0) + 1;
-    this._dialog.classList.remove('is-closing');
     this._moveFormIntoDialog();
-    this._dialog.showModal();
+    this._openSheet();
     this._dialog.querySelector('.facets__panel')?.setAttribute('tabindex', '-1');
     this._dialog.querySelector('.facets__panel')?.focus();
   }
 
-  /* Esc：拦下原生立即关闭，走下滑动画收场（与关闭钮/遮罩同一路径） */
-  _onDialogCancel = (event) => {
-    event.preventDefault();
-    this._closeDialogAnimated();
-  };
-
   /**
-   * 动画收口关闭（2026-11-03 刘工：关闭从闪现改为向下滑出，与滑入对称）。
-   * 原生 dialog 的 close() 即 display:none——动画必须赶在 close() 之前播：
-   * 常规路径挂 .is-closing 播下滑 keyframes，animationend 后才真正 close()；
-   * 拖拽路径（fromDrag）transform 已在下拉途中，改用 transition 顺势滑到屏外，
-   * 不跳回原位重播。reduced-motion 直接 close()（is-closing 规则不参与）。
-   * setTimeout 兜底 animationend/transitionend 偶发不触发（无头浏览器虚拟时间）；
-   * 代次计数让"收起途中又被打开"作废未完成的关闭（见 _openDialog）。
-   * 内联样式与 is-closing 的清理由 _onDialogClose 统一收口。
+   * 开合委托给 <bottom-sheet>（2026-11-03 刘工：滑入/滑出/重开打断都收在组件里，
+   * 本文件不再各写一份）。组件未加载时退回原生 showModal/close——没有动效，
+   * 但功能完整；组件自带 media 守卫，桌面端不会误播下滑。
    */
-  _closeDialogAnimated(fromDrag = false) {
-    const dialog = this._dialog;
-    if (!dialog?.open || this._closing) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      dialog.close();
-      return;
-    }
-    this._closing = true;
-    const gen = (this._closeGen = (this._closeGen || 0) + 1);
-    let done = false;
-    const finish = () => {
-      if (done || gen !== this._closeGen) return;
-      done = true;
-      dialog.close();
-    };
-    if (fromDrag) {
-      dialog.style.transition = 'transform 0.22s ease-in';
-      dialog.style.transform = 'translateY(100%)';
-      const onTransEnd = (event) => {
-        if (event.target !== dialog || event.propertyName !== 'transform') return;
-        dialog.removeEventListener('transitionend', onTransEnd);
-        finish();
-      };
-      dialog.addEventListener('transitionend', onTransEnd);
-    } else {
-      dialog.classList.add('is-closing');
-      const onAnimEnd = (event) => {
-        /* ::backdrop 的动画也以 dialog 为 target，按 keyframes 名字区分 */
-        if (event.animationName !== 'facets-slide-down') return;
-        dialog.removeEventListener('animationend', onAnimEnd);
-        finish();
-      };
-      dialog.addEventListener('animationend', onAnimEnd);
-    }
-    window.setTimeout(finish, 320);
+  get _sheet() {
+    const el = this._sheetEl;
+    return el && typeof el.open === 'function' ? el : null;
+  }
+
+  _openSheet() {
+    if (this._sheet) this._sheet.open();
+    else if (this._dialog && !this._dialog.open) this._dialog.showModal();
+  }
+
+  _closeSheet(options) {
+    if (this._sheet) this._sheet.close(options);
+    else if (this._dialog?.open) this._dialog.close();
   }
 
   _moveFormIntoDialog() {
@@ -661,7 +626,7 @@ class CollectionFacets extends HTMLElement {
   _onDragStart = (event) => {
     if (event.button > 0) return;
     /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
-    if (this._closing) return;
+    if (this._sheet?.isClosing) return;
     const handle = event.target.closest('.facets__grabber, .facets__mobile-head');
     if (!handle || event.target.closest('[data-facets-close]')) return;
 
@@ -688,9 +653,8 @@ class CollectionFacets extends HTMLElement {
       const dismissAt = Math.max(120, dialog.offsetHeight * 0.3);
       if (moved && dy > dismissAt) {
         this._dragClickGuard = performance.now() + 350;
-        /* 从当前拖拽位置顺势滑出（transition 收尾），不再原地闪没（2026-11-03）。
-           内联样式清理由 _onDialogClose 统一收口，这里不复位。 */
-        this._closeDialogAnimated(true);
+        /* 从当前拖拽位置顺势滑出（组件按 fromDrag 走 transition），不再原地闪没 */
+        this._closeSheet({ fromDrag: true });
         return;
       }
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
