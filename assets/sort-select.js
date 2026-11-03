@@ -177,6 +177,11 @@ class FacetSort extends HTMLElement {
 
   _openPanel() {
     this._ensureList();
+    /* 先保证 listbox 回到组件内：上一次若在面板里被关闭（例如跨断点收起），
+       它可能还挂在已关闭的 dialog 里——桌面分支只把 hidden 去掉，
+       挂在关闭的 dialog 里等于永远看不见。 */
+    if (this._list.parentElement !== this) this.append(this._list);
+
     this._open = true;
     this._activeIndex = this._select.selectedIndex;
 
