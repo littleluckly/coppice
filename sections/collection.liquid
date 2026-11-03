@@ -1669,21 +1669,67 @@
       padding: 20px 20px 0;
       margin-block-end: 0;
     }
-    /* 文字压图的底衬：与横幅自带的纵向渐隐同色（--collection-surface，Noir 自动翻转），
-       只罩住标题块并向下 3.5rem 渐隐到透明——商家换成深色照片时深色文字仍立得住，
-       同时不会在图片上切出一条硬边。无横幅时不渲染（那层底衬会浮在留白上）。 */
+    /* ---- 左侧黑色半透明遮罩（2026-11-03 参考图）----
+       横向渐隐：左缘压暗给白字垫对比度，右缘归零保留原图亮度——照片里的产品正好
+       落在未压暗区，这是这套构图的命门（整幅均匀压暗会把产品也压灰）。
+       遮罩恒黑、不跟预设翻转：它压的是照片，照片本身不随主题色变，
+       属配色纪律的例外（同类：压商品图的遮罩、投影）。 */
     .collection:not(.collection--no-banner) .collection__intro::before {
       content: '';
       position: absolute;
-      inset: 0 0 -3.5rem;
+      inset: 0;
       z-index: -1;
       pointer-events: none;
       background: linear-gradient(
-        to bottom,
-        color-mix(in srgb, var(--collection-surface) 94%, transparent) 0%,
-        color-mix(in srgb, var(--collection-surface) 82%, transparent) 62%,
-        transparent 100%
+        to right,
+        color-mix(in srgb, #000 52%, transparent) 0%,
+        color-mix(in srgb, #000 34%, transparent) 45%,
+        transparent 74%
       );
+    }
+    /* 文字整体翻白。恒 #fff，**不能取 --color-background**：Noir 预设下它是深色，
+       白字体系会直接失效（这是「压在照片上」的例外区，与遮罩同一类）。 */
+    .collection:not(.collection--no-banner) .collection__intro {
+      color: #fff;
+    }
+    .collection:not(.collection--no-banner) .collection__breadcrumb-list {
+      color: color-mix(in srgb, #fff 82%, transparent);
+    }
+    .collection:not(.collection--no-banner) .collection__description {
+      color: color-mix(in srgb, #fff 88%, transparent);
+      /* 参考图的文字只占左侧 ~2/3：右半边留给照片主体（产品），
+         整宽铺满会把产品压到文字底下、也失去「靠左」的构图。 */
+      max-inline-size: 32ch;
+    }
+    /* 亮点行：参考图是「线描细圆在上、两行标签在下、整组左靠」。
+       我们原来是白底实心圆 + 左图标右文字；遮罩是深色，白底圆会跳出来，
+       改成透明底 + 1px 半透明白描边（emoji 保留原色，metafield 格式不变）。 */
+    .collection:not(.collection--no-banner) .collection__feature {
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+      color: color-mix(in srgb, #fff 92%, transparent);
+    }
+    .collection:not(.collection--no-banner) .collection__feature-badge {
+      background-color: transparent;
+      border: 1px solid color-mix(in srgb, #fff 45%, transparent);
+      box-shadow: none;
+    }
+    /* 描述与亮点之间的短分割线（参考图），只在有亮点时出现 */
+    .collection:not(.collection--no-banner) .collection__features {
+      position: relative;
+      padding-block-start: 20px;
+      margin-block-start: 20px;
+    }
+    .collection:not(.collection--no-banner) .collection__features::before {
+      content: '';
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-start: 0;
+      inline-size: 72px;
+      block-size: 1px;
+      background-color: color-mix(in srgb, #fff 55%, transparent);
     }
     /* 无横幅：标题块回到常规流，底边距仍由 .collection--no-banner 的 2rem 提供 */
     .collection--no-banner .collection__intro {
@@ -1718,17 +1764,32 @@
     .collection__feature-emoji {
       font-size: 1.375rem;
     }
-    /* 横幅高度不再是死值：与标题块同格，靠 stretch 跟着行高长
-       （min-height 兜住「只有一句话」的集合，保住 500px 的取景） */
+    /* 横幅高度：跟参考图比例（宽高比 ≈1.25:1 ⇒ 390px 视口约 312px），
+       用 82vw 夹在 300–360 之间；仍靠 stretch 跟着标题块长高——
+       文案变长时横幅变高，波浪固定在底边（不是被文字顶下去的固定值）。 */
     .collection__banner {
       align-self: stretch;
       height: auto;
-      min-height: 500px;
+      min-height: clamp(300px, 82vw, 360px);
     }
+    /* 底图不再纵向淡出（2026-11-03）：底边改由波浪硬切，
+       留着 mask 会在波峰处透出半透明照片、波浪看起来像画在雾上。 */
     .collection__banner-bg {
       object-position: center;
-      -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
-      mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    /* 底边波浪（移动端专属）：贴死底边 -1px 亚像素缝，z2 压在底图之上、产品岛之下 */
+    .collection__banner-wave {
+      display: block;
+      position: absolute;
+      inset-inline: 0;
+      inset-block-end: -1px;
+      inline-size: 100%;
+      block-size: 24px;
+      z-index: 2;
+      color: var(--collection-surface);
+      pointer-events: none;
     }
     /* 横幅自带的纵向渐隐在移动端让位（2026-11-03）：它原本的作用是把图片顶部
        洗成页面色、好和上方的标题块接住；现在标题块就压在图上，两层渐隐叠加
