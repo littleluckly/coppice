@@ -490,6 +490,14 @@
        跟着核对（待实测校正： shopify theme dev 里量一下实际行高）。 */
     --facets-sticky-top: 4.75rem;
 
+    /* 工具条控件（Filters 按钮 / 排序控件）的共用外观——2026-11-03 刘工：
+       两者并排却长得不一样，根因是一个读 --style-border-radius-inputs（商家
+       输入框圆角设置，默认 6px）、另一个写死 12px。这里收成一个出口：
+       仍尊重商家设置（设得更大就跟），但用 max() 兜住下限 14px——
+       6px 在 44px 高的按钮上几乎看不出圆角，两个控件会显得像两个时代的产物。 */
+    --facet-control-radius: max(var(--style-border-radius-inputs), 14px);
+    --facet-control-border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
+
     /* 首列 = 页面边距（与其余 section 的内容起点对齐），第二列承载整个两栏。
        列宽只在 .collection__layout 里定义一次（--collection-left），避免
        「外层轨道 + 内层列」两处 320px 各写各的。 */
@@ -762,10 +770,10 @@
     max-width: 100%;
     min-width: 0;
     min-height: 44px;
-    padding: 6px 0.6rem;
+    padding: 8px 0.75rem;
     /* select 同 input 不继承 color；边框从 foreground 派生（配色纪律） */
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
-    border-radius: 12px;
+    border: var(--facet-control-border);
+    border-radius: var(--facet-control-radius);
     background-color: var(--color-background);
     color: var(--color-foreground);
     text-overflow: ellipsis;
@@ -785,9 +793,11 @@
     gap: 0.5rem;
     width: 100%;
     min-height: 44px;
-    padding: 10px 1rem;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
-    border-radius: 12px;
+    /* 与 .facets__open 逐值一致：padding / 描边 / 圆角都走同一组令牌，
+       两个控件并排时高度与轮廓才对得上（2026-11-03） */
+    padding: 8px 1rem;
+    border: var(--facet-control-border);
+    border-radius: var(--facet-control-radius);
     background-color: var(--color-background);
     color: var(--color-foreground);
     font: inherit;
@@ -900,8 +910,8 @@
     align-items: center;
     min-height: 44px;
     padding: 8px 1rem;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
-    border-radius: var(--style-border-radius-inputs);
+    border: var(--facet-control-border);
+    border-radius: var(--facet-control-radius);
     background: none;
     font: inherit;
     cursor: pointer;
