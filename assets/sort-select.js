@@ -24,8 +24,12 @@
  */
 const CHECK_SVG =
   '<svg class="facets__sort-check" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 5"/></svg>';
+/* 箭头与 Filters 按钮用的 assets/icon-chevron-down.svg **同一组几何参数**
+   （24 视图 / 同一条 path / 描边 2 ⇒ 显示 16px 时都是 1.33px）。
+   两处不能共用一个文件：这里是 JS 构建的按钮，那边是服务端 inline 的，
+   所以形状得手工对齐——改动其中一处时另一处要跟着改。 */
 const CHEVRON_SVG =
-  '<svg class="facets__sort-chevron" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6l4.5 4.5L12.5 6"/></svg>';
+  '<svg class="facets__sort-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>';
 
 class FacetSort extends HTMLElement {
   _abort = null;

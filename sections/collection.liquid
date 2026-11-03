@@ -1023,11 +1023,15 @@
     cursor: pointer;
   }
   /* 箭头与排序按钮里的 .facets__sort-chevron 同尺寸同色（16px / 前景色 60%），
-     两枚按钮并排时才是同一套东西。flex:none 防长文案把它压扁。 */
+     两枚按钮并排时才是同一套东西。flex:none 防长文案把它压扁。
+     stroke-width 用 CSS 压过文件里的属性值：icon-chevron-down.svg 是 24 视图、
+     描边 1.5（按 16px 显示只有 1px，比排序按钮原来那个 1.8px 的细一圈）。
+     这里统一成 24 视图 / 描边 2 ⇒ 显示 1.33px，两枚箭头才算同一个形状。 */
   .facets__open svg {
     flex: none;
     inline-size: 16px;
     block-size: 16px;
+    stroke-width: 2;
     color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
   .collection__count {
