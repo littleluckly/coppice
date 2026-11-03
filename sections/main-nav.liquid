@@ -514,15 +514,17 @@
       {%- comment -%} 内容存 <template>，首次打开才实例化（AGENTS §6） {%- endcomment -%}
       <template data-nav-drawer-template>
         {%- comment -%}
-          2026-10-13 钻入式抽屉（刘工，参考效果图）：
-          面板平铺渲染（根面板 + 每个分组一个子面板，三层封顶），由 nav-drawer.js
-          用显式栈在面板间切换——右滑进子面板 / 左滑退回。分组行是 <button>
-          （BUG-023：有子项即 GROUP，无 url，绝不渲染成 <a>）。
+          2026-11-03 手风琴改版（刘工）：
+          钻入式面板栈删除，一级/二级分组改为原生 <details name> 手风琴——
+          同 name 的 details 浏览器原生互斥展开（同级只留一个开着），
+          无 JS 也能用（此前钻入必须 JS）。展开高度动画走 CSS
+          （::details-content + interpolate-size，见样式表，旧浏览器瞬时开合）。
+          分组行是 <summary>（BUG-023：有子项即 GROUP，无 url，绝不渲染成 <a>）。
+          顶部抓手与购物车抽屉/筛选面板同一规格，支持下拉关闭（nav-drawer.js）。
         {%- endcomment -%}
-        <div class="nav-drawer__panels">
-          {%- comment -%} ---- 面板 0：根菜单 ---- {%- endcomment -%}
-          <div class="nav-drawer__panel is-active" data-nav-panel>
-            <div class="nav-drawer__head nav-drawer__head--root">
+        <div class="nav-drawer__grabber" data-nav-drawer-grabber aria-hidden="true"></div>
+
+        <div class="nav-drawer__head nav-drawer__head--root">
               {%- comment -%}
                 品牌区复刻参考图：logo + 品牌名，链回首页。图片 alt=""
                 ——可见的品牌文字已命名该链接（与桌面 Zone 0 同一约定）。
