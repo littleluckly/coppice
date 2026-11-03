@@ -229,7 +229,16 @@ class FacetSort extends HTMLElement {
     /* 关面板前把 listbox 搬回组件内：留在 dialog 里的话，下次桌面开浮层
        会找不到绝对定位的祖先，浮层跑到 body 的坐标体系里 */
     if (this._list.parentElement !== this) this.append(this._list);
-    if (this._sheet?.open) this._sheet.close();
+    /* 拖拽留下的内联样式在这里清，而不是只依赖 dialog 的 close 事件：
+       close 是异步任务，某些环境（实测无头浏览器 + virtual-time）根本观察不到，
+       状态复位不该押在它身上。不清的话下次打开不会重播滑入动画，
+       而且会带着上一手的 translateY。 */
+    if (this._sheet) {
+      this._sheet.style.animation = '';
+      this._sheet.style.transform = '';
+      this._sheet.style.transition = '';
+      if (this._sheet.open) this._sheet.close();
+    }
     if (refocus) this._btn.focus();
   }
 
@@ -380,7 +389,9 @@ class FacetSort extends HTMLElement {
 
       if (moved && dy > dismissAt) {
         this._dragEndedAt = performance.now() + 350;
-        sheet.close();
+        /* 走 _closePanel 而不是直接 sheet.close()：状态复位必须同步完成，
+           不依赖 dialog 的 close 事件（见 _closePanel 里的说明） */
+        this._closePanel(true);
         return;
       }
 
