@@ -134,11 +134,12 @@
     opacity: 1;
   }
 
-  /* 锚点落位避开吸顶页头；只在桌面生效（移动端页头不吸顶） */
-  @media screen and (min-width: 990px) {
-    html:has(product-anchor-nav[data-scrollable]) {
-      scroll-padding-top: calc(var(--anchor-nav-offset, 5rem) + 0.5rem);
-    }
+  /* 锚点落位避开吸顶页头。
+     2026-11-02：页头改成全断点吸顶（移动端也吸），这条随之取消 990px 限制。
+     选择器也**不能再挂 [data-scrollable]**——那个 flag 由 JS 按断点判，移动端恒缺失，
+     挂上去等于移动端一条规则都不匹配，锚点会钻到页头底下。 */
+  html:has(product-anchor-nav) {
+    scroll-padding-top: calc(var(--anchor-nav-offset, 5rem) + 0.5rem);
   }
 
   /* 平滑滚动词典式降级：系统要求减少动效时保持瞬间跳转 */
