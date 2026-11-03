@@ -961,6 +961,32 @@
         opacity: 1;
       }
     }
+    /* 关闭动效（2026-11-03 刘工）：与滑入对称的向下滑出，机制同 .facets__dialog
+       的 .is-closing（JS 先播动画、animationend 后才真正 close()）。
+       拖拽收起不走这条规则——transform 已在下拉途中，JS 用 transition 顺势滑出。 */
+    .facets__sort-sheet[open].is-closing {
+      animation: facets-sort-sheet-down 0.22s ease-in forwards;
+      pointer-events: none;
+    }
+    .facets__sort-sheet[open].is-closing::backdrop {
+      animation: facets-sort-sheet-fade-out 0.22s ease-in forwards;
+    }
+    @keyframes facets-sort-sheet-down {
+      from {
+        transform: translateY(0);
+      }
+      to {
+        transform: translateY(100%);
+      }
+    }
+    @keyframes facets-sort-sheet-fade-out {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
     .facets__sort-sheet-head {
       flex-shrink: 0;
       /* 头行 = 标题 + 关闭钮两端对齐（同筛选抽屉的 .facets__mobile-head） */
@@ -1438,6 +1464,35 @@
     }
     to {
       opacity: 1;
+    }
+  }
+  /* 关闭动效（2026-11-03 刘工：关闭不再闪现，向下滑出与滑入对称）。
+     机制：JS 先挂 .is-closing 播下滑 keyframes，animationend 后才真正
+     close()——原生 dialog 关闭即 display:none，动画必须赶在 close() 前播。
+     离场 0.22s ease-in（比进场 0.28s ease-out 快半拍），遮罩同步淡出。
+     reduced-motion 下 JS 直接 close()，这里不参与；拖拽收起不走这条规则
+     （transform 已在下拉途中，JS 用 transition 顺势滑出，见 faceted-filters.js）。 */
+  .facets__dialog[open].is-closing {
+    animation: facets-slide-down 0.22s ease-in forwards;
+    pointer-events: none; /* 收起途中面板不可点；背景本就 inert，点击被吞掉 */
+  }
+  .facets__dialog[open].is-closing::backdrop {
+    animation: facets-backdrop-out 0.22s ease-in forwards;
+  }
+  @keyframes facets-slide-down {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes facets-backdrop-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
     }
   }
   .facets__dialog::backdrop {
