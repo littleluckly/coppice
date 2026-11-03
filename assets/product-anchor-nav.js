@@ -88,10 +88,9 @@ class ProductAnchorNav extends HTMLElement {
   _sync() {
     const root = document.documentElement;
 
-    /* 页头只在 ≥990px 吸顶；移动端返回 0（导航本身也不在移动端出现） */
-    const desktop = typeof window.matchMedia === 'function'
-      && window.matchMedia('(min-width: 990px)').matches;
-    const header = desktop ? document.querySelector('.main-nav-section') : null;
+    /* 页头从 2026-11-02 起全断点吸顶（移动端也吸），所以高度一律按实测值取，
+       不再按断点返回 0——否则移动端锚点跳转的落点会被页头盖住。 */
+    const header = document.querySelector('.main-nav-section');
     const offset = header ? Math.round(header.getBoundingClientRect().height) : 0;
 
     /* 只在值变化时写根变量，避免每帧触发样式重算 */
@@ -101,7 +100,10 @@ class ProductAnchorNav extends HTMLElement {
     }
 
     /* 「页面有滚动」判定：内容比视口高 1px 以上。overflow: hidden 只锁滚动
-       不改 scrollHeight，所以弹窗打开时这里不会误判成"不可滚动"。 */
+       不改 scrollHeight，所以弹窗打开时这里不会误判成"不可滚动"。
+       锚点导航条本身仍是桌面专属（移动端隐藏），所以这个 flag 仍按断点判。 */
+    const desktop = typeof window.matchMedia === 'function'
+      && window.matchMedia('(min-width: 990px)').matches;
     const scrollable = desktop && root.scrollHeight > window.innerHeight + 1;
     if (scrollable !== this.hasAttribute('data-scrollable')) {
       this.toggleAttribute('data-scrollable', scrollable);
