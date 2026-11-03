@@ -45,14 +45,17 @@ class NavDrawer extends HTMLElement {
   }
 
   _onOpen = () => {
-    if (!this._dialog || this._dialog.open) return;
+    if (!this._dialog) return;
+    /* 收起动画途中再点汉堡：让它重新展开（<bottom-sheet> 会作废未完成的关闭），
+       否则顾客得点两次才开——单看 dialog.open 会把这一瞬间判成"已经开着" */
+    const sheet = this._sheet;
+    if (this._dialog.open && !sheet?.isClosing) return;
 
     // 关闭期间可能展开了某一层：重开时全部收起（与旧版"回到根面板"同义）
     this._collapseAll();
 
-    const sheet = this._sheet;
     if (sheet) sheet.open();
-    else this._dialog.showModal();
+    else if (!this._dialog.open) this._dialog.showModal();
 
     // 禁用 autofocus（AGENTS §8），显式移焦到关闭按钮——比依赖
     // showModal() 的"首个可聚焦元素"行为更稳定。
