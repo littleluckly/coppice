@@ -1666,7 +1666,9 @@
       z-index: 10;
       align-self: start;
       width: 100%;
-      padding: 20px 20px 0;
+      /* 底部 2.5rem 是给波浪让位的：文字若压到图案上，波峰会从字形中间穿过去
+         （实测 390px 下亮点标签正好落在波浪带里）。 */
+      padding: 20px 20px 2.5rem;
       margin-block-end: 0;
     }
     /* ---- 左侧黑色半透明遮罩（2026-11-03 参考图）----
@@ -1682,9 +1684,9 @@
       pointer-events: none;
       background: linear-gradient(
         to right,
-        color-mix(in srgb, #000 52%, transparent) 0%,
-        color-mix(in srgb, #000 34%, transparent) 45%,
-        transparent 74%
+        color-mix(in srgb, #000 58%, transparent) 0%,
+        color-mix(in srgb, #000 45%, transparent) 55%,
+        transparent 85%
       );
     }
     /* 文字整体翻白。恒 #fff，**不能取 --color-background**：Noir 预设下它是深色，
@@ -1699,7 +1701,7 @@
       color: color-mix(in srgb, #fff 88%, transparent);
       /* 参考图的文字只占左侧 ~2/3：右半边留给照片主体（产品），
          整宽铺满会把产品压到文字底下、也失去「靠左」的构图。 */
-      max-inline-size: 32ch;
+      max-inline-size: 28ch;
     }
     /* 亮点行：参考图是「线描细圆在上、两行标签在下、整组左靠」。
        我们原来是白底实心圆 + 左图标右文字；遮罩是深色，白底圆会跳出来，
