@@ -389,6 +389,33 @@
               {{ 'navigation.products_count' | t: count: collection.products_count }}
             </p>
 
+            {%- comment -%}
+              视图切换（2026-11-03 刘工）：网格 ⇄ 列表。
+              位置由 CSS order 决定——移动端紧跟「排序」右侧、计数推到行尾；
+              桌面在工具条最右。
+              状态挂在 <html data-collection-view> 而不是本 section：筛选走
+              Section Rendering 会整块替换 <collection-facets> 的子节点，
+              状态放 section 里刷新一次就丢。首帧无闪烁由 theme.liquid 的
+              内联脚本负责（读 localStorage 先写属性），这里只做点击与同步。
+              单一按钮 = WAI-ARIA 的 toggle button：aria-pressed 表示「列表态是否开启」，
+              图标跟着 pressed 走（列表图标 = 列表态），标签恒定不随状态改词。
+            {%- endcomment -%}
+            <view-toggle class="view-toggle" data-view-toggle>
+              <button
+                type="button"
+                class="view-toggle__button"
+                aria-pressed="false"
+                aria-label="{{ 'collections.view.list_label' | t }}"
+              >
+                <span class="view-toggle__icon view-toggle__icon--grid" aria-hidden="true">
+                  {{- 'icon-view-grid.svg' | inline_asset_content -}}
+                </span>
+                <span class="view-toggle__icon view-toggle__icon--list" aria-hidden="true">
+                  {{- 'icon-view-list.svg' | inline_asset_content -}}
+                </span>
+              </button>
+            </view-toggle>
+
             {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
           </div>
 
