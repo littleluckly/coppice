@@ -1796,7 +1796,10 @@
       -webkit-mask-image: none;
       mask-image: none;
     }
-    /* 底边波浪（移动端专属）：贴死底边 -1px 亚像素缝，z2 压在底图之上、产品岛之下 */
+    /* 底边波浪（移动端专属）。z-index 必须高过标题块（z10）——遮罩是标题块的
+       ::before，只压到 z2 的话，遮罩会盖在波浪上把它染成一条灰带
+       （实测：横幅底部 24px 出现从深到浅的灰条，就是这层叠加）。
+       文字块底部留了 2.5rem，波浪只有 24px，压不到字。 */
     .collection__banner-wave {
       display: block;
       position: absolute;
@@ -1804,7 +1807,7 @@
       inset-block-end: -1px;
       inline-size: 100%;
       block-size: 24px;
-      z-index: 2;
+      z-index: 12;
       color: var(--collection-surface);
       pointer-events: none;
     }
