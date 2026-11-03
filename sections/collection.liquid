@@ -778,9 +778,10 @@
     color: var(--color-foreground);
     text-overflow: ellipsis;
   }
-  /* ---- 排序下拉增强（<facet-sort>，2026-10-17 刘工效果图）----
-     桌面 ≥990px 由 sort-select.js 接管：按钮 + 浮层 listbox；
-     移动端 / 无 JS 保持上面这条原生 select 样式（触屏原生选择器）。 */
+  /* ---- 排序选择器（<facet-sort>，2026-10-17 刘工效果图）----
+     有 JS：全断点接管，构建描边按钮；≥990px 开浮层 listbox，
+     <990px 开底部面板（2026-11-03 刘工：与 Filters 同一种滑入）。
+     无 JS：保持上面这条原生 select 样式（GET 表单照常提交）。 */
   .facets__sort-select {
     position: relative;
     display: block;
