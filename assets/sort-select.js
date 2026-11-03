@@ -351,68 +351,8 @@ class FacetSort extends HTMLElement {
     if (this._open && !this.contains(event.target)) this._closePanel(false);
   };
 
-  /**
-   * 下拉收起（与集合页筛选面板同一套手感）。
-   * 热区只有抓手与头部行（样式里给了 touch-action:none）；选项列表不参与——
-   * 那里的手势属于滚动，抢过来顾客就没法翻长列表了。
-   * 越过阈值（面板高的 30%，至少 120px）→ 关闭；未过 → 弹回原位。
-   *
-   * 拖动期间必须把 animation 压成 none：开面板时的滑入动画优先级高于内联
-   * transform，不压掉的话写 transform 也不动。清理由 close 事件统一收口。
-   */
-  _onSheetDragStart = (event) => {
-    if (event.button > 0) return;
-    const sheet = this._sheet;
-    if (!sheet || !sheet.open) return;
-
-    const handle = event.target.closest('.facets__grabber, .facets__sort-sheet-head');
-    if (!handle) return;
-
-    const startY = event.clientY;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let moved = false;
-
-    const onMove = (moveEvent) => {
-      const dy = moveEvent.clientY - startY;
-      if (dy <= 0) return; /* 只响应下拉 */
-      moved = moved || dy > 8;
-      sheet.style.animation = 'none';
-      sheet.style.transition = 'none';
-      sheet.style.transform = `translateY(${dy}px)`;
-    };
-
-    const onEnd = (endEvent) => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onEnd);
-      window.removeEventListener('pointercancel', onEnd);
-
-      const dy = endEvent.clientY - startY;
-      const dismissAt = Math.max(120, sheet.offsetHeight * 0.3);
-
-      if (moved && dy > dismissAt) {
-        this._dragEndedAt = performance.now() + 350;
-        /* 走 _closePanel 而不是直接 sheet.close()：状态复位必须同步完成，
-           不依赖 dialog 的 close 事件（见 _closePanel 里的说明） */
-        this._closePanel(true);
-        return;
-      }
-
-      /* 弹回：animation 保持 none 直到关闭，避免回弹结束后又重播一次滑入 */
-      if (moved && !reduce) sheet.style.transition = 'transform 0.22s ease-out';
-      sheet.style.transform = '';
-      window.setTimeout(
-        () => {
-          if (moved && !reduce) sheet.style.transition = '';
-        },
-        moved && !reduce ? 240 : 0
-      );
-      if (moved) this._dragEndedAt = performance.now() + 350;
-    };
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onEnd);
-    window.addEventListener('pointercancel', onEnd);
-  };
+  /* 拖拽收起已迁到 assets/bottom-sheet.js（三个底部面板共用），
+     本组件只保留 onDragEnd 回调里的防误触 click 窗口。 */
 
   _onMq = () => {
     /* 跨断点：容器形态从浮层换成面板（或反之），开着就直接收起。
