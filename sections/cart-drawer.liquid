@@ -271,98 +271,18 @@
 
      为什么用 animation 而不是 transition：dialog 关闭即 display:none，
      transition 没有可过渡的起点；animation 在 [open] 出现时从头播，正好。 */
+  /* ---- 移动端：底部面板 ----
+     容器外观（通栏 / 上圆角 / 85vh / 遮罩 / 滑入 / 抓手 / reduce 降级）
+     全部来自 assets/bottom-sheet.css —— 与集合页筛选、排序面板共用一份。
+     桌面那套右侧滑入的 translate 已被上面的 min-width 查询收走，这里不冲突。 */
   @media (max-width: 989.98px) {
-    .cart-drawer__dialog {
-      inset-block: auto 0;
-      inset-inline: 0;
-      inline-size: 100vw;
-      /* max-inline-size 必须显式覆盖：UA 对 dialog:modal 默认
-         max-width: calc((100% - 6px) - 2em)，不覆盖时 width:100vw 会被钳窄 */
-      max-inline-size: 100vw;
-      block-size: auto;
-      max-block-size: 85vh;
-      margin: 0;
-      border-radius: 16px 16px 0 0;
-      /* 桌面那套右侧滑入在底部抽屉里没有意义，关掉 */
-      translate: none;
-      transition: none;
-    }
-    .cart-drawer__dialog[open] {
-      display: flex;
-      flex-direction: column;
-      animation: cart-drawer-slide-up 0.28s ease-out;
-    }
-    .cart-drawer__dialog[open]::backdrop {
-      animation: cart-drawer-backdrop-in 0.28s ease-out;
-    }
-    @keyframes cart-drawer-slide-up {
-      from {
-        transform: translateY(100%);
-      }
-      to {
-        transform: translateY(0);
-      }
-    }
-    @keyframes cart-drawer-backdrop-in {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
-    }
-
     /* flex 链：抓手 → 面板；滚动仍只发生在 .cart-drawer__body */
     .cart-drawer__panel {
       flex: 1 1 auto;
       min-block-size: 0;
       block-size: auto;
     }
-
-    /* 系数与集合页两个面板完全一致（2026-11-03 对齐）：
-       视觉条 56×6、前景色 18%、命中区 120×54。
-       此前这里是 40×5 且没有命中区扩展——手指抓不住，正是刘工在筛选面板上
-       提过的问题，只是改的时候漏了购物车这一份。 */
-    .cart-drawer__grabber {
-      display: block;
-      flex-shrink: 0;
-      position: relative;
-      inline-size: 56px;
-      block-size: 6px;
-      /* 上外边距 1rem：抓手离面板顶边 16px，与另外两个面板同值；
-         也正因为这 16px，下面伪元素向上扩的那一段才不会被 dialog 的
-         overflow:hidden 全部裁掉 */
-      margin: 1rem auto 0.5rem;
-      border-radius: 999px;
-      background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
-      /* 抓手要能被拖：touch-action:none 让浏览器不把手势抢给滚动
-         （手势归属由初始触点决定），user-select 防鼠标拖拽时选中文字。 */
-      touch-action: none;
-      user-select: none;
-    }
-    /* 只吃指针、不参与绘制：命中区 120×54（视觉条 56×6）。
-       横向 ±32px 容忍左右偏；纵向向上受 dialog 的 overflow:hidden 限制
-       （恰好扩满那 16px 内边距），向下补到 32px —— 下方就是头部行，
-       本来就是拖拽热区，多铺这一层不改变行为，也够不着右上角的关闭按钮。 */
-    .cart-drawer__grabber::after {
-      content: '';
-      position: absolute;
-      inset: -16px -32px -32px;
-    }
-    /* 头部行也是拖拽热区（抓手只有 6px 高，手指按不准） */
-    .cart-drawer__header {
-      touch-action: none;
-      user-select: none;
-    }
   }
-
-  /* 移动端 + reduce：滑入直接出现（媒体查询条件合并写，不嵌套——嵌套 @media
-     在老浏览器里会被整段丢弃） */
-  @media (max-width: 989.98px) and (prefers-reduced-motion: reduce) {
-    .cart-drawer__dialog[open],
-    .cart-drawer__dialog[open]::backdrop {
-      animation: none;
-    }
   }
 {% endstylesheet %}
 
