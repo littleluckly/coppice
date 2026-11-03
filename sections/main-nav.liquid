@@ -1804,19 +1804,9 @@
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
   }
 
-  /* 二级行：字号降一档、去掉一级那种 600 的重感；左缩进让层级读得出来 */
-  .nav-drawer__link--sub {
-    min-height: 44px;
-    padding: 0.5rem 1rem 0.5rem 2rem;
-    font-size: 0.9375rem;
-    font-weight: 500;
-  }
-
-  /* 三级再缩一档：左缩进与二级的文字起点错开半个字宽，字号再降 0.5px */
-  .nav-drawer__sublist--deep .nav-drawer__link--sub {
-    padding-inline-start: 2.75rem;
-    font-size: 0.875rem;
-  }
+  /* 二级行的字号 / 缩进见下方 .nav-drawer__link--sub——它必须写在
+     .nav-drawer__link 之后：同一特异性下后写者胜，写在这上面会被基础行样式盖掉
+     （踩过一次：二级行与一级行完全齐平、字号也没降）。 */
 
   /* 二级项之间的发丝线：一级那次由 .nav-drawer__item 承担，这里同名类复用，
      但二级列表已有底色分档，线只留极淡一条，免得两层线打架 */
@@ -1970,6 +1960,22 @@
   .nav-drawer__link:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: -2px;
+  }
+
+  /* 二级行（2026-11-03 手风琴）：字号降一档、去掉一级那种 600 的重感；
+     左缩进 2rem 让层级读得出来。**必须写在 .nav-drawer__link 之后**——
+     同一特异性下后写者胜，写在上面会被基础行的 padding/font 整个盖掉。 */
+  .nav-drawer__link--sub {
+    min-height: 44px;
+    padding: 0.5rem 1rem 0.5rem 2rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+
+  /* 三级再缩一档：左缩进与二级的文字起点错开半个字宽，字号再降 0.5px */
+  .nav-drawer__sublist--deep .nav-drawer__link--sub {
+    padding-inline-start: 2.75rem;
+    font-size: 0.875rem;
   }
 
   .nav-drawer__link--current {
