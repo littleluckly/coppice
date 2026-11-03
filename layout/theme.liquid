@@ -69,6 +69,13 @@
     <script src="{{ 'reveal-on-scroll.js' | asset_url }}" defer></script>
 
     {% comment %}
+      底部抽屉的开合行为（2026-11-03）：筛选抽屉 / 排序面板 / 购物车抽屉共用，
+      只做滑入滑出、不封装内容。样式在 critical.css，见其中的 bottom-sheet 段。
+      三个消费方都按使用时刻才调方法（不等定义），故与它们的加载顺序无关。
+    {% endcomment %}
+    <script src="{{ 'bottom-sheet.js' | asset_url }}" defer></script>
+
+    {% comment %}
       回到顶部按钮（2026-10-30）：全站浮层，行为在脚本里、样式在 critical.css。
       与底部对比条共用右下角，避让靠 CSS :has()，不靠这里排顺序。
     {% endcomment %}
@@ -100,5 +107,12 @@
       放在最后：浮层 DOM 靠后，无 JS 时它默认隐藏，不影响内容顺序。
     {% endcomment %}
     {% render 'back-to-top' %}
+
+    {% comment %}
+      购物车抽屉（2026-11-02）：全站唯一，挂 layout 而非某个 section ——
+      页面里任何位置的加购都要能把它打开。静态 section 才有 section.id，
+      局部刷新（?sections=）需要它；snippet 拿不到。
+    {% endcomment %}
+    {% section 'cart-drawer' %}
   </body>
 </html>
