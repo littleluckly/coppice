@@ -8,8 +8,10 @@
  *
  * 这里只定义**卡片态**（窄列 + 堆叠），因为它要同时服务窄屏表格和抽屉。
  * 购物车页桌面的四列表格由 sections/cart-lines.liquid 覆盖列定义。
- * 想在该文件里覆盖时记得写 grid-template-areas: none —— 区域名会锁死列数，
- * 只改 grid-template-columns 会整块失效。
+ * 覆盖时 **grid-template-areas 与子项的 grid-area 必须成对改**：只改 columns
+ * 不改 areas 会锁死列数，而把 areas 置 none 更糟——子项上的 grid-area 会指向
+ * 不存在的区域，所有元素静默堆进同一个格子（2026-11-02 踩过，PC 端整行文字
+ * 压在商品图上，没有任何报错）。
  */
 
 .cart-line {
