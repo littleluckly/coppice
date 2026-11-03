@@ -139,19 +139,19 @@ class FacetSort extends HTMLElement {
     if (this._sheet) return;
 
     const sheet = document.createElement('dialog');
-    /* 容器外观来自 assets/bottom-sheet.css（与筛选面板、购物车抽屉共用） */
-    sheet.className = 'facets__sort-sheet bottom-sheet';
+    sheet.className = 'facets__sort-sheet';
     sheet.setAttribute('scroll-lock', '');
 
-    /* 抓手横线：样式与拖拽都在 bottom-sheet.* 里。
-       有了抓手就必须能拖——只画不拖是假承诺。 */
+    /* 抓手横线（2026-11-03 刘工：与筛选面板保持一致）。类名复用 .facets__grabber，
+       视觉定义在 collection.liquid 的样式块里一处维护。
+       有了抓手就必须能拖——只画不拖是假承诺，所以下面挂了拖拽收起。 */
     const grabber = document.createElement('div');
-    grabber.className = 'bottom-sheet__grabber';
+    grabber.className = 'facets__grabber';
     grabber.setAttribute('aria-hidden', 'true');
     sheet.appendChild(grabber);
 
     const head = document.createElement('div');
-    head.className = 'facets__sort-sheet-head bottom-sheet__head';
+    head.className = 'facets__sort-sheet-head';
     if (this._label) {
       const title = document.createElement('p');
       title.className = 'facets__sort-sheet-title';
@@ -170,20 +170,16 @@ class FacetSort extends HTMLElement {
     sheet.addEventListener('click', (event) => {
       if (event.target === sheet) sheet.close();
     });
-    /* 下拉收起：行为在 assets/bottom-sheet.js（三个底部面板共用一份）。
-       关面板走 _closePanel，它负责把 listbox 搬回组件内并同步状态。 */
-    this._detachDrag = window.BottomSheet?.attachDragToDismiss(sheet, {
-      onDismiss: () => this._closePanel(true),
-      onDragEnd: (guardUntil) => {
-        this._dragEndedAt = guardUntil;
-      },
-    });
+    /* 下拉收起：热区 = 抓手 + 头部行（样式里给了 touch-action:none） */
+    sheet.addEventListener('pointerdown', this._onSheetDragStart);
     /* Esc / 遮罩 / 选项选中 / 下拉越界之外的关闭路径都收敛到 _closePanel，
        保证 _open 状态与 DOM 位置一起复位。
        顺带把拖拽留下的内联样式清零——动画要用 animation:none 压住才能拖，
        不清掉的话下次打开不会重新播滑入。 */
     sheet.addEventListener('close', () => {
-      window.BottomSheet?.reset(sheet);
+      sheet.style.animation = '';
+      sheet.style.transform = '';
+      sheet.style.transition = '';
       if (this._open) this._closePanel(true);
     });
 
@@ -238,7 +234,9 @@ class FacetSort extends HTMLElement {
        状态复位不该押在它身上。不清的话下次打开不会重播滑入动画，
        而且会带着上一手的 translateY。 */
     if (this._sheet) {
-      window.BottomSheet?.reset(this._sheet);
+      this._sheet.style.animation = '';
+      this._sheet.style.transform = '';
+      this._sheet.style.transition = '';
       if (this._sheet.open) this._sheet.close();
     }
     if (refocus) this._btn.focus();
@@ -351,8 +349,68 @@ class FacetSort extends HTMLElement {
     if (this._open && !this.contains(event.target)) this._closePanel(false);
   };
 
-  /* 拖拽收起已迁到 assets/bottom-sheet.js（三个底部面板共用），
-     本组件只保留 onDragEnd 回调里的防误触 click 窗口。 */
+  /**
+   * 下拉收起（与集合页筛选面板同一套手感）。
+   * 热区只有抓手与头部行（样式里给了 touch-action:none）；选项列表不参与——
+   * 那里的手势属于滚动，抢过来顾客就没法翻长列表了。
+   * 越过阈值（面板高的 30%，至少 120px）→ 关闭；未过 → 弹回原位。
+   *
+   * 拖动期间必须把 animation 压成 none：开面板时的滑入动画优先级高于内联
+   * transform，不压掉的话写 transform 也不动。清理由 close 事件统一收口。
+   */
+  _onSheetDragStart = (event) => {
+    if (event.button > 0) return;
+    const sheet = this._sheet;
+    if (!sheet || !sheet.open) return;
+
+    const handle = event.target.closest('.facets__grabber, .facets__sort-sheet-head');
+    if (!handle) return;
+
+    const startY = event.clientY;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let moved = false;
+
+    const onMove = (moveEvent) => {
+      const dy = moveEvent.clientY - startY;
+      if (dy <= 0) return; /* 只响应下拉 */
+      moved = moved || dy > 8;
+      sheet.style.animation = 'none';
+      sheet.style.transition = 'none';
+      sheet.style.transform = `translateY(${dy}px)`;
+    };
+
+    const onEnd = (endEvent) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+
+      const dy = endEvent.clientY - startY;
+      const dismissAt = Math.max(120, sheet.offsetHeight * 0.3);
+
+      if (moved && dy > dismissAt) {
+        this._dragEndedAt = performance.now() + 350;
+        /* 走 _closePanel 而不是直接 sheet.close()：状态复位必须同步完成，
+           不依赖 dialog 的 close 事件（见 _closePanel 里的说明） */
+        this._closePanel(true);
+        return;
+      }
+
+      /* 弹回：animation 保持 none 直到关闭，避免回弹结束后又重播一次滑入 */
+      if (moved && !reduce) sheet.style.transition = 'transform 0.22s ease-out';
+      sheet.style.transform = '';
+      window.setTimeout(
+        () => {
+          if (moved && !reduce) sheet.style.transition = '';
+        },
+        moved && !reduce ? 240 : 0
+      );
+      if (moved) this._dragEndedAt = performance.now() + 350;
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
+  };
 
   _onMq = () => {
     /* 跨断点：容器形态从浮层换成面板（或反之），开着就直接收起。

@@ -118,7 +118,6 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - **状态靠 attribute 反映，样式与 `:has()` / `[open]` 等选择器挂钩**，不靠 JS 切 class 硬编码视觉状态（例：`<cart-drawer open>` → CSS `:has()` 决定遮罩显隐）。
 - 元素内部 DOM **优先延迟构建**：`<template>` 惰性实例化，首次打开才 `append`（延续"隐藏组件首次打开才建 DOM"）。
 - **平台原生组件优先于自建**：能用原生 `<dialog>` + `showModal()` 解决的模态（焦点锁定、`inert` 背景、`Esc` 关闭、`::backdrop`）就不要手写模态管理。
-- **共享行为可以是普通函数 + 全局命名空间，不硬套 Custom Element**（2026-11-03 例外，唯一一例：`assets/bottom-sheet.*`）：底部滑入面板的容器外观与下拉收起由 `assets/bottom-sheet.css` + `assets/bottom-sheet.js` 提供，消费者是三个**不同**的 Custom Element（集合页筛选、排序选择器、购物车抽屉）。它**不违反上面的委托禁令**——监听挂在各自 dialog 上，`closest()` 只在该 dialog 子树内判断热区，没有任何 `document` 级路由。反过来再包一层 `<bottom-sheet>` 只会得到一个必须同时容纳「底部通栏」和「桌面右侧栏」、靠开关分叉的壳。**新增底部面板请复用这两个文件，不要照抄一份新的。**
 - 一律 ES6+ 类与 `classList` / `dataset`，不用 jQuery、不用全局 `var` 挂函数。
 - 现有 `assets/compare-toggle.js` / `wishlist-toggle.js` 为本规则落地前的产物，**新增组件不再沿用其全局委托写法**；改到相关功能时顺手重构为 Custom Element。
 
