@@ -9,13 +9,19 @@
  *   配套：<dialog scroll-lock> 触发 critical.css 里既有的
  *   `html:has(dialog[scroll-lock][open]) { overflow: hidden }` 锁背景滚动。
  *
- * 2026-10-13 钻入式面板（刘工，参考效果图）：
- *   - 抽屉本体是底部面板：showModal 后 translate 0 100% → 0，从屏幕底边往上滑入。
- *   - 分组行（[data-nav-open="#panel-id"]）把对应子面板从右侧滑入（iOS 栈式），
- *     被覆盖的面板滑出到左侧（is-left）；[data-nav-back] 逆向弹出。
- *   - 面板全部由 main-nav.liquid 服务端渲染（三层封顶），本组件只维护一个
- *     显式栈 {panel, trigger}，不在导航时构建 DOM。
- *   - 打开抽屉时重置到根面板（复用上次停留的子面板会让人迷失层级）。
+ * 2026-10-13 底部面板（刘工，参考效果图）：
+ *   抽屉本体是底部面板：showModal 后 translate 0 100% → 0，从屏幕底边往上滑入。
+ *
+ * 2026-11-03 手风琴改版（刘工）：钻入式面板栈删除。一级/二级分组改用原生
+ *   <details name> 手风琴——同 name 的 details 互斥展开（浏览器原生行为，
+ *   Chrome 120+ / Safari 17.2+ / Firefox 130+），展开高度动画走 CSS
+ *   （::details-content + interpolate-size，旧浏览器降级为瞬时开合）。
+ *   优点：开合逻辑零 JS、无 JS 也能用（此前钻入必须 JS）、无 DOM 导航构建。
+ *   抓手（grabber，2026-11-03）：与购物车抽屉/筛选面板同一规格
+ *   （视觉条 56×6、前景 18%、命中区 120×54），支持下拉关闭——
+ *   越过阈值（面板高 30%、至少 120px）关抽屉，未过则弹回。
+ *   拖拽走 translate 属性内联值：CSS 的开合动画本来就是 translate 过渡，
+ *   顺势滑出时把内联值直接给到 0 100%，与 CSS 过渡无缝衔接。
  *
  * 无 JS 降级：<dialog> 未 showModal 时保持 display:none，汉堡按钮无响应——
  *   可接受（与 search-drawer 同一取舍）。抽屉打开本身依赖 JS，
@@ -28,9 +34,6 @@ class NavDrawer extends HTMLElement {
   _dialog = null;
   _opener = null;
   _closeButton = null;
-  _root = null;
-  /** 栈元素：{ panel, trigger }；栈底为根面板（trigger 为 null） */
-  _stack = [];
 
   // 一次性拆除所有监听，避免主题编辑器 / section 重新渲染后事件叠加
   _abort = new AbortController();
