@@ -27,10 +27,12 @@ class CartDrawer extends HTMLElement {
     });
 
     const closeButton = this.querySelector('[data-cart-drawer-close]');
-    if (closeButton) closeButton.addEventListener('click', () => this._closeAnimated(), { signal });
+    if (closeButton) closeButton.addEventListener('click', () => this._closeSheet(), { signal });
+
+    /* 开合行为组件（bottom-sheet.js）：滑入/滑出/Esc 收口都归它，见 critical.css */
+    this._sheetEl = this.dialog.closest('bottom-sheet');
 
     this.dialog.addEventListener('click', this._onBackdropClick, { signal });
-    this.dialog.addEventListener('cancel', this._onCancel, { signal });
     this.dialog.addEventListener('pointerdown', this._onDragStart, { signal });
     this.dialog.addEventListener('close', this._onClose, { signal });
 
@@ -54,16 +56,29 @@ class CartDrawer extends HTMLElement {
   };
 
   _show() {
-    if (!this.dialog.open) {
-      this.dialog.showModal();
-      document.documentElement.dataset.cartDrawerOpen = '';
-    }
-    /* 收起动画进行中又被打开（如加购自动弹出）：作废未完成的关闭，
-       清掉关闭路径留下的标记——否则 is-closing 挂着，滑入会被下滑顶掉 */
-    this._closing = false;
-    this._closeGen = (this._closeGen || 0) + 1;
-    this.dialog.classList.remove('is-closing');
+    if (!this.dialog.open) this._openSheet();
     this._refresh();
+  }
+
+  /**
+   * 开合委托给 <bottom-sheet>（2026-11-03 刘工）：滑入/滑出、重开打断、
+   * reduced-motion 与桌面右滑形态的跳过都在组件里。组件未加载时退回原生开合。
+   */
+  get _sheet() {
+    const el = this._sheetEl;
+    return el && typeof el.open === 'function' ? el : null;
+  }
+
+  _openSheet() {
+    if (this._sheet) this._sheet.open();
+    else if (!this.dialog.open) this.dialog.showModal();
+    /* 锁背景滚动（critical.css 的 html:has(dialog[scroll-lock][open])） */
+    document.documentElement.dataset.cartDrawerOpen = '';
+  }
+
+  _closeSheet(options) {
+    if (this._sheet) this._sheet.close(options);
+    else if (this.dialog.open) this.dialog.close();
   }
 
   /** 只改标题计数，不整块刷新——抽屉内改数量时 cart-items 已经自己换过内容区了 */
@@ -78,63 +93,8 @@ class CartDrawer extends HTMLElement {
        不挡掉的话，"往下拽到一半又弹回"会顺手把抽屉关掉。 */
     if (this._dragEndedAt && performance.now() < this._dragEndedAt) return;
     /* dialog 自身是点击目标 = 点在遮罩上（面板盖满了 dialog 内部） */
-    if (event.target === this.dialog) this._closeAnimated();
+    if (event.target === this.dialog) this._closeSheet();
   };
-
-  /* Esc：拦下原生立即关闭，走下滑动画收场（与关闭钮/遮罩同一路径） */
-  _onCancel = (event) => {
-    event.preventDefault();
-    this._closeAnimated();
-  };
-
-  /**
-   * 动画收口关闭（2026-11-03 刘工：关闭从闪现改为向下滑出，与滑入对称）。
-   * 原生 dialog 的 close() 即 display:none——动画必须赶在 close() 之前播：
-   * 常规路径挂 .is-closing 播下滑 keyframes，animationend 后才真正 close()；
-   * 拖拽路径（fromDrag）transform 已在下拉途中，改用 transition 顺势滑到屏外。
-   * 桌面右侧抽屉不做下滑（"向下滑出"没有语义），reduced-motion 同样直接关闭。
-   * setTimeout 兜底 animationend/transitionend 偶发不触发（无头浏览器虚拟时间）；
-   * 代次计数让"收起途中又被打开"作废未完成的关闭（见 _show）。
-   * 内联样式与 is-closing 的清理由 _onClose 统一收口。
-   */
-  _closeAnimated(fromDrag = false) {
-    const dialog = this.dialog;
-    if (!dialog.open || this._closing) return;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const mobile = window.matchMedia('(max-width: 989.98px)').matches;
-    if (reduce || !mobile) {
-      dialog.close();
-      return;
-    }
-    this._closing = true;
-    const gen = (this._closeGen = (this._closeGen || 0) + 1);
-    let done = false;
-    const finish = () => {
-      if (done || gen !== this._closeGen) return;
-      done = true;
-      dialog.close();
-    };
-    if (fromDrag) {
-      dialog.style.transition = 'transform 0.22s ease-in';
-      dialog.style.transform = 'translateY(100%)';
-      const onTransEnd = (event) => {
-        if (event.target !== dialog || event.propertyName !== 'transform') return;
-        dialog.removeEventListener('transitionend', onTransEnd);
-        finish();
-      };
-      dialog.addEventListener('transitionend', onTransEnd);
-    } else {
-      dialog.classList.add('is-closing');
-      const onAnimEnd = (event) => {
-        /* ::backdrop 的动画也以 dialog 为 target，按 keyframes 名字区分 */
-        if (event.animationName !== 'cart-drawer-slide-down') return;
-        dialog.removeEventListener('animationend', onAnimEnd);
-        finish();
-      };
-      dialog.addEventListener('animationend', onAnimEnd);
-    }
-    window.setTimeout(finish, 320);
-  }
 
   /**
    * 下拉收起（移动端，与集合页筛选面板同一套手感）。
@@ -148,7 +108,7 @@ class CartDrawer extends HTMLElement {
     if (event.button > 0) return;
     if (!window.matchMedia('(max-width: 989.98px)').matches) return;
     /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
-    if (this._closing) return;
+    if (this._sheet?.isClosing) return;
 
     const handle = event.target.closest('.cart-drawer__grabber, .cart-drawer__header');
     /* 关闭按钮在头部行里，不能当成拖拽起点 */
