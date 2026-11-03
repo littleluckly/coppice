@@ -32,6 +32,15 @@
     (back arrow / title / close). Panels are all rendered server-side (flat list,
     three capped loops) and toggled by nav-drawer.js via an explicit stack —
     no DOM building at navigation time.
+  - 2026-11-03 accordion instead of drill-down (刘工): 上一条的"整块面板从右侧滑入"
+    已废除。一级、二级都在同一列表内就地展开（[data-nav-toggle] + aria-expanded,
+    子容器 .nav-drawer__sub.is-open 用 grid-template-rows 0fr→1fr 过渡），
+    同层只留一个展开项；收起态给子容器打 inert。原因：面板切换是"换页"语义，
+    菜单是"展开"语义，钻取一层就会丢掉上一层的滚动位置。
+    同一轮还加了两件：顶部抓手横线（56×6，与购物车抽屉 / 筛选面板同系数）
+    与下拉收起；开合整体移交 <bottom-sheet>（keyframes 在 critical.css），
+    section 里不再自己写 translate 过渡——dialog 从 display:none 打开的同一帧里
+    transition 没有起点，只会闪现。
 
   Recursion is deliberately capped at three levels (Shop > Mowers > Walk-behind).
 {% endcomment %}
