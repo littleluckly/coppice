@@ -261,9 +261,14 @@
      通栏、顶部圆角、translateY(100%) 滑入、遮罩淡入、抓手横线。
      两处用同一组参数，顾客在不同页面看到的是同一种"从底部拉起"的手感。
 
+     断点取 989.98px 而不是常见的 749px：集合页筛选面板与导航的移动形态都在
+     990px 换挡（见 collection.liquid 的 @media (max-width: 989.98px)、
+     main-nav.liquid 的 @media (max-width: 989px)）。抽屉若在 750–989px 仍从
+     右侧滑出，就会出现"页头是移动形态、抽屉却是桌面形态"的错位。
+
      为什么用 animation 而不是 transition：dialog 关闭即 display:none，
      transition 没有可过渡的起点；animation 在 [open] 出现时从头播，正好。 */
-  @media (max-width: 749px) {
+  @media (max-width: 989.98px) {
     .cart-drawer__dialog {
       inset-block: auto 0;
       inset-inline: 0;
@@ -316,15 +321,25 @@
       flex-shrink: 0;
       inline-size: 40px;
       block-size: 5px;
-      margin: 0.6rem auto 0;
+      margin: 0.6rem auto 0.5rem;
       border-radius: 999px;
       background-color: color-mix(in srgb, var(--color-foreground) 15%, transparent);
+      /* 抓手要能被拖：touch-action:none 让浏览器不把手势抢给滚动
+         （手势归属由初始触点决定），user-select 防鼠标拖拽时选中文字。
+         与筛选面板 .facets__grabber 同一组取值。 */
+      touch-action: none;
+      user-select: none;
+    }
+    /* 头部行也是拖拽热区（抓手只有 40×5，手指按不准） */
+    .cart-drawer__header {
+      touch-action: none;
+      user-select: none;
     }
   }
 
   /* 移动端 + reduce：滑入直接出现（媒体查询条件合并写，不嵌套——嵌套 @media
      在老浏览器里会被整段丢弃） */
-  @media (max-width: 749px) and (prefers-reduced-motion: reduce) {
+  @media (max-width: 989.98px) and (prefers-reduced-motion: reduce) {
     .cart-drawer__dialog[open],
     .cart-drawer__dialog[open]::backdrop {
       animation: none;
