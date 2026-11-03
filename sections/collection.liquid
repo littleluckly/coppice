@@ -912,12 +912,10 @@
   @media (max-width: 989.98px) {
     .facets__sort-sheet-head {
       flex-shrink: 0;
-      /* 上内边距交给抓手的外边距（0.9rem），与筛选面板的头行同一个节奏 */
+      /* 上内边距交给抓手的外边距（0.9rem），与筛选面板的头行同一个节奏；
+         拖拽热区属性在 .bottom-sheet__head 里 */
       padding: 0 1.25rem 0.5rem;
       border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
-      /* 拖拽热区：抓手只有 6px 高，头部行一起算（同筛选面板的 .facets__mobile-head） */
-      touch-action: none;
-      user-select: none;
     }
     .facets__sort-sheet-title {
       margin: 0;
@@ -1609,14 +1607,8 @@
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .facets__dialog[open],
-    .facets__dialog[open]::backdrop,
-    .facets__sort-sheet[open],
-    .facets__sort-sheet[open]::backdrop {
-      animation: none;
-    }
-  }
+  /* reduce 下的「滑入直接出现」在 assets/bottom-sheet.css 里统一处理，
+     这里不再重复声明两个面板的 animation: none。 */
 {% endstylesheet %}
 
 {% schema %}
