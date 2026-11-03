@@ -9,19 +9,13 @@
  *   配套：<dialog scroll-lock> 触发 critical.css 里既有的
  *   `html:has(dialog[scroll-lock][open]) { overflow: hidden }` 锁背景滚动。
  *
- * 2026-10-13 底部面板（刘工，参考效果图）：
- *   抽屉本体是底部面板：showModal 后 translate 0 100% → 0，从屏幕底边往上滑入。
- *
- * 2026-11-03 手风琴改版（刘工）：钻入式面板栈删除。一级/二级分组改用原生
- *   <details name> 手风琴——同 name 的 details 互斥展开（浏览器原生行为，
- *   Chrome 120+ / Safari 17.2+ / Firefox 130+），展开高度动画走 CSS
- *   （::details-content + interpolate-size，旧浏览器降级为瞬时开合）。
- *   优点：开合逻辑零 JS、无 JS 也能用（此前钻入必须 JS）、无 DOM 导航构建。
- *   抓手（grabber，2026-11-03）：与购物车抽屉/筛选面板同一规格
- *   （视觉条 56×6、前景 18%、命中区 120×54），支持下拉关闭——
- *   越过阈值（面板高 30%、至少 120px）关抽屉，未过则弹回。
- *   拖拽走 translate 属性内联值：CSS 的开合动画本来就是 translate 过渡，
- *   顺势滑出时把内联值直接给到 0 100%，与 CSS 过渡无缝衔接。
+ * 2026-10-13 钻入式面板（刘工，参考效果图）：
+ *   - 抽屉本体是底部面板：showModal 后 translate 0 100% → 0，从屏幕底边往上滑入。
+ *   - 分组行（[data-nav-open="#panel-id"]）把对应子面板从右侧滑入（iOS 栈式），
+ *     被覆盖的面板滑出到左侧（is-left）；[data-nav-back] 逆向弹出。
+ *   - 面板全部由 main-nav.liquid 服务端渲染（三层封顶），本组件只维护一个
+ *     显式栈 {panel, trigger}，不在导航时构建 DOM。
+ *   - 打开抽屉时重置到根面板（复用上次停留的子面板会让人迷失层级）。
  *
  * 无 JS 降级：<dialog> 未 showModal 时保持 display:none，汉堡按钮无响应——
  *   可接受（与 search-drawer 同一取舍）。抽屉打开本身依赖 JS，
@@ -34,12 +28,18 @@ class NavDrawer extends HTMLElement {
   _dialog = null;
   _opener = null;
   _closeButton = null;
+  _root = null;
+  /** 栈元素：{ panel, trigger }；栈底为根面板（trigger 为 null） */
+  _stack = [];
 
   // 一次性拆除所有监听，避免主题编辑器 / section 重新渲染后事件叠加
   _abort = new AbortController();
 
   _onOpen = () => {
     if (!this._dialog || this._dialog.open) return;
+
+    // 关闭期间可能钻到了子面板：重开时回到根面板
+    this._resetPanels();
 
     this._dialog.showModal();
 
@@ -62,76 +62,33 @@ class NavDrawer extends HTMLElement {
     if (event.target === this._dialog) this._onClose();
   };
 
-  /**
-   * 抓手下拉关闭（2026-11-03，与购物车抽屉同一套手感，见 cart-drawer.js）。
-   *
-   * 热区只有抓手（视觉条 + ::after 扩展命中区）；菜单列表的手势属于滚动，
-   * 不参与拖拽。拖拽直接写内联 translate——CSS 开合动画本来就是 translate
-   * 过渡，松手越过阈值后把内联值顺势给到 0 100%，与 CSS 过渡无缝衔接。
-   */
-  _onDragStart = (event) => {
-    if (event.button > 0) return;
-    if (!this._dialog?.open) return;
-    if (!event.target.closest('[data-nav-drawer-grabber]')) return;
+  /** 钻入：当前面板滑出左侧，目标面板自右滑入；焦点移到子面板返回键 */
+  _push = (trigger) => {
+    const target = this._dialog.querySelector(
+      `#${CSS.escape(trigger.getAttribute('data-nav-open'))}`,
+    );
+    const current = this._stack[this._stack.length - 1];
+    if (!target || !current || target === current.panel) return;
 
-    const dialog = this._dialog;
-    const startY = event.clientY;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let moved = false;
+    current.panel.classList.remove('is-active');
+    current.panel.classList.add('is-left');
+    target.classList.add('is-active');
+    this._stack.push({ panel: target, trigger });
 
-    const onMove = (moveEvent) => {
-      const dy = moveEvent.clientY - startY;
-      if (dy <= 0) return; /* 只响应下拉，上推不做事 */
-      moved = moved || dy > 8;
-      /* 拖拽期间压掉 CSS 过渡，跟随手指（translate 是 CSS 动画用的同一属性） */
-      dialog.style.transition = 'none';
-      dialog.style.translate = `0 ${dy}px`;
-    };
+    target.querySelector('[data-nav-back]')?.focus();
+  };
 
-    const onEnd = (endEvent) => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onEnd);
-      window.removeEventListener('pointercancel', onEnd);
+  /** 弹回：子面板退场，上一层滑回；焦点回到触发钻入的那枚按钮 */
+  _pop = () => {
+    if (this._stack.length < 2) return;
 
-      const dy = endEvent.clientY - startY;
-      const dismissAt = Math.max(120, dialog.offsetHeight * 0.3);
+    const entry = this._stack.pop();
+    const prev = this._stack[this._stack.length - 1];
 
-      if (moved && dy > dismissAt) {
-        if (reduce) {
-          /* reduce 下 CSS 过渡已被关停，内联过渡等于绕开它——直接瞬时关闭 */
-          dialog.style.transition = '';
-          dialog.style.translate = '';
-          this._onClose();
-          return;
-        }
-        /* 顺势滑出：内联 transition 接管（须包含 display/overlay 的
-           allow-discrete，否则 close() 摘 [open] 时 display 立即翻转、
-           面板拖到一半闪没）。收尾清内联样式，还 CSS 一个干净状态。 */
-        dialog.style.transition =
-          'translate 0.25s ease, display 0.25s allow-discrete, overlay 0.25s allow-discrete';
-        dialog.style.translate = '0 100%';
-        this._onClose();
-        window.setTimeout(() => {
-          dialog.style.transition = '';
-          dialog.style.translate = '';
-        }, 300);
-        return;
-      }
-
-      /* 弹回原位（滑入动画的 translate 0 0 由样式表接管） */
-      if (moved && !reduce) dialog.style.transition = 'translate 0.22s ease-out';
-      dialog.style.translate = '';
-      window.setTimeout(
-        () => {
-          dialog.style.transition = '';
-        },
-        moved && !reduce ? 240 : 0,
-      );
-    };
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onEnd);
-    window.addEventListener('pointercancel', onEnd);
+    entry.panel.classList.remove('is-active');
+    prev.panel.classList.remove('is-left');
+    prev.panel.classList.add('is-active');
+    entry.trigger?.focus();
   };
 
   /**
@@ -142,6 +99,14 @@ class NavDrawer extends HTMLElement {
    */
   _onSearch = (button) => {
     this.closest('nav')?.querySelector('search-drawer')?.open(button);
+  };
+
+  _resetPanels = () => {
+    for (const { panel } of this._stack) {
+      panel.classList.remove('is-active', 'is-left');
+    }
+    this._stack = this._root ? [{ panel: this._root, trigger: null }] : [];
+    this._root?.classList.add('is-active');
   };
 
   connectedCallback() {
@@ -188,17 +153,23 @@ class NavDrawer extends HTMLElement {
 
     const { signal } = this._abort;
 
-    // 关闭按钮（根面板头部一枚）；焦点初始落点取它
+    // 关闭按钮每层面板各有一枚，全量绑定；焦点初始落点取根面板那枚
     const closeButtons = this._dialog.querySelectorAll('[data-nav-drawer-close]');
     this._closeButton = closeButtons[0] ?? null;
     closeButtons.forEach((button) => {
       button.addEventListener('click', this._onClose, { signal });
     });
 
-    // 抓手下拉关闭（手风琴改版后唯一的手势区）
-    const grabber = this._dialog.querySelector('[data-nav-drawer-grabber]');
-    grabber?.addEventListener('pointerdown', this._onDragStart, { signal });
+    // 面板栈初始化：根面板 = 第一个 data-nav-panel（main-nav.liquid 保证顺序）
+    this._root = this._dialog.querySelector('[data-nav-panel]');
+    this._resetPanels();
 
+    this._dialog.querySelectorAll('[data-nav-open]').forEach((button) => {
+      button.addEventListener('click', () => this._push(button), { signal });
+    });
+    this._dialog.querySelectorAll('[data-nav-back]').forEach((button) => {
+      button.addEventListener('click', this._pop, { signal });
+    });
     this._dialog.querySelectorAll('[data-nav-search]').forEach((button) => {
       button.addEventListener('click', () => this._onSearch(button), { signal });
     });
