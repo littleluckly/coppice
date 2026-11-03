@@ -275,13 +275,7 @@
     color: var(--color-foreground-muted);
   }
 
-  /* reduce：滑入改成直接出现（dialog 本身仍是即时显隐） */
-  @media (prefers-reduced-motion: reduce) {
-    .cart-drawer__dialog {
-      transition: none;
-      translate: 0 0;
-    }
-  }
+  /* reduce 下"直接出现"由 <bottom-sheet> 组件负责（不挂动效类），这里无需覆盖 */
 
   .cart-drawer__grabber {
     display: none;
