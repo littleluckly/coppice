@@ -1741,7 +1741,8 @@
   @media (prefers-reduced-motion: reduce) {
     .search-drawer,
     .search-drawer::backdrop,
-    .nav-drawer__sub {
+    .nav-drawer__sub,
+    .nav-drawer__chevron {
       transition: none;
     }
   }
@@ -1804,12 +1805,10 @@
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
   }
 
-  /* 二级行的字号 / 缩进见下方 .nav-drawer__link--sub——它必须写在
-     .nav-drawer__link 之后：同一特异性下后写者胜，写在这上面会被基础行样式盖掉
-     （踩过一次：二级行与一级行完全齐平、字号也没降）。 */
-
   /* 二级项之间的发丝线：一级那次由 .nav-drawer__item 承担，这里同名类复用，
-     但二级列表已有底色分档，线只留极淡一条，免得两层线打架 */
+     但二级列表已有底色分档，线只留极淡一条，免得两层线打架。
+     （二级行的字号 / 缩进写在 .nav-drawer__link--sub，位置必须在
+     .nav-drawer__link 之后，理由见那一条。） */
   .nav-drawer__item--sub {
     border-block-end-color: color-mix(in srgb, var(--color-foreground) 5%, transparent);
   }
