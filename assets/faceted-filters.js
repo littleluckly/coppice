@@ -263,7 +263,14 @@ class CollectionFacets extends HTMLElement {
       this._dialog.addEventListener('change', this._onChange, { signal });
       this._dialog.addEventListener('click', this._onClick, { signal });
       this._dialog.addEventListener('close', this._onDialogClose, { signal });
-      this._dialog.addEventListener('pointerdown', this._onDragStart, { signal });
+      /* 下拉收起：逻辑在 assets/bottom-sheet.js（三个底部面板共用一份）。
+         以前这里有一份 _onDragStart，与购物车抽屉、排序面板各写了一遍。 */
+      this._detachDrag = window.BottomSheet?.attachDragToDismiss(this._dialog, {
+        exclude: '[data-facets-close]',
+        onDragEnd: (guardUntil) => {
+          this._dragClickGuard = guardUntil;
+        },
+      });
     }
 
     /* 排序卡落点：移动端工具条（pages-ui §4），桌面左列第一张卡 */
@@ -275,6 +282,7 @@ class CollectionFacets extends HTMLElement {
   disconnectedCallback() {
     this._abort.abort();
     if (this._fetchAbort) this._fetchAbort.abort();
+    this._detachDrag?.();
   }
 
   _onChange = (event) => {
