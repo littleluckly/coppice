@@ -1,18 +1,23 @@
 /**
- * facet-sort — 排序下拉增强组件（2026-10-17 刘工效果图：描边按钮 + 浮层
- * listbox，hover 高亮、选中项品牌色 + 对勾）。
+ * facet-sort — 排序选择器（2026-10-17 刘工效果图：描边按钮 + 浮层 listbox）。
+ *
+ * 2026-11-03 刘工：移动端也改成底部滑入面板，与集合页筛选抽屉同一套动效。
+ * 原先移动端刻意保留原生 <select>（触屏原生选择器），但筛选与排序并排时
+ * 一个开抽屉、一个弹系统选择器，同一次操作出现两种界面语言。现在两者一致。
  *
  * 渐进增强（红线对齐：数据仍来自平台 sort_options，前端零排序逻辑）：
  * - 服务端渲染原生 <select data-facets-sort>：无 JS 全功能（GET 表单提交）；
- * - <990px 保留原生 select——触屏上原生选择器（滚轮/半屏面板）是更好的交互；
- * - ≥990px 由本元素接管：构建按钮 + 浮层列表，隐藏 select 但保留在
- *   表单里（name/value/form 属性不动，FormData 照常含 sort_by）。
+ * - 有 JS：构建按钮，隐藏 select 但保留在表单里（name/value/form 属性不动，
+ *   FormData 照常含 sort_by）；
+ * - ≥990px 开浮层 listbox（锚在按钮下方）；<990px 开 <dialog> 底部面板。
+ *   选项 DOM 只有一份，开面板时搬进对应容器，收起时搬回——不复制选项，
+ *   也不会出现"两份 listbox 各记一套选中态"。
  *
  * 值变更同步回隐藏 select 并派发冒泡 change——collection-facets 的委托
  * 监听（有表单 requestSubmit / 无表单独立局部更新）零改动复用。
  *
  * 实现纪律（AGENTS §6）：
- * - AbortController 一次性拆绑；listbox 首次打开才构建（隐藏组件惰性 DOM）；
+ * - AbortController 一次性拆绑；listbox 与面板首次打开才构建（惰性 DOM）；
  * - _placeSort 在工具条 ↔ 左列间搬移卡片会触发本元素断开/重连——
  *   connectedCallback 幂等（重连只重挂监听，不重复构建）；
  * - 键盘：方向键/Home/End 移动、Enter/Space 选中、Esc 关闭、Tab 走默认。
@@ -44,18 +49,21 @@ class FacetSort extends HTMLElement {
     /* 点外面收起：挂在 document，随本元素销毁一并拆除 */
     document.addEventListener('pointerdown', this._onDocPointerDown, { signal });
 
-    if (this._mq.matches) this._enhance();
-    else this._restore();
+    this._enhance();
   }
 
   disconnectedCallback() {
-    /* document 级监听随 signal 一起拆除；开着时被搬移/替换则视为收起 */
+    /* document 级监听随 signal 一起拆除；开着时被搬移/替换则视为收起。
+       _placeSort 搬移卡片会走这条路径——面板开着被搬走必须关掉，
+       否则会留下一个悬浮在 top layer、已经脱离文档的 dialog。 */
     this._abort?.abort();
     this._open = false;
+    if (this._sheet?.open) this._sheet.close();
   }
 
   /* ---- 构建 ---- */
 
+  /** 全断点都接管：移动端开底部面板，桌面开浮层（2026-11-03 改） */
   _enhance() {
     if (!this._built) this._build();
     this._select.classList.add('visually-hidden');
@@ -65,22 +73,14 @@ class FacetSort extends HTMLElement {
     this._syncLabel();
   }
 
-  /** 移动端 / 降级：还原原生 select，收起浮层 */
-  _restore() {
-    if (this._open) this._closePanel(false);
-    if (this._btn) {
-      this._btn.hidden = true;
-      this._btn.tabIndex = -1;
-    }
-    this._select.classList.remove('visually-hidden');
-    this._select.tabIndex = 0;
-  }
-
   _build() {
     this._uid = `sort-${Math.random().toString(36).slice(2, 8)}`;
     const label = this.closest('.facets__sort-card')
       ?.querySelector('.facets__sort-card-label')
       ?.textContent.trim();
+    /* 标签在移动端是视觉隐藏的（只给读屏用），这里留一份给底部面板当标题——
+       面板里没有那个 label 元素，不能现取 */
+    this._label = label || '';
 
     this._btn = document.createElement('button');
     this._btn.type = 'button';
