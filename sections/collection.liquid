@@ -1445,7 +1445,9 @@
   }
   html[data-collection-view='list'] .collection__grid .product-card {
     display: grid;
-    grid-template-columns: minmax(88px, 168px) minmax(0, 1fr);
+    /* 图片列：手机 ~104px、桌面封顶 168px。用 clamp 而不是 minmax——
+       minmax 在窄格里会一直贴在 88px 上，图片小到看不清是什么机器。 */
+    grid-template-columns: clamp(104px, 30%, 168px) minmax(0, 1fr);
     align-content: start;
     column-gap: 1rem;
     row-gap: 0.35rem;
