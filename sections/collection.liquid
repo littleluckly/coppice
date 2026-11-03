@@ -906,55 +906,10 @@
     width: auto;
   }
 
-  /* ---- 移动端排序底部面板（2026-11-03 刘工：与 Filters 保持同一种滑入）----
-     这里只做"容器"：选项列表复用桌面浮层那一份 DOM（.facets__sort-list），
-     打开时由 sort-select.js 搬进来，所以要把浮层的绝对定位与描边清掉。
-     用 <dialog> + showModal()：焦点锁定、背景 inert、Esc 全由平台给（AGENTS §8），
-     与集合页筛选抽屉、购物车抽屉同一套做法。
-     动效参数逐值对齐 .facets__dialog（16px 上圆角 / 85vh / 0.28s ease-out / 遮罩 40% 黑）。 */
+  /* ---- 移动端排序面板：容器外观在 assets/bottom-sheet.css ----
+     这里只留排序独有的部分：标题行、选项列表。列表复用桌面浮层那一份 DOM，
+     打开时由 sort-select.js 搬进来，所以要抹掉浮层的绝对定位与描边。 */
   @media (max-width: 989.98px) {
-    .facets__sort-sheet {
-      border: none;
-      /* 顶部内边距给抓手让位：与 .facets__panel 的 padding-top 同值，
-         两个面板的抓手离顶边的距离一致（16px） */
-      padding: 1rem 0 0;
-      width: 100vw;
-      /* max-width 必须显式覆盖：UA 对 dialog:modal 默认
-         max-width: calc((100% - 6px) - 2em)，不覆盖时 100vw 会被钳窄 */
-      max-width: 100vw;
-      max-height: 85vh;
-      margin: auto auto 0;
-      border-radius: 16px 16px 0 0;
-      background-color: var(--color-background);
-      color: var(--color-foreground);
-    }
-    .facets__sort-sheet[open] {
-      display: flex;
-      flex-direction: column;
-      animation: facets-sort-sheet-up 0.28s ease-out;
-    }
-    .facets__sort-sheet[open]::backdrop {
-      animation: facets-sort-sheet-fade 0.28s ease-out;
-    }
-    .facets__sort-sheet::backdrop {
-      background: rgb(0 0 0 / 40%);
-    }
-    @keyframes facets-sort-sheet-up {
-      from {
-        transform: translateY(100%);
-      }
-      to {
-        transform: translateY(0);
-      }
-    }
-    @keyframes facets-sort-sheet-fade {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
-    }
     .facets__sort-sheet-head {
       flex-shrink: 0;
       /* 上内边距交给抓手的外边距（0.9rem），与筛选面板的头行同一个节奏 */
@@ -1417,44 +1372,8 @@
     min-height: 0;
     overflow-y: auto;
   }
-  /* 抓手横线（2026-10-16 刘工，iPhone 底部抽屉同款）：拖拽把手，
-     按住下拉收回弹窗（JS 见 faceted-filters.js 的 _onDragStart）。
-     touch-action:none 让浏览器不把手势抢给滚动（初触目标决定手势归属）；
-     user-select:none 防鼠标拖拽时选中标题文字。 */
-  .facets__dialog .facets__grabber,
-  .facets__sort-sheet .facets__grabber {
-    flex-shrink: 0;
-    /* 2026-11-03 刘工：手指经常抓不到。视觉条 40×5 → 56×6，
-       命中区再用伪元素扩到约 120×54——按 Apple/Material 的口径，
-       可点区域至少 44px 见方，光靠 5px 高的条子必然抓不稳。
-       视觉上仍是"细横线"，不会变成一条粗杠。
-       两个底部面板（筛选 / 排序）共用这一份定义，形状与手感一致。 */
-    position: relative;
-    width: 56px;
-    height: 6px;
-    margin: 0 auto 0.9rem;
-    border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
-    touch-action: none;
-    user-select: none;
-  }
-  /* 只吃指针、不参与绘制。命中区实测 120×54（视觉条 56×6）：
-     横向 ±32px 容忍左右偏；纵向在筛选面板里向上被 .facets__panel 的
-     overflow:hidden 截在面板内边距（16px）处，所以向下补到 32px——
-     下方就是头部行，本来就是拖拽热区，多铺这一层不改变行为，
-     也不会挡住关闭按钮（它在头部行最右端，横向够不着）。
-     排序面板没有那层裁切，向上这段是真吃到遮罩上的 16px（无害：那里点下去
-     也只是开始拖拽，松手没越过阈值就弹回）。 */
-  .facets__dialog .facets__grabber::after,
-  .facets__sort-sheet .facets__grabber::after {
-    content: '';
-    position: absolute;
-    inset: -16px -32px -32px;
-  }
-  .facets__dialog .facets__mobile-head {
-    touch-action: none; /* 头部行也是拖拽热区 */
-    user-select: none;
-  }
+  /* 抓手与头部热区的样式已抽到 assets/bottom-sheet.css（.bottom-sheet__grabber /
+     .bottom-sheet__head）——三个底部面板共用一份，避免再各自漂移。 */
   .facets__dialog .facets__mobile-head,
   .facets__dialog .facets__apply {
     flex-shrink: 0;
