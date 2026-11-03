@@ -238,9 +238,7 @@ class FacetSort extends HTMLElement {
        状态复位不该押在它身上。不清的话下次打开不会重播滑入动画，
        而且会带着上一手的 translateY。 */
     if (this._sheet) {
-      this._sheet.style.animation = '';
-      this._sheet.style.transform = '';
-      this._sheet.style.transition = '';
+      window.BottomSheet?.reset(this._sheet);
       if (this._sheet.open) this._sheet.close();
     }
     if (refocus) this._btn.focus();
