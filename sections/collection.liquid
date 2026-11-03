@@ -1704,8 +1704,8 @@
       background: linear-gradient(
         to right,
         color-mix(in srgb, #000 48%, transparent) 0%,
-        color-mix(in srgb, #000 42%, transparent) 30%,
-        transparent 55%
+        color-mix(in srgb, #000 44%, transparent) 55%,
+        transparent 80%
       );
     }
     /* 文字整体翻白。恒 #fff，**不能取 --color-background**：Noir 预设下它是深色，
@@ -1718,9 +1718,10 @@
     }
     .collection:not(.collection--no-banner) .collection__description {
       color: color-mix(in srgb, #fff 88%, transparent);
-      /* 文字列收在遮罩里（遮罩 55% 归零 ⇒ 文字最多 52%，留 3% 不压到过渡带）。
+      /* 文字列收在遮罩的实色区里（实色到 55%，文字最多 50%——压到渐隐带上
+         就会碰到照片高光，实测有一段对比度掉到 1.16:1）。
          用百分比不用 ch：ch 随字号漂，平板一档还得再写一条补丁。 */
-      max-inline-size: 52%;
+      max-inline-size: 50%;
     }
     /* 亮点行：参考图是「线描细圆在上、两行标签在下、整组左靠」。
        我们原来是白底实心圆 + 左图标右文字；遮罩是深色，白底圆会跳出来，
@@ -1760,7 +1761,7 @@
        （实测 390px 下第三条「Longer runtime」正好落在水面高光上，读不出）。 */
     .collection:not(.collection--no-banner) .collection__features {
       position: relative;
-      max-inline-size: 52%;
+      max-inline-size: 50%;
       padding-block-start: 20px;
       margin-block-start: 20px;
       gap: 14px 10px;
