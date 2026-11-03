@@ -573,10 +573,68 @@ class CollectionFacets extends HTMLElement {
 
   _openDialog() {
     if (!this._dialog) return;
+    /* 收起动画进行中又被打开：作废未完成的关闭（finish 的代次校验让它空转），
+       并清掉关闭路径留下的标记——否则 is-closing 还挂着，滑入会被下滑动画顶掉 */
+    this._closing = false;
+    this._closeGen = (this._closeGen || 0) + 1;
+    this._dialog.classList.remove('is-closing');
     this._moveFormIntoDialog();
     this._dialog.showModal();
     this._dialog.querySelector('.facets__panel')?.setAttribute('tabindex', '-1');
     this._dialog.querySelector('.facets__panel')?.focus();
+  }
+
+  /* Esc：拦下原生立即关闭，走下滑动画收场（与关闭钮/遮罩同一路径） */
+  _onDialogCancel = (event) => {
+    event.preventDefault();
+    this._closeDialogAnimated();
+  };
+
+  /**
+   * 动画收口关闭（2026-11-03 刘工：关闭从闪现改为向下滑出，与滑入对称）。
+   * 原生 dialog 的 close() 即 display:none——动画必须赶在 close() 之前播：
+   * 常规路径挂 .is-closing 播下滑 keyframes，animationend 后才真正 close()；
+   * 拖拽路径（fromDrag）transform 已在下拉途中，改用 transition 顺势滑到屏外，
+   * 不跳回原位重播。reduced-motion 直接 close()（is-closing 规则不参与）。
+   * setTimeout 兜底 animationend/transitionend 偶发不触发（无头浏览器虚拟时间）；
+   * 代次计数让"收起途中又被打开"作废未完成的关闭（见 _openDialog）。
+   * 内联样式与 is-closing 的清理由 _onDialogClose 统一收口。
+   */
+  _closeDialogAnimated(fromDrag = false) {
+    const dialog = this._dialog;
+    if (!dialog?.open || this._closing) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      dialog.close();
+      return;
+    }
+    this._closing = true;
+    const gen = (this._closeGen = (this._closeGen || 0) + 1);
+    let done = false;
+    const finish = () => {
+      if (done || gen !== this._closeGen) return;
+      done = true;
+      dialog.close();
+    };
+    if (fromDrag) {
+      dialog.style.transition = 'transform 0.22s ease-in';
+      dialog.style.transform = 'translateY(100%)';
+      const onTransEnd = (event) => {
+        if (event.target !== dialog || event.propertyName !== 'transform') return;
+        dialog.removeEventListener('transitionend', onTransEnd);
+        finish();
+      };
+      dialog.addEventListener('transitionend', onTransEnd);
+    } else {
+      dialog.classList.add('is-closing');
+      const onAnimEnd = (event) => {
+        /* ::backdrop 的动画也以 dialog 为 target，按 keyframes 名字区分 */
+        if (event.animationName !== 'facets-slide-down') return;
+        dialog.removeEventListener('animationend', onAnimEnd);
+        finish();
+      };
+      dialog.addEventListener('animationend', onAnimEnd);
+    }
+    window.setTimeout(finish, 320);
   }
 
   _moveFormIntoDialog() {
@@ -602,6 +660,8 @@ class CollectionFacets extends HTMLElement {
    */
   _onDragStart = (event) => {
     if (event.button > 0) return;
+    /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
+    if (this._closing) return;
     const handle = event.target.closest('.facets__grabber, .facets__mobile-head');
     if (!handle || event.target.closest('[data-facets-close]')) return;
 
@@ -627,12 +687,10 @@ class CollectionFacets extends HTMLElement {
       const dy = endEvent.clientY - startY;
       const dismissAt = Math.max(120, dialog.offsetHeight * 0.3);
       if (moved && dy > dismissAt) {
-        dialog.close();
-        /* 同步复位，不只依赖 close 事件——它是异步任务，某些环境（无头浏览器）
-           观察不到；不复位的话下次打开不会重播滑入，还会带着上一手的位移 */
-        dialog.style.animation = '';
-        dialog.style.transform = '';
-        dialog.style.transition = '';
+        this._dragClickGuard = performance.now() + 350;
+        /* 从当前拖拽位置顺势滑出（transition 收尾），不再原地闪没（2026-11-03）。
+           内联样式清理由 _onDialogClose 统一收口，这里不复位。 */
+        this._closeDialogAnimated(true);
         return;
       }
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -653,10 +711,13 @@ class CollectionFacets extends HTMLElement {
     /* form 归位为布局的第一个 grid item（桌面侧栏原位；单一 DOM 副本不变） */
     if (!this._dialog) return;
     /* 拖拽残留的内联样式清零（弹回/收起两条路径的公共收口）。
-       animation 也要清：拖动期间被压成 none，不清的话下次打开不会重播滑入 */
+       animation 也要清：拖动期间被压成 none，不清的话下次打开不会重播滑入。
+       is-closing 同步摘除、收起标记复位：跨断点等路径会绕过动画直接 close()。 */
     this._dialog.style.transform = '';
     this._dialog.style.transition = '';
     this._dialog.style.animation = '';
+    this._dialog.classList.remove('is-closing');
+    this._closing = false;
     /* 没点 Apply 就收起（下拉/Esc/遮罩）：表单回滚到最近一次生效的筛选
        （checked/value 属性来自上次 section payload，reset 即回到该状态），
        避免"勾选状态与结果不一致"；Apply 路径的 FormData 已在关窗前取证 */
