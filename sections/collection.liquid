@@ -294,6 +294,29 @@
                   alt: island_alt
               }}
             {%- endif -%}
+            {%- comment -%}
+              底边波浪（2026-11-03 按参考图）。只在移动端显示（CSS 控制），
+              把横幅下缘切成浅波形、与下方内容区同色接住。
+              写法理由：
+              · 内联 SVG + currentColor，颜色由 CSS 交给 --collection-surface
+                ——Noir 深色预设下自动翻转，不烤进图片（商家换图不换形状）。
+              · 不用 clip-path：振幅只有 ~10px，clip-path 的抗锯齿在这种
+                浅角度曲线上会出锯齿；SVG 描边自带平滑。
+              · preserveAspectRatio="none"：横向拉满屏宽，纵向固定 24px。
+              · 装饰图形，不进无障碍树（aria-hidden + focusable="false"）。
+            {%- endcomment -%}
+            <svg
+              class="collection__banner-wave"
+              viewBox="0 0 1200 48"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M0 14 C 120 30 260 30 380 22 C 500 14 620 12 760 20 C 900 28 1060 26 1200 14 L1200 48 L0 48 Z"
+                fill="currentColor"
+              />
+            </svg>
           </tilt-element>
         {%- endif -%}
 
@@ -684,6 +707,11 @@
     max-width: 900px;
     z-index: 3;
     filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
+  }
+  /* 底边波浪：默认不显示（桌面是圆角卡侵入版式，没有这条边），
+     只有移动端叠放版式才展开——见文件末尾的 <990px 媒体查询。 */
+  .collection__banner-wave {
+    display: none;
   }
   /* 倾斜的平滑感由 CSS 承担（JS 只做 rAF 合帧）：商品卡同款极缓曲线。
      只给 transform 加，投影不动——大图 filter 动画每帧重绘，性价比低。 */
