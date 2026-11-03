@@ -16,14 +16,15 @@
   连脚下的小计一起更新，不用手写「把这个数字改成那个数字」。
 {% endcomment %}
 
-<script src="{{ 'cart-drawer.js' | asset_url }}" defer></script>
-{{ 'cart-line.css' | asset_url | stylesheet_tag }}
 {%- comment -%}
   底部面板的公共外观与拖拽行为（2026-11-03 抽取）：与集合页筛选、排序面板共用。
-  必须排在使用者之前——defer 按文档顺序执行。
+  **必须排在 cart-drawer.js 之前**：defer 按文档顺序执行，而 cart-drawer 元素
+  在脚本 define 的瞬间就会升级并跑 connectedCallback——那时要读 window.BottomSheet。
 {%- endcomment -%}
 {{ 'bottom-sheet.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'bottom-sheet.js' | asset_url }}" defer></script>
+<script src="{{ 'cart-drawer.js' | asset_url }}" defer></script>
+{{ 'cart-line.css' | asset_url | stylesheet_tag }}
 
 <cart-drawer
   class="cart-drawer"
@@ -31,11 +32,11 @@
   data-cart-url="{{ routes.cart_url }}"
   data-root="{{ routes.root_url }}"
 >
-  <dialog class="cart-drawer__dialog" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
-    {%- comment -%} 移动端底部抽屉的抓手横线（桌面隐藏）。纯装饰，不参与交互 {%- endcomment -%}
-    <div class="cart-drawer__grabber" aria-hidden="true"></div>
+  <dialog class="cart-drawer__dialog bottom-sheet" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
+    {%- comment -%} 移动端底部面板的抓手横线（桌面隐藏）。样式与拖拽在 bottom-sheet.* {%- endcomment -%}
+    <div class="bottom-sheet__grabber" aria-hidden="true"></div>
     <div class="cart-drawer__panel">
-      <div class="cart-drawer__header">
+      <div class="cart-drawer__header bottom-sheet__head">
         <h2 class="cart-drawer__title" id="CartDrawerTitle-{{ section.id }}">
           {{ 'cart.title' | t }}
           <span class="cart-drawer__count" data-cart-drawer-count>({{ cart.item_count }})</span>
