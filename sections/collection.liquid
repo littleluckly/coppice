@@ -915,7 +915,9 @@
   @media (max-width: 989.98px) {
     .facets__sort-sheet {
       border: none;
-      padding: 0;
+      /* 顶部内边距给抓手让位：与 .facets__panel 的 padding-top 同值，
+         两个面板的抓手离顶边的距离一致（16px） */
+      padding: 1rem 0 0;
       width: 100vw;
       /* max-width 必须显式覆盖：UA 对 dialog:modal 默认
          max-width: calc((100% - 6px) - 2em)，不覆盖时 100vw 会被钳窄 */
@@ -955,8 +957,12 @@
     }
     .facets__sort-sheet-head {
       flex-shrink: 0;
-      padding: 1rem 1.25rem 0.5rem;
+      /* 上内边距交给抓手的外边距（0.9rem），与筛选面板的头行同一个节奏 */
+      padding: 0 1.25rem 0.5rem;
       border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+      /* 拖拽热区：抓手只有 6px 高，头部行一起算（同筛选面板的 .facets__mobile-head） */
+      touch-action: none;
+      user-select: none;
     }
     .facets__sort-sheet-title {
       margin: 0;
@@ -1445,12 +1451,14 @@
      按住下拉收回弹窗（JS 见 faceted-filters.js 的 _onDragStart）。
      touch-action:none 让浏览器不把手势抢给滚动（初触目标决定手势归属）；
      user-select:none 防鼠标拖拽时选中标题文字。 */
-  .facets__dialog .facets__grabber {
+  .facets__dialog .facets__grabber,
+  .facets__sort-sheet .facets__grabber {
     flex-shrink: 0;
     /* 2026-11-03 刘工：手指经常抓不到。视觉条 40×5 → 56×6，
-       命中区再用伪元素扩到约 120×38——按 Apple/Material 的口径，
+       命中区再用伪元素扩到约 120×54——按 Apple/Material 的口径，
        可点区域至少 44px 见方，光靠 5px 高的条子必然抓不稳。
-       视觉上仍是"细横线"，不会变成一条粗杠。 */
+       视觉上仍是"细横线"，不会变成一条粗杠。
+       两个底部面板（筛选 / 排序）共用这一份定义，形状与手感一致。 */
     position: relative;
     width: 56px;
     height: 6px;
@@ -1461,10 +1469,14 @@
     user-select: none;
   }
   /* 只吃指针、不参与绘制。命中区实测 120×54（视觉条 56×6）：
-     横向 ±32px 容忍左右偏；纵向向上被 .facets__panel 的 overflow:hidden 截在
-     面板内边距（16px）处，所以向下补到 32px——下方就是头部行，本来就是拖拽热区，
-     多铺这一层不改变行为，也不会挡住关闭按钮（它在头部行最右端，横向够不着）。 */
-  .facets__dialog .facets__grabber::after {
+     横向 ±32px 容忍左右偏；纵向在筛选面板里向上被 .facets__panel 的
+     overflow:hidden 截在面板内边距（16px）处，所以向下补到 32px——
+     下方就是头部行，本来就是拖拽热区，多铺这一层不改变行为，
+     也不会挡住关闭按钮（它在头部行最右端，横向够不着）。
+     排序面板没有那层裁切，向上这段是真吃到遮罩上的 16px（无害：那里点下去
+     也只是开始拖拽，松手没越过阈值就弹回）。 */
+  .facets__dialog .facets__grabber::after,
+  .facets__sort-sheet .facets__grabber::after {
     content: '';
     position: absolute;
     inset: -16px -32px -32px;
