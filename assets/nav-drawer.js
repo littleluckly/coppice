@@ -188,23 +188,17 @@ class NavDrawer extends HTMLElement {
 
     const { signal } = this._abort;
 
-    // 关闭按钮每层面板各有一枚，全量绑定；焦点初始落点取根面板那枚
+    // 关闭按钮（根面板头部一枚）；焦点初始落点取它
     const closeButtons = this._dialog.querySelectorAll('[data-nav-drawer-close]');
     this._closeButton = closeButtons[0] ?? null;
     closeButtons.forEach((button) => {
       button.addEventListener('click', this._onClose, { signal });
     });
 
-    // 面板栈初始化：根面板 = 第一个 data-nav-panel（main-nav.liquid 保证顺序）
-    this._root = this._dialog.querySelector('[data-nav-panel]');
-    this._resetPanels();
+    // 抓手下拉关闭（手风琴改版后唯一的手势区）
+    const grabber = this._dialog.querySelector('[data-nav-drawer-grabber]');
+    grabber?.addEventListener('pointerdown', this._onDragStart, { signal });
 
-    this._dialog.querySelectorAll('[data-nav-open]').forEach((button) => {
-      button.addEventListener('click', () => this._push(button), { signal });
-    });
-    this._dialog.querySelectorAll('[data-nav-back]').forEach((button) => {
-      button.addEventListener('click', this._pop, { signal });
-    });
     this._dialog.querySelectorAll('[data-nav-search]').forEach((button) => {
       button.addEventListener('click', () => this._onSearch(button), { signal });
     });
