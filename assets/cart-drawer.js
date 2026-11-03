@@ -100,6 +100,9 @@ class CartDrawer extends HTMLElement {
       const dy = moveEvent.clientY - startY;
       if (dy <= 0) return; /* 只响应下拉，上推不做事 */
       moved = moved || dy > 8;
+      /* 必须先压掉滑入动画：@keyframes 的 transform 优先级高于内联 style，
+         不压的话抽屉打开后的 0.28s 内怎么拖都不会动（2026-11-03 修） */
+      dialog.style.animation = 'none';
       dialog.style.transition = 'none';
       dialog.style.transform = `translateY(${dy}px)`;
     };
@@ -115,6 +118,11 @@ class CartDrawer extends HTMLElement {
       if (moved && dy > dismissAt) {
         this._dragEndedAt = performance.now() + 350;
         dialog.close();
+        /* 同步复位，不只依赖 close 事件——它是异步任务，某些环境（无头浏览器）
+           观察不到；不复位的话下次打开不会重播滑入，还会带着上一手的位移 */
+        dialog.style.animation = '';
+        dialog.style.transform = '';
+        dialog.style.transition = '';
         return;
       }
 
@@ -136,9 +144,11 @@ class CartDrawer extends HTMLElement {
   };
 
   _onClose = () => {
-    /* 拖拽留下的内联位移必须清零：不清的话下次打开会带着上一手的偏移量 */
+    /* 拖拽留下的内联样式必须清零：不清的话下次打开会带着上一手的偏移量；
+       animation 也要清——拖动期间被压成 none，不清就不会重播滑入 */
     this.dialog.style.transform = '';
     this.dialog.style.transition = '';
+    this.dialog.style.animation = '';
     delete document.documentElement.dataset.cartDrawerOpen;
     if (this._lastTrigger && this._lastTrigger.isConnected) {
       this._lastTrigger.focus({ preventScroll: true });
