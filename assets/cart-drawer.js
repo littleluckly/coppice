@@ -30,7 +30,15 @@ class CartDrawer extends HTMLElement {
     if (closeButton) closeButton.addEventListener('click', () => this.dialog.close(), { signal });
 
     this.dialog.addEventListener('click', this._onBackdropClick, { signal });
-    this.dialog.addEventListener('pointerdown', this._onDragStart, { signal });
+    /* 下拉收起：逻辑在 assets/bottom-sheet.js（三个底部面板共用一份）。
+       只在底部面板形态下启用——桌面是从右侧滑出的窄栏，往下拽没有语义。 */
+    this._detachDrag = window.BottomSheet?.attachDragToDismiss(this.dialog, {
+      exclude: '[data-cart-drawer-close]',
+      isActive: () => window.matchMedia('(max-width: 989.98px)').matches,
+      onDragEnd: (guardUntil) => {
+        this._dragEndedAt = guardUntil;
+      },
+    });
     this.dialog.addEventListener('close', this._onClose, { signal });
 
     document.addEventListener('cart:added', this._onAdded, { signal });
