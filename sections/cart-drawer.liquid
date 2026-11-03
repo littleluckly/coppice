@@ -100,36 +100,39 @@
     display: contents;
   }
 
-  .cart-drawer__dialog {
-    /* <dialog> 默认居中且带 margin；这里改成右侧抽屉。
-       宽高与定位都放在 ::backdrop 之上，showModal 后由 top layer 接管。 */
-    position: fixed;
-    inset-block: 0;
-    inset-inline-end: 0;
-    inset-inline-start: auto;
-    inline-size: min(26rem, 100%);
-    max-inline-size: 100%;
-    /* 用 dvh 而不是 100%：移动端 100% 会按 layout viewport 算（含地址栏的高度），
-       内容比可见区域高时 dialog 自己就溢出了，页面上会多出一根外层滚动条。 */
-    block-size: 100dvh;
-    max-block-size: 100dvh;
-    /* 兜住 dialog 自身的溢出：滚动只允许发生在 .cart-drawer__body 里，
-       否则就是"内层滚列表、外层滚整个面板"的两根滚动条。 */
-    overflow: hidden;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    /* 从右侧滑入：translate 由 [open] 驱动，关闭时没有过渡（原生 dialog 关闭即隐藏） */
-    translate: 100% 0;
-    transition: translate 0.25s ease;
-  }
-  .cart-drawer__dialog[open] {
-    translate: 0 0;
-  }
-  .cart-drawer__dialog::backdrop {
-    background-color: rgb(0 0 0 / 40%);
+  /* 桌面（≥990px）：右侧栏形态。
+     这些几何属性原本写在无媒体查询的基类里、靠移动端覆盖来纠正——
+     现在底部面板的外观由 assets/bottom-sheet.css 提供，若继续留在基类里，
+     两者会为同一批属性打架（同为单类选择器，只能靠加载顺序决胜）。
+     所以把"仅桌面成立"的部分收进 min-width 查询，移动端只剩共享样式。 */
+  @media (min-width: 990px) {
+    .cart-drawer__dialog {
+      position: fixed;
+      inset-block: 0;
+      inset-inline-end: 0;
+      inset-inline-start: auto;
+      inline-size: min(26rem, 100%);
+      max-inline-size: 100%;
+      block-size: 100dvh;
+      max-block-size: 100dvh;
+      /* 兜住 dialog 自身的溢出：滚动只允许发生在 .cart-drawer__body 里，
+         否则就是"内层滚列表、外层滚整个面板"的两根滚动条。 */
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background-color: var(--color-background);
+      color: var(--color-foreground);
+      /* 从右侧滑入：translate 由 [open] 驱动，关闭时没有过渡（原生 dialog 关闭即隐藏） */
+      translate: 100% 0;
+      transition: translate 0.25s ease;
+    }
+    .cart-drawer__dialog[open] {
+      translate: 0 0;
+    }
+    .cart-drawer__dialog::backdrop {
+      background-color: rgb(0 0 0 / 40%);
+    }
   }
 
   .cart-drawer__panel {
