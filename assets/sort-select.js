@@ -228,19 +228,11 @@ class FacetSort extends HTMLElement {
 
     if (this._isMobile()) {
       this._ensureSheet();
-      /* 收起动画进行中又被打开：作废未完成的关闭（finish 的代次校验让它空转），
-         清掉关闭路径留下的内联样式与 is-closing，面板回位 */
-      this._closing = false;
-      this._closeGen = (this._closeGen || 0) + 1;
-      this._sheet.classList.remove('is-closing');
-      this._sheet.style.animation = '';
-      this._sheet.style.transform = '';
-      this._sheet.style.transition = '';
       /* 选项 DOM 搬进面板——只此一份，桌面浮层同时不可能开着 */
       this._sheetBody.append(this._list);
       this._list.hidden = false;
       this._paint();
-      if (!this._sheet.open) this._sheet.showModal();
+      this._openSheet();
     } else {
       this._list.hidden = false;
       this._btn.setAttribute('aria-expanded', 'true');
@@ -256,11 +248,10 @@ class FacetSort extends HTMLElement {
     this._btn.setAttribute('aria-expanded', 'false');
     this._btn.setAttribute('aria-activedescendant', '');
     if (refocus) this._btn.focus();
-    /* 移动端面板：向下滑出（2026-11-03 刘工），动画播完才真正 close()——
-       listbox 归位隐藏与内联样式清理由 close 事件统一收口，提前搬走会让
-       下滑过程里选项凭空消失 */
+    /* 移动端面板：向下滑出由 <bottom-sheet> 负责（2026-11-03），动画播完才真正
+       close()——listbox 归位隐藏挂在 close 事件上，提前搬走会让下滑过程里选项消失 */
     if (this._sheet?.open) {
-      this._closeSheetAnimated(fromDrag);
+      this._closeSheet({ fromDrag });
       return;
     }
     /* 桌面浮层（或面板尚未建立）：维持瞬时收起。listbox 搬回组件内——
@@ -271,49 +262,17 @@ class FacetSort extends HTMLElement {
   }
 
   /**
-   * 底部面板动画收口关闭（2026-11-03 刘工：关闭从闪现改为向下滑出，与滑入对称）。
-   * 机制同筛选抽屉 _closeDialogAnimated：原生 close() 即 display:none，
-   * 动画必须赶在 close() 之前播。常规路径挂 .is-closing 播下滑 keyframes；
-   * 拖拽路径（fromDrag）transform 已在下拉途中，transition 顺势滑到屏外，
-   * 不跳回原位重播。reduced-motion 直接 close()。
-   * setTimeout 兜底 animationend/transitionend 偶发不触发（无头浏览器虚拟时间）；
-   * 代次计数让"收起途中又被打开"作废未完成的关闭（见 _openPanel）。
+   * 开合委托给 <bottom-sheet>（2026-11-03 刘工）：滑入/滑出、重开打断、
+   * reduced-motion 都收在组件里。组件未加载时退回原生 showModal/close。
    */
-  _closeSheetAnimated(fromDrag = false) {
-    const sheet = this._sheet;
-    if (!sheet?.open || this._closing) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      sheet.close();
-      return;
-    }
-    this._closing = true;
-    const gen = (this._closeGen = (this._closeGen || 0) + 1);
-    let done = false;
-    const finish = () => {
-      if (done || gen !== this._closeGen) return;
-      done = true;
-      sheet.close();
-    };
-    if (fromDrag) {
-      sheet.style.transition = 'transform 0.22s ease-in';
-      sheet.style.transform = 'translateY(100%)';
-      const onTransEnd = (event) => {
-        if (event.target !== sheet || event.propertyName !== 'transform') return;
-        sheet.removeEventListener('transitionend', onTransEnd);
-        finish();
-      };
-      sheet.addEventListener('transitionend', onTransEnd);
-    } else {
-      sheet.classList.add('is-closing');
-      const onAnimEnd = (event) => {
-        /* ::backdrop 的动画也以 sheet 为 target，按 keyframes 名字区分 */
-        if (event.animationName !== 'facets-sort-sheet-down') return;
-        sheet.removeEventListener('animationend', onAnimEnd);
-        finish();
-      };
-      sheet.addEventListener('animationend', onAnimEnd);
-    }
-    window.setTimeout(finish, 320);
+  _openSheet() {
+    if (this._sheetEl && typeof this._sheetEl.open === 'function') this._sheetEl.open();
+    else if (!this._sheet.open) this._sheet.showModal();
+  }
+
+  _closeSheet(options) {
+    if (this._sheetEl && typeof this._sheetEl.close === 'function') this._sheetEl.close(options);
+    else if (this._sheet.open) this._sheet.close();
   }
 
   _paint() {
@@ -446,7 +405,7 @@ class FacetSort extends HTMLElement {
     const handle = event.target.closest('.facets__grabber, .facets__sort-sheet-head');
     if (!handle) return;
     /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
-    if (this._closing) return;
+    if (this._sheetEl?.isClosing) return;
 
     const startY = event.clientY;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
