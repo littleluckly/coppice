@@ -122,16 +122,77 @@ class FacetSort extends HTMLElement {
     this.append(this._list);
   }
 
+  /**
+   * 底部面板（移动端）：同样惰性构建。
+   * 用 <dialog> + showModal()，焦点锁定、背景 inert、Esc 关闭都由平台给
+   * （AGENTS §8）——与集合页筛选抽屉、购物车抽屉是同一套做法。
+   *
+   * 挂在 <facet-sort> 自己身上而不是 document.body：_placeSort 搬移卡片时
+   * 它跟着走，元素销毁时一起消失，不留孤立节点。关着时 UA 的 display:none
+   * 保证它不占任何布局。
+   */
+  _ensureSheet() {
+    if (this._sheet) return;
+
+    const sheet = document.createElement('dialog');
+    sheet.className = 'facets__sort-sheet';
+    sheet.setAttribute('scroll-lock', '');
+
+    const head = document.createElement('div');
+    head.className = 'facets__sort-sheet-head';
+    if (this._label) {
+      const title = document.createElement('p');
+      title.className = 'facets__sort-sheet-title';
+      title.id = `${this._uid}-sheet-title`;
+      title.textContent = this._label;
+      head.appendChild(title);
+      sheet.setAttribute('aria-labelledby', title.id);
+    }
+    sheet.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'facets__sort-sheet-body';
+    sheet.appendChild(body);
+
+    /* 遮罩点击 = 点在 dialog 自身（面板盖满了内部） */
+    sheet.addEventListener('click', (event) => {
+      if (event.target === sheet) sheet.close();
+    });
+    /* Esc / 遮罩 / 选项选中之外的关闭路径都收敛到 _closePanel，
+       保证 _open 状态与 DOM 位置一起复位 */
+    sheet.addEventListener('close', () => {
+      if (this._open) this._closePanel(true);
+    });
+
+    this._sheet = sheet;
+    this._sheetBody = body;
+    this.append(sheet);
+  }
+
   /* ---- 开合与绘制 ---- */
+
+  _isMobile() {
+    return !this._mq.matches;
+  }
 
   _openPanel() {
     this._ensureList();
     this._open = true;
-    this._list.hidden = false;
-    this._btn.setAttribute('aria-expanded', 'true');
     this._activeIndex = this._select.selectedIndex;
-    this._paint();
-    this._list.focus();
+
+    if (this._isMobile()) {
+      this._ensureSheet();
+      /* 选项 DOM 搬进面板——只此一份，桌面浮层同时不可能开着 */
+      this._sheetBody.append(this._list);
+      this._list.hidden = false;
+      this._paint();
+      if (!this._sheet.open) this._sheet.showModal();
+    } else {
+      this._list.hidden = false;
+      this._btn.setAttribute('aria-expanded', 'true');
+      this._paint();
+      this._list.focus();
+    }
     this._optionEls[this._activeIndex]?.scrollIntoView({ block: 'nearest' });
   }
 
@@ -141,6 +202,10 @@ class FacetSort extends HTMLElement {
     this._list.hidden = true;
     this._btn.setAttribute('aria-expanded', 'false');
     this._btn.setAttribute('aria-activedescendant', '');
+    /* 关面板前把 listbox 搬回组件内：留在 dialog 里的话，下次桌面开浮层
+       会找不到绝对定位的祖先，浮层跑到 body 的坐标体系里 */
+    if (this._list.parentElement !== this) this.append(this._list);
+    if (this._sheet?.open) this._sheet.close();
     if (refocus) this._btn.focus();
   }
 
@@ -243,11 +308,15 @@ class FacetSort extends HTMLElement {
   };
 
   _onDocPointerDown = (event) => {
+    /* 面板是模态的，遮罩点击由 dialog 自己的监听处理（target 是 dialog 本身，
+       而 dialog 在 this 内部，这里本来也不会命中） */
     if (this._open && !this.contains(event.target)) this._closePanel(false);
   };
 
-  _onMq = (event) => {
-    event.matches ? this._enhance() : this._restore();
+  _onMq = () => {
+    /* 跨断点：容器形态从浮层换成面板（或反之），开着就直接收起。
+       不收起的话，绝对定位的浮层会失去定位祖先，跑到 body 坐标里。 */
+    if (this._open) this._closePanel(false);
   };
 }
 
