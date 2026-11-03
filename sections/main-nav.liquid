@@ -1915,7 +1915,7 @@
   }
 
   .nav-drawer__item {
-    border-block-end: 1px solid rgb(0 0 0 / 8%);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
   }
 
   .nav-drawer__item:last-child {
@@ -1943,11 +1943,13 @@
     cursor: pointer;
   }
 
+  /* 箭头颜色从前景色派生（原先写死 rgb(0 0 0 / 45%)，Noir 深底上等于隐形的
+     黑色——BUG-059 同款问题） */
   .nav-drawer__link svg {
     flex: none;
     width: 1rem;
     height: 1rem;
-    color: rgb(0 0 0 / 45%);
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
 
   .nav-drawer__link:focus-visible {
