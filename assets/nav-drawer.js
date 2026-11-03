@@ -41,9 +41,6 @@ class NavDrawer extends HTMLElement {
   _onOpen = () => {
     if (!this._dialog || this._dialog.open) return;
 
-    // 关闭期间可能钻到了子面板：重开时回到根面板
-    this._resetPanels();
-
     this._dialog.showModal();
 
     // 禁用 autofocus（AGENTS §8），显式移焦到关闭按钮——比依赖
