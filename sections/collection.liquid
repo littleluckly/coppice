@@ -303,6 +303,14 @@
                 aria-controls="FacetsDialog-{{ section.id }}"
               >
                 {{ 'collections.filters.open' | t }}
+                {%- comment -%}
+                  2026-11-03 刘工：与右侧排序控件并排时一个有箭头一个没有，
+                  看起来像两个来源不同的控件。共用 icon-chevron-down.svg，
+                  尺寸与颜色由 CSS 统一（16px / 前景色 60%），
+                  与排序按钮里那个 JS 生成的 chevron 同一形状。
+                  箭头是装饰：按钮的可访问名来自文字「Filters」，图标不进 a11y 树。
+                {%- endcomment -%}
+                {{ 'icon-chevron-down.svg' | inline_asset_content }}
               </button>
             {%- endif -%}
 
@@ -1005,6 +1013,7 @@
   .facets__open {
     display: none;
     align-items: center;
+    gap: 0.5rem;
     min-height: 44px;
     padding: 8px 1rem;
     border: var(--facet-control-border);
@@ -1012,6 +1021,14 @@
     background: none;
     font: inherit;
     cursor: pointer;
+  }
+  /* 箭头与排序按钮里的 .facets__sort-chevron 同尺寸同色（16px / 前景色 60%），
+     两枚按钮并排时才是同一套东西。flex:none 防长文案把它压扁。 */
+  .facets__open svg {
+    flex: none;
+    inline-size: 16px;
+    block-size: 16px;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
   .collection__count {
     font-size: 0.85rem;
