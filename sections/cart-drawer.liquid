@@ -298,7 +298,8 @@
      右侧滑出，就会出现"页头是移动形态、抽屉却是桌面形态"的错位。
 
      为什么用 animation 而不是 transition：dialog 关闭即 display:none，
-     transition 没有可过渡的起点；animation 在 [open] 出现时从头播，正好。 */
+     transition 没有可过渡的起点（这正是桌面端曾经"闪现"的原因）；
+     animation 在类名挂上时从头播，方向与时长都由 CSS 给。 */
   @media (max-width: 989.98px) {
     .cart-drawer__dialog {
       inset-block: auto 0;
@@ -311,9 +312,6 @@
       max-block-size: 85vh;
       margin: 0;
       border-radius: 16px 16px 0 0;
-      /* 桌面那套右侧滑入在底部抽屉里没有意义，关掉 */
-      translate: none;
-      transition: none;
     }
     .cart-drawer__dialog[open] {
       display: flex;

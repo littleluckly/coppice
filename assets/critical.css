@@ -666,6 +666,9 @@ back-to-top[data-visible] .back-to-top__button {
    .is-closing   收起途中：禁点击 + 遮罩淡出（拖拽收起也走它）
    .is-close-anim  keyframes 下滑（0.22s ease-in，比进场快半拍）；
                   拖拽收起刻意不挂它——keyframes 的 transform 会压过内联 style
+   这里的 keyframes 是**默认方向（向下）**。方向不属于组件：宿主用一个
+   优先级更高的选择器（如 `.cart-drawer__dialog.is-entering`）覆盖
+   animation 即可改成右滑——组件只认"面板自身的 animationend"，不绑动画名。
    =================================================================== */
 bottom-sheet {
   /* 不生成盒子：包裹层不能成为父级 grid/flex 的 item
