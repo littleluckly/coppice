@@ -1439,13 +1439,14 @@
     touch-action: none;
     user-select: none;
   }
-  /* 只吃指针、不参与绘制。命中区 120×46（视觉条 56×6）——
-     纵向 ±20px 才够到 44px 的通用触摸门槛，横向 ±32px 容忍左右偏。
-     落在标题行正上方，那里没有可点控件，不会遮住关闭按钮（在头部行最右侧）。 */
+  /* 只吃指针、不参与绘制。命中区实测 120×54（视觉条 56×6）：
+     横向 ±32px 容忍左右偏；纵向向上被 .facets__panel 的 overflow:hidden 截在
+     面板内边距（16px）处，所以向下补到 32px——下方就是头部行，本来就是拖拽热区，
+     多铺这一层不改变行为，也不会挡住关闭按钮（它在头部行最右端，横向够不着）。 */
   .facets__dialog .facets__grabber::after {
     content: '';
     position: absolute;
-    inset: -20px -32px;
+    inset: -16px -32px -32px;
   }
   .facets__dialog .facets__mobile-head {
     touch-action: none; /* 头部行也是拖拽热区 */
