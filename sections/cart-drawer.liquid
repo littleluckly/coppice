@@ -18,6 +18,12 @@
 
 <script src="{{ 'cart-drawer.js' | asset_url }}" defer></script>
 {{ 'cart-line.css' | asset_url | stylesheet_tag }}
+{%- comment -%}
+  底部面板的公共外观与拖拽行为（2026-11-03 抽取）：与集合页筛选、排序面板共用。
+  必须排在使用者之前——defer 按文档顺序执行。
+{%- endcomment -%}
+{{ 'bottom-sheet.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'bottom-sheet.js' | asset_url }}" defer></script>
 
 <cart-drawer
   class="cart-drawer"
@@ -255,22 +261,6 @@
     }
   }
 
-  .cart-drawer__grabber {
-    display: none;
-  }
-
-  /* ---- 移动端：底部通栏上滑 ----
-     与集合页筛选面板同一套动效（sections/collection.liquid 的 .facets__dialog）：
-     通栏、顶部圆角、translateY(100%) 滑入、遮罩淡入、抓手横线。
-     两处用同一组参数，顾客在不同页面看到的是同一种"从底部拉起"的手感。
-
-     断点取 989.98px 而不是常见的 749px：集合页筛选面板与导航的移动形态都在
-     990px 换挡（见 collection.liquid 的 @media (max-width: 989.98px)、
-     main-nav.liquid 的 @media (max-width: 989px)）。抽屉若在 750–989px 仍从
-     右侧滑出，就会出现"页头是移动形态、抽屉却是桌面形态"的错位。
-
-     为什么用 animation 而不是 transition：dialog 关闭即 display:none，
-     transition 没有可过渡的起点；animation 在 [open] 出现时从头播，正好。 */
   /* ---- 移动端：底部面板 ----
      容器外观（通栏 / 上圆角 / 85vh / 遮罩 / 滑入 / 抓手 / reduce 降级）
      全部来自 assets/bottom-sheet.css —— 与集合页筛选、排序面板共用一份。
@@ -282,7 +272,6 @@
       min-block-size: 0;
       block-size: auto;
     }
-  }
   }
 {% endstylesheet %}
 
