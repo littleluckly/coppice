@@ -1701,7 +1701,7 @@
       color: color-mix(in srgb, #fff 88%, transparent);
       /* 参考图的文字只占左侧 ~2/3：右半边留给照片主体（产品），
          整宽铺满会把产品压到文字底下、也失去「靠左」的构图。 */
-      max-inline-size: 28ch;
+      max-inline-size: 24ch;
     }
     /* 亮点行：参考图是「线描细圆在上、两行标签在下、整组左靠」。
        我们原来是白底实心圆 + 左图标右文字；遮罩是深色，白底圆会跳出来，
@@ -1711,7 +1711,17 @@
       align-items: center;
       gap: 8px;
       text-align: center;
+      font-size: 0.8125rem;
       color: color-mix(in srgb, #fff 92%, transparent);
+    }
+    /* 线描圆比原来的白底实心圆更小：参考图 26px、我们是 emoji 需要空间，
+       取 40px——再大就会把横幅顶高、也更像「按钮」而不像标注。 */
+    .collection:not(.collection--no-banner) .collection__feature-badge {
+      inline-size: 2.5rem;
+      block-size: 2.5rem;
+    }
+    .collection:not(.collection--no-banner) .collection__feature-emoji {
+      font-size: 1.25rem;
     }
     .collection:not(.collection--no-banner) .collection__feature-badge {
       background-color: transparent;
