@@ -1455,16 +1455,33 @@
   html[data-collection-view='list'] .collection__grid .product-card > * {
     grid-column: 2;
   }
+  /* 媒体盒必须 stretch + 图片改成「填满容器」：卡片图是 aspect-ratio: 1 的方图，
+     列表里右列内容比 168px 高/矮都不一定，方图会溢到卡片外面（桌面实测：
+     图比卡高 40px，直接越出圆角边框）。改成高度 100% + contain，
+     图跟着行高走，不再溢出也不被裁。 */
   html[data-collection-view='list'] .collection__grid .product-card__media-wrap {
     grid-column: 1;
     grid-row: 1 / span 6;
-    align-self: start;
+    align-self: stretch;
+    min-block-size: 0;
+  }
+  html[data-collection-view='list'] .collection__grid .product-card__media {
+    block-size: 100%;
+  }
+  html[data-collection-view='list'] .collection__grid .product-card__media img {
+    block-size: 100%;
+    aspect-ratio: auto;
+    object-fit: contain;
   }
   /* 这两处的基础规则靠 margin-top:auto 把按钮压到卡底（纵向卡），
      横排时该行高度就是内容高度，auto 会把它顶开，这里清零。 */
   html[data-collection-view='list'] .collection__grid .product-card__compare,
   html[data-collection-view='list'] .collection__grid .product-card__quick-add {
     margin-block-start: 0;
+  }
+  /* 加购按钮不再拉满整行：桌面信息列宽 700+px，一条全宽绿条会把整张卡压住 */
+  html[data-collection-view='list'] .collection__grid .product-card__add {
+    max-inline-size: min(100%, 240px);
   }
 
   /* 分页：圆形按钮（参考截图 2026-10-16）——白圆 + 浅边框居中一排，
