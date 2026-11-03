@@ -1571,6 +1571,12 @@
      2026-11-03：滑入 / 滑出移交 <bottom-sheet>（keyframes 在 critical.css），
      这里只留几何。顶部两角改圆 + 抓手，与购物车抽屉 / 筛选面板同一副面孔。
      高度仍是满屏：菜单展开后可能很长，收高度会让面板在每次展开时上下跳。 */
+  /* 自定义元素本身不生成盒子：里面只有 <bottom-sheet>（display:contents）
+     与 top layer 的 <dialog>，多一层 inline 盒只会在页头里留个空的基线缝。 */
+  nav-drawer {
+    display: contents;
+  }
+
   .nav-drawer {
     inset: 0;
     /* 由 showModal() 置于 top layer，无需 z-index */
@@ -1970,7 +1976,7 @@
     align-items: stretch;
     margin-block-start: auto;
     padding: 0;
-    border-block-start: 1px solid rgb(0 0 0 / 12%);
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
   }
 
   /* 抽屉内账户组件的 sheet 从抽屉顶部弹出，与桌面端不同 */
@@ -1981,7 +1987,7 @@
   /* 账户行：占满一行；触发器是平台组件（内部结构不可控），只对齐行距 */
   .account--in-drawer {
     padding: 0.5rem 1rem;
-    border-block-end: 1px solid rgb(0 0 0 / 8%);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
   }
 
   /* 购物车行：图标 + "Cart" 文字 + 右上角计数徽标（snippet 传 show_label）。
