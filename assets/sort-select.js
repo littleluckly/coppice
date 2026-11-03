@@ -139,19 +139,19 @@ class FacetSort extends HTMLElement {
     if (this._sheet) return;
 
     const sheet = document.createElement('dialog');
-    sheet.className = 'facets__sort-sheet';
+    /* 容器外观来自 assets/bottom-sheet.css（与筛选面板、购物车抽屉共用） */
+    sheet.className = 'facets__sort-sheet bottom-sheet';
     sheet.setAttribute('scroll-lock', '');
 
-    /* 抓手横线（2026-11-03 刘工：与筛选面板保持一致）。类名复用 .facets__grabber，
-       视觉定义在 collection.liquid 的样式块里一处维护。
-       有了抓手就必须能拖——只画不拖是假承诺，所以下面挂了拖拽收起。 */
+    /* 抓手横线：样式与拖拽都在 bottom-sheet.* 里。
+       有了抓手就必须能拖——只画不拖是假承诺。 */
     const grabber = document.createElement('div');
-    grabber.className = 'facets__grabber';
+    grabber.className = 'bottom-sheet__grabber';
     grabber.setAttribute('aria-hidden', 'true');
     sheet.appendChild(grabber);
 
     const head = document.createElement('div');
-    head.className = 'facets__sort-sheet-head';
+    head.className = 'facets__sort-sheet-head bottom-sheet__head';
     if (this._label) {
       const title = document.createElement('p');
       title.className = 'facets__sort-sheet-title';
@@ -170,16 +170,20 @@ class FacetSort extends HTMLElement {
     sheet.addEventListener('click', (event) => {
       if (event.target === sheet) sheet.close();
     });
-    /* 下拉收起：热区 = 抓手 + 头部行（样式里给了 touch-action:none） */
-    sheet.addEventListener('pointerdown', this._onSheetDragStart);
+    /* 下拉收起：行为在 assets/bottom-sheet.js（三个底部面板共用一份）。
+       关面板走 _closePanel，它负责把 listbox 搬回组件内并同步状态。 */
+    this._detachDrag = window.BottomSheet?.attachDragToDismiss(sheet, {
+      onDismiss: () => this._closePanel(true),
+      onDragEnd: (guardUntil) => {
+        this._dragEndedAt = guardUntil;
+      },
+    });
     /* Esc / 遮罩 / 选项选中 / 下拉越界之外的关闭路径都收敛到 _closePanel，
        保证 _open 状态与 DOM 位置一起复位。
        顺带把拖拽留下的内联样式清零——动画要用 animation:none 压住才能拖，
        不清掉的话下次打开不会重新播滑入。 */
     sheet.addEventListener('close', () => {
-      sheet.style.animation = '';
-      sheet.style.transform = '';
-      sheet.style.transition = '';
+      window.BottomSheet?.reset(sheet);
       if (this._open) this._closePanel(true);
     });
 
