@@ -9,12 +9,32 @@
  */
 {
   "sections": {
-    "main": {
-      "type": "cart",
+    "banner": {
+      "type": "cart-summary-banner",
       "settings": {}
+    },
+    "lines": {
+      "type": "cart-lines",
+      "settings": {
+        "show_stock": false
+      }
+    },
+    "summary": {
+      "type": "cart-summary",
+      "settings": {
+        "heading": "",
+        "shipping_note": "",
+        "show_payment_icons": true
+      }
+    },
+    "upsell": {
+      "type": "cart-recommendations",
+      "settings": {
+        "heading": "",
+        "products_to_show": 4,
+        "enable_personalized": true
+      }
     }
   },
-  "order": [
-    "main"
-  ]
+  "order": ["banner", "lines", "summary", "upsell"]
 }

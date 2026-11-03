@@ -850,6 +850,9 @@ PRODUCTS = [
         tags="accessories, bar and chain, saw chains",
         sku="NB-CH16",
         price="21.99",
+        # 锯链允许超卖（2026-11-02 刘工）：耗材缺货时顾客愿意等补货，
+        # 停售等于把复购单推给别家；主机不在此列，缺货就应停售。
+        oversell=True,
         fitment="Fits NB-C16G and NB-BAR16 (16 in. bar, 56 drive links)",
         desc="<p>Low-kickback 3/8 in. low-profile chain, 56 drive links, pre-stretched "
              "and ready to fit a 16 in. bar. Sharpening spec is printed on the box.</p>",
@@ -863,6 +866,7 @@ PRODUCTS = [
         tags="accessories, bar and chain, saw chains",
         sku="NB-CH18",
         price="23.99",
+        oversell=True,
         fitment="Fits NB-C18G and NB-BAR18 (18 in. bar, 62 drive links)",
         desc="<p>Low-kickback 3/8 in. low-profile chain, 62 drive links. Swap it on "
              "when the old chain needs more than two strokes of the file.</p>",
@@ -876,6 +880,7 @@ PRODUCTS = [
         tags="accessories, bar and chain, saw chains",
         sku="NB-CH20",
         price="26.99",
+        oversell=True,
         fitment="Fits NB-C20G and NB-BAR20 (20 in. bar, 70 drive links)",
         desc="<p>3/8 in. low-profile chain, 70 drive links, for the 20 in. bar on the "
              "farm-and-ranch saw. Keep a spare so a rocked chain never ends the day.</p>",
@@ -945,7 +950,13 @@ def build_rows():
             "Charge tax": "TRUE",
             "Inventory tracker": "shopify",
             "Inventory quantity": "25",
-            "Continue selling when out of stock": "DENY",
+            # 库存策略：这一列就是后台的「Continue selling when out of stock」，
+            # 旧版 CSV 里叫 "Variant Inventory Policy"（值 deny / continue），同一设置两种叫法。
+            # 官方模板 product_template.csv 用的写法是**大写 DENY**，这里跟随模板，避免
+            # 列值格式与模板不一致导致导入时被静默忽略。
+            # 需要放开的商品在 dict 里写 oversell=True —— 缺省不改动任何现有商品，
+            # 输出与加这个开关之前逐字节相同。
+            "Continue selling when out of stock": "CONTINUE" if p.get("oversell") else "DENY",
             "Weight value (grams)": grams,
             "Weight unit for display": "lb",
             "Requires shipping": "TRUE",

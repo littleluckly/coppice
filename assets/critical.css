@@ -589,3 +589,70 @@ back-to-top[data-visible] .back-to-top__button {
     translate: none;
   }
 }
+
+/* ==========================================================================
+ * 购物车页两栏（2026-11-02 · task-cart §0.3）
+ *
+ * 为什么写在 critical.css 而不是某个 section 的 {% stylesheet %}：
+ * 这个栅格跨四个 section（行项 / 摘要 / 物流条 / 推荐位），任何单个 section
+ * 都管不了另外三个；它属于模板级布局，与骨架同生命周期。
+ *
+ * 结构：把 #MainContent 收成内容区宽度并居中，内部两栏；每个 section 的
+ * 包装层退化为单列（--content-grid: 1fr），不再二次收页边距。
+ *
+ * 两个必须**同时**做的覆盖（少一条就错位）：
+ *   1. --content-grid: 1fr —— 否则每个 section 内部再按 page-margin 缩一次，
+ *      两栏的可用宽度被吃掉两侧边距，摘要卡被挤成一条。
+ *   2. .shopify-section > * { grid-column: 1 } —— 全局规则写的是 grid-column: 2，
+ *      单列网格下它会创建一个隐式第二列，内容整体右移一整列。
+ *
+ * 列定位靠 schema "class" 落到包装元素上（cart-lines-section 等），
+ * **不依赖 section 顺序**——商家在编辑器里上下移动 section 也不会错位。
+ * ========================================================================== */
+.template-cart #MainContent {
+  --cart-summary-width: 360px;
+  inline-size: min(
+    calc(var(--page-width) - var(--page-margin) * 2),
+    calc(100% - var(--page-margin) * 2)
+  );
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 1.25rem;
+  padding-block: 1.5rem 3rem;
+}
+
+.template-cart .shopify-section {
+  --content-grid: 1fr;
+}
+.template-cart .shopify-section > * {
+  grid-column: 1;
+}
+
+/* 窄屏单列时行项同样要截断自动最小尺寸：长标题会把 grid item 撑到内容宽度 */
+.template-cart .cart-lines-section {
+  min-inline-size: 0;
+}
+
+@media (min-width: 990px) {
+  .template-cart #MainContent {
+    grid-template-columns: minmax(0, 1fr) var(--cart-summary-width);
+    column-gap: 2rem;
+    align-items: start;
+  }
+  .template-cart .cart-lines-section {
+    grid-column: 1;
+  }
+  .template-cart .cart-summary-section {
+    grid-column: 2;
+    /* 关键：grid item 的高度默认按内容收缩，容器不给高度，里面的 sticky 就
+       "无处可粘"——滚动时摘要卡直接跟着走。stretch 让包装层占满整行高度，
+       sticky 才有位移空间。 */
+    align-self: stretch;
+  }
+  /* 汇总条与推荐位各占一整行：跨两栏 = 内容区通栏，但不超出内容区 */
+  .template-cart .cart-banner-section,
+  .template-cart .cart-recommendations-section {
+    grid-column: 1 / -1;
+  }
+}

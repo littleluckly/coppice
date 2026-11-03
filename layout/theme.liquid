@@ -100,5 +100,12 @@
       放在最后：浮层 DOM 靠后，无 JS 时它默认隐藏，不影响内容顺序。
     {% endcomment %}
     {% render 'back-to-top' %}
+
+    {% comment %}
+      购物车抽屉（2026-11-02）：全站唯一，挂 layout 而非某个 section ——
+      页面里任何位置的加购都要能把它打开。静态 section 才有 section.id，
+      局部刷新（?sections=）需要它；snippet 拿不到。
+    {% endcomment %}
+    {% section 'cart-drawer' %}
   </body>
 </html>

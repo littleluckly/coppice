@@ -28,7 +28,8 @@
  * 那一刻阴影慢半拍浮起，观感是"闪"。同步判据 + 只在状态翻转时写 class，
  * 每帧至多一次 rect 读取、至多一次 DOM 写入，开销与 rAF 方案等价。
  *
- * 移动端（< 990px）没有 sticky，CSS 只在该断点消费 is-stuck，此处不判断断点。
+ * 移动端（< 990px）也吸顶（2026-11-02 刘工），但移动块自带常驻投影，
+ * 不消费 is-stuck；此处不判断断点，状态类只在桌面样式里被用到。
  */
 if (!customElements.get('nav-sticky')) {
   customElements.define(

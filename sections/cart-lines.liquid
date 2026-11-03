@@ -1,0 +1,283 @@
+{% comment %}
+  购物车行项（pages-ui §10 · task-cart T-1.2）。
+
+  DOM 契约：
+    · `#cart-form` —— 摘要卡的结账按钮靠 `form="cart-form"` 关联到它（两个 section
+      不能共用一个 <form> 元素，只能用 form 属性）。改这个 id 时同步 cart-summary。
+    · `<cart-items>` —— assets/cart-items.js 的根。所有 AJAX 行为挂在元素内部，
+      不向 document 派发全局委托（AGENTS.md §6）。
+    · `data-cart-section` —— 局部刷新时 Section Rendering 的返回键；脚本靠它找回来替换。
+
+  无 JS：表单照常 POST /cart，整页刷新；数量输入为原生 number，移除为 <a>（GET 生效）。
+{% endcomment %}
+
+{%- comment -%}
+  脚本只在本 section 需要——购物车页专属，不挂 layout（page-only JS 不占全站带宽）。
+  defer：解析完成后执行，不阻塞首屏。
+{% endcomment -%}
+<script src="{{ 'cart-items.js' | asset_url }}" defer></script>
+{%- comment -%}
+  行项样式独立成 assets/cart-line.css：抽屉（layout 级）与购物车页共用同一份行项，
+  section 的样式块只在 section 存在时加载，抽屉拿不到。
+{%- endcomment -%}
+{{ 'cart-line.css' | asset_url | stylesheet_tag }}
+
+<cart-items
+  class="cart-lines"
+  data-cart-section="{{ section.id }}"
+  data-cart-change-url="{{ routes.cart_change_url }}.js"
+  data-cart-update-url="{{ routes.cart_update_url }}.js"
+  data-cart-live-template="{{ 'cart.total_updated' | t: total: '[total]' }}"
+  data-cart-product-ids="{{ cart.items | map: 'product_id' | join: ',' }}"
+  data-error-message="{{ 'products.product_card.add_error' | t }}"
+>
+  <h1 class="cart-lines__title" tabindex="-1">
+    {{ 'cart.title' | t }}
+    {%- if cart.item_count > 0 -%}
+      <span class="cart-lines__count" aria-hidden="true">({{ cart.item_count }})</span>
+    {%- endif -%}
+  </h1>
+
+  {%- if cart.item_count == 0 -%}
+    {%- comment -%}
+      空态（T-1.6）：独占本栏，摘要卡此时整节不输出（cart-summary 里判同一个条件）。
+      不放任何金额、不放倒计时/库存话术——空购物车里那些全是伪造的数据。
+    {%- endcomment -%}
+    <div class="cart-lines__empty">
+      <p class="cart-lines__empty-heading">{{ 'cart.empty_heading' | t }}</p>
+      <p class="cart-lines__empty-text">{{ 'cart.empty_text' | t }}</p>
+      <a class="btn-solid cart-lines__empty-cta" href="{{ routes.all_products_collection_url }}">
+        {{- 'cart.continue_shopping' | t -}}
+      </a>
+    </div>
+  {%- else -%}
+    {%- comment -%}
+      桌面表头（2026-11-02 刘工参考图）：Product / Price / Quantity / Total 四列。
+      `aria-hidden` 是有意的——每个数值列在 cart-line 里都带一个 visually-hidden
+      的列名，表头只是给眼睛看的，否则屏幕阅读器会把列名念两遍。
+      窄屏整块隐藏（行变成卡片，四列对齐失去意义）。
+    {%- endcomment -%}
+    <div class="cart-lines__table">
+      <div class="cart-lines__head" aria-hidden="true">
+        <span class="cart-lines__head-product">{{ 'cart.product' | t }}</span>
+        <span class="cart-lines__head-price">{{ 'cart.price' | t }}</span>
+        <span class="cart-lines__head-qty">{{ 'cart.quantity' | t }}</span>
+        <span class="cart-lines__head-total">{{ 'cart.total' | t }}</span>
+      </div>
+
+      <form id="cart-form" class="cart-lines__form" action="{{ routes.cart_url }}" method="post" novalidate>
+        <ul class="cart-lines__list" role="list">
+          {%- for item in cart.items -%}
+            <li class="cart-lines__item" data-line-key="{{ item.key }}">
+              {%- render 'cart-line', item: item, show_stock: section.settings.show_stock -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+
+        {%- comment -%}
+          订单备注（官方 Cart page 硬项 "Cart notes"）。放在行项之后、提交按钮之前。
+          无 JS：随表单 POST 一起提交（name="note" 是平台约定的字段名）。
+          有 JS：失焦即保存，由 cart-items 里发 /cart/update.js —— 不弹任何提示，
+          顾客不需要为「填了个备注」再点一次保存。
+        {%- endcomment -%}
+        <div class="cart-lines__note">
+          <label class="cart-lines__note-label" for="CartNote">{{ 'cart.note_label' | t }}</label>
+          <textarea
+            id="CartNote"
+            class="cart-lines__note-input"
+            name="note"
+            rows="3"
+            placeholder="{{ 'cart.note_placeholder' | t }}"
+            data-cart-note
+          >{{ cart.note }}</textarea>
+        </div>
+
+        {%- comment -%}
+          无 JS 的「Update」按钮：JS 环境下数量变化即提交，这个按钮仍然保留——
+          它同时承担「备注改完点一下保存」的兜底语义。
+        {%- endcomment -%}
+        <div class="cart-lines__actions">
+          <button type="submit" name="update" class="btn-solid btn-solid--quiet cart-lines__update">
+            {{- 'cart.update_cart' | t -}}
+          </button>
+        </div>
+      </form>
+    </div>
+  {%- endif -%}
+</cart-items>
+
+{% stylesheet %}
+  cart-items {
+    display: block;
+  }
+
+  .cart-lines__title {
+    font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-block-end: 1rem;
+  }
+  .cart-lines__count {
+    font-size: 0.5em;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--color-foreground-muted);
+    margin-inline-start: 0.35em;
+  }
+
+  /* 桌面表格容器：表头与所有行同处一个圆角框内，与右侧摘要卡共用一套卡片语言。
+     行项自身的通用外观在 assets/cart-line.css，这里只管表格专属的骨架。 */
+  .cart-lines__table {
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 12px;
+    padding-inline: 1.25rem;
+    padding-block-end: 0.25rem;
+  }
+  .cart-lines__head {
+    /* 只在桌面出现；窄屏行变卡片，四列对齐已无意义 */
+    display: none;
+  }
+
+  .cart-lines__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  /* 行之间画分隔线，首行不画——首行的上边界由表头的下边线负责 */
+  .cart-lines__item + .cart-lines__item {
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+
+  /* ---- 桌面：四列表格 ----
+     覆盖 cart-line.css 的卡片态。列宽写死是为了表头与每行严格对齐——
+     用 auto 时，一行有折扣、一行没有，整张表就会左右错位。
+
+     ⚠️ 这里必须**重写 areas 成 5 列一行**，不能只写 grid-template-areas: none：
+     子项身上带着 `grid-area: media/info/price/qty/total`，一旦区域名不存在，
+     所有子项会全部落进同一个格子，画面就是"标题、价格、数量叠在商品图上"。 */
+  @media (min-width: 750px) {
+    .cart-lines__head,
+    .cart-lines .cart-line {
+      grid-template-columns: 96px minmax(0, 1fr) 120px 132px 100px;
+      gap: 1rem;
+    }
+    .cart-lines .cart-line {
+      grid-template-areas: 'media info price qty total';
+      align-items: center;
+      /* 数值列在整行高度里居中：信息区通常最高（标题 + 徽标 + 移除） */
+      padding-block: 1.25rem;
+    }
+    .cart-lines__head {
+      display: grid;
+      align-items: end;
+      padding-block: 0.9rem 0.6rem;
+      border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+      font-size: 0.8125rem;
+      color: var(--color-foreground-muted);
+    }
+    /* Product 标签盖住「图 + 信息」两列，左对齐到容器内边 */
+    .cart-lines__head-product {
+      grid-column: 1 / span 2;
+    }
+    /* 表格里数值列一律左对齐到列首；卡片态的 justify-self: end 在这里不要 */
+    .cart-lines .cart-line__qty,
+    .cart-lines .cart-line__total {
+      justify-self: start;
+    }
+  }
+
+  /* ---- 窄屏：表格容器退成通栏，行本身就是卡片 ---- */
+  @media (max-width: 749px) {
+    .cart-lines__table {
+      border: 0;
+      border-radius: 0;
+      padding-inline: 0;
+      padding-block-end: 0;
+    }
+  }
+
+  .cart-lines__note {
+    display: grid;
+    gap: 0.35rem;
+    /* 与上方商品行分开：备注是订单级信息，不跟着某件商品走。
+       没有这条线时它紧贴最后一行，读起来像"表格的第 5 行"。 */
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    padding-block: 1.25rem 0.5rem;
+  }
+  .cart-lines__note-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .cart-lines__note-input {
+    /* 占满表格内宽：原先限了 34rem，与上方行项的右边界对不上 */
+    inline-size: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
+    border-radius: 8px;
+    background-color: var(--color-background);
+    color: inherit;
+    font: inherit;
+    resize: vertical;
+  }
+  .cart-lines__note-input::placeholder {
+    color: var(--color-foreground-muted);
+  }
+
+  .cart-lines__actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-block-start: 1rem;
+  }
+  .cart-lines__update {
+    padding-inline: 1.25rem;
+  }
+  /* 有 JS 时数量即改即提交，「Update」确实冗余，但**不隐藏**：
+     cart-items.js 加载失败而 .js 类已经写上时，藏掉它会让顾客彻底没有提交路径。
+     多一个按钮的代价远小于一个死掉的购物车。 */
+
+  /* ---- 空态 ---- */
+  .cart-lines__empty {
+    display: grid;
+    justify-items: start;
+    gap: 0.75rem;
+    padding-block: 2.5rem 3rem;
+  }
+  .cart-lines__empty-heading {
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+  .cart-lines__empty-text {
+    color: var(--color-foreground-muted);
+    max-inline-size: 42ch;
+  }
+  .cart-lines__empty-cta {
+    margin-block-start: 0.5rem;
+    padding-inline: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.cart_lines.name",
+  "tag": "section",
+  "class": "cart-lines-section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_stock",
+      "label": "t:sections.cart_lines.labels.show_stock",
+      "info": "t:sections.cart_lines.labels.show_stock_info",
+      "default": false
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.cart_lines.name"
+    }
+  ]
+}
+{% endschema %}

@@ -489,7 +489,12 @@
       {{ 'icon-menu.svg' | inline_asset_content }}
     </button>
 
-    {%- comment -%} 移动端：汉堡居左、搜索图标推到最右 {%- endcomment -%}
+    {%- comment -%}
+      移动端：汉堡居左，(搜索 + 购物车) 推到最右。
+      购物车入口此前只存在于 ☰ 抽屉里，吸顶之后顾客滚到页面中段找不到它——
+      2026-11-02 刘工要求固定在顶部。复用 cart-entry snippet，计数角标与桌面共用
+      同一套 cart-badge.js 同步逻辑。
+    {%- endcomment -%}
     <button
       type="button"
       class="main-nav__search-toggle main-nav__search-toggle--mobile"
@@ -499,6 +504,8 @@
     >
       {{ 'icon-search.svg' | inline_asset_content }}
     </button>
+
+    {% render 'cart-entry', class: 'cart-entry--mobile' %}
   </div>
   {%- comment -%} 【B】移动抽屉 nav-drawer（原文件 480–696） {%- endcomment -%}
 
@@ -2018,9 +2025,14 @@
       box-shadow: var(--header-shadow);
     }
 
-    /* 汉堡居左，搜索图标推到最右 */
+    /* 汉堡居左，(搜索 + 购物车) 推到最右 */
     .main-nav__search-toggle--mobile {
       margin-inline-start: auto;
+    }
+
+    /* 两个 44px 触摸目标相邻，留一点缝避免误触 */
+    .main-nav__mobile .cart-entry {
+      margin-inline-start: 0.35rem;
     }
 
     .main-nav__burger {
@@ -2042,21 +2054,21 @@
     }
   }
 
-  /* ---- O-1：sticky 仅 PC，务必留在本媒体查询内 ----
+  /* ---- sticky：全断点（2026-11-02 刘工：移动端也要吸顶）----
      BUG-032：sticky 不能挂在 .main-nav 上——它的父级是 Shopify 生成的
      .shopify-section 包裹层，高度只有导航行自身，sticky 没有可黏的滚动余量。
      必须挂在包裹层（schema "class": "main-nav-section"）上：包裹层是 body
      （flex 列）的直接子项、纵贯整页，sticky 才有作用空间。 */
-  @media screen and (min-width: 990px) {
-    .main-nav-section {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-    }
+  .main-nav-section {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
 
+  @media screen and (min-width: 990px) {
     /* 吸住才浮投影（2026-10-29 刘工）。is-stuck 由 assets/nav-sticky.js 打上，
-       判据与像素阈值无关，见该文件头部说明。这条必须与上面的 sticky 同处一段：
-       低于 990px 时既没有吸顶，也不该有投影出现/消失的状态切换。 */
+       判据与像素阈值无关，见该文件头部说明。
+       移动块自带常驻投影（见下方断点），不需要这层"吸住才亮"的状态。 */
     .main-nav-section.is-stuck .main-nav__desktop {
       box-shadow: var(--header-shadow);
     }

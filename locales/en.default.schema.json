@@ -48,7 +48,8 @@
     "typography": "Typography",
     "compare": "Compare",
     "compare_groups_header": "Comparison groups",
-    "compare_page_header": "Comparison page"
+    "compare_page_header": "Comparison page",
+    "cart_drawer": "Cart drawer"
   },
   "sections": {
     "hero_slideshow": {
@@ -315,12 +316,51 @@
       "heading_info": "Leave blank to use \"Similar mowers\" for equipment and \"You may also like\" for accessories."
     },
     "product_anchor_nav": {
-      "name": "Section anchor bar"
+      "name": "Anchor navigation"
     },
     "product_complementary": {
       "name": "Pairs well with",
       "default_heading": "Pairs well with",
       "limit": "Number of products"
+    },
+    "cart_lines": {
+      "name": "Cart items",
+      "labels": {
+        "show_stock": "Show stock status",
+        "show_stock_info": "Only labelled for items currently available. Out-of-stock items never get a positive label."
+      }
+    },
+    "cart_summary": {
+      "name": "Order summary",
+      "defaults": {
+        "heading": "Order summary",
+        "shipping_note": "Shipping and taxes are calculated at checkout."
+      },
+      "labels": {
+        "heading": "Heading",
+        "shipping_note": "Shipping and tax note",
+        "shipping_note_info": "Text only. The theme cannot calculate shipping or tax, so never enter an amount here.",
+        "show_payment_icons": "Show payment icons"
+      }
+    },
+    "cart_summary_banner": {
+      "name": "Oversized shipping notice",
+      "labels": {
+        "oversized_text": "Oversized item notice",
+        "freight_text": "Freight delivery notice",
+        "notice_info": "Only appears when the cart contains a matching item. Keep the closing sentence about final shipping cost at checkout."
+      }
+    },
+    "cart_recommendations": {
+      "name": "Cart recommendations",
+      "defaults": {
+        "heading": "You may also like"
+      },
+      "labels": {
+        "enable_personalized": "Match recommendations to the cart",
+        "enable_personalized_info": "Tries product-specific complementary recommendations first and falls back to the collection below. Requires the merchant to configure complementary products in Search & Discovery.",
+        "collection_info": "Fallback list. Shown when personalised recommendations are unavailable — point it at the accessories collection so the cart keeps selling consumables."
+      }
     }
   },
   "labels": {

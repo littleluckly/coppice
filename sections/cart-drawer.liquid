@@ -1,0 +1,356 @@
+{% comment %}
+  购物车抽屉（2026-11-02 刘工要求：点页头购物车图标打开）。
+
+  为什么是 layout 里的静态 section 而不是 snippet：
+  局部刷新要用 Section Rendering（`?sections=`），那需要 section 自己的 id；
+  snippet 拿不到。用 section 之后，抽屉能只刷新自己，不影响背后的页面。
+
+  为什么用 <dialog> + showModal()：
+  焦点锁定、背景 inert、Esc 关闭、::backdrop 全都由平台给（AGENTS.md §8 明确要求优先原生），
+  手写焦点陷阱只会和它打架。`scroll-lock` 属性配合 critical.css 里已有的
+  `html:has(dialog[scroll-lock][open]) { overflow: hidden }` 锁背景滚动。
+
+  渐进增强：页头入口本身仍是 <a href="/cart">，没有 JS 就跳页面 —— 抽屉永远只是增强。
+
+  内容区包在 `[data-cart-section]` 里：assets/cart-items.js 改数量后靠它整块替换，
+  连脚下的小计一起更新，不用手写「把这个数字改成那个数字」。
+{% endcomment %}
+
+<script src="{{ 'cart-drawer.js' | asset_url }}" defer></script>
+{{ 'cart-line.css' | asset_url | stylesheet_tag }}
+
+<cart-drawer
+  class="cart-drawer"
+  data-section-id="{{ section.id }}"
+  data-cart-url="{{ routes.cart_url }}"
+  data-root="{{ routes.root_url }}"
+>
+  <dialog class="cart-drawer__dialog" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
+    {%- comment -%} 移动端底部抽屉的抓手横线（桌面隐藏）。纯装饰，不参与交互 {%- endcomment -%}
+    <div class="cart-drawer__grabber" aria-hidden="true"></div>
+    <div class="cart-drawer__panel">
+      <div class="cart-drawer__header">
+        <h2 class="cart-drawer__title" id="CartDrawerTitle-{{ section.id }}">
+          {{ 'cart.title' | t }}
+          <span class="cart-drawer__count" data-cart-drawer-count>({{ cart.item_count }})</span>
+        </h2>
+        <button type="button" class="cart-drawer__close" data-cart-drawer-close>
+          {{ 'icon-close.svg' | inline_asset_content }}
+          <span class="visually-hidden">{{ 'cart.close' | t }}</span>
+        </button>
+      </div>
+
+      <div class="cart-drawer__content" data-cart-section="{{ section.id }}">
+        <div class="cart-drawer__body">
+          {%- if cart.item_count == 0 -%}
+            <div class="cart-drawer__empty">
+              <p class="cart-drawer__empty-heading">{{ 'cart.empty_heading' | t }}</p>
+              <p class="cart-drawer__empty-text">{{ 'cart.empty_text' | t }}</p>
+              <a class="btn-solid" href="{{ routes.all_products_collection_url }}">
+                {{- 'cart.continue_shopping' | t -}}
+              </a>
+            </div>
+          {%- else -%}
+            <cart-items
+              data-sections="{{ section.id }}"
+              data-cart-change-url="{{ routes.cart_change_url }}.js"
+              data-cart-update-url="{{ routes.cart_update_url }}.js"
+              data-cart-live-template="{{ 'cart.total_updated' | t: total: '[total]' }}"
+              data-error-message="{{ 'products.product_card.add_error' | t }}"
+            >
+              <ul class="cart-drawer__list" role="list">
+                {%- for item in cart.items -%}
+                  <li class="cart-drawer__item">{%- render 'cart-line', item: item -%}</li>
+                {%- endfor -%}
+              </ul>
+            </cart-items>
+          {%- endif -%}
+        </div>
+
+        {%- if cart.item_count > 0 -%}
+          <div class="cart-drawer__footer">
+            <div class="cart-drawer__subtotal">
+              <span>{{ 'cart.subtotal' | t }}</span>
+              <span data-cart-drawer-subtotal>{{ cart.items_subtotal_price | money }}</span>
+            </div>
+            <p class="cart-drawer__note">{{ 'cart.shipping_note' | t }}</p>
+            <p class="visually-hidden" role="status" data-cart-live></p>
+
+            {%- comment -%}
+              两个按钮都是普通链接/表单提交，不依赖 JS：
+              结账直接 POST name=checkout（Shopify 认这个字段，不需要带行项）。
+            {%- endcomment -%}
+            <form action="{{ routes.cart_url }}" method="post" class="cart-drawer__actions">
+              <button type="submit" name="checkout" class="btn-solid cart-drawer__checkout">
+                {{- 'cart.checkout' | t -}}
+              </button>
+            </form>
+            <a class="btn-solid btn-solid--quiet cart-drawer__view" href="{{ routes.cart_url }}">
+              {{- 'cart.view_cart' | t -}}
+            </a>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </dialog>
+</cart-drawer>
+
+{% stylesheet %}
+  cart-drawer {
+    display: contents;
+  }
+
+  .cart-drawer__dialog {
+    /* <dialog> 默认居中且带 margin；这里改成右侧抽屉。
+       宽高与定位都放在 ::backdrop 之上，showModal 后由 top layer 接管。 */
+    position: fixed;
+    inset-block: 0;
+    inset-inline-end: 0;
+    inset-inline-start: auto;
+    inline-size: min(26rem, 100%);
+    max-inline-size: 100%;
+    /* 用 dvh 而不是 100%：移动端 100% 会按 layout viewport 算（含地址栏的高度），
+       内容比可见区域高时 dialog 自己就溢出了，页面上会多出一根外层滚动条。 */
+    block-size: 100dvh;
+    max-block-size: 100dvh;
+    /* 兜住 dialog 自身的溢出：滚动只允许发生在 .cart-drawer__body 里，
+       否则就是"内层滚列表、外层滚整个面板"的两根滚动条。 */
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    /* 从右侧滑入：translate 由 [open] 驱动，关闭时没有过渡（原生 dialog 关闭即隐藏） */
+    translate: 100% 0;
+    transition: translate 0.25s ease;
+  }
+  .cart-drawer__dialog[open] {
+    translate: 0 0;
+  }
+  .cart-drawer__dialog::backdrop {
+    background-color: rgb(0 0 0 / 40%);
+  }
+
+  .cart-drawer__panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  .cart-drawer__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+  .cart-drawer__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .cart-drawer__count {
+    font-weight: 400;
+    color: var(--color-foreground-muted);
+  }
+  .cart-drawer__close {
+    inline-size: 44px;
+    block-size: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 999px;
+  }
+  .cart-drawer__close:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+  .cart-drawer__close svg {
+    inline-size: 18px;
+    block-size: 18px;
+  }
+
+  .cart-drawer__content {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+  .cart-drawer__body {
+    min-block-size: 0;
+    overflow-y: auto;
+    /* 滚到底不把滚动传给背景页（移动端尤其明显：列表滑完接着整页跟着滑） */
+    overscroll-behavior: contain;
+    padding-inline: 1.25rem;
+  }
+  .cart-drawer__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .cart-drawer__item + .cart-drawer__item {
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+
+  .cart-drawer__footer {
+    padding: 1rem 1.25rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    display: grid;
+    gap: 0.6rem;
+  }
+  .cart-drawer__subtotal {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .cart-drawer__note {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-foreground-muted);
+  }
+  .cart-drawer__actions {
+    display: grid;
+  }
+  .cart-drawer__checkout,
+  .cart-drawer__view {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 100%;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .cart-drawer__empty {
+    display: grid;
+    justify-items: start;
+    gap: 0.75rem;
+    padding-block: 2.5rem;
+  }
+  .cart-drawer__empty-heading {
+    font-size: 1.125rem;
+    font-weight: 500;
+  }
+  .cart-drawer__empty-text {
+    color: var(--color-foreground-muted);
+  }
+
+  /* reduce：滑入改成直接出现（dialog 本身仍是即时显隐） */
+  @media (prefers-reduced-motion: reduce) {
+    .cart-drawer__dialog {
+      transition: none;
+      translate: 0 0;
+    }
+  }
+
+  .cart-drawer__grabber {
+    display: none;
+  }
+
+  /* ---- 移动端：底部通栏上滑 ----
+     与集合页筛选面板同一套动效（sections/collection.liquid 的 .facets__dialog）：
+     通栏、顶部圆角、translateY(100%) 滑入、遮罩淡入、抓手横线。
+     两处用同一组参数，顾客在不同页面看到的是同一种"从底部拉起"的手感。
+
+     断点取 989.98px 而不是常见的 749px：集合页筛选面板与导航的移动形态都在
+     990px 换挡（见 collection.liquid 的 @media (max-width: 989.98px)、
+     main-nav.liquid 的 @media (max-width: 989px)）。抽屉若在 750–989px 仍从
+     右侧滑出，就会出现"页头是移动形态、抽屉却是桌面形态"的错位。
+
+     为什么用 animation 而不是 transition：dialog 关闭即 display:none，
+     transition 没有可过渡的起点；animation 在 [open] 出现时从头播，正好。 */
+  @media (max-width: 989.98px) {
+    .cart-drawer__dialog {
+      inset-block: auto 0;
+      inset-inline: 0;
+      inline-size: 100vw;
+      /* max-inline-size 必须显式覆盖：UA 对 dialog:modal 默认
+         max-width: calc((100% - 6px) - 2em)，不覆盖时 width:100vw 会被钳窄 */
+      max-inline-size: 100vw;
+      block-size: auto;
+      max-block-size: 85vh;
+      margin: 0;
+      border-radius: 16px 16px 0 0;
+      /* 桌面那套右侧滑入在底部抽屉里没有意义，关掉 */
+      translate: none;
+      transition: none;
+    }
+    .cart-drawer__dialog[open] {
+      display: flex;
+      flex-direction: column;
+      animation: cart-drawer-slide-up 0.28s ease-out;
+    }
+    .cart-drawer__dialog[open]::backdrop {
+      animation: cart-drawer-backdrop-in 0.28s ease-out;
+    }
+    @keyframes cart-drawer-slide-up {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+    @keyframes cart-drawer-backdrop-in {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* flex 链：抓手 → 面板；滚动仍只发生在 .cart-drawer__body */
+    .cart-drawer__panel {
+      flex: 1 1 auto;
+      min-block-size: 0;
+      block-size: auto;
+    }
+
+    .cart-drawer__grabber {
+      display: block;
+      flex-shrink: 0;
+      inline-size: 40px;
+      block-size: 5px;
+      margin: 0.6rem auto 0.5rem;
+      border-radius: 999px;
+      background-color: color-mix(in srgb, var(--color-foreground) 15%, transparent);
+      /* 抓手要能被拖：touch-action:none 让浏览器不把手势抢给滚动
+         （手势归属由初始触点决定），user-select 防鼠标拖拽时选中文字。
+         与筛选面板 .facets__grabber 同一组取值。 */
+      touch-action: none;
+      user-select: none;
+    }
+    /* 头部行也是拖拽热区（抓手只有 40×5，手指按不准） */
+    .cart-drawer__header {
+      touch-action: none;
+      user-select: none;
+    }
+  }
+
+  /* 移动端 + reduce：滑入直接出现（媒体查询条件合并写，不嵌套——嵌套 @media
+     在老浏览器里会被整段丢弃） */
+  @media (max-width: 989.98px) and (prefers-reduced-motion: reduce) {
+    .cart-drawer__dialog[open],
+    .cart-drawer__dialog[open]::backdrop {
+      animation: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.cart_drawer",
+  "class": "cart-drawer-section",
+  "settings": []
+}
+{% endschema %}

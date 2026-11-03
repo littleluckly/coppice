@@ -47,7 +47,7 @@
 
 | # | 开放项 | **决策** | 落点与代价 |
 | --- | --- | --- | --- |
-| O-1 | 页头是否 sticky | **仅 PC 端 sticky** | 移动端不吸顶。实现：`position: sticky` 必须写在**媒体查询 ≥ 990px 内**，移动端保持静态流。**代价**：需实测移动端浏览器地址栏收起/展开的高度跳变对 CLS 的影响（验收并入 T-3.1） |
+| O-1 | 页头是否 sticky | ~~**仅 PC 端 sticky**~~ → **全断点 sticky（2026-11-02 刘工）** | 移动端也吸顶，且搜索图标与购物车图标同处吸顶行（购物车此前只在 ☰ 抽屉里，滚到页面中段就找不到）。实现：`position: sticky` 落在 `.main-nav-section`、不包在媒体查询内（仍须挂包裹层，见 BUG-032）。**连带改动**：`product-anchor-nav.js` 原先按断点把页头偏移返回 0，移动端锚点会钻到页头底下，已改为一律实测高度；`product-anchor-nav.liquid` 的 `scroll-padding-top` 同步取消 990px 限制、选择器去掉 `[data-scrollable]`（该 flag 桌面专属） |
 | O-2 | `utility-bar` 是否进 v1.0 | ~~**做**~~ **已作废（2026-10-29 整条删除）** | 原决策：默认加入 group preset、移动端隐藏。**现况**：section 已移除，页头组只剩 announcement-bar + main-nav |
 | O-3 | cart 入口行为 | **本期不做 cart 交互**——只做「入口 + 跳 `routes.cart_url`」，**不开抽屉、不做计数联动** | **cart 交互后续单独开任务清单**（抽屉本体 + `<cart-toggle>` + 计数同步 + `cart_action` 配置项一并归入）。**代价**：`<dialog>` 抽屉本期只在导航汉堡处验证过一次，cart 抽屉的无障碍模式要等下轮重新验一次；`cart_action` 设置项本期**不预留**（避免 schema 空占位），下轮加时按 AGENTS §6 一次成型。本期 T-1.6 从 0.5 降到 **0.25 人日** |
 | O-4 | 预测搜索端点 | **HTML 片段端点**：`/search/suggest` + `section_id`（Section Rendering API） | 与官方教程现行方案一致；字段最小化由服务端保证，无 JS 降级路径更短。**必须同步回填 pages-ui §1.1**（其"数据源"列现写 `suggest.json`）→ T-3.2 |
@@ -149,7 +149,7 @@
 - [ ] **父级分组项（有子项）不输出 `<a>`**：`link.links.size > 0` → 渲染 `<span>` 或 `<button>`（配合下拉展开）；仅叶子节点（`size == 0`）才输出 `<a href="{{ link.url }}">`。**否则空 url 会渲染出假链接**（详见 T-0.2 父级链接说明）
 - [ ] `Shop by Platform` 二级项指向自动化集合——**主题不做任何过滤**（空集合不挂菜单是店侧动作，§0.2）
 - [ ] **无 JS 底线**：二级/三级用纯 CSS `:hover` / `:focus-within` 展开（键盘可达，不依赖 JS）
-- [ ] **O-1 仅 PC sticky**：`position: sticky` 写在 `@media (min-width: 990px)` 内；**移动端不得出现 `sticky`**（复核时 grep `sticky` 确认不在移动端媒体查询外泄漏）
+- [x] **O-1 全断点 sticky（2026-11-02 改判）**：`position: sticky` 落在 `.main-nav-section`、**不**包在媒体查询内；移动端同样吸顶。原「移动端不得出现 sticky」的验收条件已作废——改为验证移动端滚动后 `getBoundingClientRect().top === 0`，且锚点跳转落点不被页头遮挡（`--anchor-nav-offset` 移动端也须为实测高度）
 - [ ] 下拉项触摸目标 ≥ 44×44 px；当前页标示**优先用 `link.current`**（官方已处理 URL 参数与集合内产品 URL 的等价判定），不要自己比对路径字符串；父级高亮用 `link.child_active` / `link.child_current`
 - [ ] 下拉箭头为装饰（`aria-hidden="true"`），展开状态由 `aria-expanded` 表达，不靠箭头旋转传达信息
 - [ ] 长菜单项不截断：用 CSS `text-wrap: balance` + 允许两行（不用 `title` 属性，触屏与读屏不友好）

@@ -14,7 +14,7 @@
 | 1 | 权威关系 | **SDD 为准**，效果图仅作视觉参照；冲突逐条记入 §2 `与效果图差异`，不靠效果图改事实 |
 | 2 | 折扣（`Save 17%`） | **做真的**：21 款主机补 `Compare-at price`（取值 = 现 `Price`，即已核实的 MSRP），现价 = MSRP × 0.95 **四舍五入取整到整数美元**（2026-10-28 刘工定）。**21 款主机显示折扣全部正好 5%**，脚本已按此重生成并断言校验（T-0.2）。**配件不打折**（同日拍定 A 方案）：配件 `Compare-at price` 留空 → 不出徽标，理由见 T-0.2 附表 |
 | 3 | 评分星级 | **v1.0 不做**。产品页不渲染星级；口径与 `snippets/product-card.liquid` 一致（仅当存在官方 `reviews.rating` 时才有星，演示店无此数据 → 不出现）。judge.me 已由刘工于 2026-10-28 在后台卸载 → `product.json` 里的 `apps` 块只剩清理值（T-0.3） |
-| 4 | 结构 | **不做 tab，也不做锚点条 —— 纯垂直平铺 + 滚动入场动画**（2026-10-28 二次拍板，推翻同日早先的"sticky 锚点条"方案）。理由不变：全量规格不被折叠、无 JS 可读、不会出现两个空 tab；锚点条被判定为**多余的一层导航**——只有 3 项、且紧跟在首屏产品图下方，实际滚动距离很短，用户不需要它来回跳 |
+| 4 | 结构 | **不做 tab，也不做锚点条 —— 纯垂直平铺 + 滚动入场动画**（2026-10-28 二次拍板，推翻同日早先的"sticky 锚点条"方案；**2026-11-02 追加**：右侧悬浮锚点导航，独立 section、可删，顶部锚点条仍不做）。理由不变：全量规格不被折叠、无 JS 可读、不会出现两个空 tab；锚点条被判定为**多余的一层导航**——只有 3 项、且紧跟在首屏产品图下方，实际滚动距离很短，用户不需要它来回跳 |
 | 5 | 移动端固定底栏（Home/Shop/Account/Cart） | **v1.0 不做**。不在 22 项强制矩阵内；与既有 sticky 页头抢屏幕高度；跨 4 个页面级的选中态与购物车计数联动属于全局组件，若要做单独立项 |
 | 6 | 两个 "Frequently Bought Together" | **拆两块并改名**：耗材区 → `Recommended Supplies`（数据驱动 `acc.consumables`）；四张整机 → `Similar Mowers`（官方 related 推荐）。**弃用 "Frequently Bought Together" 名称**——该词是购买关联算法语义，主题无订单关联数据，用了等于暗示不存在的能力（与「伪造库存紧张」同类问题）。**2026-10-28 追加**：两块拆成**两个独立 section、各占不同位置**（互补区紧跟买盒、耗材区在规格表之后），不再用 if/else 挤在同一处 |
 | 7 | 耗材加购 | 单卡 `Add` + 底部 `Add all N items`（一次 `add` 多行）；**N = 1 时不出现底部按钮**；**不做捆绑折扣**（红线：买赠/捆绑定价不实现） |
@@ -37,7 +37,7 @@
 | --- | --- | --- | --- |
 | 1 | `Compatible with 40V Platform` 卡 | 卡保留，但**读 `platform.battery_platform`，空值整卡不渲染**——演示款 NB-21P 是汽油机（`battery_platform` 为空），该卡在演示店不出现 | 效果图把电池卡贴在油机上，属数据错误 |
 | 2 | `⭐4.9 (126)` + `Reviews` tab | 均不渲染 | 无评论数据源；依赖 App 撞红线（拍板 3/4） |
-| 3 | `Overview / Specifications / What's Included / Reviews` 四 tab | **纯垂直平铺，无 tab、无锚点条**；**tab 名直接复用为分块标题**：规格表 = `Specifications`、耗材块 = `Supplies`（描述块 `Overview` 已恢复：2026-10-28 v1.11 加回全文，2026-11-02 起与规格表一起拆回独立 section）。区块进视口时从下方 24px 淡入（`data-reveal` + `reveal-on-scroll.js`） | `What's Included` 无 metafield；`Reviews` 无数据；锚点条在 2026-10-28 二次拍板中被砍（拍板 4） |
+| 3 | `Overview / Specifications / What's Included / Reviews` 四 tab | **纯垂直平铺，无 tab**；**tab 名直接复用为分块标题**；2026-11-02 起右侧悬浮锚点导航（独立 section，仅桌面且页面可滚动时出现，可删）：规格表 = `Specifications`、耗材块 = `Supplies`（描述块 `Overview` 已恢复：2026-10-28 v1.11 加回全文，2026-11-02 起与规格表一起拆回独立 section）。区块进视口时从下方 24px 淡入（`data-reveal` + `reveal-on-scroll.js`） | `What's Included` 无 metafield；`Reviews` 无数据；锚点条 2026-10-28 被砍、2026-11-02 改右侧悬浮形态回归（见 T-1.2） |
 | 4 | 两个 `Frequently Bought Together` | `Recommended Supplies` + `Similar Mowers` | 命名重复且语义不符（拍板 6） |
 | 5 | 耗材三张卡：刀片 / 2L Oil / Engine Oil | 只渲染 `acc.consumables` 里实际挂载的（NB-21P = 1 件刀片）；机油类商品**不做**（已拍板） | 无数据 + 品类已否决 |
 | 6 | `Shipping & Delivery` 同时列 Parcel 与 Freight | 只出当前商品的 `shipping_class` 一档 | 字段是单值枚举（拍板 9） |
@@ -155,14 +155,19 @@
 - [ ] **样式待接线**：`.product-compare*` 的方框样式写在 T-2.1 的 `{% stylesheet %}`（snippet 不能自带样式块）
 - [ ] T-2.1 接线后 `OrphanedSnippet` 警告消失（当前 2 条属预期）
 
-#### T-1.2 锚点条 —— ⛔ 已撤销（2026-10-28 二次拍板：改纯垂直平铺 + 滚动入场动画）
+#### T-1.2 锚点导航 —— ✅ 2026-11-02 以「右侧悬浮」形态重新落地（原顶部锚点条仍撤销）
 
-> 曾按"sticky 锚点条 + scrollspy"实现过一版（`section` + JS 全套都写完了），同日刘工看过页面后判定多余：
-> 只有 3 项、且紧贴首屏产品图下方，滚动距离本来就短，多这一层反而像"页面里塞了个导航条"。
-> **文件已删除**（`sections/product-anchor-nav.liquid` / `assets/product-anchor-nav.js`），
-> 换成**纯垂直平铺 + 区块滚动入场动画**（见 T-1.4）。
-> 保留的只有落点 `id`（`#product-overview` / `#product-specs` / `#product-supplies`）——它们现在没有页内导航引用，
-> 但仍可作深链，留着不碍事。
+> 2026-10-28 曾按"sticky 顶部锚点条 + scrollspy"实现过一版，同日刘工判定多余并删除：
+> 只有 3 项、紧贴首屏产品图下方，滚动距离本来就短，多一层像"页面里塞了个导航条"。
+> 那段历史结论仍有效——**顶部锚点条不做**。
+>
+> 2026-11-02 刘工改为**右侧悬浮**形态，并以「页面有滚动」为显示条件：
+> · 新 `sections/product-anchor-nav.liquid` + `assets/product-anchor-nav.js`（Custom Element，非全局委托）
+> · `enabled_on.templates: ["product"]`，只接在 `templates/product.json` 的 `main` 之后
+> · 桌面 ≥990px、`scrollHeight > 视口` 才显示；目标 section 缺失自动摘链接，剩 <2 项整条不出现
+> · 原生 `<a href="#…">` + CSS `scroll-behavior` / `scroll-padding-top`（偏移由脚本实测页头写入），
+>   `aria-current="location"` 标当前分区；内容异步撑高由 ResizeObserver 重算
+> 落点 `id` 不变：`#product-overview` / `#product-specs` / `#product-supplies`。
 
 #### T-1.3 `snippets/spec-bullets.liquid` — 买盒三条决策参数（拍板 10）🔄 代码完成 2026-10-28
 
@@ -359,7 +364,7 @@
 | 任务 | 文件 |
 | --- | --- |
 | T-1.1 | `snippets/compare-button.liquid` |
-| ~~T-1.2~~ | 已撤销：`sections/product-anchor-nav.liquid` 与 `assets/product-anchor-nav.js` **已删除**；改为 `assets/reveal-on-scroll.js` + `critical.css` 的 `[data-reveal-state]` 规则 |
+| T-1.2 | **2026-11-02 重新落地（右侧悬浮版，非原顶部锚点条）**：`sections/product-anchor-nav.liquid` + `assets/product-anchor-nav.js`；桌面 ≥990px 且页面可滚动才出现，锚点 Overview / Specifications / Supplies，`enabled_on.templates: ["product"]` |
 | T-1.3 | `snippets/spec-bullets.liquid` + `assets/icon-spec-{width,bar,engine,drive}.svg` |
 | T-2.1 | `sections/main-product.liquid` + `assets/product-gallery.js` + `assets/product-form.js` + `assets/pickup-availability.js` + `assets/icon-{play,truck,return,warranty}.svg`（旧 `sections/product.liquid` 已删） |
 | T-2.2 | `sections/product-highlights.liquid` + `assets/icon-battery.svg` |
@@ -367,7 +372,7 @@
 | T-2.4 | `sections/product-spec-table.liquid` |
 | T-2.5 | `sections/product-description.liquid`（2026-11-02 起在模板中启用，独立分区） |
 | T-2.6 | `sections/product-recommendations.liquid` + `assets/product-recommendations.js` |
-| T-3.1 | `templates/product.json`（8 个 section 全接）+ 两个 locale 文件 |
+| T-3.1 | `templates/product.json`（9 个 section 全接）+ 两个 locale 文件 |
 | 共享件 | `snippets/spec-value.liquid`（+`displacement_cc`/`power_w`、`.0` 清洗）、`snippets/compare-cell.liquid`（`.0` 清洗） |
 | 工具 | `tools/smoke-product.py`（4 场景内容冒烟）、`tools/audit-product.py`（结构/无障碍体检） |
 
@@ -421,6 +426,7 @@
 | 2026-10-28 | v1.1 | 补两条裁定：① 折扣 = MSRP × 0.95 **取整到整数美元**，21 款主机实算全部正好 5%（明细表进 T-0.2）；11 款配件取整后有 4 款显示 4%/6%/7% → **三选一待拍**（推荐 A：配件不打折）。② judge.me 已在后台卸载 → T-0.3 去掉"先卸载"前置，改为直接改文件 + 复核；风险 4 降级、新增风险 9（列名未经官方模板逐字校验）与风险 10（取整误差） |
 | 2026-10-28 | v1.2 | ① 配件定 A 方案（不打折），T-0.2 三选一结案。② 官方模板入仓 `dev-docs/mower-import/product_template.csv`，脚本 `TEMPLATE_PATH` 改指向它、逐字校验常态生效；列名确认 `Compare-at price`。③ 脚本已改并重生成 CSV（52 列 / 32 款 / 53 行 / 0 错 0 警），定价走 `Decimal + ROUND_HALF_UP`，`validate()` 三条断言经反向测试确认会拦。④ 风险 9/10 关闭，新增风险 11（重导覆盖库存与图片）。导入动作仍待刘工执行 |
 | 2026-10-28 | v1.3 | 编码启动（刘工确认已导入 CSV）。① T-0.3 完成：`product.json` 移除 judge.me `apps` 块。② T-1.1 完成：`snippets/compare-button.liquid`（`<compare-toggle>` + `<button aria-pressed>`，复用 compare.js 契约，脚本零改动）。③ T-1.3 完成：`snippets/spec-bullets.liquid` + 4 个规格图标；顺带扩展 `spec-value` 的 `displacement_cc` / `power_w` 两种单位（原缺动力换算出口）。④ locale 加 6 键，`check-locale-keys.py` 0 错；`shopify theme check` **0 error**（3 warning：1 条既有 `UnusedAssign` + 2 条新 snippet 未接线的 `OrphanedSnippet`，接线后消失）。⑤ 待确认：cc 不转 cu in 的口径偏离 |
+| 2026-11-02 | v1.13 | **产品页新增右侧悬浮锚点导航**（刘工）：新 section `product-anchor-nav`（Custom Element，`enabled_on.templates: ["product"]`），固定竖排在视口右侧，锚到 Overview / Specifications / Supplies。**只在页面确实能滚动时显示**（量 `scrollHeight`，推荐区异步撑高由 ResizeObserver 重算）、桌面 ≥990px 才出现；目标 section 不存在（商家删了 / 商品无耗材）就摘掉对应链接，剩不到 2 项整条不出现。**不接管点击**：原生 `<a href="#id">` 负责 hash 与焦点，平滑滚动用 CSS `scroll-behavior`、吸顶避让用 `scroll-padding-top` + 脚本实测的 `--anchor-nav-offset`；滚动时用 `aria-current="location"` 标当前分区。`templates/product.json` 在 `main` 之后插入该 section；schema locale 名改为 Anchor navigation，复用既有的 `sections.product_anchor_nav.label/overview/specs/supplies` 键 |
 | 2026-11-02 | v1.12 | **取消 Tab，回到纯垂直平铺**（刘工）：`product-tabs` 拆回 `sections/product-description.liquid`（Overview）与 `sections/product-spec-table.liquid`（Specifications）两个独立 section，与 `product-supplies` 同一形态（标题 1.25rem/500、段距 2rem、`data-reveal`）；`product.json` 顺序 main → 互补 → Overview → Specifications → Supplies → 推荐；删除 `sections/product-tabs.liquid` / `assets/product-tabs.js` / `snippets/product-description-content.liquid` / `snippets/product-spec-table-content.liquid`，并清掉两个 locale 文件里的 `product_tabs` 键；规格表保留 2026-10-29 的圆角斑马线样式，「Why specs can vary」提示回到标题行右侧 |
 | 2026-10-28 | v1.11 | **改为"关摘要、留全文"**（刘工按推荐方案定稿）：`main-product` 的 `show_description` 设 `false`，`product-description` 加回模板并排在 `Specifications` 之前；页面上描述只出现一次，且是富文本全文。**根因订正**：重复不是模板缺陷——演示数据描述仅 38 词，而摘要是 `truncatewords: 40`，阈值比正文还长，摘要==全文。描述写长后（≥120 词）可重新打开摘要。`product.json` 回到 8 个 section |
 | 2026-10-28 | v1.10 | **移除 Overview 描述块**（刘工：与买盒价格下方的描述重复）。`product.json` 从 8 个 section 降到 7 个；`sections/product-description.liquid` 保留（带 preset，商家可加回）。**已知代价**：页面只剩买盒里 38 词的纯文本摘要，富文本全文不再输出——若要两全，改为关闭 `main-product` 的 `show_description` 再把本 section 加回 |
