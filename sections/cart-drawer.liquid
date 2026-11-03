@@ -316,21 +316,37 @@
       block-size: auto;
     }
 
+    /* 系数与集合页两个面板完全一致（2026-11-03 对齐）：
+       视觉条 56×6、前景色 18%、命中区 120×54。
+       此前这里是 40×5 且没有命中区扩展——手指抓不住，正是刘工在筛选面板上
+       提过的问题，只是改的时候漏了购物车这一份。 */
     .cart-drawer__grabber {
       display: block;
       flex-shrink: 0;
-      inline-size: 40px;
-      block-size: 5px;
-      margin: 0.6rem auto 0.5rem;
+      position: relative;
+      inline-size: 56px;
+      block-size: 6px;
+      /* 上外边距 1rem：抓手离面板顶边 16px，与另外两个面板同值；
+         也正因为这 16px，下面伪元素向上扩的那一段才不会被 dialog 的
+         overflow:hidden 全部裁掉 */
+      margin: 1rem auto 0.5rem;
       border-radius: 999px;
-      background-color: color-mix(in srgb, var(--color-foreground) 15%, transparent);
+      background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
       /* 抓手要能被拖：touch-action:none 让浏览器不把手势抢给滚动
-         （手势归属由初始触点决定），user-select 防鼠标拖拽时选中文字。
-         与筛选面板 .facets__grabber 同一组取值。 */
+         （手势归属由初始触点决定），user-select 防鼠标拖拽时选中文字。 */
       touch-action: none;
       user-select: none;
     }
-    /* 头部行也是拖拽热区（抓手只有 40×5，手指按不准） */
+    /* 只吃指针、不参与绘制：命中区 120×54（视觉条 56×6）。
+       横向 ±32px 容忍左右偏；纵向向上受 dialog 的 overflow:hidden 限制
+       （恰好扩满那 16px 内边距），向下补到 32px —— 下方就是头部行，
+       本来就是拖拽热区，多铺这一层不改变行为，也够不着右上角的关闭按钮。 */
+    .cart-drawer__grabber::after {
+      content: '';
+      position: absolute;
+      inset: -16px -32px -32px;
+    }
+    /* 头部行也是拖拽热区（抓手只有 6px 高，手指按不准） */
     .cart-drawer__header {
       touch-action: none;
       user-select: none;
