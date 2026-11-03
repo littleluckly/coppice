@@ -34,9 +34,14 @@
     <div class="facets__grabber" aria-hidden="true"></div>
     <div class="facets__mobile-head">
       <h2 class="facets__panel-title">{{ 'collections.filters.label' | t }}</h2>
-      <button type="button" class="facets__close" data-facets-close>
-        {{ 'collections.filters.close' | t }}
-        <span class="visually-hidden">{{ 'navigation.close' | t }}</span>
+      {%- comment -%}
+        X 图标关闭钮（2026-11-03 刘工：三个面板头部统一）。几何与购物车抽屉
+        .cart-drawer__close 同参（44px 圆形热区 / 18px 图标 / 悬停浅底），
+        样式目前定义在唯一消费方 collection.liquid 的 .facets__close。
+        图标是装饰：可访问名来自 aria-label（navigation.close）。
+      {%- endcomment -%}
+      <button type="button" class="facets__close" data-facets-close aria-label="{{ 'navigation.close' | t }}">
+        {{ 'icon-close.svg' | inline_asset_content }}
       </button>
     </div>
 
