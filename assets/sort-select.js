@@ -181,10 +181,11 @@ class FacetSort extends HTMLElement {
     body.className = 'facets__sort-sheet-body';
     sheet.appendChild(body);
 
-    /* 遮罩点击 = 点在 dialog 自身（面板盖满了内部）；收起动画期间忽略——
-       点击已被 pointer-events:none 吞掉，这里只是双保险 */
+    /* 遮罩点击 = 点在 dialog 自身（面板盖满了内部）。走 _closePanel 收口
+       （_open 状态与 aria 一起复位），收起动画期间忽略——点击已被
+       pointer-events:none 吞掉，这里只是双保险 */
     sheet.addEventListener('click', (event) => {
-      if (event.target === sheet && !this._closing) sheet.close();
+      if (event.target === sheet && !this._closing) this._closePanel();
     });
     /* Esc：拦下原生立即关闭，走下滑动画收场（与其他关闭路径同路） */
     sheet.addEventListener('cancel', (event) => {
