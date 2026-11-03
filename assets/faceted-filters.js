@@ -612,6 +612,9 @@ class CollectionFacets extends HTMLElement {
       const dy = moveEvent.clientY - startY;
       if (dy <= 0) return; /* 只响应下拉 */
       moved = moved || dy > 8;
+      /* 必须先压掉滑入动画：@keyframes 的 transform 优先级高于内联 style，
+         不压的话面板打开后的 0.28s 内怎么拖都不会动（2026-11-03 修） */
+      dialog.style.animation = 'none';
       dialog.style.transition = 'none';
       dialog.style.transform = `translateY(${dy}px)`;
     };
@@ -624,6 +627,11 @@ class CollectionFacets extends HTMLElement {
       const dismissAt = Math.max(120, dialog.offsetHeight * 0.3);
       if (moved && dy > dismissAt) {
         dialog.close();
+        /* 同步复位，不只依赖 close 事件——它是异步任务，某些环境（无头浏览器）
+           观察不到；不复位的话下次打开不会重播滑入，还会带着上一手的位移 */
+        dialog.style.animation = '';
+        dialog.style.transform = '';
+        dialog.style.transition = '';
         return;
       }
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -643,9 +651,11 @@ class CollectionFacets extends HTMLElement {
   _onDialogClose = () => {
     /* form 归位为布局的第一个 grid item（桌面侧栏原位；单一 DOM 副本不变） */
     if (!this._dialog) return;
-    /* 拖拽残留的内联位移清零（弹回/收起两条路径的公共收口） */
+    /* 拖拽残留的内联样式清零（弹回/收起两条路径的公共收口）。
+       animation 也要清：拖动期间被压成 none，不清的话下次打开不会重播滑入 */
     this._dialog.style.transform = '';
     this._dialog.style.transition = '';
+    this._dialog.style.animation = '';
     /* 没点 Apply 就收起（下拉/Esc/遮罩）：表单回滚到最近一次生效的筛选
        （checked/value 属性来自上次 section payload，reset 即回到该状态），
        避免"勾选状态与结果不一致"；Apply 路径的 FormData 已在关窗前取证 */
