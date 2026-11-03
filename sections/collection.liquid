@@ -1747,9 +1747,12 @@
       border: 1px solid color-mix(in srgb, #fff 45%, transparent);
       box-shadow: none;
     }
-    /* 描述与亮点之间的短分割线（参考图），只在有亮点时出现 */
+    /* 描述与亮点之间的短分割线（参考图），只在有亮点时出现。
+       宽度跟描述同一条列（52%）：亮点是白字，跑出遮罩就等于压在亮照片上
+       （实测 390px 下第三条「Longer runtime」正好落在水面高光上，读不出）。 */
     .collection:not(.collection--no-banner) .collection__features {
       position: relative;
+      max-inline-size: 52%;
       padding-block-start: 20px;
       margin-block-start: 20px;
     }
@@ -1825,9 +1828,11 @@
       color: var(--collection-surface);
       pointer-events: none;
     }
-    /* 上层半透明浪：留出 8px 的「第二层」过渡带 */
+    /* 上层半透明浪：留出 8px 的「第二层」过渡带。
+       0.6 是实测的折中：0.45 时这条带子发灰（半透明页面色压在暗照片上），
+       再高就跟下面的实色浪糊成一条、看不出两层。 */
     .collection__banner-wave-ghost {
-      opacity: 0.45;
+      opacity: 0.6;
     }
     /* 横幅自带的页面色渐隐在移动端整个下线（2026-11-03）：它原本是把图顶洗成
        页面色、好和上方标题块接住；现在标题块压在图上，两层渐隐叠加会把照片洗白。
