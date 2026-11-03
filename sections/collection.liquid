@@ -1,10 +1,11 @@
 {% comment %}
   Collection — 集合页主体（task-collection T-2.1/T-2.2/T-2.3/T-2.4/T-3.1，pages-ui §4）。
 
-  结构（2026-10-14 效果图 v2）：
-  横幅矩形图（全幅，LCP eager）→ 白色圆角卡上移侵入（面包屑 + h1 + 描述
-  + 筛选/内容两栏 + 网格 + 分页）。曲线全部 CSS：border-radius + 伪元素
-  radial-gradient 反向弧；图片不烤形状；移动端（<990px）白卡不侵入贴底。
+  结构（2026-10-20 两栏版；2026-11-03 移动端改为叠放）：
+  桌面 —— 左列（面包屑 + h1 + 描述 + 亮点 + 筛选卡）越界压住右侧横幅，横幅铺到右缘；
+  移动 —— 面包屑 + h1 + 描述 + 亮点整块叠在横幅上（底衬渐隐保可读性），
+          下方接工具条 + 网格。曲线全部 CSS：border-radius + 伪元素
+          radial-gradient 反向弧；图片不烤形状。
 
   复用（搜索页将复用同组积木，task-collection §0）：
   - snippets/faceted-filters.liquid（筛选组）/ active-facets.liquid（已选标签）
@@ -184,7 +185,10 @@
                     <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
                       {{ 'collections.sort.label' | t }}
                     </label>
-                    <facet-sort class="facets__sort-select">
+                    <facet-sort
+                      class="facets__sort-select"
+                      data-label-close="{{ 'navigation.close' | t }}"
+                    >
                       <select
                         id="SortBy-{{ section.id }}"
                         name="sort_by"
@@ -290,6 +294,41 @@
                   alt: island_alt
               }}
             {%- endif -%}
+            {%- comment -%}
+              底边波浪（2026-11-03 按参考图）。只在移动端显示（CSS 控制），
+              把横幅下缘切成浅波形、与下方内容区同色接住。
+              写法理由：
+              · 内联 SVG + currentColor，颜色由 CSS 交给 --collection-surface
+                ——Noir 深色预设下自动翻转，不烤进图片（商家换图不换形状）。
+              · 不用 clip-path：振幅只有 ~10px，clip-path 的抗锯齿在这种
+                浅角度曲线上会出锯齿；SVG 描边自带平滑。
+              · preserveAspectRatio="none"：横向拉满屏宽，纵向固定 24px。
+              · 装饰图形，不进无障碍树（aria-hidden + focusable="false"）。
+            {%- endcomment -%}
+            <svg
+              class="collection__banner-wave"
+              viewBox="0 0 1200 62"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              {%- comment -%}
+                两层浪（2026-11-03 刘工对照参考图）：上一条半透明、下一条实色。
+                「错位」不是把同一条曲线往下平移——那会变成一条等宽的半透明带，
+                看着像画了两条平行线。这里让上层走**反相**：实色浪往下兜的地方
+                （x≈190 / 960）上层正好抬起来，两层时近时远，才有前后两层的感觉。
+                改波形时两条要一起看，别只动一条。
+              {%- endcomment -%}
+              <path
+                class="collection__banner-wave-ghost"
+                d="M0 16 C 120 30 260 33 380 30 C 500 25 620 17 760 14 C 900 17 1060 27 1200 23 L1200 62 L0 62 Z"
+                fill="currentColor"
+              />
+              <path
+                d="M0 30 C 120 46 260 46 380 38 C 500 30 620 28 760 36 C 900 44 1060 42 1200 30 L1200 62 L0 62 Z"
+                fill="currentColor"
+              />
+            </svg>
           </tilt-element>
         {%- endif -%}
 
@@ -303,6 +342,14 @@
                 aria-controls="FacetsDialog-{{ section.id }}"
               >
                 {{ 'collections.filters.open' | t }}
+                {%- comment -%}
+                  2026-11-03 刘工：与右侧排序控件并排时一个有箭头一个没有，
+                  看起来像两个来源不同的控件。共用 icon-chevron-down.svg，
+                  尺寸与颜色由 CSS 统一（16px / 前景色 60%），
+                  与排序按钮里那个 JS 生成的 chevron 同一形状。
+                  箭头是装饰：按钮的可访问名来自文字「Filters」，图标不进 a11y 树。
+                {%- endcomment -%}
+                {{ 'icon-chevron-down.svg' | inline_asset_content }}
               </button>
             {%- endif -%}
 
@@ -317,7 +364,10 @@
                 <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
                   {{ 'collections.sort.label' | t }}
                 </label>
-                <facet-sort class="facets__sort-select">
+                <facet-sort
+                  class="facets__sort-select"
+                  data-label-close="{{ 'navigation.close' | t }}"
+                >
                   <select id="SortBy-{{ section.id }}" name="sort_by" data-facets-sort>
                     {%- for option in collection.sort_options -%}
                       <option
@@ -452,12 +502,19 @@
   </collection-facets>
 
   {%- if collection.filters.size > 0 -%}
-    <dialog
-      id="FacetsDialog-{{ section.id }}"
-      class="facets__dialog"
-      scroll-lock
-      aria-label="{{ 'collections.filters.label' | t }}"
-    ></dialog>
+    {%- comment -%}
+      筛选抽屉交给 <bottom-sheet>（2026-11-03 刘工）：开合动效与 Esc 收口由组件
+      统一负责，本 section 只管面板外观（.facets__dialog 的宽度/圆角/flex 链）。
+      组件不生成盒子（display:contents），不会成为 .collection 这个 grid 的 item。
+    {%- endcomment -%}
+    <bottom-sheet media="(max-width: 989.98px)">
+      <dialog
+        id="FacetsDialog-{{ section.id }}"
+        class="facets__dialog"
+        scroll-lock
+        aria-label="{{ 'collections.filters.label' | t }}"
+      ></dialog>
+    </bottom-sheet>
   {%- endif -%}
 </div>
 
@@ -489,6 +546,14 @@
        announcement bar 不吸顶、随页滚走，不计入。改动导航行内边距后这里要
        跟着核对（待实测校正： shopify theme dev 里量一下实际行高）。 */
     --facets-sticky-top: 4.75rem;
+
+    /* 工具条控件（Filters 按钮 / 排序控件）的共用外观——2026-11-03 刘工：
+       两者并排却长得不一样，根因是一个读 --style-border-radius-inputs（商家
+       输入框圆角设置，默认 6px）、另一个写死 12px。这里收成一个出口：
+       仍尊重商家设置（设得更大就跟），但用 max() 兜住下限 14px——
+       6px 在 44px 高的按钮上几乎看不出圆角，两个控件会显得像两个时代的产物。 */
+    --facet-control-radius: max(var(--style-border-radius-inputs), 14px);
+    --facet-control-border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
 
     /* 首列 = 页面边距（与其余 section 的内容起点对齐），第二列承载整个两栏。
        列宽只在 .collection__layout 里定义一次（--collection-left），避免
@@ -655,6 +720,11 @@
     z-index: 3;
     filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
   }
+  /* 底边波浪：默认不显示（桌面是圆角卡侵入版式，没有这条边），
+     只有移动端叠放版式才展开——见文件末尾的 <990px 媒体查询。 */
+  .collection__banner-wave {
+    display: none;
+  }
   /* 倾斜的平滑感由 CSS 承担（JS 只做 rAF 合帧）：商品卡同款极缓曲线。
      只给 transform 加，投影不动——大图 filter 动画每帧重绘，性价比低。 */
   @media (hover: hover) and (pointer: fine) {
@@ -762,17 +832,18 @@
     max-width: 100%;
     min-width: 0;
     min-height: 44px;
-    padding: 6px 0.6rem;
+    padding: 8px 0.75rem;
     /* select 同 input 不继承 color；边框从 foreground 派生（配色纪律） */
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
-    border-radius: 12px;
+    border: var(--facet-control-border);
+    border-radius: var(--facet-control-radius);
     background-color: var(--color-background);
     color: var(--color-foreground);
     text-overflow: ellipsis;
   }
-  /* ---- 排序下拉增强（<facet-sort>，2026-10-17 刘工效果图）----
-     桌面 ≥990px 由 sort-select.js 接管：按钮 + 浮层 listbox；
-     移动端 / 无 JS 保持上面这条原生 select 样式（触屏原生选择器）。 */
+  /* ---- 排序选择器（<facet-sort>，2026-10-17 刘工效果图）----
+     有 JS：全断点接管，构建描边按钮；≥990px 开浮层 listbox，
+     <990px 开底部面板（2026-11-03 刘工：与 Filters 同一种滑入）。
+     无 JS：保持上面这条原生 select 样式（GET 表单照常提交）。 */
   .facets__sort-select {
     position: relative;
     display: block;
@@ -785,9 +856,11 @@
     gap: 0.5rem;
     width: 100%;
     min-height: 44px;
-    padding: 10px 1rem;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
-    border-radius: 12px;
+    /* 与 .facets__open 逐值一致：padding / 描边 / 圆角都走同一组令牌，
+       两个控件并排时高度与轮廓才对得上（2026-11-03） */
+    padding: 8px 1rem;
+    border: var(--facet-control-border);
+    border-radius: var(--facet-control-radius);
     background-color: var(--color-background);
     color: var(--color-foreground);
     font: inherit;
@@ -887,6 +960,96 @@
     width: auto;
   }
 
+  /* ---- 移动端排序底部面板（2026-11-03 刘工：与 Filters 保持同一种滑入）----
+     这里只做"容器"：选项列表复用桌面浮层那一份 DOM（.facets__sort-list），
+     打开时由 sort-select.js 搬进来，所以要把浮层的绝对定位与描边清掉。
+     用 <dialog> + showModal()：焦点锁定、背景 inert、Esc 全由平台给（AGENTS §8），
+     与集合页筛选抽屉、购物车抽屉同一套做法。
+     动效参数逐值对齐 .facets__dialog（16px 上圆角 / 85vh / 0.28s ease-out / 遮罩 40% 黑）。 */
+  @media (max-width: 989.98px) {
+    .facets__sort-sheet {
+      border: none;
+      /* 顶部内边距给抓手让位：与 .facets__panel 的 padding-top 同值，
+         两个面板的抓手离顶边的距离一致（16px） */
+      padding: 1rem 0 0;
+      width: 100vw;
+      /* max-width 必须显式覆盖：UA 对 dialog:modal 默认
+         max-width: calc((100% - 6px) - 2em)，不覆盖时 100vw 会被钳窄 */
+      max-width: 100vw;
+      max-height: 85vh;
+      margin: auto auto 0;
+      border-radius: 16px 16px 0 0;
+      background-color: var(--color-background);
+      color: var(--color-foreground);
+    }
+    .facets__sort-sheet[open] {
+      display: flex;
+      flex-direction: column;
+      /* 开合动效由 <bottom-sheet> 组件（sort-select.js 包了一层），见 critical.css */
+    }
+    .facets__sort-sheet::backdrop {
+      background: rgb(0 0 0 / 40%);
+    }
+    .facets__sort-sheet-head {
+      flex-shrink: 0;
+      /* 头行 = 标题 + 关闭钮两端对齐（同筛选抽屉的 .facets__mobile-head） */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      /* 上内边距交给抓手的外边距（0.9rem），与筛选面板的头行同一个节奏 */
+      padding: 0 1.25rem 0.5rem;
+      border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+      /* 拖拽热区：抓手只有 6px 高，头部行一起算（同筛选面板的 .facets__mobile-head） */
+      touch-action: none;
+      user-select: none;
+    }
+    /* 关闭钮本体（.facets__sort-sheet-close）与筛选抽屉的 .facets__close
+       共用上面那条统一规则，这里不重复定义。 */
+    .facets__sort-sheet-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .facets__sort-sheet-body {
+      min-block-size: 0;
+      overflow-y: auto;
+      /* 滚到底不把滚动传给背后的页面 */
+      overscroll-behavior: contain;
+      padding: 0.5rem 1.25rem calc(1rem + env(safe-area-inset-bottom));
+    }
+    /* 选项列表在面板里回到常规流：抹掉浮层形态的定位、描边、投影与限高 */
+    .facets__sort-sheet .facets__sort-list {
+      position: static;
+      inset: auto;
+      z-index: auto;
+      max-height: none;
+      overflow: visible;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    /* 面板里按行铺开，触摸目标 44px（浮层里是 40px 的紧凑版） */
+    .facets__sort-sheet .facets__sort-option {
+      min-height: 44px;
+      padding: 10px 0.25rem;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    /* 焦点指示落在**当前选项**上，而不是整个 listbox：
+       全局 :focus-visible 是 2px currentColor 方角环，套在圆角面板里就是一整圈
+       多余的黑框。listbox 仍拿焦点（方向键要靠它），所以这里只抑制它自己的环，
+       改由 .is-active 选项承担可见焦点。 */
+    .facets__sort-sheet .facets__sort-list:focus-visible {
+      outline: none;
+    }
+    .facets__sort-sheet .facets__sort-option.is-active {
+      outline: 2px solid var(--color-brand-accent);
+      outline-offset: -2px;
+    }
+  }
+
   /* 工具条 */
   .collection__toolbar {
     display: flex;
@@ -898,13 +1061,26 @@
   .facets__open {
     display: none;
     align-items: center;
+    gap: 0.5rem;
     min-height: 44px;
     padding: 8px 1rem;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
-    border-radius: var(--style-border-radius-inputs);
+    border: var(--facet-control-border);
+    border-radius: var(--facet-control-radius);
     background: none;
     font: inherit;
     cursor: pointer;
+  }
+  /* 箭头与排序按钮里的 .facets__sort-chevron 同尺寸同色（16px / 前景色 60%），
+     两枚按钮并排时才是同一套东西。flex:none 防长文案把它压扁。
+     stroke-width 用 CSS 压过文件里的属性值：icon-chevron-down.svg 是 24 视图、
+     描边 1.5（按 16px 显示只有 1px，比排序按钮原来那个 1.8px 的细一圈）。
+     这里统一成 24 视图 / 描边 2 ⇒ 显示 1.33px，两枚箭头才算同一个形状。 */
+  .facets__open svg {
+    flex: none;
+    inline-size: 16px;
+    block-size: 16px;
+    stroke-width: 2;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
   .collection__count {
     font-size: 0.85rem;
@@ -1272,26 +1448,8 @@
   .facets__dialog[open] {
     display: flex;
     flex-direction: column;
-    animation: facets-slide-up 0.28s ease-out;
-  }
-  .facets__dialog[open]::backdrop {
-    animation: facets-backdrop-in 0.28s ease-out;
-  }
-  @keyframes facets-slide-up {
-    from {
-      transform: translateY(100%);
-    }
-    to {
-      transform: translateY(0);
-    }
-  }
-  @keyframes facets-backdrop-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    /* 开合动效（滑入 / 滑出 / 遮罩淡入淡出）由 <bottom-sheet> 组件负责，
+       见 critical.css 的 bottom-sheet 段——这里只留布局 */
   }
   .facets__dialog::backdrop {
     background: rgb(0 0 0 / 40%);
@@ -1317,15 +1475,35 @@
      按住下拉收回弹窗（JS 见 faceted-filters.js 的 _onDragStart）。
      touch-action:none 让浏览器不把手势抢给滚动（初触目标决定手势归属）；
      user-select:none 防鼠标拖拽时选中标题文字。 */
-  .facets__dialog .facets__grabber {
+  .facets__dialog .facets__grabber,
+  .facets__sort-sheet .facets__grabber {
     flex-shrink: 0;
-    width: 40px;
-    height: 5px;
+    /* 2026-11-03 刘工：手指经常抓不到。视觉条 40×5 → 56×6，
+       命中区再用伪元素扩到约 120×54——按 Apple/Material 的口径，
+       可点区域至少 44px 见方，光靠 5px 高的条子必然抓不稳。
+       视觉上仍是"细横线"，不会变成一条粗杠。
+       两个底部面板（筛选 / 排序）共用这一份定义，形状与手感一致。 */
+    position: relative;
+    width: 56px;
+    height: 6px;
     margin: 0 auto 0.9rem;
     border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-foreground) 15%, transparent);
+    background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
     touch-action: none;
     user-select: none;
+  }
+  /* 只吃指针、不参与绘制。命中区实测 120×54（视觉条 56×6）：
+     横向 ±32px 容忍左右偏；纵向在筛选面板里向上被 .facets__panel 的
+     overflow:hidden 截在面板内边距（16px）处，所以向下补到 32px——
+     下方就是头部行，本来就是拖拽热区，多铺这一层不改变行为，
+     也不会挡住关闭按钮（它在头部行最右端，横向够不着）。
+     排序面板没有那层裁切，向上这段是真吃到遮罩上的 16px（无害：那里点下去
+     也只是开始拖拽，松手没越过阈值就弹回）。 */
+  .facets__dialog .facets__grabber::after,
+  .facets__sort-sheet .facets__grabber::after {
+    content: '';
+    position: absolute;
+    inset: -16px -32px -32px;
   }
   .facets__dialog .facets__mobile-head {
     touch-action: none; /* 头部行也是拖拽热区 */
@@ -1346,14 +1524,32 @@
     font-size: 1rem;
     font-weight: 600;
   }
-  .facets__close {
-    min-height: 44px;
-    padding: 8px 0.75rem;
+  /* 面板关闭钮（2026-11-03 刘工：筛选抽屉 / 排序底部面板 / 购物车抽屉三处
+     统一成 X 图标）。几何与购物车抽屉的 .cart-drawer__close 逐值同参：
+     44px 圆形热区、18px 图标、悬停 6% 前景色浅底。原先筛选抽屉这里是
+     文字钮「Done」，排序面板没有关闭钮——三处一个来源才算统一。 */
+  .facets__close,
+  .facets__sort-sheet-close {
+    inline-size: 44px;
+    block-size: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
     border: none;
     background: none;
     font: inherit;
-    color: var(--color-brand-accent);
+    color: inherit;
     cursor: pointer;
+    border-radius: 999px;
+  }
+  .facets__close:hover,
+  .facets__sort-sheet-close:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  }
+  .facets__close svg,
+  .facets__sort-sheet-close svg {
+    inline-size: 24px;
+    block-size: 24px;
   }
 
   /* 桌面两栏：纯 CSS 媒体查询，不依赖 JS（无 JS 也能筛选——应用按钮整页 GET 提交）。
@@ -1450,9 +1646,10 @@
     display: none;
   }
   /* ===================================================================
-     移动端（<990px）单列退化：标题卡全宽不侵入 → 横幅纵向渐隐 → 工具条 → 网格。
+     移动端（<990px）单列：横幅 + 叠在上面的标题块 → 工具条 → 网格。
      横幅的渐隐方向从「向左」改成「向下」：下方就是产品区，两者同底色才能接住。
-     参考稿同规则（650px → 500px，产品岛 90% 居中）。
+     （参考稿的「650px → 500px、产品岛 90% 居中」已被 2026-11-03 的叠放改版
+       取代：文字占掉上半屏后，岛改为收窄贴右下沿，见下。）
      =================================================================== */
   @media (max-width: 989.98px) {
     .collection {
@@ -1461,13 +1658,122 @@
     .collection__facets {
       grid-column: auto;
     }
-    .collection__left {
-      padding: 20px;
+    /* ---- 标题块叠到横幅上（2026-11-03 刘工）----
+       左右两列在移动端退化成「分发器」：display: contents 让它们的孩子直接成为
+       .collection__layout 的网格项，横幅与标题块占同一格、上下叠放。
+       ⚠️ 别改成「标题块绝对定位」：它的高度随描述与亮点行变化，绝对定位会脱离
+       高度计算，长文案直接被横幅的 overflow: hidden 切掉；网格叠放时
+       行高 = max(横幅 min-height, 标题块高)，横幅跟着长高——文案再长也压得住。 */
+    .collection__left,
+    .collection__right {
+      display: contents;
+    }
+    .collection__banner,
+    .collection__intro {
+      grid-row: 1;
+      grid-column: 1;
     }
     .collection__intro {
+      position: relative;
+      z-index: 10;
+      align-self: start;
       width: 100%;
-      padding-block-start: 0;
-      margin-block-end: 28px;
+      /* 底部 2.5rem 是给波浪让位的：文字若压到图案上，波峰会从字形中间穿过去
+         （实测 390px 下亮点标签正好落在波浪带里）。 */
+      padding: 20px 20px 2.5rem;
+      margin-block-end: 0;
+    }
+    /* ---- 左侧白色遮罩（2026-11-03 第三版：与桌面同源）----
+       桌面是「页面色弧形渐隐」把标题卡从照片里托出来；移动端把同一条思路
+       转 90°：左缘页面色实色压住照片、向右渐隐，右缘留原图亮度给产品。
+       用 --collection-surface 而不是写死白：Noir 深色预设下自动变成
+       「深底 + 浅色字」，不需要第二套规则（黑色遮罩那版必须写死 #000，
+       是因为照片不跟预设翻转，两者性质不同）。
+       左缘不满格（88%）是刻意的：满格就是一块纯白，照片全被抹掉；
+       88% 还能透出纹理，字也照样立得住。
+       实测（隐藏文字后量描述框背景）：标题 8.2:1（最差）/ 10.4:1（中位）；
+       描述 3.3:1（最差）/ 3.6:1（中位）。描述卡在 3.3 不是遮罩的锅——
+       描述色本身是「前景 62%」，压在纯白上也只有 3.8:1；要上 AA 得改描述色
+       （全站级），不是改这里。深字压浅底的好处是**结果稳定**：
+       黑遮罩那版换个亮照片能从 4.8 掉到 1.2，这版最差也就 3.3。 */
+    .collection:not(.collection--no-banner) .collection__intro::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--collection-surface) 88%, transparent) 0%,
+        color-mix(in srgb, var(--collection-surface) 78%, transparent) 55%,
+        transparent 82%
+      );
+    }
+    /* 文字不再翻白：遮罩是页面色，深字/浅字交给预设自己决定，
+       面包屑、标题、描述、亮点全部回到主题色，不再逐条覆盖。 */
+    .collection:not(.collection--no-banner) .collection__description {
+      /* 文字列收在遮罩的实色区里（实色到 55%，文字最多 50%）。
+         用百分比不用 ch：ch 随字号漂，平板一档还得再写一条补丁。 */
+      max-inline-size: 50%;
+    }
+    /* 亮点行：沿用参考图的竖排形态（图标在上、两行标签在下），但配色回到主题：
+       白底圆 + 品牌色文字。三列等分是因为遮罩只有 55% 宽，三条要点要排得进
+       这条列（50% ≈ 195px / 3 = 65px 一列）。 */
+    .collection:not(.collection--no-banner) .collection__feature {
+      flex: 1 1 0;
+      min-inline-size: 0;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+      font-size: 0.75rem;
+      line-height: 1.25;
+    }
+    /* 基础规则给标签 max-inline-size: 9ch（横排形态用），三并列时按列宽走 */
+    .collection:not(.collection--no-banner) .collection__feature-text {
+      max-inline-size: 100%;
+    }
+    /* 圆 36px、标签 12px：40px 圆 + 13px 字在 50% 的列里会掉成 2+1，
+       第三条孤零零一行，跟参考图的「三并排」不是一回事。 */
+    .collection:not(.collection--no-banner) .collection__feature-badge {
+      inline-size: 2.25rem;
+      block-size: 2.25rem;
+    }
+    .collection:not(.collection--no-banner) .collection__feature-emoji {
+      font-size: 1.125rem;
+    }
+    /* 描述与亮点之间的短分割线（参考图），只在有亮点时出现。
+       宽度跟描述同一条列（50%）：跑出遮罩就压到原图上（实测 390px 下
+       第三条「Longer runtime」正好落在水面高光上），对比度会掉。 */
+    .collection:not(.collection--no-banner) .collection__features {
+      position: relative;
+      max-inline-size: 50%;
+      padding-block-start: 20px;
+      margin-block-start: 20px;
+      gap: 14px 10px;
+      justify-content: space-between;
+    }
+    .collection:not(.collection--no-banner) .collection__features::before {
+      content: '';
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-start: 0;
+      inline-size: 72px;
+      block-size: 1px;
+      background-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
+    }
+    /* 无横幅：标题块回到常规流，底边距仍由 .collection--no-banner 的 2rem 提供 */
+    .collection--no-banner .collection__intro {
+      padding-block-end: 0;
+    }
+    /* 左列的内边距随 display: contents 一起没了：无 JS 时筛选面板在流内出现，
+       自己补页面边距。有 JS 时表单被搬进抽屉 / 隐藏，槽是空的，不能再撑出
+       20px 空隙（否则横幅与产品区之间多一道白条）。 */
+    .facets__form-slot {
+      padding: 0 20px 20px;
+    }
+    .collection__facets[data-facets-ready] .facets__form-slot {
+      padding: 0;
     }
     .collection__title {
       font-size: clamp(1.75rem, 8vw, 2.25rem);
@@ -1489,22 +1795,59 @@
     .collection__feature-emoji {
       font-size: 1.375rem;
     }
+    /* 横幅高度：跟参考图比例（宽高比 ≈1.25:1 ⇒ 390px 视口约 312px），
+       用 82vw 夹在 300–360 之间；仍靠 stretch 跟着标题块长高——
+       文案变长时横幅变高，波浪固定在底边（不是被文字顶下去的固定值）。 */
     .collection__banner {
-      height: 500px;
+      align-self: stretch;
+      height: auto;
+      min-height: clamp(300px, 82vw, 360px);
     }
+    /* 底图不再纵向淡出（2026-11-03）：底边改由波浪硬切，
+       留着 mask 会在波峰处透出半透明照片、波浪看起来像画在雾上。 */
     .collection__banner-bg {
       object-position: center;
-      -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
-      mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+      -webkit-mask-image: none;
+      mask-image: none;
     }
+    /* 底边波浪（移动端专属）。z-index 必须高过标题块（z10）——遮罩是标题块的
+       ::before，只压到 z2 的话，遮罩会盖在波浪上把它染成一条灰带
+       （实测：横幅底部 24px 出现从深到浅的灰条，就是这层叠加）。
+       文字块底部留了 2.5rem，波浪只有 24px，压不到字。 */
+    .collection__banner-wave {
+      display: block;
+      position: absolute;
+      inset-inline: 0;
+      inset-block-end: -1px;
+      inline-size: 100%;
+      block-size: 32px;
+      z-index: 12;
+      color: var(--collection-surface);
+      pointer-events: none;
+    }
+    /* 上层半透明浪：留出 8px 的「第二层」过渡带。
+       0.6 是实测的落点：0.75/0.88 时这条带子接近白色、跟下面的实色区糊成一片，
+       两层又变回「一条边」；0.45 则偏脏。0.6 正好卡在照片与实色之间，
+       上下两条边都读得出来。 */
+    .collection__banner-wave-ghost {
+      opacity: 0.6;
+    }
+    /* 横幅自带的页面色渐隐在移动端整个下线（2026-11-03）：它原本是把图顶洗成
+       页面色、好和上方标题块接住；现在标题块压在图上，两层渐隐叠加会把照片洗白。
+       可读性改由标题块自己的黑色遮罩负责（见上），底图也不再纵向淡出
+       （底边是波浪硬切，见 .collection__banner-bg 的 mask: none）。 */
     .collection__banner-mask {
-      width: 100%;
-      border-radius: 0;
-      background: linear-gradient(to bottom, var(--collection-surface) 0%, transparent 80%);
+      display: none;
     }
+    /* 产品岛：横幅现在是「照片 + 文字块」，岛不能再居中——文字块占掉左侧 ~70%、
+       高度接近整条横幅，居中会从描述里穿过去（实测 390px 下割草机扶手正好压在
+       最后两行字上）。压到右下角、允许右侧被 overflow 裁掉一点，读作
+       「产品从右边入画」，也把未压暗区的亮度用起来。 */
     .collection__banner-island {
-      width: 90%;
-      left: 50%;
+      width: 50%;
+      left: 88%;
+      top: 100%;
+      translate: -50% -100%;
     }
     .collection__content {
       padding: 20px;
@@ -1547,8 +1890,16 @@
       clip-path: inset(50%);
       white-space: nowrap;
     }
+    /* 高度与 Filters 按钮对齐（原 40px，比相邻的 Filters 矮 4px）；
+       限宽防长排序名把计数挤下整行——按钮分支是移动端的实际形态，
+       select 分支只在无 JS 时出现，两者限同一档。 */
     .collection__toolbar .facets__sort-card select {
-      min-height: 40px;
+      min-height: 44px;
+      max-width: 40vw;
+    }
+    .collection__toolbar .facets__sort-btn {
+      /* 与原 select 同一档限宽：44vw 会让「Alphabetically, A-Z」这类长名
+         把计数挤到下一行（375px 下总宽刚好越界） */
       max-width: 40vw;
     }
     /* 抽屉 / 无 JS 流内：排序卡在筛选卡顶部（.facets__sort-slot 已给分隔线），
@@ -1558,12 +1909,6 @@
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .facets__dialog[open],
-    .facets__dialog[open]::backdrop {
-      animation: none;
-    }
-  }
 {% endstylesheet %}
 
 {% schema %}

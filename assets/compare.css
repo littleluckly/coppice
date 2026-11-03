@@ -159,8 +159,8 @@ compare-bar[hidden] {
 }
 
 .compare-bar__close svg {
-  inline-size: 1rem;
-  block-size: 1rem;
+  inline-size: 1.4rem;
+  block-size: 1.4rem;
 }
 
 .compare-bar__view:focus-visible,

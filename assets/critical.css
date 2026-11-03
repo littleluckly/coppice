@@ -656,3 +656,70 @@ back-to-top[data-visible] .back-to-top__button {
     grid-column: 1 / -1;
   }
 }
+
+/* ===================================================================
+   bottom-sheet —— 底部抽屉的开合行为（assets/bottom-sheet.js，2026-11-03 刘工）
+   组件只管"滑"，不管内容与外观：作者自带的 <dialog> 是面板本体，圆角、宽度、
+   flex 结构全归宿主 section 的样式块。这里只放三个由脚本添加的状态类和 keyframes，
+   三个面板（筛选抽屉 / 排序面板 / 购物车抽屉）共用这一份。
+   .is-entering  滑入（0.28s ease-out）
+   .is-closing   收起途中：禁点击 + 遮罩淡出（拖拽收起也走它）
+   .is-close-anim  keyframes 下滑（0.22s ease-in，比进场快半拍）；
+                  拖拽收起刻意不挂它——keyframes 的 transform 会压过内联 style
+   这里的 keyframes 是**默认方向（向下）**。方向不属于组件：宿主用一个
+   优先级更高的选择器（如 `.cart-drawer__dialog.is-entering`）覆盖
+   animation 即可改成右滑——组件只认"面板自身的 animationend"，不绑动画名。
+   =================================================================== */
+bottom-sheet {
+  /* 不生成盒子：包裹层不能成为父级 grid/flex 的 item
+     （集合页 .collection 是 grid，多一个 item 会把整块布局顶乱） */
+  display: contents;
+}
+bottom-sheet > dialog.is-entering {
+  animation: sheet-slide-up 0.28s ease-out;
+}
+bottom-sheet > dialog.is-entering::backdrop {
+  animation: sheet-backdrop-in 0.28s ease-out;
+}
+bottom-sheet > dialog.is-closing {
+  /* 收起途中面板不可点；背景本来就被 showModal 置为 inert，点击会被吞掉 */
+  pointer-events: none;
+}
+bottom-sheet > dialog.is-closing::backdrop {
+  animation: sheet-backdrop-out 0.22s ease-in forwards;
+}
+bottom-sheet > dialog.is-close-anim {
+  animation: sheet-slide-down 0.22s ease-in forwards;
+}
+@keyframes sheet-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes sheet-slide-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheet-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

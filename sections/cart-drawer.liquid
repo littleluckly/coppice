@@ -25,6 +25,12 @@
   data-cart-url="{{ routes.cart_url }}"
   data-root="{{ routes.root_url }}"
 >
+  {%- comment -%}
+    抽屉开合交给 <bottom-sheet>（2026-11-03 刘工）：滑入 / 滑出 / Esc 收口由组件
+    统一负责。移动端向下滑（组件默认 keyframes），桌面从右滑入、向右滑出
+    （本 section 的 @media (min-width: 990px) 覆盖动画名）；组件 display:contents，不占位。
+  {%- endcomment -%}
+  <bottom-sheet>
   <dialog class="cart-drawer__dialog" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
     {%- comment -%} 移动端底部抽屉的抓手横线（桌面隐藏）。纯装饰，不参与交互 {%- endcomment -%}
     <div class="cart-drawer__grabber" aria-hidden="true"></div>
@@ -93,6 +99,7 @@
       </div>
     </div>
   </dialog>
+  </bottom-sheet>
 </cart-drawer>
 
 {% stylesheet %}
@@ -121,15 +128,39 @@
     border: 0;
     background-color: var(--color-background);
     color: var(--color-foreground);
-    /* 从右侧滑入：translate 由 [open] 驱动，关闭时没有过渡（原生 dialog 关闭即隐藏） */
-    translate: 100% 0;
-    transition: translate 0.25s ease;
-  }
-  .cart-drawer__dialog[open] {
-    translate: 0 0;
+    /* 开合动效不在这里写：由 <bottom-sheet> 组件加 .is-entering / .is-close-anim，
+       桌面方向在下方 @media 里覆盖成右滑。
+       原先这里是 translate + transition——播不出来：dialog 从 display:none
+       打开的同一帧里 transition 没有起点，视觉上就是闪现（2026-11-03 修）。 */
   }
   .cart-drawer__dialog::backdrop {
     background-color: rgb(0 0 0 / 40%);
+  }
+  /* 桌面：从右滑入 / 向右滑出（组件默认是"下滑"，这里覆盖两个动画名）。
+     选择器比 critical.css 的 `bottom-sheet > dialog.is-*` 多一个类，压得住。 */
+  @media (min-width: 990px) {
+    .cart-drawer__dialog.is-entering {
+      animation: cart-drawer-slide-in-end 0.28s ease-out;
+    }
+    .cart-drawer__dialog.is-close-anim {
+      animation: cart-drawer-slide-out-end 0.22s ease-in forwards;
+    }
+    @keyframes cart-drawer-slide-in-end {
+      from {
+        transform: translateX(100%);
+      }
+      to {
+        transform: translateX(0);
+      }
+    }
+    @keyframes cart-drawer-slide-out-end {
+      from {
+        transform: translateX(0);
+      }
+      to {
+        transform: translateX(100%);
+      }
+    }
   }
 
   .cart-drawer__panel {
@@ -172,8 +203,8 @@
     background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
   }
   .cart-drawer__close svg {
-    inline-size: 18px;
-    block-size: 18px;
+    inline-size: 24px;
+    block-size: 24px;
   }
 
   .cart-drawer__content {
@@ -244,13 +275,7 @@
     color: var(--color-foreground-muted);
   }
 
-  /* reduce：滑入改成直接出现（dialog 本身仍是即时显隐） */
-  @media (prefers-reduced-motion: reduce) {
-    .cart-drawer__dialog {
-      transition: none;
-      translate: 0 0;
-    }
-  }
+  /* reduce 下"直接出现"由 <bottom-sheet> 组件负责（不挂动效类），这里无需覆盖 */
 
   .cart-drawer__grabber {
     display: none;
@@ -267,7 +292,8 @@
      右侧滑出，就会出现"页头是移动形态、抽屉却是桌面形态"的错位。
 
      为什么用 animation 而不是 transition：dialog 关闭即 display:none，
-     transition 没有可过渡的起点；animation 在 [open] 出现时从头播，正好。 */
+     transition 没有可过渡的起点（这正是桌面端曾经"闪现"的原因）；
+     animation 在类名挂上时从头播，方向与时长都由 CSS 给。 */
   @media (max-width: 989.98px) {
     .cart-drawer__dialog {
       inset-block: auto 0;
@@ -280,33 +306,11 @@
       max-block-size: 85vh;
       margin: 0;
       border-radius: 16px 16px 0 0;
-      /* 桌面那套右侧滑入在底部抽屉里没有意义，关掉 */
-      translate: none;
-      transition: none;
     }
     .cart-drawer__dialog[open] {
       display: flex;
       flex-direction: column;
-      animation: cart-drawer-slide-up 0.28s ease-out;
-    }
-    .cart-drawer__dialog[open]::backdrop {
-      animation: cart-drawer-backdrop-in 0.28s ease-out;
-    }
-    @keyframes cart-drawer-slide-up {
-      from {
-        transform: translateY(100%);
-      }
-      to {
-        transform: translateY(0);
-      }
-    }
-    @keyframes cart-drawer-backdrop-in {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
+      /* 开合动效由 <bottom-sheet> 组件（critical.css），这里只留布局 */
     }
 
     /* flex 链：抓手 → 面板；滚动仍只发生在 .cart-drawer__body */
@@ -316,35 +320,43 @@
       block-size: auto;
     }
 
+    /* 系数与集合页两个面板完全一致（2026-11-03 对齐）：
+       视觉条 56×6、前景色 18%、命中区 120×54。
+       此前这里是 40×5 且没有命中区扩展——手指抓不住，正是刘工在筛选面板上
+       提过的问题，只是改的时候漏了购物车这一份。 */
     .cart-drawer__grabber {
       display: block;
       flex-shrink: 0;
-      inline-size: 40px;
-      block-size: 5px;
-      margin: 0.6rem auto 0.5rem;
+      position: relative;
+      inline-size: 56px;
+      block-size: 6px;
+      /* 上外边距 1rem：抓手离面板顶边 16px，与另外两个面板同值；
+         也正因为这 16px，下面伪元素向上扩的那一段才不会被 dialog 的
+         overflow:hidden 全部裁掉 */
+      margin: 1rem auto 0.5rem;
       border-radius: 999px;
-      background-color: color-mix(in srgb, var(--color-foreground) 15%, transparent);
+      background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
       /* 抓手要能被拖：touch-action:none 让浏览器不把手势抢给滚动
-         （手势归属由初始触点决定），user-select 防鼠标拖拽时选中文字。
-         与筛选面板 .facets__grabber 同一组取值。 */
+         （手势归属由初始触点决定），user-select 防鼠标拖拽时选中文字。 */
       touch-action: none;
       user-select: none;
     }
-    /* 头部行也是拖拽热区（抓手只有 40×5，手指按不准） */
+    /* 只吃指针、不参与绘制：命中区 120×54（视觉条 56×6）。
+       横向 ±32px 容忍左右偏；纵向向上受 dialog 的 overflow:hidden 限制
+       （恰好扩满那 16px 内边距），向下补到 32px —— 下方就是头部行，
+       本来就是拖拽热区，多铺这一层不改变行为，也够不着右上角的关闭按钮。 */
+    .cart-drawer__grabber::after {
+      content: '';
+      position: absolute;
+      inset: -16px -32px -32px;
+    }
+    /* 头部行也是拖拽热区（抓手只有 6px 高，手指按不准） */
     .cart-drawer__header {
       touch-action: none;
       user-select: none;
     }
   }
 
-  /* 移动端 + reduce：滑入直接出现（媒体查询条件合并写，不嵌套——嵌套 @media
-     在老浏览器里会被整段丢弃） */
-  @media (max-width: 989.98px) and (prefers-reduced-motion: reduce) {
-    .cart-drawer__dialog[open],
-    .cart-drawer__dialog[open]::backdrop {
-      animation: none;
-    }
-  }
 {% endstylesheet %}
 
 {% schema %}

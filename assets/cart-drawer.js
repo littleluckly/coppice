@@ -27,7 +27,10 @@ class CartDrawer extends HTMLElement {
     });
 
     const closeButton = this.querySelector('[data-cart-drawer-close]');
-    if (closeButton) closeButton.addEventListener('click', () => this.dialog.close(), { signal });
+    if (closeButton) closeButton.addEventListener('click', () => this._closeSheet(), { signal });
+
+    /* 开合行为组件（bottom-sheet.js）：滑入/滑出/Esc 收口都归它，见 critical.css */
+    this._sheetEl = this.dialog.closest('bottom-sheet');
 
     this.dialog.addEventListener('click', this._onBackdropClick, { signal });
     this.dialog.addEventListener('pointerdown', this._onDragStart, { signal });
@@ -53,11 +56,29 @@ class CartDrawer extends HTMLElement {
   };
 
   _show() {
-    if (!this.dialog.open) {
-      this.dialog.showModal();
-      document.documentElement.dataset.cartDrawerOpen = '';
-    }
+    if (!this.dialog.open) this._openSheet();
     this._refresh();
+  }
+
+  /**
+   * 开合委托给 <bottom-sheet>（2026-11-03 刘工）：滑入/滑出、重开打断、
+   * reduced-motion 与桌面右滑形态的跳过都在组件里。组件未加载时退回原生开合。
+   */
+  get _sheet() {
+    const el = this._sheetEl;
+    return el && typeof el.open === 'function' ? el : null;
+  }
+
+  _openSheet() {
+    if (this._sheet) this._sheet.open();
+    else if (!this.dialog.open) this.dialog.showModal();
+    /* 锁背景滚动（critical.css 的 html:has(dialog[scroll-lock][open])） */
+    document.documentElement.dataset.cartDrawerOpen = '';
+  }
+
+  _closeSheet(options) {
+    if (this._sheet) this._sheet.close(options);
+    else if (this.dialog.open) this.dialog.close();
   }
 
   /** 只改标题计数，不整块刷新——抽屉内改数量时 cart-items 已经自己换过内容区了 */
@@ -72,7 +93,7 @@ class CartDrawer extends HTMLElement {
        不挡掉的话，"往下拽到一半又弹回"会顺手把抽屉关掉。 */
     if (this._dragEndedAt && performance.now() < this._dragEndedAt) return;
     /* dialog 自身是点击目标 = 点在遮罩上（面板盖满了 dialog 内部） */
-    if (event.target === this.dialog) this.dialog.close();
+    if (event.target === this.dialog) this._closeSheet();
   };
 
   /**
@@ -86,6 +107,8 @@ class CartDrawer extends HTMLElement {
   _onDragStart = (event) => {
     if (event.button > 0) return;
     if (!window.matchMedia('(max-width: 989.98px)').matches) return;
+    /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
+    if (this._sheet?.isClosing) return;
 
     const handle = event.target.closest('.cart-drawer__grabber, .cart-drawer__header');
     /* 关闭按钮在头部行里，不能当成拖拽起点 */
@@ -100,6 +123,9 @@ class CartDrawer extends HTMLElement {
       const dy = moveEvent.clientY - startY;
       if (dy <= 0) return; /* 只响应下拉，上推不做事 */
       moved = moved || dy > 8;
+      /* 必须先压掉滑入动画：@keyframes 的 transform 优先级高于内联 style，
+         不压的话抽屉打开后的 0.28s 内怎么拖都不会动（2026-11-03 修） */
+      dialog.style.animation = 'none';
       dialog.style.transition = 'none';
       dialog.style.transform = `translateY(${dy}px)`;
     };
@@ -114,7 +140,8 @@ class CartDrawer extends HTMLElement {
 
       if (moved && dy > dismissAt) {
         this._dragEndedAt = performance.now() + 350;
-        dialog.close();
+        /* 从当前拖拽位置顺势滑出（组件按 fromDrag 走 transition），不再原地闪没 */
+        this._closeSheet({ fromDrag: true });
         return;
       }
 
@@ -136,9 +163,7 @@ class CartDrawer extends HTMLElement {
   };
 
   _onClose = () => {
-    /* 拖拽留下的内联位移必须清零：不清的话下次打开会带着上一手的偏移量 */
-    this.dialog.style.transform = '';
-    this.dialog.style.transition = '';
+    /* 内联样式与 is-closing 由 <bottom-sheet> 组件统一清零，这里只管本组件状态 */
     delete document.documentElement.dataset.cartDrawerOpen;
     if (this._lastTrigger && this._lastTrigger.isConnected) {
       this._lastTrigger.focus({ preventScroll: true });

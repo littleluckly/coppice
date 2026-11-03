@@ -1,26 +1,41 @@
 /**
- * facet-sort — 排序下拉增强组件（2026-10-17 刘工效果图：描边按钮 + 浮层
- * listbox，hover 高亮、选中项品牌色 + 对勾）。
+ * facet-sort — 排序选择器（2026-10-17 刘工效果图：描边按钮 + 浮层 listbox）。
+ *
+ * 2026-11-03 刘工：移动端也改成底部滑入面板，与集合页筛选抽屉同一套动效。
+ * 原先移动端刻意保留原生 <select>（触屏原生选择器），但筛选与排序并排时
+ * 一个开抽屉、一个弹系统选择器，同一次操作出现两种界面语言。现在两者一致。
  *
  * 渐进增强（红线对齐：数据仍来自平台 sort_options，前端零排序逻辑）：
  * - 服务端渲染原生 <select data-facets-sort>：无 JS 全功能（GET 表单提交）；
- * - <990px 保留原生 select——触屏上原生选择器（滚轮/半屏面板）是更好的交互；
- * - ≥990px 由本元素接管：构建按钮 + 浮层列表，隐藏 select 但保留在
- *   表单里（name/value/form 属性不动，FormData 照常含 sort_by）。
+ * - 有 JS：构建按钮，隐藏 select 但保留在表单里（name/value/form 属性不动，
+ *   FormData 照常含 sort_by）；
+ * - ≥990px 开浮层 listbox（锚在按钮下方）；<990px 开 <dialog> 底部面板。
+ *   选项 DOM 只有一份，开面板时搬进对应容器，收起时搬回——不复制选项，
+ *   也不会出现"两份 listbox 各记一套选中态"。
  *
  * 值变更同步回隐藏 select 并派发冒泡 change——collection-facets 的委托
  * 监听（有表单 requestSubmit / 无表单独立局部更新）零改动复用。
  *
  * 实现纪律（AGENTS §6）：
- * - AbortController 一次性拆绑；listbox 首次打开才构建（隐藏组件惰性 DOM）；
+ * - AbortController 一次性拆绑；listbox 与面板首次打开才构建（惰性 DOM）；
  * - _placeSort 在工具条 ↔ 左列间搬移卡片会触发本元素断开/重连——
  *   connectedCallback 幂等（重连只重挂监听，不重复构建）；
  * - 键盘：方向键/Home/End 移动、Enter/Space 选中、Esc 关闭、Tab 走默认。
  */
 const CHECK_SVG =
   '<svg class="facets__sort-check" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 5"/></svg>';
+/* 箭头与 Filters 按钮用的 assets/icon-chevron-down.svg **同一组几何参数**
+   （24 视图 / 同一条 path / 描边 2 ⇒ 显示 16px 时都是 1.33px）。
+   两处不能共用一个文件：这里是 JS 构建的按钮，那边是服务端 inline 的，
+   所以形状得手工对齐——改动其中一处时另一处要跟着改。 */
 const CHEVRON_SVG =
-  '<svg class="facets__sort-chevron" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6l4.5 4.5L12.5 6"/></svg>';
+  '<svg class="facets__sort-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>';
+/* 关闭 X 与筛选抽屉/购物车抽屉用的是同一文件 assets/icon-close.svg
+   （服务端 inline），这里 JS 构建只能手抄同一组几何参数——同 CHEVRON_SVG
+   的纪律，改其中一处时另一处要跟着改（2026-11-03 三面板关闭钮统一，
+   同日刘工追改：X 外加圆圈，Heroicons x-circle 同一条 path）。 */
+const CLOSE_SVG =
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>';
 
 class FacetSort extends HTMLElement {
   _abort = null;
@@ -44,18 +59,21 @@ class FacetSort extends HTMLElement {
     /* 点外面收起：挂在 document，随本元素销毁一并拆除 */
     document.addEventListener('pointerdown', this._onDocPointerDown, { signal });
 
-    if (this._mq.matches) this._enhance();
-    else this._restore();
+    this._enhance();
   }
 
   disconnectedCallback() {
-    /* document 级监听随 signal 一起拆除；开着时被搬移/替换则视为收起 */
+    /* document 级监听随 signal 一起拆除；开着时被搬移/替换则视为收起。
+       _placeSort 搬移卡片会走这条路径——面板开着被搬走必须关掉，
+       否则会留下一个悬浮在 top layer、已经脱离文档的 dialog。 */
     this._abort?.abort();
     this._open = false;
+    if (this._sheet?.open) this._sheet.close();
   }
 
   /* ---- 构建 ---- */
 
+  /** 全断点都接管：移动端开底部面板，桌面开浮层（2026-11-03 改） */
   _enhance() {
     if (!this._built) this._build();
     this._select.classList.add('visually-hidden');
@@ -65,22 +83,14 @@ class FacetSort extends HTMLElement {
     this._syncLabel();
   }
 
-  /** 移动端 / 降级：还原原生 select，收起浮层 */
-  _restore() {
-    if (this._open) this._closePanel(false);
-    if (this._btn) {
-      this._btn.hidden = true;
-      this._btn.tabIndex = -1;
-    }
-    this._select.classList.remove('visually-hidden');
-    this._select.tabIndex = 0;
-  }
-
   _build() {
     this._uid = `sort-${Math.random().toString(36).slice(2, 8)}`;
     const label = this.closest('.facets__sort-card')
       ?.querySelector('.facets__sort-card-label')
       ?.textContent.trim();
+    /* 标签在移动端是视觉隐藏的（只给读屏用），这里留一份给底部面板当标题——
+       面板里没有那个 label 元素，不能现取 */
+    this._label = label || '';
 
     this._btn = document.createElement('button');
     this._btn.type = 'button';
@@ -122,26 +132,147 @@ class FacetSort extends HTMLElement {
     this.append(this._list);
   }
 
+  /**
+   * 底部面板（移动端）：同样惰性构建。
+   * 用 <dialog> + showModal()，焦点锁定、背景 inert、Esc 关闭都由平台给
+   * （AGENTS §8）——与集合页筛选抽屉、购物车抽屉是同一套做法。
+   *
+   * 挂在 <facet-sort> 自己身上而不是 document.body：_placeSort 搬移卡片时
+   * 它跟着走，元素销毁时一起消失，不留孤立节点。关着时 UA 的 display:none
+   * 保证它不占任何布局。
+   */
+  _ensureSheet() {
+    if (this._sheet) return;
+
+    const sheet = document.createElement('dialog');
+    sheet.className = 'facets__sort-sheet';
+    sheet.setAttribute('scroll-lock', '');
+
+    /* 抓手横线（2026-11-03 刘工：与筛选面板保持一致）。类名复用 .facets__grabber，
+       视觉定义在 collection.liquid 的样式块里一处维护。
+       有了抓手就必须能拖——只画不拖是假承诺，所以下面挂了拖拽收起。 */
+    const grabber = document.createElement('div');
+    grabber.className = 'facets__grabber';
+    grabber.setAttribute('aria-hidden', 'true');
+    sheet.appendChild(grabber);
+
+    const head = document.createElement('div');
+    head.className = 'facets__sort-sheet-head';
+    if (this._label) {
+      const title = document.createElement('p');
+      title.className = 'facets__sort-sheet-title';
+      title.id = `${this._uid}-sheet-title`;
+      title.textContent = this._label;
+      head.appendChild(title);
+      sheet.setAttribute('aria-labelledby', title.id);
+    }
+    /* X 图标关闭钮（2026-11-03 刘工：与筛选抽屉、购物车抽屉三处统一）。
+       文案走宿主 data-label-close（JS 拿不到 | t 翻译，data-* 传参是
+       compare.js / cart-badge.js 的既有惯例），缺失时英文兜底。 */
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'facets__sort-sheet-close';
+    closeBtn.setAttribute('aria-label', this.dataset.labelClose || 'Close');
+    closeBtn.innerHTML = CLOSE_SVG;
+    head.appendChild(closeBtn);
+    sheet.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'facets__sort-sheet-body';
+    sheet.appendChild(body);
+
+    /* 遮罩点击 = 点在 dialog 自身（面板盖满了内部）。走 _closePanel 收口
+       （_open 状态与 aria 一起复位），收起动画期间忽略——点击已被
+       pointer-events:none 吞掉，这里只是双保险 */
+    sheet.addEventListener('click', (event) => {
+      if (event.target === sheet && !this._sheetEl?.isClosing) this._closePanel();
+    });
+    /* Esc 由 bottom-sheet 组件接住（cancel → 滑出），这里不再重复处理 */
+    /* 下拉收起：热区 = 抓手 + 头部行（样式里给了 touch-action:none） */
+    sheet.addEventListener('pointerdown', this._onSheetDragStart);
+    /* 真正关闭后的收口：listbox 归位隐藏（内联样式与 is-closing 由组件清零）。
+       提前搬走会让下滑过程里选项凭空消失。 */
+    sheet.addEventListener('close', () => {
+      this._list.hidden = true;
+      if (this._list.parentElement !== this) this.append(this._list);
+    });
+
+    /* 开合行为包给 <bottom-sheet>（2026-11-03 刘工）：滑入/滑出/重开打断/Esc
+       都在组件里，本文件只留"什么时候该关"的判断。media 限定移动端——
+       桌面这个 dialog 根本不打开，约束住可防跨断点残留。 */
+    const wrapper = document.createElement('bottom-sheet');
+    wrapper.setAttribute('media', '(max-width: 989.98px)');
+    wrapper.append(sheet);
+
+    this._sheet = sheet;
+    this._sheetEl = wrapper;
+    this._sheetBody = body;
+    this.append(wrapper);
+  }
+
   /* ---- 开合与绘制 ---- */
+
+  _isMobile() {
+    return !this._mq.matches;
+  }
 
   _openPanel() {
     this._ensureList();
+    /* 先保证 listbox 回到组件内：上一次若在面板里被关闭（例如跨断点收起），
+       它可能还挂在已关闭的 dialog 里——桌面分支只把 hidden 去掉，
+       挂在关闭的 dialog 里等于永远看不见。 */
+    if (this._list.parentElement !== this) this.append(this._list);
+
     this._open = true;
-    this._list.hidden = false;
-    this._btn.setAttribute('aria-expanded', 'true');
     this._activeIndex = this._select.selectedIndex;
-    this._paint();
-    this._list.focus();
+
+    if (this._isMobile()) {
+      this._ensureSheet();
+      /* 选项 DOM 搬进面板——只此一份，桌面浮层同时不可能开着 */
+      this._sheetBody.append(this._list);
+      this._list.hidden = false;
+      this._paint();
+      this._openSheet();
+    } else {
+      this._list.hidden = false;
+      this._btn.setAttribute('aria-expanded', 'true');
+      this._paint();
+      this._list.focus();
+    }
     this._optionEls[this._activeIndex]?.scrollIntoView({ block: 'nearest' });
   }
 
-  _closePanel(refocus = true) {
+  _closePanel(refocus = true, fromDrag = false) {
     if (!this._open) return;
     this._open = false;
-    this._list.hidden = true;
     this._btn.setAttribute('aria-expanded', 'false');
     this._btn.setAttribute('aria-activedescendant', '');
     if (refocus) this._btn.focus();
+    /* 移动端面板：向下滑出由 <bottom-sheet> 负责（2026-11-03），动画播完才真正
+       close()——listbox 归位隐藏挂在 close 事件上，提前搬走会让下滑过程里选项消失 */
+    if (this._sheet?.open) {
+      this._closeSheet({ fromDrag });
+      return;
+    }
+    /* 桌面浮层（或面板尚未建立）：维持瞬时收起。listbox 搬回组件内——
+       留在 dialog 里的话，下次桌面开浮层找不到绝对定位祖先，
+       浮层会跑到 body 的坐标体系里 */
+    this._list.hidden = true;
+    if (this._list.parentElement !== this) this.append(this._list);
+  }
+
+  /**
+   * 开合委托给 <bottom-sheet>（2026-11-03 刘工）：滑入/滑出、重开打断、
+   * reduced-motion 都收在组件里。组件未加载时退回原生 showModal/close。
+   */
+  _openSheet() {
+    if (this._sheetEl && typeof this._sheetEl.open === 'function') this._sheetEl.open();
+    else if (!this._sheet.open) this._sheet.showModal();
+  }
+
+  _closeSheet(options) {
+    if (this._sheetEl && typeof this._sheetEl.close === 'function') this._sheetEl.close(options);
+    else if (this._sheet.open) this._sheet.close();
   }
 
   _paint() {
@@ -186,6 +317,15 @@ class FacetSort extends HTMLElement {
 
   _onClick = (event) => {
     if (!this._built || this._btn.hidden) return;
+    /* 下拉手势刚结束：浏览器还会补一个 click，落点可能正好在某个选项上——
+       不挡掉的话，「往下拽到一半又弹回」会顺手把排序改掉。 */
+    if (this._dragEndedAt && performance.now() < this._dragEndedAt) return;
+    /* 头部行是拖拽热区，关闭钮在它里面：点按（无位移）不会触发拖拽收起，
+       这里显式接住 click 关面板（与遮罩点击同走 _closePanel 收口状态） */
+    if (event.target.closest('.facets__sort-sheet-close')) {
+      this._closePanel();
+      return;
+    }
     if (event.target.closest('.facets__sort-btn')) {
       this._open ? this._closePanel() : this._openPanel();
       return;
@@ -243,11 +383,80 @@ class FacetSort extends HTMLElement {
   };
 
   _onDocPointerDown = (event) => {
+    /* 面板是模态的，遮罩点击由 dialog 自己的监听处理（target 是 dialog 本身，
+       而 dialog 在 this 内部，这里本来也不会命中） */
     if (this._open && !this.contains(event.target)) this._closePanel(false);
   };
 
-  _onMq = (event) => {
-    event.matches ? this._enhance() : this._restore();
+  /**
+   * 下拉收起（与集合页筛选面板同一套手感）。
+   * 热区只有抓手与头部行（样式里给了 touch-action:none）；选项列表不参与——
+   * 那里的手势属于滚动，抢过来顾客就没法翻长列表了。
+   * 越过阈值（面板高的 30%，至少 120px）→ 关闭；未过 → 弹回原位。
+   *
+   * 拖动期间必须把 animation 压成 none：开面板时的滑入动画优先级高于内联
+   * transform，不压掉的话写 transform 也不动。清理由 close 事件统一收口。
+   */
+  _onSheetDragStart = (event) => {
+    if (event.button > 0) return;
+    const sheet = this._sheet;
+    if (!sheet || !sheet.open) return;
+
+    const handle = event.target.closest('.facets__grabber, .facets__sort-sheet-head');
+    if (!handle) return;
+    /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
+    if (this._sheetEl?.isClosing) return;
+
+    const startY = event.clientY;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let moved = false;
+
+    const onMove = (moveEvent) => {
+      const dy = moveEvent.clientY - startY;
+      if (dy <= 0) return; /* 只响应下拉 */
+      moved = moved || dy > 8;
+      sheet.style.animation = 'none';
+      sheet.style.transition = 'none';
+      sheet.style.transform = `translateY(${dy}px)`;
+    };
+
+    const onEnd = (endEvent) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+
+      const dy = endEvent.clientY - startY;
+      const dismissAt = Math.max(120, sheet.offsetHeight * 0.3);
+
+      if (moved && dy > dismissAt) {
+        this._dragEndedAt = performance.now() + 350;
+        /* fromDrag：从当前拖拽位置顺势滑出（transition 收尾），不跳回原位，
+           也不再原地闪没——与滑入对称（2026-11-03 刘工） */
+        this._closePanel(true, true);
+        return;
+      }
+
+      /* 弹回：animation 保持 none 直到关闭，避免回弹结束后又重播一次滑入 */
+      if (moved && !reduce) sheet.style.transition = 'transform 0.22s ease-out';
+      sheet.style.transform = '';
+      window.setTimeout(
+        () => {
+          if (moved && !reduce) sheet.style.transition = '';
+        },
+        moved && !reduce ? 240 : 0
+      );
+      if (moved) this._dragEndedAt = performance.now() + 350;
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
+  };
+
+  _onMq = () => {
+    /* 跨断点：容器形态从浮层换成面板（或反之），开着就直接收起。
+       不收起的话，绝对定位的浮层会失去定位祖先，跑到 body 坐标里。 */
+    if (this._open) this._closePanel(false);
   };
 }
 

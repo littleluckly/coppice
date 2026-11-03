@@ -241,6 +241,8 @@ class CollectionFacets extends HTMLElement {
   connectedCallback() {
     this._sectionId = this.dataset.sectionId;
     this._dialog = document.getElementById(`FacetsDialog-${this._sectionId}`);
+    /* 开合行为组件（bottom-sheet.js）：dialog 的包裹层，找不到就退回原生开合 */
+    this._sheetEl = this._dialog?.closest('bottom-sheet') || null;
     /* 无筛选集合没有筛选表单，但排序 select 仍在工具条——控制器照常激活 */
     if (
       !this.querySelector('[data-facets-form]') &&
@@ -320,12 +322,14 @@ class CollectionFacets extends HTMLElement {
       return;
     }
     if (event.target.closest('[data-facets-close]')) {
-      if (this._dialog) this._dialog.close();
+      this._closeSheet();
       return;
     }
-    /* 点遮罩关闭：target 是 dialog 本体即背景点击（对齐 nav-drawer 行为） */
+    /* 点遮罩关闭：target 是 dialog 本体即背景点击（对齐 nav-drawer 行为）。
+       遮罩策略留在宿主而非组件：这里将来若有防误触判断（如拖拽补发的 click），
+       属于本面板的私事，组件只管收到 close() 后怎么滑出去。 */
     if (event.target === this._dialog) {
-      this._dialog.close();
+      this._closeSheet();
       return;
     }
     /* 已选标签 / 清除全部：拦截站内跳转改走局部更新。
@@ -358,7 +362,7 @@ class CollectionFacets extends HTMLElement {
       const form = this._findForm();
       if (form) {
         const requestUrl = this._buildUrl(form.action, new FormData(form));
-        if (this._dialog?.open) this._dialog.close();
+        if (this._dialog?.open) this._closeSheet();
         this._load(requestUrl);
       }
     }
@@ -573,9 +577,29 @@ class CollectionFacets extends HTMLElement {
   _openDialog() {
     if (!this._dialog) return;
     this._moveFormIntoDialog();
-    this._dialog.showModal();
+    this._openSheet();
     this._dialog.querySelector('.facets__panel')?.setAttribute('tabindex', '-1');
     this._dialog.querySelector('.facets__panel')?.focus();
+  }
+
+  /**
+   * 开合委托给 <bottom-sheet>（2026-11-03 刘工：滑入/滑出/重开打断都收在组件里，
+   * 本文件不再各写一份）。组件未加载时退回原生 showModal/close——没有动效，
+   * 但功能完整；组件自带 media 守卫，桌面端不会误播下滑。
+   */
+  get _sheet() {
+    const el = this._sheetEl;
+    return el && typeof el.open === 'function' ? el : null;
+  }
+
+  _openSheet() {
+    if (this._sheet) this._sheet.open();
+    else if (this._dialog && !this._dialog.open) this._dialog.showModal();
+  }
+
+  _closeSheet(options) {
+    if (this._sheet) this._sheet.close(options);
+    else if (this._dialog?.open) this._dialog.close();
   }
 
   _moveFormIntoDialog() {
@@ -601,6 +625,8 @@ class CollectionFacets extends HTMLElement {
    */
   _onDragStart = (event) => {
     if (event.button > 0) return;
+    /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
+    if (this._sheet?.isClosing) return;
     const handle = event.target.closest('.facets__grabber, .facets__mobile-head');
     if (!handle || event.target.closest('[data-facets-close]')) return;
 
@@ -612,6 +638,9 @@ class CollectionFacets extends HTMLElement {
       const dy = moveEvent.clientY - startY;
       if (dy <= 0) return; /* 只响应下拉 */
       moved = moved || dy > 8;
+      /* 必须先压掉滑入动画：@keyframes 的 transform 优先级高于内联 style，
+         不压的话面板打开后的 0.28s 内怎么拖都不会动（2026-11-03 修） */
+      dialog.style.animation = 'none';
       dialog.style.transition = 'none';
       dialog.style.transform = `translateY(${dy}px)`;
     };
@@ -623,7 +652,9 @@ class CollectionFacets extends HTMLElement {
       const dy = endEvent.clientY - startY;
       const dismissAt = Math.max(120, dialog.offsetHeight * 0.3);
       if (moved && dy > dismissAt) {
-        dialog.close();
+        this._dragClickGuard = performance.now() + 350;
+        /* 从当前拖拽位置顺势滑出（组件按 fromDrag 走 transition），不再原地闪没 */
+        this._closeSheet({ fromDrag: true });
         return;
       }
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -643,9 +674,8 @@ class CollectionFacets extends HTMLElement {
   _onDialogClose = () => {
     /* form 归位为布局的第一个 grid item（桌面侧栏原位；单一 DOM 副本不变） */
     if (!this._dialog) return;
-    /* 拖拽残留的内联位移清零（弹回/收起两条路径的公共收口） */
-    this._dialog.style.transform = '';
-    this._dialog.style.transition = '';
+    /* 内联样式（拖拽残留）与 is-closing 由 <bottom-sheet> 组件统一清零，
+       这里只管本面板的领域状态 */
     /* 没点 Apply 就收起（下拉/Esc/遮罩）：表单回滚到最近一次生效的筛选
        （checked/value 属性来自上次 section payload，reset 即回到该状态），
        避免"勾选状态与结果不一致"；Apply 路径的 FormData 已在关窗前取证 */
