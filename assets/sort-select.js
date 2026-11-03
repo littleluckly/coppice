@@ -181,21 +181,29 @@ class FacetSort extends HTMLElement {
     body.className = 'facets__sort-sheet-body';
     sheet.appendChild(body);
 
-    /* 遮罩点击 = 点在 dialog 自身（面板盖满了内部） */
+    /* 遮罩点击 = 点在 dialog 自身（面板盖满了内部）；收起动画期间忽略——
+       点击已被 pointer-events:none 吞掉，这里只是双保险 */
     sheet.addEventListener('click', (event) => {
-      if (event.target === sheet) sheet.close();
+      if (event.target === sheet && !this._closing) sheet.close();
+    });
+    /* Esc：拦下原生立即关闭，走下滑动画收场（与其他关闭路径同路） */
+    sheet.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      this._closePanel();
     });
     /* 下拉收起：热区 = 抓手 + 头部行（样式里给了 touch-action:none） */
     sheet.addEventListener('pointerdown', this._onSheetDragStart);
-    /* Esc / 遮罩 / 选项选中 / 下拉越界之外的关闭路径都收敛到 _closePanel，
-       保证 _open 状态与 DOM 位置一起复位。
-       顺带把拖拽留下的内联样式清零——动画要用 animation:none 压住才能拖，
-       不清掉的话下次打开不会重新播滑入。 */
+    /* 真正关闭后的统一收口：清内联样式（拖拽压掉的 animation:none、
+       收起路径的 transition）与 is-closing 摘除，listbox 归位隐藏。
+       不在这里做的话，下次打开会带着上一手的 translateY、不重播滑入。 */
     sheet.addEventListener('close', () => {
       sheet.style.animation = '';
       sheet.style.transform = '';
       sheet.style.transition = '';
-      if (this._open) this._closePanel(true);
+      sheet.classList.remove('is-closing');
+      this._closing = false;
+      this._list.hidden = true;
+      if (this._list.parentElement !== this) this.append(this._list);
     });
 
     this._sheet = sheet;
@@ -221,6 +229,14 @@ class FacetSort extends HTMLElement {
 
     if (this._isMobile()) {
       this._ensureSheet();
+      /* 收起动画进行中又被打开：作废未完成的关闭（finish 的代次校验让它空转），
+         清掉关闭路径留下的内联样式与 is-closing，面板回位 */
+      this._closing = false;
+      this._closeGen = (this._closeGen || 0) + 1;
+      this._sheet.classList.remove('is-closing');
+      this._sheet.style.animation = '';
+      this._sheet.style.transform = '';
+      this._sheet.style.transition = '';
       /* 选项 DOM 搬进面板——只此一份，桌面浮层同时不可能开着 */
       this._sheetBody.append(this._list);
       this._list.hidden = false;
@@ -235,26 +251,70 @@ class FacetSort extends HTMLElement {
     this._optionEls[this._activeIndex]?.scrollIntoView({ block: 'nearest' });
   }
 
-  _closePanel(refocus = true) {
+  _closePanel(refocus = true, fromDrag = false) {
     if (!this._open) return;
     this._open = false;
-    this._list.hidden = true;
     this._btn.setAttribute('aria-expanded', 'false');
     this._btn.setAttribute('aria-activedescendant', '');
-    /* 关面板前把 listbox 搬回组件内：留在 dialog 里的话，下次桌面开浮层
-       会找不到绝对定位的祖先，浮层跑到 body 的坐标体系里 */
-    if (this._list.parentElement !== this) this.append(this._list);
-    /* 拖拽留下的内联样式在这里清，而不是只依赖 dialog 的 close 事件：
-       close 是异步任务，某些环境（实测无头浏览器 + virtual-time）根本观察不到，
-       状态复位不该押在它身上。不清的话下次打开不会重播滑入动画，
-       而且会带着上一手的 translateY。 */
-    if (this._sheet) {
-      this._sheet.style.animation = '';
-      this._sheet.style.transform = '';
-      this._sheet.style.transition = '';
-      if (this._sheet.open) this._sheet.close();
-    }
     if (refocus) this._btn.focus();
+    /* 移动端面板：向下滑出（2026-11-03 刘工），动画播完才真正 close()——
+       listbox 归位隐藏与内联样式清理由 close 事件统一收口，提前搬走会让
+       下滑过程里选项凭空消失 */
+    if (this._sheet?.open) {
+      this._closeSheetAnimated(fromDrag);
+      return;
+    }
+    /* 桌面浮层（或面板尚未建立）：维持瞬时收起。listbox 搬回组件内——
+       留在 dialog 里的话，下次桌面开浮层找不到绝对定位祖先，
+       浮层会跑到 body 的坐标体系里 */
+    this._list.hidden = true;
+    if (this._list.parentElement !== this) this.append(this._list);
+  }
+
+  /**
+   * 底部面板动画收口关闭（2026-11-03 刘工：关闭从闪现改为向下滑出，与滑入对称）。
+   * 机制同筛选抽屉 _closeDialogAnimated：原生 close() 即 display:none，
+   * 动画必须赶在 close() 之前播。常规路径挂 .is-closing 播下滑 keyframes；
+   * 拖拽路径（fromDrag）transform 已在下拉途中，transition 顺势滑到屏外，
+   * 不跳回原位重播。reduced-motion 直接 close()。
+   * setTimeout 兜底 animationend/transitionend 偶发不触发（无头浏览器虚拟时间）；
+   * 代次计数让"收起途中又被打开"作废未完成的关闭（见 _openPanel）。
+   */
+  _closeSheetAnimated(fromDrag = false) {
+    const sheet = this._sheet;
+    if (!sheet?.open || this._closing) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      sheet.close();
+      return;
+    }
+    this._closing = true;
+    const gen = (this._closeGen = (this._closeGen || 0) + 1);
+    let done = false;
+    const finish = () => {
+      if (done || gen !== this._closeGen) return;
+      done = true;
+      sheet.close();
+    };
+    if (fromDrag) {
+      sheet.style.transition = 'transform 0.22s ease-in';
+      sheet.style.transform = 'translateY(100%)';
+      const onTransEnd = (event) => {
+        if (event.target !== sheet || event.propertyName !== 'transform') return;
+        sheet.removeEventListener('transitionend', onTransEnd);
+        finish();
+      };
+      sheet.addEventListener('transitionend', onTransEnd);
+    } else {
+      sheet.classList.add('is-closing');
+      const onAnimEnd = (event) => {
+        /* ::backdrop 的动画也以 sheet 为 target，按 keyframes 名字区分 */
+        if (event.animationName !== 'facets-sort-sheet-down') return;
+        sheet.removeEventListener('animationend', onAnimEnd);
+        finish();
+      };
+      sheet.addEventListener('animationend', onAnimEnd);
+    }
+    window.setTimeout(finish, 320);
   }
 
   _paint() {
@@ -386,6 +446,8 @@ class FacetSort extends HTMLElement {
 
     const handle = event.target.closest('.facets__grabber, .facets__sort-sheet-head');
     if (!handle) return;
+    /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
+    if (this._closing) return;
 
     const startY = event.clientY;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -410,9 +472,9 @@ class FacetSort extends HTMLElement {
 
       if (moved && dy > dismissAt) {
         this._dragEndedAt = performance.now() + 350;
-        /* 走 _closePanel 而不是直接 sheet.close()：状态复位必须同步完成，
-           不依赖 dialog 的 close 事件（见 _closePanel 里的说明） */
-        this._closePanel(true);
+        /* fromDrag：从当前拖拽位置顺势滑出（transition 收尾），不跳回原位，
+           也不再原地闪没——与滑入对称（2026-11-03 刘工） */
+        this._closePanel(true, true);
         return;
       }
 
