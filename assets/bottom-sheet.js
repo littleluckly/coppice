@@ -68,6 +68,9 @@ class BottomSheet extends HTMLElement {
     const dialog = this._dialog;
     /* isClosing 守卫：多路径同时触发（宿主遮罩 + 按钮）时只走一次 */
     if (!dialog?.open || this.isClosing) return;
+    /* 拖拽期间宿主把 animation 压成 none（内联优先级高于 keyframes），
+       不清掉的话下面 .is-close-anim 不生效，会退化成"延迟一下才消失" */
+    dialog.style.animation = '';
     if (!this._animates) {
       dialog.close();
       return;

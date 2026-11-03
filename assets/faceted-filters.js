@@ -674,14 +674,8 @@ class CollectionFacets extends HTMLElement {
   _onDialogClose = () => {
     /* form 归位为布局的第一个 grid item（桌面侧栏原位；单一 DOM 副本不变） */
     if (!this._dialog) return;
-    /* 拖拽残留的内联样式清零（弹回/收起两条路径的公共收口）。
-       animation 也要清：拖动期间被压成 none，不清的话下次打开不会重播滑入。
-       is-closing 同步摘除、收起标记复位：跨断点等路径会绕过动画直接 close()。 */
-    this._dialog.style.transform = '';
-    this._dialog.style.transition = '';
-    this._dialog.style.animation = '';
-    this._dialog.classList.remove('is-closing');
-    this._closing = false;
+    /* 内联样式（拖拽残留）与 is-closing 由 <bottom-sheet> 组件统一清零，
+       这里只管本面板的领域状态 */
     /* 没点 Apply 就收起（下拉/Esc/遮罩）：表单回滚到最近一次生效的筛选
        （checked/value 属性来自上次 section payload，reset 即回到该状态），
        避免"勾选状态与结果不一致"；Apply 路径的 FormData 已在关窗前取证 */
