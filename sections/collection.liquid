@@ -1702,10 +1702,12 @@
       -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
       mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
     }
+    /* 横幅自带的纵向渐隐在移动端让位（2026-11-03）：它原本的作用是把图片顶部
+       洗成页面色、好和上方的标题块接住；现在标题块就压在图上，两层渐隐叠加
+       会把照片整块洗白，看着仍像「文字在图片上方」。文字可读性改由标题块
+       自己的 ::before 底衬负责（见上），这里只保留底图自身的纵向 mask。 */
     .collection__banner-mask {
-      width: 100%;
-      border-radius: 0;
-      background: linear-gradient(to bottom, var(--collection-surface) 0%, transparent 80%);
+      display: none;
     }
     /* 产品岛：横幅现在是「图 + 标题块」，岛按原尺寸居中会整个压在文字后面
        （岛是 1536² 的方形抠图，90% 宽 ≈ 351px，从 y≈92 一直铺到 443）。
