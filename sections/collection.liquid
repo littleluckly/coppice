@@ -1439,12 +1439,13 @@
     touch-action: none;
     user-select: none;
   }
-  /* 只吃指针、不参与绘制。命中区落在标题行正上方，那里没有可点控件，
-     不会遮住关闭按钮（它在头部行最右侧）。 */
+  /* 只吃指针、不参与绘制。命中区 120×46（视觉条 56×6）——
+     纵向 ±20px 才够到 44px 的通用触摸门槛，横向 ±32px 容忍左右偏。
+     落在标题行正上方，那里没有可点控件，不会遮住关闭按钮（在头部行最右侧）。 */
   .facets__dialog .facets__grabber::after {
     content: '';
     position: absolute;
-    inset: -16px -32px;
+    inset: -20px -32px;
   }
   .facets__dialog .facets__mobile-head {
     touch-action: none; /* 头部行也是拖拽热区 */
