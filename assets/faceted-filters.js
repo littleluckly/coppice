@@ -263,6 +263,7 @@ class CollectionFacets extends HTMLElement {
       this._dialog.addEventListener('change', this._onChange, { signal });
       this._dialog.addEventListener('click', this._onClick, { signal });
       this._dialog.addEventListener('close', this._onDialogClose, { signal });
+      this._dialog.addEventListener('cancel', this._onDialogCancel, { signal });
       this._dialog.addEventListener('pointerdown', this._onDragStart, { signal });
     }
 
@@ -320,12 +321,12 @@ class CollectionFacets extends HTMLElement {
       return;
     }
     if (event.target.closest('[data-facets-close]')) {
-      if (this._dialog) this._dialog.close();
+      this._closeDialogAnimated();
       return;
     }
     /* 点遮罩关闭：target 是 dialog 本体即背景点击（对齐 nav-drawer 行为） */
     if (event.target === this._dialog) {
-      this._dialog.close();
+      this._closeDialogAnimated();
       return;
     }
     /* 已选标签 / 清除全部：拦截站内跳转改走局部更新。
@@ -358,7 +359,7 @@ class CollectionFacets extends HTMLElement {
       const form = this._findForm();
       if (form) {
         const requestUrl = this._buildUrl(form.action, new FormData(form));
-        if (this._dialog?.open) this._dialog.close();
+        if (this._dialog?.open) this._closeDialogAnimated();
         this._load(requestUrl);
       }
     }
