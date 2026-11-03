@@ -47,6 +47,7 @@ class CartDrawer extends HTMLElement {
 
   disconnectedCallback() {
     this._ac.abort();
+    this._detachDrag?.();
   }
 
   _onOpen = (event) => {
