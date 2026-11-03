@@ -1,10 +1,11 @@
 {% comment %}
   Collection — 集合页主体（task-collection T-2.1/T-2.2/T-2.3/T-2.4/T-3.1，pages-ui §4）。
 
-  结构（2026-10-14 效果图 v2）：
-  横幅矩形图（全幅，LCP eager）→ 白色圆角卡上移侵入（面包屑 + h1 + 描述
-  + 筛选/内容两栏 + 网格 + 分页）。曲线全部 CSS：border-radius + 伪元素
-  radial-gradient 反向弧；图片不烤形状；移动端（<990px）白卡不侵入贴底。
+  结构（2026-10-20 两栏版；2026-11-03 移动端改为叠放）：
+  桌面 —— 左列（面包屑 + h1 + 描述 + 亮点 + 筛选卡）越界压住右侧横幅，横幅铺到右缘；
+  移动 —— 面包屑 + h1 + 描述 + 亮点整块叠在横幅上（底衬渐隐保可读性），
+          下方接工具条 + 网格。曲线全部 CSS：border-radius + 伪元素
+          radial-gradient 反向弧；图片不烤形状。
 
   复用（搜索页将复用同组积木，task-collection §0）：
   - snippets/faceted-filters.liquid（筛选组）/ active-facets.liquid（已选标签）
@@ -1616,13 +1617,57 @@
     .collection__facets {
       grid-column: auto;
     }
-    .collection__left {
-      padding: 20px;
+    /* ---- 标题块叠到横幅上（2026-11-03 刘工）----
+       左右两列在移动端退化成「分发器」：display: contents 让它们的孩子直接成为
+       .collection__layout 的网格项，横幅与标题块占同一格、上下叠放。
+       ⚠️ 别改成「标题块绝对定位」：它的高度随描述与亮点行变化，绝对定位会脱离
+       高度计算，长文案直接被横幅的 overflow: hidden 切掉；网格叠放时
+       行高 = max(横幅 min-height, 标题块高)，横幅跟着长高——文案再长也压得住。 */
+    .collection__left,
+    .collection__right {
+      display: contents;
+    }
+    .collection__banner,
+    .collection__intro {
+      grid-row: 1;
+      grid-column: 1;
     }
     .collection__intro {
+      position: relative;
+      z-index: 10;
+      align-self: start;
       width: 100%;
-      padding-block-start: 0;
-      margin-block-end: 28px;
+      padding: 20px 20px 0;
+      margin-block-end: 0;
+    }
+    /* 文字压图的底衬：与横幅自带的纵向渐隐同色（--collection-surface，Noir 自动翻转），
+       只罩住标题块并向下 3.5rem 渐隐到透明——商家换成深色照片时深色文字仍立得住，
+       同时不会在图片上切出一条硬边。无横幅时不渲染（那层底衬会浮在留白上）。 */
+    .collection:not(.collection--no-banner) .collection__intro::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 -3.5rem;
+      z-index: -1;
+      pointer-events: none;
+      background: linear-gradient(
+        to bottom,
+        var(--collection-surface) 0%,
+        color-mix(in srgb, var(--collection-surface) 88%, transparent) 60%,
+        transparent 100%
+      );
+    }
+    /* 无横幅：标题块回到常规流，底边距仍由 .collection--no-banner 的 2rem 提供 */
+    .collection--no-banner .collection__intro {
+      padding-block-end: 0;
+    }
+    /* 左列的内边距随 display: contents 一起没了：无 JS 时筛选面板在流内出现，
+       自己补页面边距。有 JS 时表单被搬进抽屉 / 隐藏，槽是空的，不能再撑出
+       20px 空隙（否则横幅与产品区之间多一道白条）。 */
+    .facets__form-slot {
+      padding: 0 20px 20px;
+    }
+    .collection__facets[data-facets-ready] .facets__form-slot {
+      padding: 0;
     }
     .collection__title {
       font-size: clamp(1.75rem, 8vw, 2.25rem);
@@ -1644,8 +1689,12 @@
     .collection__feature-emoji {
       font-size: 1.375rem;
     }
+    /* 横幅高度不再是死值：与标题块同格，靠 stretch 跟着行高长
+       （min-height 兜住「只有一句话」的集合，保住 500px 的取景） */
     .collection__banner {
-      height: 500px;
+      align-self: stretch;
+      height: auto;
+      min-height: 500px;
     }
     .collection__banner-bg {
       object-position: center;
@@ -1657,9 +1706,15 @@
       border-radius: 0;
       background: linear-gradient(to bottom, var(--collection-surface) 0%, transparent 80%);
     }
+    /* 产品岛：横幅现在是「图 + 标题块」，岛按原尺寸居中会整个压在文字后面
+       （岛是 1536² 的方形抠图，90% 宽 ≈ 351px，从 y≈92 一直铺到 443）。
+       移动端收窄并贴到右下沿，给标题块让出位置；贴底而不是居中是因为
+       文字块高度不固定，底部锚点在任何文案长度下都不会被压。 */
     .collection__banner-island {
-      width: 90%;
-      left: 50%;
+      width: 58%;
+      left: 60%;
+      top: 94%;
+      translate: -50% -100%;
     }
     .collection__content {
       padding: 20px;
