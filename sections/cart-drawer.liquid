@@ -25,6 +25,12 @@
   data-cart-url="{{ routes.cart_url }}"
   data-root="{{ routes.root_url }}"
 >
+  {%- comment -%}
+    抽屉开合交给 <bottom-sheet>（2026-11-03 刘工）：滑入 / 滑出 / Esc 收口由组件
+    统一负责。media 限定移动端——桌面是右侧滑出的窄栏，"向下滑出"没有语义，
+    桌面维持原来的 translate 过渡（见下方样式块）。组件 display:contents，不占位。
+  {%- endcomment -%}
+  <bottom-sheet media="(max-width: 989.98px)">
   <dialog class="cart-drawer__dialog" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
     {%- comment -%} 移动端底部抽屉的抓手横线（桌面隐藏）。纯装饰，不参与交互 {%- endcomment -%}
     <div class="cart-drawer__grabber" aria-hidden="true"></div>
@@ -93,6 +99,7 @@
       </div>
     </div>
   </dialog>
+  </bottom-sheet>
 </cart-drawer>
 
 {% stylesheet %}
@@ -287,53 +294,7 @@
     .cart-drawer__dialog[open] {
       display: flex;
       flex-direction: column;
-      animation: cart-drawer-slide-up 0.28s ease-out;
-    }
-    .cart-drawer__dialog[open]::backdrop {
-      animation: cart-drawer-backdrop-in 0.28s ease-out;
-    }
-    @keyframes cart-drawer-slide-up {
-      from {
-        transform: translateY(100%);
-      }
-      to {
-        transform: translateY(0);
-      }
-    }
-    @keyframes cart-drawer-backdrop-in {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
-    }
-    /* 关闭动效（2026-11-03 刘工）：底部抽屉向下滑出，与滑入对称，机制同
-       集合页两个面板的 .is-closing（JS 先播动画、animationend 后才真正 close()）。
-       桌面右侧抽屉不做这个——"向下滑出"对右滑形态没有语义，桌面维持原生瞬时关闭。
-       拖拽收起不走这条规则：transform 已在下拉途中，JS 用 transition 顺势滑出。 */
-    .cart-drawer__dialog[open].is-closing {
-      animation: cart-drawer-slide-down 0.22s ease-in forwards;
-      pointer-events: none; /* 收起途中面板不可点；背景本就 inert */
-    }
-    .cart-drawer__dialog[open].is-closing::backdrop {
-      animation: cart-drawer-backdrop-out 0.22s ease-in forwards;
-    }
-    @keyframes cart-drawer-slide-down {
-      from {
-        transform: translateY(0);
-      }
-      to {
-        transform: translateY(100%);
-      }
-    }
-    @keyframes cart-drawer-backdrop-out {
-      from {
-        opacity: 1;
-      }
-      to {
-        opacity: 0;
-      }
+      /* 开合动效由 <bottom-sheet> 组件（critical.css），这里只留布局 */
     }
 
     /* flex 链：抓手 → 面板；滚动仍只发生在 .cart-drawer__body */
@@ -380,14 +341,6 @@
     }
   }
 
-  /* 移动端 + reduce：滑入直接出现（媒体查询条件合并写，不嵌套——嵌套 @media
-     在老浏览器里会被整段丢弃） */
-  @media (max-width: 989.98px) and (prefers-reduced-motion: reduce) {
-    .cart-drawer__dialog[open],
-    .cart-drawer__dialog[open]::backdrop {
-      animation: none;
-    }
-  }
 {% endstylesheet %}
 
 {% schema %}
