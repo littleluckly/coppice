@@ -1726,6 +1726,8 @@
        我们原来是白底实心圆 + 左图标右文字；遮罩是深色，白底圆会跳出来，
        改成透明底 + 1px 半透明白描边（emoji 保留原色，metafield 格式不变）。 */
     .collection:not(.collection--no-banner) .collection__feature {
+      flex: 1 1 0;
+      min-inline-size: 0;
       flex-direction: column;
       align-items: center;
       gap: 6px;
@@ -1733,6 +1735,10 @@
       font-size: 0.75rem;
       line-height: 1.25;
       color: color-mix(in srgb, #fff 92%, transparent);
+    }
+    /* 基础规则给标签 max-inline-size: 9ch（横排形态用），三并列时按列宽走 */
+    .collection:not(.collection--no-banner) .collection__feature-text {
+      max-inline-size: 100%;
     }
     /* 线描圆 36px、标签 12px：遮罩只有 55% 宽，三条要点必须排得进这条列
        （52% ≈ 203px / 3 = 67px 一列）。40px 圆 + 13px 字会掉成 2+1，
