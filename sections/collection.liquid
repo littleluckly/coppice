@@ -1675,7 +1675,12 @@
        横向渐隐：左缘压暗给白字垫对比度，右缘归零保留原图亮度——照片里的产品正好
        落在未压暗区，这是这套构图的命门（整幅均匀压暗会把产品也压灰）。
        遮罩恒黑、不跟预设翻转：它压的是照片，照片本身不随主题色变，
-       属配色纪律的例外（同类：压商品图的遮罩、投影）。 */
+       属配色纪律的例外（同类：压商品图的遮罩、投影）。
+       强度是按实测定的，不是目测：隐藏文字后量描述框内背景亮度，
+       取描述色（白 88%）的对比度。58/45 → 3.3:1（不达标）；62/52 → 3.9:1（仍差）；
+       现在这组 66/58/0@100% 在两张测试图上分别 4.8:1 / 5.0:1（按最暗处算）。
+       ⚠️ 亮到发白的照片（雪景、天空占据大半）仍可能降到 4.5 以下——
+       这不是参数没调够，是「白字压图」的物理上限；真要兜死只能牺牲照片（遮罩 >80%）。 */
     .collection:not(.collection--no-banner) .collection__intro::before {
       content: '';
       position: absolute;
@@ -1684,9 +1689,9 @@
       pointer-events: none;
       background: linear-gradient(
         to right,
-        color-mix(in srgb, #000 58%, transparent) 0%,
-        color-mix(in srgb, #000 45%, transparent) 55%,
-        transparent 85%
+        color-mix(in srgb, #000 66%, transparent) 0%,
+        color-mix(in srgb, #000 58%, transparent) 70%,
+        transparent 100%
       );
     }
     /* 文字整体翻白。恒 #fff，**不能取 --color-background**：Noir 预设下它是深色，
