@@ -78,6 +78,12 @@
 <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
 <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
+{%- comment -%}
+  底部面板的公共外观与拖拽行为（2026-11-03 抽取）：
+  筛选面板、排序面板、购物车抽屉共用。必须排在使用者之前——defer 按文档顺序执行。
+{%- endcomment -%}
+{{ 'bottom-sheet.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'bottom-sheet.js' | asset_url }}" defer></script>
 {%- if collection.filters.size > 0 -%}
   <script src="{{ 'faceted-filters.js' | asset_url }}" defer></script>
 {%- endif -%}
@@ -460,9 +466,13 @@
   </collection-facets>
 
   {%- if collection.filters.size > 0 -%}
+    {%- comment -%}
+      容器外观（通栏 / 上圆角 / 85vh / 遮罩 / 滑入 / 抓手）来自 .bottom-sheet，
+      见 assets/bottom-sheet.css——与排序面板、购物车抽屉共用同一份。
+    {%- endcomment -%}
     <dialog
       id="FacetsDialog-{{ section.id }}"
-      class="facets__dialog"
+      class="facets__dialog bottom-sheet"
       scroll-lock
       aria-label="{{ 'collections.filters.label' | t }}"
     ></dialog>
