@@ -19,6 +19,13 @@
  * 断点 989.98px 与集合页筛选逻辑（faceted-filters.js 的 _mobileQuery）一致。
  */
 
+/* 基础：桌面不显示抓手。三个消费者里只有购物车抽屉在桌面有形态（右侧栏，
+   本来就没有抓手），另两个桌面根本不打开这个 dialog；所以统一在这里关掉，
+   免得桌面上留一个无高度但占宽度的空块。 */
+.bottom-sheet__grabber {
+  display: none;
+}
+
 @media (max-width: 989.98px) {
   .bottom-sheet {
     position: fixed;
@@ -82,6 +89,7 @@
      顶部那 16px 内边距，所以向下补到 32px——下方是头部行，本来就是拖拽热区。
      拖动行为在 assets/bottom-sheet.js。 */
   .bottom-sheet__grabber {
+    display: block;
     flex-shrink: 0;
     position: relative;
     inline-size: 56px;
