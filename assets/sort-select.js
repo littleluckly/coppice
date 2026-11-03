@@ -32,9 +32,10 @@ const CHEVRON_SVG =
   '<svg class="facets__sort-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>';
 /* 关闭 X 与筛选抽屉/购物车抽屉用的是同一文件 assets/icon-close.svg
    （服务端 inline），这里 JS 构建只能手抄同一组几何参数——同 CHEVRON_SVG
-   的纪律，改其中一处时另一处要跟着改（2026-11-03 三面板关闭钮统一）。 */
+   的纪律，改其中一处时另一处要跟着改（2026-11-03 三面板关闭钮统一，
+   同日刘工追改：X 外加圆圈，Heroicons x-circle 同一条 path）。 */
 const CLOSE_SVG =
-  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18 18 6M6 6l12 12"/></svg>';
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>';
 
 class FacetSort extends HTMLElement {
   _abort = null;
