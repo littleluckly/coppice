@@ -401,6 +401,7 @@
               单一按钮 = WAI-ARIA 的 toggle button：aria-pressed 表示「列表态是否开启」，
               图标跟着 pressed 走（列表图标 = 列表态），标签恒定不随状态改词。
             {%- endcomment -%}
+            {%- if collection.products_count > 0 -%}
             <view-toggle class="view-toggle" data-view-toggle>
               <button
                 type="button"
@@ -416,6 +417,7 @@
                 </span>
               </button>
             </view-toggle>
+            {%- endif -%}
 
             {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
           </div>
@@ -1110,6 +1112,51 @@
     stroke-width: 2;
     color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
+  /* ---- 视图切换（网格 / 列表，2026-11-03 刘工）----
+     与 Filters / 排序控件同一套边框与圆角（--facet-control-*），图标 18px、
+     颜色与 Filters 的 chevron 同为前景色 60%，三个控件才像同一套东西。 */
+  .view-toggle {
+    display: flex;
+    flex: none;
+  }
+  /* 自定义元素未升级（无 JS / 脚本未到）：整块隐藏——留一个按不动的按钮
+     比不显示更糟；CSS 也就不用再依赖 .js 门控。 */
+  view-toggle:not(:defined) {
+    display: none;
+  }
+  .view-toggle__button {
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    border: var(--facet-control-border);
+    border-radius: var(--facet-control-radius);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .view-toggle__button:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+  .view-toggle__button svg {
+    inline-size: 18px;
+    block-size: 18px;
+    stroke-width: 1.6;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  }
+  /* 两个图标按 aria-pressed 二选一：未按下 = 网格态（显示网格图标），
+     按下 = 列表态（显示行图标）。脚本只改 aria-pressed，不碰 DOM。 */
+  .view-toggle__icon {
+    display: none;
+  }
+  .view-toggle__button[aria-pressed='false'] .view-toggle__icon--grid {
+    display: block;
+  }
+  .view-toggle__button[aria-pressed='true'] .view-toggle__icon--list {
+    display: block;
+  }
+
   .collection__count {
     font-size: 0.85rem;
     color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
@@ -1384,6 +1431,38 @@
     .collection__grid {
       grid-template-columns: repeat(4, 1fr);
     }
+  }
+
+  /* ===================================================================
+     列表视图（html[data-collection-view='list']）
+     卡片改成「图左 / 信息右」两列**网格**，不改 product-card 的标记——
+     那张卡被首页 featured-collection 与搜索页共用，加包裹层会波及它们。
+     子节点统一落在第 2 列，媒体盒用 span 6 撑起左列（缺项时该行高度为 0，
+     不留空隙）；行号不写死，靠自动流排，多一个少一个都不会错位。
+     =================================================================== */
+  html[data-collection-view='list'] .collection__grid {
+    grid-template-columns: 1fr;
+  }
+  html[data-collection-view='list'] .collection__grid .product-card {
+    display: grid;
+    grid-template-columns: minmax(88px, 168px) minmax(0, 1fr);
+    align-content: start;
+    column-gap: 1rem;
+    row-gap: 0.35rem;
+  }
+  html[data-collection-view='list'] .collection__grid .product-card > * {
+    grid-column: 2;
+  }
+  html[data-collection-view='list'] .collection__grid .product-card__media-wrap {
+    grid-column: 1;
+    grid-row: 1 / span 6;
+    align-self: start;
+  }
+  /* 这两处的基础规则靠 margin-top:auto 把按钮压到卡底（纵向卡），
+     横排时该行高度就是内容高度，auto 会把它顶开，这里清零。 */
+  html[data-collection-view='list'] .collection__grid .product-card__compare,
+  html[data-collection-view='list'] .collection__grid .product-card__quick-add {
+    margin-block-start: 0;
   }
 
   /* 分页：圆形按钮（参考截图 2026-10-16）——白圆 + 浅边框居中一排，
@@ -1665,6 +1744,9 @@
     .collection__toolbar .collection__count {
       order: 3;
     }
+    .collection__toolbar .view-toggle {
+      order: 4;
+    }
     /* 筛选卡头部：桌面复用抽屉的头行做「Filters」卡头（参考稿同形态），
        关闭按钮只在抽屉里有意义，桌面隐藏。 */
     .facets__mobile-head {
@@ -1903,8 +1985,12 @@
       /* 不右推：紧邻 Filters，自由空间全给计数，行尾对齐 */
       margin-inline-start: 0;
     }
-    .collection__toolbar .collection__count {
+    /* 视图切换紧跟「排序」右侧（2026-11-03 刘工），计数推到行尾 */
+    .collection__toolbar .view-toggle {
       order: 3;
+    }
+    .collection__toolbar .collection__count {
+      order: 4;
       margin-inline-start: auto;
     }
     .collection__toolbar .facets__active {
