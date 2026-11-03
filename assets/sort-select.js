@@ -185,31 +185,29 @@ class FacetSort extends HTMLElement {
        （_open 状态与 aria 一起复位），收起动画期间忽略——点击已被
        pointer-events:none 吞掉，这里只是双保险 */
     sheet.addEventListener('click', (event) => {
-      if (event.target === sheet && !this._closing) this._closePanel();
+      if (event.target === sheet && !this._sheetEl?.isClosing) this._closePanel();
     });
-    /* Esc：拦下原生立即关闭，走下滑动画收场（与其他关闭路径同路） */
-    sheet.addEventListener('cancel', (event) => {
-      event.preventDefault();
-      this._closePanel();
-    });
+    /* Esc 由 bottom-sheet 组件接住（cancel → 滑出），这里不再重复处理 */
     /* 下拉收起：热区 = 抓手 + 头部行（样式里给了 touch-action:none） */
     sheet.addEventListener('pointerdown', this._onSheetDragStart);
-    /* 真正关闭后的统一收口：清内联样式（拖拽压掉的 animation:none、
-       收起路径的 transition）与 is-closing 摘除，listbox 归位隐藏。
-       不在这里做的话，下次打开会带着上一手的 translateY、不重播滑入。 */
+    /* 真正关闭后的收口：listbox 归位隐藏（内联样式与 is-closing 由组件清零）。
+       提前搬走会让下滑过程里选项凭空消失。 */
     sheet.addEventListener('close', () => {
-      sheet.style.animation = '';
-      sheet.style.transform = '';
-      sheet.style.transition = '';
-      sheet.classList.remove('is-closing');
-      this._closing = false;
       this._list.hidden = true;
       if (this._list.parentElement !== this) this.append(this._list);
     });
 
+    /* 开合行为包给 <bottom-sheet>（2026-11-03 刘工）：滑入/滑出/重开打断/Esc
+       都在组件里，本文件只留"什么时候该关"的判断。media 限定移动端——
+       桌面这个 dialog 根本不打开，约束住可防跨断点残留。 */
+    const wrapper = document.createElement('bottom-sheet');
+    wrapper.setAttribute('media', '(max-width: 989.98px)');
+    wrapper.append(sheet);
+
     this._sheet = sheet;
+    this._sheetEl = wrapper;
     this._sheetBody = body;
-    this.append(sheet);
+    this.append(wrapper);
   }
 
   /* ---- 开合与绘制 ---- */

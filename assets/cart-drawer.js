@@ -140,9 +140,8 @@ class CartDrawer extends HTMLElement {
 
       if (moved && dy > dismissAt) {
         this._dragEndedAt = performance.now() + 350;
-        /* 从当前拖拽位置顺势滑出（transition 收尾），不再原地闪没（2026-11-03）。
-           内联样式清理由 _onClose 统一收口，这里不复位。 */
-        this._closeAnimated(true);
+        /* 从当前拖拽位置顺势滑出（组件按 fromDrag 走 transition），不再原地闪没 */
+        this._closeSheet({ fromDrag: true });
         return;
       }
 
@@ -164,14 +163,7 @@ class CartDrawer extends HTMLElement {
   };
 
   _onClose = () => {
-    /* 拖拽留下的内联样式必须清零：不清的话下次打开会带着上一手的偏移量；
-       animation 也要清——拖动期间被压成 none，不清就不会重播滑入。
-       is-closing 同步摘除、收起标记复位：桌面等路径会绕过动画直接 close()。 */
-    this.dialog.style.transform = '';
-    this.dialog.style.transition = '';
-    this.dialog.style.animation = '';
-    this.dialog.classList.remove('is-closing');
-    this._closing = false;
+    /* 内联样式与 is-closing 由 <bottom-sheet> 组件统一清零，这里只管本组件状态 */
     delete document.documentElement.dataset.cartDrawerOpen;
     if (this._lastTrigger && this._lastTrigger.isConnected) {
       this._lastTrigger.focus({ preventScroll: true });
