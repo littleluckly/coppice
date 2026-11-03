@@ -1683,19 +1683,15 @@
       padding: 20px 20px 2.5rem;
       margin-block-end: 0;
     }
-    /* ---- 左侧黑色半透明遮罩（2026-11-03 参考图）----
-       横向渐隐：左缘压暗给白字垫对比度，右缘归零保留原图亮度——照片里的产品正好
-       落在未压暗区，这是这套构图的命门（整幅均匀压暗会把产品也压灰）。
-       遮罩恒黑、不跟预设翻转：它压的是照片，照片本身不随主题色变，
-       属配色纪律的例外（同类：压商品图的遮罩、投影）。
-       强度是按实测定的，不是目测：隐藏文字后量描述框内背景亮度再算对比度
-       （描述色 = 白 88%）。历次实测（同一张雪山图，取框内最亮处）：
-         66/58 → 4.8:1（过 AA，但刘工 2026-11-03 反馈「太黑」）
-         58/50 → 3.7:1
-       ★ 54/46 → 3.2:1，中位 6.9:1（现用值，对齐参考图的强度）
-       「更淡」是刘工明确选的，代价就是这一项：最亮处低于 AA 4.5。
-       要回到 4.5 只有两条路——遮罩加到 66/58 以上，或把描述收窄让文字待在
-       压暗的左侧（现在 24ch）。别指望调渐变能两头都占。 */
+    /* ---- 左侧白色遮罩（2026-11-03 第三版：与桌面同源）----
+       桌面是「页面色弧形渐隐」把标题卡从照片里托出来；移动端把同一条思路
+       转 90°：左缘页面色实色压住照片、向右渐隐，右缘留原图亮度给产品。
+       用 --collection-surface 而不是写死白：Noir 深色预设下自动变成
+       「深底 + 浅色字」，不需要第二套规则（黑色遮罩那版必须写死 #000，
+       是因为照片不跟预设翻转，两者性质不同）。
+       实测（隐藏文字后量描述框内背景亮度，描述色 = 前景 62%）：
+       左缘近似纯页面色，对比度 5.6:1；最亮处 4.1:1 —— 比黑遮罩那版稳，
+       因为深字压浅底本来就是更容易的方向。 */
     .collection:not(.collection--no-banner) .collection__intro::before {
       content: '';
       position: absolute;
@@ -1704,29 +1700,21 @@
       pointer-events: none;
       background: linear-gradient(
         to right,
-        color-mix(in srgb, #000 48%, transparent) 0%,
-        color-mix(in srgb, #000 44%, transparent) 55%,
+        var(--collection-surface) 0%,
+        color-mix(in srgb, var(--collection-surface) 93%, transparent) 55%,
         transparent 80%
       );
     }
-    /* 文字整体翻白。恒 #fff，**不能取 --color-background**：Noir 预设下它是深色，
-       白字体系会直接失效（这是「压在照片上」的例外区，与遮罩同一类）。 */
-    .collection:not(.collection--no-banner) .collection__intro {
-      color: #fff;
-    }
-    .collection:not(.collection--no-banner) .collection__breadcrumb-list {
-      color: color-mix(in srgb, #fff 82%, transparent);
-    }
+    /* 文字不再翻白：遮罩是页面色，深字/浅字交给预设自己决定，
+       面包屑、标题、描述、亮点全部回到主题色，不再逐条覆盖。 */
     .collection:not(.collection--no-banner) .collection__description {
-      color: color-mix(in srgb, #fff 88%, transparent);
-      /* 文字列收在遮罩的实色区里（实色到 55%，文字最多 50%——压到渐隐带上
-         就会碰到照片高光，实测有一段对比度掉到 1.16:1）。
+      /* 文字列收在遮罩的实色区里（实色到 55%，文字最多 50%）。
          用百分比不用 ch：ch 随字号漂，平板一档还得再写一条补丁。 */
       max-inline-size: 50%;
     }
-    /* 亮点行：参考图是「线描细圆在上、两行标签在下、整组左靠」。
-       我们原来是白底实心圆 + 左图标右文字；遮罩是深色，白底圆会跳出来，
-       改成透明底 + 1px 半透明白描边（emoji 保留原色，metafield 格式不变）。 */
+    /* 亮点行：沿用参考图的竖排形态（图标在上、两行标签在下），但配色回到主题：
+       白底圆 + 品牌色文字。三列等分是因为遮罩只有 55% 宽，三条要点要排得进
+       这条列（50% ≈ 195px / 3 = 65px 一列）。 */
     .collection:not(.collection--no-banner) .collection__feature {
       flex: 1 1 0;
       min-inline-size: 0;
@@ -1736,14 +1724,12 @@
       text-align: center;
       font-size: 0.75rem;
       line-height: 1.25;
-      color: color-mix(in srgb, #fff 92%, transparent);
     }
     /* 基础规则给标签 max-inline-size: 9ch（横排形态用），三并列时按列宽走 */
     .collection:not(.collection--no-banner) .collection__feature-text {
       max-inline-size: 100%;
     }
-    /* 线描圆 36px、标签 12px：遮罩只有 55% 宽，三条要点必须排得进这条列
-       （52% ≈ 203px / 3 = 67px 一列）。40px 圆 + 13px 字会掉成 2+1，
+    /* 圆 36px、标签 12px：40px 圆 + 13px 字在 50% 的列里会掉成 2+1，
        第三条孤零零一行，跟参考图的「三并排」不是一回事。 */
     .collection:not(.collection--no-banner) .collection__feature-badge {
       inline-size: 2.25rem;
@@ -1752,14 +1738,9 @@
     .collection:not(.collection--no-banner) .collection__feature-emoji {
       font-size: 1.125rem;
     }
-    .collection:not(.collection--no-banner) .collection__feature-badge {
-      background-color: transparent;
-      border: 1px solid color-mix(in srgb, #fff 45%, transparent);
-      box-shadow: none;
-    }
     /* 描述与亮点之间的短分割线（参考图），只在有亮点时出现。
-       宽度跟描述同一条列（52%）：亮点是白字，跑出遮罩就等于压在亮照片上
-       （实测 390px 下第三条「Longer runtime」正好落在水面高光上，读不出）。 */
+       宽度跟描述同一条列（50%）：跑出遮罩就压到原图上（实测 390px 下
+       第三条「Longer runtime」正好落在水面高光上），对比度会掉。 */
     .collection:not(.collection--no-banner) .collection__features {
       position: relative;
       max-inline-size: 50%;
@@ -1775,7 +1756,7 @@
       inset-inline-start: 0;
       inline-size: 72px;
       block-size: 1px;
-      background-color: color-mix(in srgb, #fff 55%, transparent);
+      background-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
     }
     /* 无横幅：标题块回到常规流，底边距仍由 .collection--no-banner 的 2rem 提供 */
     .collection--no-banner .collection__intro {
