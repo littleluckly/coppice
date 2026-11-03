@@ -27,9 +27,10 @@ class CartDrawer extends HTMLElement {
     });
 
     const closeButton = this.querySelector('[data-cart-drawer-close]');
-    if (closeButton) closeButton.addEventListener('click', () => this.dialog.close(), { signal });
+    if (closeButton) closeButton.addEventListener('click', () => this._closeAnimated(), { signal });
 
     this.dialog.addEventListener('click', this._onBackdropClick, { signal });
+    this.dialog.addEventListener('cancel', this._onCancel, { signal });
     this.dialog.addEventListener('pointerdown', this._onDragStart, { signal });
     this.dialog.addEventListener('close', this._onClose, { signal });
 
@@ -57,6 +58,11 @@ class CartDrawer extends HTMLElement {
       this.dialog.showModal();
       document.documentElement.dataset.cartDrawerOpen = '';
     }
+    /* 收起动画进行中又被打开（如加购自动弹出）：作废未完成的关闭，
+       清掉关闭路径留下的标记——否则 is-closing 挂着，滑入会被下滑顶掉 */
+    this._closing = false;
+    this._closeGen = (this._closeGen || 0) + 1;
+    this.dialog.classList.remove('is-closing');
     this._refresh();
   }
 
@@ -72,8 +78,63 @@ class CartDrawer extends HTMLElement {
        不挡掉的话，"往下拽到一半又弹回"会顺手把抽屉关掉。 */
     if (this._dragEndedAt && performance.now() < this._dragEndedAt) return;
     /* dialog 自身是点击目标 = 点在遮罩上（面板盖满了 dialog 内部） */
-    if (event.target === this.dialog) this.dialog.close();
+    if (event.target === this.dialog) this._closeAnimated();
   };
+
+  /* Esc：拦下原生立即关闭，走下滑动画收场（与关闭钮/遮罩同一路径） */
+  _onCancel = (event) => {
+    event.preventDefault();
+    this._closeAnimated();
+  };
+
+  /**
+   * 动画收口关闭（2026-11-03 刘工：关闭从闪现改为向下滑出，与滑入对称）。
+   * 原生 dialog 的 close() 即 display:none——动画必须赶在 close() 之前播：
+   * 常规路径挂 .is-closing 播下滑 keyframes，animationend 后才真正 close()；
+   * 拖拽路径（fromDrag）transform 已在下拉途中，改用 transition 顺势滑到屏外。
+   * 桌面右侧抽屉不做下滑（"向下滑出"没有语义），reduced-motion 同样直接关闭。
+   * setTimeout 兜底 animationend/transitionend 偶发不触发（无头浏览器虚拟时间）；
+   * 代次计数让"收起途中又被打开"作废未完成的关闭（见 _show）。
+   * 内联样式与 is-closing 的清理由 _onClose 统一收口。
+   */
+  _closeAnimated(fromDrag = false) {
+    const dialog = this.dialog;
+    if (!dialog.open || this._closing) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const mobile = window.matchMedia('(max-width: 989.98px)').matches;
+    if (reduce || !mobile) {
+      dialog.close();
+      return;
+    }
+    this._closing = true;
+    const gen = (this._closeGen = (this._closeGen || 0) + 1);
+    let done = false;
+    const finish = () => {
+      if (done || gen !== this._closeGen) return;
+      done = true;
+      dialog.close();
+    };
+    if (fromDrag) {
+      dialog.style.transition = 'transform 0.22s ease-in';
+      dialog.style.transform = 'translateY(100%)';
+      const onTransEnd = (event) => {
+        if (event.target !== dialog || event.propertyName !== 'transform') return;
+        dialog.removeEventListener('transitionend', onTransEnd);
+        finish();
+      };
+      dialog.addEventListener('transitionend', onTransEnd);
+    } else {
+      dialog.classList.add('is-closing');
+      const onAnimEnd = (event) => {
+        /* ::backdrop 的动画也以 dialog 为 target，按 keyframes 名字区分 */
+        if (event.animationName !== 'cart-drawer-slide-down') return;
+        dialog.removeEventListener('animationend', onAnimEnd);
+        finish();
+      };
+      dialog.addEventListener('animationend', onAnimEnd);
+    }
+    window.setTimeout(finish, 320);
+  }
 
   /**
    * 下拉收起（移动端，与集合页筛选面板同一套手感）。
@@ -86,6 +147,8 @@ class CartDrawer extends HTMLElement {
   _onDragStart = (event) => {
     if (event.button > 0) return;
     if (!window.matchMedia('(max-width: 989.98px)').matches) return;
+    /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
+    if (this._closing) return;
 
     const handle = event.target.closest('.cart-drawer__grabber, .cart-drawer__header');
     /* 关闭按钮在头部行里，不能当成拖拽起点 */
@@ -117,12 +180,9 @@ class CartDrawer extends HTMLElement {
 
       if (moved && dy > dismissAt) {
         this._dragEndedAt = performance.now() + 350;
-        dialog.close();
-        /* 同步复位，不只依赖 close 事件——它是异步任务，某些环境（无头浏览器）
-           观察不到；不复位的话下次打开不会重播滑入，还会带着上一手的位移 */
-        dialog.style.animation = '';
-        dialog.style.transform = '';
-        dialog.style.transition = '';
+        /* 从当前拖拽位置顺势滑出（transition 收尾），不再原地闪没（2026-11-03）。
+           内联样式清理由 _onClose 统一收口，这里不复位。 */
+        this._closeAnimated(true);
         return;
       }
 
@@ -145,10 +205,13 @@ class CartDrawer extends HTMLElement {
 
   _onClose = () => {
     /* 拖拽留下的内联样式必须清零：不清的话下次打开会带着上一手的偏移量；
-       animation 也要清——拖动期间被压成 none，不清就不会重播滑入 */
+       animation 也要清——拖动期间被压成 none，不清就不会重播滑入。
+       is-closing 同步摘除、收起标记复位：桌面等路径会绕过动画直接 close()。 */
     this.dialog.style.transform = '';
     this.dialog.style.transition = '';
     this.dialog.style.animation = '';
+    this.dialog.classList.remove('is-closing');
+    this._closing = false;
     delete document.documentElement.dataset.cartDrawerOpen;
     if (this._lastTrigger && this._lastTrigger.isConnected) {
       this._lastTrigger.focus({ preventScroll: true });
