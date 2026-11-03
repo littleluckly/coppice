@@ -1676,7 +1676,9 @@
       max-width: 40vw;
     }
     .collection__toolbar .facets__sort-btn {
-      max-width: 44vw;
+      /* 与原 select 同一档限宽：44vw 会让「Alphabetically, A-Z」这类长名
+         把计数挤到下一行（375px 下总宽刚好越界） */
+      max-width: 40vw;
     }
     /* 抽屉 / 无 JS 流内：排序卡在筛选卡顶部（.facets__sort-slot 已给分隔线），
        这里只把 form 退回 block，不再重复画一条线。 */
