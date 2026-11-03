@@ -1241,7 +1241,11 @@
     padding: 10px 1rem;
     /* 2026-10-16 刘工：与产品卡加购按钮同款配色（静态品牌绿 + hover 提亮） */
     border: 1px solid var(--color-brand);
-    border-radius: var(--style-border-radius-inputs);
+    /* 2026-11-03 刘工：圆角跟加购按钮一致 —— .btn-solid 是 999px 胶囊，
+       这里原来读 --style-border-radius-inputs（商家输入框圆角，默认 4–6px），
+       同一个页面里一个胶囊一个方角，看着像两个年代的控件。
+       写死 999px 而不是再引用变量：胶囊就是胶囊，不该随输入框圆角设置变。 */
+    border-radius: 999px;
     background-color: var(--color-brand);
     color: var(--color-background);
     font: inherit;
