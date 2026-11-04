@@ -2108,6 +2108,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* 移动端徽标在流里，和图标之间要留一口气（4px）；
+       桌面徽标是绝对定位、不参与 flex 排布，这条那边等于不存在 */
+    gap: 0.25rem;
     /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-inline-size: 44px;
     min-block-size: 44px;
