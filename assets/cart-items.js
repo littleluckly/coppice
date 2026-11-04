@@ -24,7 +24,15 @@ class CartItems extends HTMLElement {
   _timer = null;
 
   connectedCallback() {
-    if (!this.querySelector('#cart-form')) return;
+    /**
+     * 绑定判据取「有没有改数量的接口」，**不是**「页面上有没有 #cart-form」。
+     * 那个 id 只存在于购物车页（sections/cart-lines.liquid）；抽屉里没有 <form>
+     * ——按钮都是 type="button"、输入框也不参与表单提交——于是抽屉里的
+     * <cart-items> 会在这一行直接 return，加减号点了没反应、输入框改完不提交，
+     * 而且不报任何错（2026-11-03 PC 抽屉「改数量不生效」的第二层根因）。
+     * data-cart-change-url 由两处模板都输出，才是真正的能力判据。
+     */
+    if (!this.dataset.cartChangeUrl) return;
 
     const { signal } = this._controller;
     this.addEventListener('click', this._onClick, { signal });
@@ -283,15 +291,19 @@ class CartItems extends HTMLElement {
       else target = line.querySelector(`[data-cart-qty="${descriptor.kind.replace('step', '')}"]`);
     }
 
-    /* 整行被删（数量归零）：落到标题，屏幕阅读器会重新念出「Cart」与数量 */
-    if (!target) target = document.querySelector('.cart-lines__title');
+    /* 整行被删（数量归零）：落到标题，屏幕阅读器会重新念出「Cart」与数量。
+       购物车页的标题与抽屉的标题都带 tabindex="-1"，两者都可能是当前上下文。 */
+    if (!target) target = document.querySelector('.cart-lines__title, .cart-drawer__title');
 
     if (target) target.focus({ preventScroll: true });
   }
 
   _announceTotal() {
     const template = this.dataset.cartLiveTemplate;
-    const total = document.querySelector('.cart-summary__total-value');
+    /* 两套小计：购物车页是 .cart-summary__total-value，抽屉里是
+       [data-cart-drawer-subtotal]。只认前者会让抽屉里改数量后
+       「小计已更新」这句话永远播不出来（[data-cart-live] 在抽屉里是有的）。 */
+    const total = document.querySelector('.cart-summary__total-value, [data-cart-drawer-subtotal]');
     if (!template || !total) return;
     this._announceMessage(template.replace('[total]', total.textContent.trim()));
   }
