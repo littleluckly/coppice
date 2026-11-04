@@ -49,8 +49,11 @@
     {%- endif -%}
 
     {%- comment -%}
-      Count badge is absolutely positioned so it never occupies layout space — the
-      later cart-updated sync then can't shift the entry and cause CLS.
+      Count badge. On desktop it is absolutely positioned over the icon so it never
+      occupies layout space (the later cart-updated sync then can't shift the entry
+      and cause CLS). On mobile it stays in flow — both mobile entries (header row,
+      drawer row) put it after the label — see .cart-entry__count in sections/main-nav.liquid
+      for the 990px split.
     {%- endcomment -%}
     {%- if cart.item_count > 0 -%}
       <span class="cart-entry__count" aria-hidden="true">{{ cart.item_count }}</span>
