@@ -1977,9 +1977,13 @@
     font-size: 0.875rem;
   }
 
+  /* 当前路由（2026-11-03 刘工）：浅品牌底 + 品牌字。
+     底色从 --color-brand 派生（不写死浅绿）——Noir 预设下自动变成"深底上的一层浅绿"。
+     取 10% 而不是更淡：二级列表本身已有 4% 前景底，叠上去还要能一眼分辨。 */
   .nav-drawer__link--current {
     color: var(--color-brand);
     font-weight: 700;
+    background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
   }
 
   /* 抽屉底部固定区（2026-10-13 参考图）：Account / Cart 竖排两行，
@@ -2116,15 +2120,12 @@
     block-size: 1.5rem;
   }
 
-  /* 徽标绝对定位：脱离文档流，将来加购更新计数时入口尺寸不变（避免 CLS） */
+  /* 徽标：小圆点 + 数字，尺寸固定，两位数自动横向撑开（border-radius 999px 不会破形） */
   .cart-entry__count {
-    position: absolute;
-    inset-block-start: 2px;
-    inset-inline-end: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* 视觉小，但数字不被压缩；两位数会自动横向撑开（border-radius 999px 不会破形） */
+    /* 视觉小，但数字不被压缩 */
     min-inline-size: 1.125rem;
     block-size: 1.125rem;
     padding-inline: 0.25rem;
@@ -2133,6 +2134,18 @@
     color: var(--color-background);
     background-color: var(--color-brand);
     border-radius: 999px;
+  }
+
+  /* 脱离文档流的角标**只在桌面**成立（2026-11-03 刘工）。
+     桌面页头是纯图标的 44×44 入口，角标压在图标右上角才不占位；
+     移动端两个入口都有文字行（页头是触控目标、抽屉是 Account/Cart 那种行式），
+     角标必须回到文档流里排到行尾——绝对定位会把数字压到图标上。 */
+  @media screen and (min-width: 990px) {
+    .cart-entry__count {
+      position: absolute;
+      inset-block-start: 2px;
+      inset-inline-end: 0;
+    }
   }
 
     .cart-entry__link:focus-visible {
