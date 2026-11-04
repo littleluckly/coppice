@@ -55,57 +55,66 @@
         </button>
       </div>
 
-      <div class="cart-drawer__content" data-cart-section="{{ section.id }}">
-        <div class="cart-drawer__body">
-          {%- if cart.item_count == 0 -%}
-            <div class="cart-drawer__empty">
-              <p class="cart-drawer__empty-heading">{{ 'cart.empty_heading' | t }}</p>
-              <p class="cart-drawer__empty-text">{{ 'cart.empty_text' | t }}</p>
-              <a class="btn-solid" href="{{ routes.all_products_collection_url }}">
-                {{- 'cart.continue_shopping' | t -}}
-              </a>
-            </div>
-          {%- else -%}
-            <cart-items
-              data-sections="{{ section.id }}"
-              data-cart-change-url="{{ routes.cart_change_url }}.js"
-              data-cart-update-url="{{ routes.cart_update_url }}.js"
-              data-cart-live-template="{{ 'cart.total_updated' | t: total: '[total]' }}"
-              data-error-message="{{ 'products.product_card.add_error' | t }}"
-            >
+      {%- comment -%}
+        <cart-items> 是**稳定外壳**，必须包住可刷新的 `[data-cart-section]`，
+        而不是被它包住（2026-11-03 修）。
+        改数量的请求由 cart-items 自己发出，回来时整块替换 `[data-cart-section]`；
+        若替换目标包含 cart-items 自身，元素会被断开重建——监听器、按行去重表、
+        正在飞的请求全跟着丢：连点两行时第二行的请求会被 disconnectedCallback
+        abort 掉，服务端没收到，界面却不动，表现为「改了数量没生效」。
+        外壳用 display:contents 退出布局，栅格与滚动仍由 .cart-drawer__content 承担。
+        空车时也渲染外壳：加购成功后只换内层，不必重新绑定。
+      {%- endcomment -%}
+      <cart-items
+        data-cart-change-url="{{ routes.cart_change_url }}.js"
+        data-cart-update-url="{{ routes.cart_update_url }}.js"
+        data-cart-live-template="{{ 'cart.total_updated' | t: total: '[total]' }}"
+        data-error-message="{{ 'products.product_card.add_error' | t }}"
+      >
+        <div class="cart-drawer__content" data-cart-section="{{ section.id }}">
+          <div class="cart-drawer__body">
+            {%- if cart.item_count == 0 -%}
+              <div class="cart-drawer__empty">
+                <p class="cart-drawer__empty-heading">{{ 'cart.empty_heading' | t }}</p>
+                <p class="cart-drawer__empty-text">{{ 'cart.empty_text' | t }}</p>
+                <a class="btn-solid" href="{{ routes.all_products_collection_url }}">
+                  {{- 'cart.continue_shopping' | t -}}
+                </a>
+              </div>
+            {%- else -%}
               <ul class="cart-drawer__list" role="list">
                 {%- for item in cart.items -%}
                   <li class="cart-drawer__item">{%- render 'cart-line', item: item -%}</li>
                 {%- endfor -%}
               </ul>
-            </cart-items>
+            {%- endif -%}
+          </div>
+
+          {%- if cart.item_count > 0 -%}
+            <div class="cart-drawer__footer">
+              <div class="cart-drawer__subtotal">
+                <span>{{ 'cart.subtotal' | t }}</span>
+                <span data-cart-drawer-subtotal>{{ cart.items_subtotal_price | money }}</span>
+              </div>
+              <p class="cart-drawer__note">{{ 'cart.shipping_note' | t }}</p>
+              <p class="visually-hidden" role="status" data-cart-live></p>
+
+              {%- comment -%}
+                两个按钮都是普通链接/表单提交，不依赖 JS：
+                结账直接 POST name=checkout（Shopify 认这个字段，不需要带行项）。
+              {%- endcomment -%}
+              <form action="{{ routes.cart_url }}" method="post" class="cart-drawer__actions">
+                <button type="submit" name="checkout" class="btn-solid cart-drawer__checkout">
+                  {{- 'cart.checkout' | t -}}
+                </button>
+              </form>
+              <a class="btn-solid btn-solid--quiet cart-drawer__view" href="{{ routes.cart_url }}">
+                {{- 'cart.view_cart' | t -}}
+              </a>
+            </div>
           {%- endif -%}
         </div>
-
-        {%- if cart.item_count > 0 -%}
-          <div class="cart-drawer__footer">
-            <div class="cart-drawer__subtotal">
-              <span>{{ 'cart.subtotal' | t }}</span>
-              <span data-cart-drawer-subtotal>{{ cart.items_subtotal_price | money }}</span>
-            </div>
-            <p class="cart-drawer__note">{{ 'cart.shipping_note' | t }}</p>
-            <p class="visually-hidden" role="status" data-cart-live></p>
-
-            {%- comment -%}
-              两个按钮都是普通链接/表单提交，不依赖 JS：
-              结账直接 POST name=checkout（Shopify 认这个字段，不需要带行项）。
-            {%- endcomment -%}
-            <form action="{{ routes.cart_url }}" method="post" class="cart-drawer__actions">
-              <button type="submit" name="checkout" class="btn-solid cart-drawer__checkout">
-                {{- 'cart.checkout' | t -}}
-              </button>
-            </form>
-            <a class="btn-solid btn-solid--quiet cart-drawer__view" href="{{ routes.cart_url }}">
-              {{- 'cart.view_cart' | t -}}
-            </a>
-          </div>
-        {%- endif -%}
-      </div>
+      </cart-items>
     </div>
   </dialog>
   </bottom-sheet>
@@ -113,6 +122,12 @@
 
 {% stylesheet %}
   cart-drawer {
+    display: contents;
+  }
+
+  /* 刷新外壳不参与布局：把 .cart-drawer__content 直接交给 .cart-drawer__panel 的栅格，
+     与重构前（content 是 panel 的直接子级）完全一致。 */
+  .cart-drawer cart-items {
     display: contents;
   }
 
