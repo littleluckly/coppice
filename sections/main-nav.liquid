@@ -41,6 +41,11 @@
     与下拉收起；开合整体移交 <bottom-sheet>（keyframes 在 critical.css），
     section 里不再自己写 translate 过渡——dialog 从 display:none 打开的同一帧里
     transition 没有起点，只会闪现。
+    同一日补：打开抽屉时自动展开"当前页所在的那一组"——分组按钮上由
+    `link.child_current or link.child_active` 打出 data-nav-branch，
+    nav-drawer.js 的 _resetToCurrent 在每次打开时把带标记的按钮逐层展开
+    （三级当前页时一、二级两个按钮都带标记）。没有这一条，顾客在某个子分类页
+    打开菜单只能看到一排收起的组，"你在哪"这件事被手风琴藏掉了。
 
   Recursion is deliberately capped at three levels (Shop > Mowers > Walk-behind).
 {% endcomment %}
@@ -2110,9 +2115,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* 移动端徽标在流里，和图标之间要留一口气（4px）；
-       桌面徽标是绝对定位、不参与 flex 排布，这条那边等于不存在 */
-    gap: 0.25rem;
     /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-inline-size: 44px;
     min-block-size: 44px;
@@ -2125,8 +2127,14 @@
     block-size: 1.5rem;
   }
 
-  /* 徽标：小圆点 + 数字，尺寸固定，两位数自动横向撑开（border-radius 999px 不会破形） */
+  /* 徽标：压在图标的右上角、脱离文档流（加购后计数刷新不推移布局），
+     尺寸固定，两位数自动横向撑开（border-radius 999px 不会破形）。
+     定位写在这里而不是加一层 :not()——PC 与移动端页头都吃这一条，
+     抽屉那一行再显式撤销（下面紧跟的一条），与 .compare-entry--in-drawer 同一路子。 */
   .cart-entry__count {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-end: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2141,16 +2149,12 @@
     border-radius: 999px;
   }
 
-  /* 脱离文档流的角标**只在桌面**成立（2026-11-03 刘工）。
-     桌面页头是纯图标的 44×44 入口，角标压在图标右上角才不占位；
-     移动端两个入口都有文字行（页头是触控目标、抽屉是 Account/Cart 那种行式），
-     角标必须回到文档流里排到行尾——绝对定位会把数字压到图标上。 */
-  @media screen and (min-width: 990px) {
-    .cart-entry__count {
-      position: absolute;
-      inset-block-start: 2px;
-      inset-inline-end: 0;
-    }
+  /* 抽屉里那枚回到文档流（2026-11-03 刘工）：这一行是「图标 + Cart 文字 + 数字」的行式，
+     数字排在行尾，压不到图标上。判定用修饰类而不是断点——同一个组件换个容器行为跟着变，
+     跟屏幕多宽无关。 */
+  .cart-entry--in-drawer .cart-entry__count {
+    position: static;
+    inset: auto;
   }
 
   .cart-entry__link:focus-visible {
