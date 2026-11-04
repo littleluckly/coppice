@@ -87,7 +87,6 @@ class CartDrawer extends HTMLElement {
     const el = this.querySelector('[data-cart-drawer-count]');
     if (el && typeof count === 'number') el.textContent = `(${count})`;
   };
-
   _onBackdropClick = (event) => {
     /* 拖拽刚松手时浏览器还会补一个 click，落点可能正好在遮罩上——
        不挡掉的话，"往下拽到一半又弹回"会顺手把抽屉关掉。 */

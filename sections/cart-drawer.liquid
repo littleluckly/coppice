@@ -14,6 +14,8 @@
 
   内容区包在 `[data-cart-section]` 里：assets/cart-items.js 改数量后靠它整块替换，
   连脚下的小计一起更新，不用手写「把这个数字改成那个数字」。
+  注意「谁包谁」：`<cart-items>` 在外、`[data-cart-section]` 在内 —— 反过来会让
+  替换动作把发出请求的元素自己也换掉（详见下面 <cart-items> 处的注释）。
 {% endcomment %}
 
 <script src="{{ 'cart-drawer.js' | asset_url }}" defer></script>
@@ -45,7 +47,7 @@
     <div class="cart-drawer__grabber" aria-hidden="true"></div>
     <div class="cart-drawer__panel">
       <div class="cart-drawer__header">
-        <h2 class="cart-drawer__title" id="CartDrawerTitle-{{ section.id }}">
+        <h2 class="cart-drawer__title" id="CartDrawerTitle-{{ section.id }}" tabindex="-1">
           {{ 'cart.title' | t }}
           <span class="cart-drawer__count" data-cart-drawer-count>({{ cart.item_count }})</span>
         </h2>
