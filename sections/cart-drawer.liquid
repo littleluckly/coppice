@@ -17,6 +17,15 @@
 {% endcomment %}
 
 <script src="{{ 'cart-drawer.js' | asset_url }}" defer></script>
+{%- comment -%}
+  cart-items.js 必须在这里加载，不能只在购物车页（sections/cart-lines.liquid）加载：
+  抽屉是全站组件，商品页 / 集合页里根本没有 cart-lines 这个 section，
+  之前脚本只在购物车页出现 ⇒ 其它页面上的 <cart-items> 是个**没有行为的空壳**，
+  加减号点了没反应、输入框改完也不会提交（2026-11-03 修 PC 抽屉「改数量不生效」）。
+  抽屉挂在 layout 上、永远在页面里，所以这里是全站加载它的正确位置；
+  cart-lines 那边的同一行已删除，避免同一份脚本被塞两次。
+{%- endcomment -%}
+<script src="{{ 'cart-items.js' | asset_url }}" defer></script>
 {{ 'cart-line.css' | asset_url | stylesheet_tag }}
 
 <cart-drawer
