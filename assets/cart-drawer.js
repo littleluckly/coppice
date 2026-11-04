@@ -101,6 +101,7 @@ class CartDrawer extends HTMLElement {
     const fromItems = detail.source === 'items';
     if (!fromItems && this.dialog.open) this._refresh();
   };
+
   _onBackdropClick = (event) => {
     /* 拖拽刚松手时浏览器还会补一个 click，落点可能正好在遮罩上——
        不挡掉的话，"往下拽到一半又弹回"会顺手把抽屉关掉。 */
