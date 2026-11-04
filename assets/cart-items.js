@@ -318,10 +318,14 @@ class CartItems extends HTMLElement {
     });
   }
 
-  /** 页头角标靠这个事件同步（assets/cart-badge.js） */
+  /**
+   * 页头角标靠这个事件同步（assets/cart-badge.js）。
+   * `source: 'items'` 是给 cart-drawer 的判据：这条更新来自抽屉内部、内容区
+   * 已经由 _render 换过，抽屉不该再刷一次；缺这个标记的就是外部加购/另一个标签页。
+   */
   _announceCount(count) {
     if (typeof count !== 'number') return;
-    document.dispatchEvent(new CustomEvent('cart:updated', { detail: { count } }));
+    document.dispatchEvent(new CustomEvent('cart:updated', { detail: { count, source: 'items' } }));
   }
 }
 
