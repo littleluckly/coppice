@@ -51,11 +51,15 @@ class NavDrawer extends HTMLElement {
     const sheet = this._sheet;
     if (this._dialog.open && !sheet?.isClosing) return;
 
-    // 关闭期间可能展开了某一层：重开时全部收起（与旧版"回到根面板"同义）
-    this._collapseAll();
+    // 重开时先全部收起，再展开"当前页所在的那一组"（见 _resetToCurrent）
+    this._resetToCurrent();
 
     if (sheet) sheet.open();
     else if (!this._dialog.open) this._dialog.showModal();
+
+    /* 必须在 showModal 之后再滚：关着的 dialog 是 display:none，没有布局，
+       offsetTop / clientHeight 全是 0，滚了等于没滚。 */
+    this._centerCurrent();
 
     // 禁用 autofocus（AGENTS §8），显式移焦到关闭按钮——比依赖
     // showModal() 的"首个可聚焦元素"行为更稳定。
@@ -131,6 +135,47 @@ class NavDrawer extends HTMLElement {
     this._dialog?.querySelectorAll('[data-nav-toggle][aria-expanded="true"]').forEach((button) => {
       this._setExpanded(button, false);
     });
+  };
+
+  /**
+   * 打开抽屉时的初始展开态（2026-11-03 刘工）：全部收起，只展开"当前页所在的那一组"。
+   *
+   * 标记由 Liquid 打在分组按钮上（data-nav-branch，条件是该组子树里有当前页）。
+   * 逐层展开是必须的：当前页在三级时，一级和二级两个按钮都带标记，
+   * querySelectorAll 按文档顺序返回（祖先在前），先开父再开子，两条都成立；
+   * 反过来只开最内层会得到一个仍然收起的父级，等于什么都没展开。
+   * 这里只展开、不收起——_setExpanded(false) 才会级联收起后代。
+   */
+  _resetToCurrent = () => {
+    this._collapseAll();
+    this._dialog?.querySelectorAll('[data-nav-branch]').forEach((button) => {
+      this._setExpanded(button, true);
+    });
+  };
+
+  /**
+   * 把当前项滚到列表可视区中部（2026-11-03 刘工）。
+   *
+   * 只解决"展开分支"是不够的：当前组排在第 6 个、下面又挂十来个子项时，
+   * 展开后当前项仍在折叠线以下——顾客看到一个莫名张开的组，却看不到自己。
+   *
+   * **用 offsetTop 而不是 getBoundingClientRect**：打开瞬间面板正在做滑入动画
+   * （transform: translateY），rect 会把这段位移算进去，量出来的位置整体偏出一屏。
+   * offsetTop 是布局位置，与 transform 无关。
+   *
+   * 只动 .nav-drawer__list 的 scrollTop，绝不调 scrollIntoView ——
+   * 后者会连带滚动文档（背景页虽然被 overflow:hidden 锁着手势，程序化滚动仍能滚），
+   * 关掉抽屉后页面就停在了一个莫名其妙的位置。
+   */
+  _centerCurrent = () => {
+    const list = this._dialog?.querySelector('.nav-drawer__list');
+    const current = this._dialog?.querySelector('.nav-drawer__link--current');
+    if (!list || !current) return;
+
+    /* 两者 offsetParent 相同（position:fixed 的 dialog），相减即"在列表内容里的位置" */
+    const top = current.offsetTop - list.offsetTop;
+    const target = top - (list.clientHeight - current.offsetHeight) / 2;
+    list.scrollTop = Math.max(0, target);
   };
 
   /**
