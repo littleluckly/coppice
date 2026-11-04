@@ -601,6 +601,7 @@
                     data-nav-toggle
                     aria-expanded="false"
                     aria-controls="{{ sub_id }}"
+                    {% if link.child_current or link.child_active %}data-nav-branch{% endif %}
                   >
                     <span>{{ link.title }}</span>
                     <span class="nav-drawer__chevron" aria-hidden="true">
@@ -620,6 +621,7 @@
                                 data-nav-toggle
                                 aria-expanded="false"
                                 aria-controls="{{ subsub_id }}"
+                                {% if child.child_current or child.child_active %}data-nav-branch{% endif %}
                               >
                                 <span>{{ child.title }}</span>
                                 <span class="nav-drawer__chevron" aria-hidden="true">
