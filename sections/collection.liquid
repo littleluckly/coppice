@@ -85,6 +85,7 @@
 {%- if section.settings.show_sort -%}
   <script src="{{ 'sort-select.js' | asset_url }}" defer></script>
 {%- endif -%}
+<script src="{{ 'view-toggle.js' | asset_url }}" defer></script>
 {{ 'product-card.css' | asset_url | stylesheet_tag }}
 
 <div class="collection{% unless has_banner %} collection--no-banner{% endunless %} full-width" data-collection-root>
@@ -388,6 +389,35 @@
             <p class="collection__count" aria-live="polite" data-facets-count>
               {{ 'navigation.products_count' | t: count: collection.products_count }}
             </p>
+
+            {%- comment -%}
+              视图切换（2026-11-03 刘工）：网格 ⇄ 列表。
+              位置由 CSS order 决定——移动端紧跟「排序」右侧、计数推到行尾；
+              桌面在工具条最右。
+              状态挂在 <html data-collection-view> 而不是本 section：筛选走
+              Section Rendering 会整块替换 <collection-facets> 的子节点，
+              状态放 section 里刷新一次就丢。首帧无闪烁由 theme.liquid 的
+              内联脚本负责（读 localStorage 先写属性），这里只做点击与同步。
+              单一按钮 = WAI-ARIA 的 toggle button：aria-pressed 表示「列表态是否开启」，
+              图标跟着 pressed 走（列表图标 = 列表态），标签恒定不随状态改词。
+            {%- endcomment -%}
+            {%- if collection.products_count > 0 -%}
+            <view-toggle class="view-toggle" data-view-toggle>
+              <button
+                type="button"
+                class="view-toggle__button"
+                aria-pressed="false"
+                aria-label="{{ 'collections.view.list_label' | t }}"
+              >
+                <span class="view-toggle__icon view-toggle__icon--grid" aria-hidden="true">
+                  {{- 'icon-view-grid.svg' | inline_asset_content -}}
+                </span>
+                <span class="view-toggle__icon view-toggle__icon--list" aria-hidden="true">
+                  {{- 'icon-view-list.svg' | inline_asset_content -}}
+                </span>
+              </button>
+            </view-toggle>
+            {%- endif -%}
 
             {%- render 'active-facets', filters: collection.filters, clear_url: collection.url -%}
           </div>
@@ -912,7 +942,7 @@
     justify-content: space-between;
     gap: 0.5rem;
     min-height: 40px;
-    padding: 8px 0.75rem;
+    padding: 12px;
     border-radius: 8px;
     font-size: 0.92rem;
     color: var(--color-foreground);
@@ -1082,6 +1112,51 @@
     stroke-width: 2;
     color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
+  /* ---- 视图切换（网格 / 列表，2026-11-03 刘工）----
+     与 Filters / 排序控件同一套边框与圆角（--facet-control-*），图标 18px、
+     颜色与 Filters 的 chevron 同为前景色 60%，三个控件才像同一套东西。 */
+  .view-toggle {
+    display: flex;
+    flex: none;
+  }
+  /* 自定义元素未升级（无 JS / 脚本未到）：整块隐藏——留一个按不动的按钮
+     比不显示更糟；CSS 也就不用再依赖 .js 门控。 */
+  view-toggle:not(:defined) {
+    display: none;
+  }
+  .view-toggle__button {
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    border: var(--facet-control-border);
+    border-radius: var(--facet-control-radius);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .view-toggle__button:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+  .view-toggle__button svg {
+    inline-size: 18px;
+    block-size: 18px;
+    stroke-width: 1.6;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  }
+  /* 两个图标按 aria-pressed 二选一：未按下 = 网格态（显示网格图标），
+     按下 = 列表态（显示行图标）。脚本只改 aria-pressed，不碰 DOM。 */
+  .view-toggle__icon {
+    display: none;
+  }
+  .view-toggle__button[aria-pressed='false'] .view-toggle__icon--grid {
+    display: block;
+  }
+  .view-toggle__button[aria-pressed='true'] .view-toggle__icon--list {
+    display: block;
+  }
+
   .collection__count {
     font-size: 0.85rem;
     color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
@@ -1241,7 +1316,11 @@
     padding: 10px 1rem;
     /* 2026-10-16 刘工：与产品卡加购按钮同款配色（静态品牌绿 + hover 提亮） */
     border: 1px solid var(--color-brand);
-    border-radius: var(--style-border-radius-inputs);
+    /* 2026-11-03 刘工：圆角跟加购按钮一致 —— .btn-solid 是 999px 胶囊，
+       这里原来读 --style-border-radius-inputs（商家输入框圆角，默认 4–6px），
+       同一个页面里一个胶囊一个方角，看着像两个年代的控件。
+       写死 999px 而不是再引用变量：胶囊就是胶囊，不该随输入框圆角设置变。 */
+    border-radius: 999px;
     background-color: var(--color-brand);
     color: var(--color-background);
     font: inherit;
@@ -1352,6 +1431,57 @@
     .collection__grid {
       grid-template-columns: repeat(4, 1fr);
     }
+  }
+
+  /* ===================================================================
+     列表视图（html[data-collection-view='list']）
+     卡片改成「图左 / 信息右」两列**网格**，不改 product-card 的标记——
+     那张卡被首页 featured-collection 与搜索页共用，加包裹层会波及它们。
+     子节点统一落在第 2 列，媒体盒用 span 6 撑起左列（缺项时该行高度为 0，
+     不留空隙）；行号不写死，靠自动流排，多一个少一个都不会错位。
+     =================================================================== */
+  html[data-collection-view='list'] .collection__grid {
+    grid-template-columns: 1fr;
+  }
+  html[data-collection-view='list'] .collection__grid .product-card {
+    display: grid;
+    /* 图片列：手机 ~104px、桌面封顶 168px。用 clamp 而不是 minmax——
+       minmax 在窄格里会一直贴在 88px 上，图片小到看不清是什么机器。 */
+    grid-template-columns: clamp(104px, 30%, 168px) minmax(0, 1fr);
+    align-content: start;
+    column-gap: 1rem;
+    row-gap: 0.35rem;
+  }
+  html[data-collection-view='list'] .collection__grid .product-card > * {
+    grid-column: 2;
+  }
+  /* 媒体盒必须 stretch + 图片改成「填满容器」：卡片图是 aspect-ratio: 1 的方图，
+     列表里右列内容比 168px 高/矮都不一定，方图会溢到卡片外面（桌面实测：
+     图比卡高 40px，直接越出圆角边框）。改成高度 100% + contain，
+     图跟着行高走，不再溢出也不被裁。 */
+  html[data-collection-view='list'] .collection__grid .product-card__media-wrap {
+    grid-column: 1;
+    grid-row: 1 / span 6;
+    align-self: stretch;
+    min-block-size: 0;
+  }
+  html[data-collection-view='list'] .collection__grid .product-card__media {
+    block-size: 100%;
+  }
+  html[data-collection-view='list'] .collection__grid .product-card__media img {
+    block-size: 100%;
+    aspect-ratio: auto;
+    object-fit: contain;
+  }
+  /* 这两处的基础规则靠 margin-top:auto 把按钮压到卡底（纵向卡），
+     横排时该行高度就是内容高度，auto 会把它顶开，这里清零。 */
+  html[data-collection-view='list'] .collection__grid .product-card__compare,
+  html[data-collection-view='list'] .collection__grid .product-card__quick-add {
+    margin-block-start: 0;
+  }
+  /* 加购按钮不再拉满整行：桌面信息列宽 700+px，一条全宽绿条会把整张卡压住 */
+  html[data-collection-view='list'] .collection__grid .product-card__add {
+    max-inline-size: min(100%, 240px);
   }
 
   /* 分页：圆形按钮（参考截图 2026-10-16）——白圆 + 浅边框居中一排，
@@ -1633,6 +1763,9 @@
     .collection__toolbar .collection__count {
       order: 3;
     }
+    .collection__toolbar .view-toggle {
+      order: 4;
+    }
     /* 筛选卡头部：桌面复用抽屉的头行做「Filters」卡头（参考稿同形态），
        关闭按钮只在抽屉里有意义，桌面隐藏。 */
     .facets__mobile-head {
@@ -1871,8 +2004,12 @@
       /* 不右推：紧邻 Filters，自由空间全给计数，行尾对齐 */
       margin-inline-start: 0;
     }
-    .collection__toolbar .collection__count {
+    /* 视图切换紧跟「排序」右侧（2026-11-03 刘工），计数推到行尾 */
+    .collection__toolbar .view-toggle {
       order: 3;
+    }
+    .collection__toolbar .collection__count {
+      order: 4;
       margin-inline-start: auto;
     }
     .collection__toolbar .facets__active {

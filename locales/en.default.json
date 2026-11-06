@@ -85,6 +85,9 @@
     "sort": {
       "label": "Sort by"
     },
+    "view": {
+      "list_label": "List view"
+    },
     "filters": {
       "label": "Filters",
       "open": "Filters",

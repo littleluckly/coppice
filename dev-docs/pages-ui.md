@@ -240,6 +240,7 @@
 - **面包屑**：标题块内 `<nav aria-label="Breadcrumb">`，Home（`routes.root_url`）/ 集合名；页内唯一 `h1` = 集合标题（标题块内）。
 - **筛选器 UI**：HTML/样式/交互壳完全自主重写（不照搬 Dawn DOM）；数据与更新仍走原生 `collection.filters` + Section Rendering API（红线保留）。实现形态：`snippets/faceted-filters.liquid` 通用件（集合页与搜索页共用）+ 单表单（筛选组 + sort_by + q 全在一个 GET form 内），`Custom Element` 拦截提交做局部更新。
 - **排序控件（2026-11-03 改）**：有 JS 时全断点接管 —— `≥990px` 按钮 + 浮层 listbox，`<990px` **底部滑入面板**（`<dialog>` + `showModal`，参数对齐筛选抽屉：抓手 + 16px 上圆角 / 85vh / 0.28s ease-out / 遮罩 40% 黑 / 下拉收起同阈值）。原「移动端保留原生 select」作废：与 Filters 并排时一个开抽屉、一个弹系统选择器，同一次操作出现两种界面语言。选项 DOM 只有一份，开面板时搬进 dialog，收起时搬回组件内。Tools 条两个控件（Filters / 排序）共用 `--facet-control-radius`（= `max(商家输入框圆角, 14px)`）与 `--facet-control-border`，高度统一 44px，均带同形状下拉箭头。
+- **视图切换（2026-11-03）**：工具条加一个图标按钮，网格 ⇄ 列表。移动端紧跟「排序」右侧、桌面在工具条最右；图标按 `aria-pressed` 二选一（未按下=网格态，按下=列表态），标签恒为「List view」（WAI-ARIA toggle button）。状态挂 `<html data-collection-view>` 而非 section 根（筛选走 Section Rendering 会替换子树，状态会丢），首帧由 `layout/theme.liquid` 的内联脚本从 `localStorage['coppice:collection-view']` 预写，避免列表态用户先看到网格；`view-toggle:not(:defined)` 在无 JS 时整块隐藏。列表版式=卡片改「图左 / 信息右」两列网格（`clamp(104px,30%,168px)` 图列 + 信息列），**不改 product-card 标记**（该卡被首页与搜索页共用），加购按钮封顶 240px。
 - **商品卡快加**：单变体且 available → 快加按钮（`/cart/add.js` + aria-live + 无 JS 表单降级）；多变体不渲染 CTA；售罄置灰。进 `product-card` snippet 全局生效（首页同步获得）。
 - **价格筛选**：原生 min/max 形态（效果图 v1 的固定区间勾选为自研禁区，已放弃该形态）。
 

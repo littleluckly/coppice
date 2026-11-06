@@ -49,8 +49,12 @@
     {%- endif -%}
 
     {%- comment -%}
-      Count badge is absolutely positioned so it never occupies layout space — the
-      later cart-updated sync then can't shift the entry and cause CLS.
+      Count badge. In the header entries (desktop and mobile alike) it is absolutely
+      positioned over the icon's top-right corner so it never occupies layout space —
+      the later cart-updated sync then can't shift the entry and cause CLS.
+      In the drawer the row has a visible label, so the badge stays in flow and sits
+      at the end of the row. The split lives on .cart-entry:not(.cart-entry--in-drawer)
+      in sections/main-nav.liquid.
     {%- endcomment -%}
     {%- if cart.item_count > 0 -%}
       <span class="cart-entry__count" aria-hidden="true">{{ cart.item_count }}</span>

@@ -6,6 +6,21 @@
       document.documentElement.classList.add('js');
     </script>
 
+    {%- comment -%}
+      集合页视图偏好（网格 / 列表）：必须在首帧前写进 <html data-collection-view>，
+      否则列表态用户会先看到一屏网格再跳成列表。与 assets/view-toggle.js 共用
+      同一个 storage key；读不到 / 存储被禁就维持默认网格，不报错。
+    {%- endcomment -%}
+    <script>
+      try {
+        if (localStorage.getItem('coppice:collection-view') === 'list') {
+          document.documentElement.dataset.collectionView = 'list';
+        }
+      } catch (error) {
+        /* 隐私模式等场景：静默退回默认网格 */
+      }
+    </script>
+
     {% # Inlined CSS Variables %}
     {% render 'css-variables' %}
 

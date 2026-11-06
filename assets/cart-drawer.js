@@ -81,11 +81,25 @@ class CartDrawer extends HTMLElement {
     else if (this.dialog.open) this.dialog.close();
   }
 
-  /** 只改标题计数，不整块刷新——抽屉内改数量时 cart-items 已经自己换过内容区了 */
+  /**
+   * 标题计数同步（cart:updated 带真实 item_count）。
+   *
+   * 计数之外还要判断「内容区是不是旧的」：cart:updated 有两条来路——
+   *   ① cart-items 自己改完数量派发的（detail.source === 'items'），此刻内容区
+   *      已经整块换过，这里只管标题数字，别再发一次请求；
+   *   ② 外部加购（quick-add / product-form / supplies）或另一个标签页改车，
+   *      detail 里只有 count。这时抽屉若开着，列表还是旧的——加购事件 cart:added
+   *      是**点击即发**的，_show() 里的那次刷新很可能跑在 /cart/add.js 之前，
+   *      于是抽屉打开却看不到刚加的东西。必须再刷一次。
+   */
   _onCountChange = (event) => {
-    const count = event.detail && event.detail.count;
+    const detail = event.detail || {};
+    const count = detail.count;
     const el = this.querySelector('[data-cart-drawer-count]');
     if (el && typeof count === 'number') el.textContent = `(${count})`;
+
+    const fromItems = detail.source === 'items';
+    if (!fromItems && this.dialog.open) this._refresh();
   };
 
   _onBackdropClick = (event) => {
@@ -170,15 +184,23 @@ class CartDrawer extends HTMLElement {
     }
   };
 
+  /**
+   * 取回本 section 的最新渲染，只换 `[data-cart-section]`（连小计一起）。
+   *
+   * **裸 fetch，禁止带 `Accept: application/json`**：商品页上带这个头，Shopify 会
+   * 走 AJAX Product API 返回 `{"product":{…}}`，`payload[id]` 恒为 undefined
+   * （SDD §6.2 实测踩坑，与 compare-lookup 同一条）。`?sections=` 自己就会回
+   * `{ "<section id>": "<html>" }`，不需要任何头。
+   * no-store：抽屉内容必须反映刚刚发生的加购，走缓存等于白刷。
+   */
   async _refresh() {
     const id = this.dataset.sectionId;
     if (!id) return;
 
     try {
-      const response = await fetch(
-        `${window.location.pathname}?sections=${encodeURIComponent(id)}`,
-        { headers: { Accept: 'application/json' } }
-      );
+      const response = await fetch(`${window.location.pathname}?sections=${encodeURIComponent(id)}`, {
+        cache: 'no-store',
+      });
 
       const payload = response.ok ? await response.json() : null;
       const html = payload && payload[id];

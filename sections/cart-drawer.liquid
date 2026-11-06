@@ -14,9 +14,20 @@
 
   内容区包在 `[data-cart-section]` 里：assets/cart-items.js 改数量后靠它整块替换，
   连脚下的小计一起更新，不用手写「把这个数字改成那个数字」。
+  注意「谁包谁」：`<cart-items>` 在外、`[data-cart-section]` 在内 —— 反过来会让
+  替换动作把发出请求的元素自己也换掉（详见下面 <cart-items> 处的注释）。
 {% endcomment %}
 
 <script src="{{ 'cart-drawer.js' | asset_url }}" defer></script>
+{%- comment -%}
+  cart-items.js 必须在这里加载，不能只在购物车页（sections/cart-lines.liquid）加载：
+  抽屉是全站组件，商品页 / 集合页里根本没有 cart-lines 这个 section，
+  之前脚本只在购物车页出现 ⇒ 其它页面上的 <cart-items> 是个**没有行为的空壳**，
+  加减号点了没反应、输入框改完也不会提交（2026-11-03 修 PC 抽屉「改数量不生效」）。
+  抽屉挂在 layout 上、永远在页面里，所以这里是全站加载它的正确位置；
+  cart-lines 那边的同一行已删除，避免同一份脚本被塞两次。
+{%- endcomment -%}
+<script src="{{ 'cart-items.js' | asset_url }}" defer></script>
 {{ 'cart-line.css' | asset_url | stylesheet_tag }}
 
 <cart-drawer
@@ -36,7 +47,7 @@
     <div class="cart-drawer__grabber" aria-hidden="true"></div>
     <div class="cart-drawer__panel">
       <div class="cart-drawer__header">
-        <h2 class="cart-drawer__title" id="CartDrawerTitle-{{ section.id }}">
+        <h2 class="cart-drawer__title" id="CartDrawerTitle-{{ section.id }}" tabindex="-1">
           {{ 'cart.title' | t }}
           <span class="cart-drawer__count" data-cart-drawer-count>({{ cart.item_count }})</span>
         </h2>
@@ -46,57 +57,66 @@
         </button>
       </div>
 
-      <div class="cart-drawer__content" data-cart-section="{{ section.id }}">
-        <div class="cart-drawer__body">
-          {%- if cart.item_count == 0 -%}
-            <div class="cart-drawer__empty">
-              <p class="cart-drawer__empty-heading">{{ 'cart.empty_heading' | t }}</p>
-              <p class="cart-drawer__empty-text">{{ 'cart.empty_text' | t }}</p>
-              <a class="btn-solid" href="{{ routes.all_products_collection_url }}">
-                {{- 'cart.continue_shopping' | t -}}
-              </a>
-            </div>
-          {%- else -%}
-            <cart-items
-              data-sections="{{ section.id }}"
-              data-cart-change-url="{{ routes.cart_change_url }}.js"
-              data-cart-update-url="{{ routes.cart_update_url }}.js"
-              data-cart-live-template="{{ 'cart.total_updated' | t: total: '[total]' }}"
-              data-error-message="{{ 'products.product_card.add_error' | t }}"
-            >
+      {%- comment -%}
+        <cart-items> 是**稳定外壳**，必须包住可刷新的 `[data-cart-section]`，
+        而不是被它包住（2026-11-03 修）。
+        改数量的请求由 cart-items 自己发出，回来时整块替换 `[data-cart-section]`；
+        若替换目标包含 cart-items 自身，元素会被断开重建——监听器、按行去重表、
+        正在飞的请求全跟着丢：连点两行时第二行的请求会被 disconnectedCallback
+        abort 掉，服务端没收到，界面却不动，表现为「改了数量没生效」。
+        外壳用 display:contents 退出布局，栅格与滚动仍由 .cart-drawer__content 承担。
+        空车时也渲染外壳：加购成功后只换内层，不必重新绑定。
+      {%- endcomment -%}
+      <cart-items
+        data-cart-change-url="{{ routes.cart_change_url }}.js"
+        data-cart-update-url="{{ routes.cart_update_url }}.js"
+        data-cart-live-template="{{ 'cart.total_updated' | t: total: '[total]' }}"
+        data-error-message="{{ 'products.product_card.add_error' | t }}"
+      >
+        <div class="cart-drawer__content" data-cart-section="{{ section.id }}">
+          <div class="cart-drawer__body">
+            {%- if cart.item_count == 0 -%}
+              <div class="cart-drawer__empty">
+                <p class="cart-drawer__empty-heading">{{ 'cart.empty_heading' | t }}</p>
+                <p class="cart-drawer__empty-text">{{ 'cart.empty_text' | t }}</p>
+                <a class="btn-solid" href="{{ routes.all_products_collection_url }}">
+                  {{- 'cart.continue_shopping' | t -}}
+                </a>
+              </div>
+            {%- else -%}
               <ul class="cart-drawer__list" role="list">
                 {%- for item in cart.items -%}
                   <li class="cart-drawer__item">{%- render 'cart-line', item: item -%}</li>
                 {%- endfor -%}
               </ul>
-            </cart-items>
+            {%- endif -%}
+          </div>
+
+          {%- if cart.item_count > 0 -%}
+            <div class="cart-drawer__footer">
+              <div class="cart-drawer__subtotal">
+                <span>{{ 'cart.subtotal' | t }}</span>
+                <span data-cart-drawer-subtotal>{{ cart.items_subtotal_price | money }}</span>
+              </div>
+              <p class="cart-drawer__note">{{ 'cart.shipping_note' | t }}</p>
+              <p class="visually-hidden" role="status" data-cart-live></p>
+
+              {%- comment -%}
+                两个按钮都是普通链接/表单提交，不依赖 JS：
+                结账直接 POST name=checkout（Shopify 认这个字段，不需要带行项）。
+              {%- endcomment -%}
+              <form action="{{ routes.cart_url }}" method="post" class="cart-drawer__actions">
+                <button type="submit" name="checkout" class="btn-solid cart-drawer__checkout">
+                  {{- 'cart.checkout' | t -}}
+                </button>
+              </form>
+              <a class="btn-solid btn-solid--quiet cart-drawer__view" href="{{ routes.cart_url }}">
+                {{- 'cart.view_cart' | t -}}
+              </a>
+            </div>
           {%- endif -%}
         </div>
-
-        {%- if cart.item_count > 0 -%}
-          <div class="cart-drawer__footer">
-            <div class="cart-drawer__subtotal">
-              <span>{{ 'cart.subtotal' | t }}</span>
-              <span data-cart-drawer-subtotal>{{ cart.items_subtotal_price | money }}</span>
-            </div>
-            <p class="cart-drawer__note">{{ 'cart.shipping_note' | t }}</p>
-            <p class="visually-hidden" role="status" data-cart-live></p>
-
-            {%- comment -%}
-              两个按钮都是普通链接/表单提交，不依赖 JS：
-              结账直接 POST name=checkout（Shopify 认这个字段，不需要带行项）。
-            {%- endcomment -%}
-            <form action="{{ routes.cart_url }}" method="post" class="cart-drawer__actions">
-              <button type="submit" name="checkout" class="btn-solid cart-drawer__checkout">
-                {{- 'cart.checkout' | t -}}
-              </button>
-            </form>
-            <a class="btn-solid btn-solid--quiet cart-drawer__view" href="{{ routes.cart_url }}">
-              {{- 'cart.view_cart' | t -}}
-            </a>
-          </div>
-        {%- endif -%}
-      </div>
+      </cart-items>
     </div>
   </dialog>
   </bottom-sheet>
@@ -104,6 +124,12 @@
 
 {% stylesheet %}
   cart-drawer {
+    display: contents;
+  }
+
+  /* 刷新外壳不参与布局：把 .cart-drawer__content 直接交给 .cart-drawer__panel 的栅格，
+     与重构前（content 是 panel 的直接子级）完全一致。 */
+  .cart-drawer cart-items {
     display: contents;
   }
 

@@ -439,6 +439,17 @@
 - **修复**：① 底图改为 capture 后检测，缺 `alt=` 就 `replace: '<img ', '<img alt="" '`（底图是装饰图，空 alt 是正确语义）；② 产品岛 alt 的兜底源 `banner_badge_title` 随毛玻璃小卡一起下线，改用 `collection.title`（每页不同、语义正确，比空 alt 强，也不用商品标题那种同页重复的兜底）。
 - **预防**：**任何 `image_tag` 输出点都必须走 capture+unless 模式**，不能凭"我传了 alt 参数"就放心——传空等于没传。可执行做法：① `grep -rn "image_tag" sections snippets` 逐处确认是否在 `<capture>` 内且带 `contains ' alt='` 检查，新写的一律照抄 `hero-slideshow.liquid` 的形态；② 验收时把图 alt 清空再抓一次 HTML，`grep -o '<img[^>]*>'` 必须每张都有 `alt=`；③ 这条也写进交付文档的 a11y 检查清单。
 
+### BUG-062 · PC 端购物车抽屉里改数量完全不生效（点加减号无反应、输入框改完不提交）
+
+- **日期**：2026-11-03 ｜ **状态**：Fixed
+- **现象**：刘工反馈"pc 端购物车抽屉中修改产品数量不生效"。抽屉能正常打开、行项、小计、结算按钮都在，但点 `+`／`−` 数字不动，直接改输入框也不提交；DevTools Network 里**一条请求都没有**（连失败的都没有），Console 干净。购物车页（`/cart`）上同样的行项是正常的，所以第一眼像"抽屉里的事件没绑上"，实际是两层原因叠加。
+- **根因**（两层，缺一都不成立）：
+  1. **脚本根本没加载**。`assets/cart-items.js` 只由 `sections/cart-lines.liquid` 引入，而那个 section 只存在于购物车页模板。抽屉是 layout 里的全站静态 section，在商品页 / 集合页 / 首页上**没有 cart-items.js** ⇒ `<cart-items>` 是个未定义的自定义元素，是个纯静态空壳。
+  2. **就算加载了也绑不上**。`connectedCallback` 的守卫写的是 `if (!this.querySelector('#cart-form')) return;`，而 `#cart-form` 是购物车页那份 `<form>` 的 id；抽屉里没有 `<form>`（按钮都是 `type="button"`、没有 form 语义）⇒ 抽屉里的实例在守卫处直接 return，监听器一个都没挂。
+  3. **附带的结构缺陷**：抽屉里 `data-cart-section` 包在 `<cart-items>` **外面**，改数量回来的整块替换会把发出请求的元素自身一起换掉 → 监听器、按行去重表、`AbortController` 全丢。实测（无头 Chrome，把某一行响应延迟 300ms）：同一帧内改两行，A 先回来触发替换，B 的请求在 `disconnectedCallback` 里被 abort，**服务端没收到 B 的修改**，界面却停在旧值。
+- **修复**：① `sections/cart-drawer.liquid` 引入 `cart-items.js`（抽屉永远在页面上，这才是全站加载点），`sections/cart-lines.liquid` 里那份删除，避免购物车页塞两次；② 守卫改成 `if (!this.dataset.cartChangeUrl) return;`——判据取"有没有改数量的接口"，不取页面专属的 id；③ 抽屉结构调换成 `<cart-items>` 在外、`[data-cart-section]` 在内，外壳 `display: contents` 不参与布局，替换只发生在内层，元素实例与监听器全程存活；④ 顺带修 `cart-drawer.js` 的 `_refresh`：**去掉 `Accept: application/json`**（商品页上带它 Shopify 会走 AJAX Product API 返回 `{"product":…}`，`payload[id]` 恒 undefined，与 SDD §6.2 的 compare-lookup 同一条坑），改 `cache: 'no-store'`；⑤ `cart:updated` 增加 `detail.source = 'items'`，抽屉据此区分"自己改的（内容已换过，别再刷）"与"外部加购 / 另一个标签页（抽屉开着就得再刷一次）"——`cart:added` 是点击即发的，`_show()` 里那次刷新常常跑在 `/cart/add.js` 之前，抽屉会打开却看不到刚加的商品；⑥ `_announceTotal` 补 `[data-cart-drawer-subtotal]` 兜底（原先只认 `.cart-summary__total-value`，抽屉里小计播报一直是哑的）；⑦ 抽屉标题补 `tabindex="-1"`，`_restoreFocus` 的落点兜底认 `.cart-drawer__title`。
+- **预防**：**全站组件的脚本必须由全站 section 加载，且"能不能用"不能靠页面专属的 DOM 结构来判断**。可执行做法：① 新增/移动任何 `assets/*.js` 时 `grep -rn "<脚本名>" sections snippets layout` 确认引入点覆盖**所有**渲染该元素的页面（抽屉、页头这类 `{% section %}`/`{% render %}` 在 layout 的一律按全站算）；② 自定义元素的 `connectedCallback` 守卫只允许判 `data-*` 能力标记（接口地址、模板字符串），不允许判 `#id` / 某个页面才有的子元素——`#cart-form` 这一条就是反例；③ **可交互元素在哪出现，就要在那份 DOM 里点一次实测**：本次三处 JS 都在购物车页验过、唯独抽屉没跑过，坏了两周没人发现（无报错、无网络请求，肉眼只看得到"没反应"）；④ 抽屉/浮层类组件，可刷新区域必须是组件的**子节点**，绝不能让组件成为被替换的节点本身（`display: contents` 外壳是最省事的写法）。
+
 ## 记录模板（追加新 bug 用）
 
 ```

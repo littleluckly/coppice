@@ -12,10 +12,11 @@
 {% endcomment %}
 
 {%- comment -%}
-  脚本只在本 section 需要——购物车页专属，不挂 layout（page-only JS 不占全站带宽）。
-  defer：解析完成后执行，不阻塞首屏。
-{% endcomment -%}
-<script src="{{ 'cart-items.js' | asset_url }}" defer></script>
+  cart-items.js 不在这里加载（2026-11-03 移至 sections/cart-drawer.liquid）。
+  抽屉是全站组件、挂在 layout 上，那里的 <cart-items> 同样需要这个脚本；
+  两处都写就会在购物车页把同一份脚本塞两次。抽屉 section 永远存在，
+  购物车页自然也拿得到。
+{%- endcomment -%}
 {%- comment -%}
   行项样式独立成 assets/cart-line.css：抽屉（layout 级）与购物车页共用同一份行项，
   section 的样式块只在 section 存在时加载，抽屉拿不到。

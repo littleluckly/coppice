@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nav drawer 核对稿</title>
+<style>
+:root {
+  --color-background: #ffffff;
+  --color-foreground: #333333;
+  --color-brand: #1E4B3C;
+  --color-brand-accent: #2E6B4E;
+  --color-foreground-muted: #666666;
+  --color-header-surface: #ffffff;
+  --header-shadow: none;
+  --card-hover-lift: -2px;
+  --card-hover-shadow: none;
+  --card-glow-1: transparent;
+  --card-glow-2: transparent;
+  --card-glow-3: transparent;
+  --style-border-radius-inputs: 4px;
+  --content-width: 1200px;
+  --page-margin: 16px;
+  --font-primary--family: -apple-system, "Helvetica Neue", sans-serif;
+}
+html, body { margin: 0; height: 100%; }
+body { font-family: -apple-system, "Helvetica Neue", sans-serif; color: var(--color-foreground); background: #f3f3f0; }
+.visually-hidden { position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.page-note { padding: 24px; font-size: 14px; color: #555; }
+/* ===================================================================
+   bottom-sheet —— 底部抽屉的开合行为（assets/bottom-sheet.js，2026-11-03 刘工）
+   组件只管"滑"，不管内容与外观：作者自带的 <dialog> 是面板本体，圆角、宽度、
+   flex 结构全归宿主 section 的样式块。这里只放三个由脚本添加的状态类和 keyframes，
+   三个面板（筛选抽屉 / 排序面板 / 购物车抽屉）共用这一份。
+   .is-entering  滑入（0.28s ease-out）
+   .is-closing   收起途中：禁点击 + 遮罩淡出（拖拽收起也走它）
+   .is-close-anim  keyframes 下滑（0.22s ease-in，比进场快半拍）；
+                  拖拽收起刻意不挂它——keyframes 的 transform 会压过内联 style
+   这里的 keyframes 是**默认方向（向下）**。方向不属于组件：宿主用一个
+   优先级更高的选择器（如 `.cart-drawer__dialog.is-entering`）覆盖
+   animation 即可改成右滑——组件只认"面板自身的 animationend"，不绑动画名。
+   =================================================================== */
+bottom-sheet {
+  /* 不生成盒子：包裹层不能成为父级 grid/flex 的 item
+     （集合页 .collection 是 grid，多一个 item 会把整块布局顶乱） */
+  display: contents;
+}
+bottom-sheet > dialog.is-entering {
+  animation: sheet-slide-up 0.28s ease-out;
+}
+bottom-sheet > dialog.is-entering::backdrop {
+  animation: sheet-backdrop-in 0.28s ease-out;
+}
+bottom-sheet > dialog.is-closing {
+  /* 收起途中面板不可点；背景本来就被 showModal 置为 inert，点击会被吞掉 */
+  pointer-events: none;
+}
+bottom-sheet > dialog.is-closing::backdrop {
+  animation: sheet-backdrop-out 0.22s ease-in forwards;
+}
+bottom-sheet > dialog.is-close-anim {
+  animation: sheet-slide-down 0.22s ease-in forwards;
+}
+@keyframes sheet-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes sheet-slide-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheet-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+  /* BUG-044 防御修法（见 <nav> 首子节点注释）：唯一的非 ASCII 落点，
+     视觉 + 无障碍树双重隐藏，标准 visually-hidden 裁剪（非 display:none，
+     避免与判据的渲染盒要求相抵触）。 */
+  .main-nav__bug044-guard {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .main-nav {
+    position: relative;
+    /* 根节点带 full-width：整行通栏，背景铺满视口（BUG-032 sticky 配套）。
+       内容行不在这里加 padding——由 __inner 对齐页面内容列（见下）。 */
+  }
+
+  /* 三段布局：logo / 菜单 / 工具。
+     grid 而非 flex——菜单长度随商家配置变化，flex 下工具区会被挤压。
+     white-space: nowrap（2026-10-10 刘工）：导航行内任何内容都不换行，
+     菜单项 / 品牌名超出时只压缩中间列宽度，不折行。
+     行宽对齐 .shopify-section 的内容列（--content-width 从包裹层继承），
+     与下方各 section 的文案同一列线。 */
+  .main-nav__inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.5rem;
+    white-space: nowrap;
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
+    /* 行的上下 padding 由 li 承担（BUG-034，见 .main-nav__item 注释），
+       inner 自身不加 padding-block——否则 trigger 与面板之间出现 hover 盲区 */
+    /* 注意：inner 不能创建 stacking context（position+z-index）——
+       mega 是 inner 的后代，一旦被兜进它的层叠上下文，"面板从行下
+       滑出"就永远做不出来（层级被 inner 整体抬走）。第五轮结论。 */
+  }
+
+  /* Zone 0: logo + 品牌名。图标与文字并排一行，永不换行。 */
+  .main-nav__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .main-nav__logo-img {
+    /* 高度定死、宽度按图片自身比例算（2026-10-21）。
+       原来 inline/block 都写 2.5rem = 强制方形，把 160×152 的 demo logo
+       压成正方形（Lighthouse image-aspect-ratio 判失败），商家传横向
+       wordmark 会被压得更狠。inline-size: auto 会覆盖 img 的 width 属性，
+       按固有比例算出宽度；max-inline-size 兜住超宽 logo，防止撑开导航，
+       触发兜底时靠 object-fit 保比例、不拉伸。 */
+    block-size: 2.5rem;
+    inline-size: auto;
+    max-inline-size: 6rem;
+    object-fit: contain;
+  }
+
+  .main-nav__brand {
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    color: var(--color-brand);
+  }
+
+  .main-nav__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* 搜索切换按钮：行上只放图标（2026-10-10 刘工），点击开抽屉 */
+  .main-nav__search-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: var(--color-foreground);
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .main-nav__search-toggle svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .main-nav__search-toggle:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* 菜单列包裹层（<nav-pill>）：菜单在中间列内居中。
+     注意不能加 position: relative——它和 ul 的定位都会劫持 mega 面板的
+     包含块（面板会缩到菜单宽度而不是整行宽）；药丸定位用 JS 量测
+     getBoundingClientRect，不依赖 CSS 锚点（2026-10-12 第五轮）。 */
+  .main-nav__list-wrap {
+    display: flex;
+    justify-content: center;
+  }
+
+  .main-nav__list {
+    display: flex;
+    align-items: center;
+    /* 不用 gap（2026-10-12 第三轮，刘工）：条目之间的空隙是 hover 盲区，
+       鼠标扫过时药丸会停在上一个目标上。间距改由链接自身水平 padding 提供，
+       相邻项 hover 区域无缝衔接，药丸滑动连贯。 */
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* BUG-034（2026-10-13 刘工）：行 padding 不能放在 inner 上——
+     li 只包住 trigger（44px），inner 的 padding-block 会在 trigger 与
+     mega 面板之间造出 16px"死亡区"（既不在 li 内也不在面板内），
+     鼠标穿过时 hover 链断掉、面板自动收起。padding 移到 li 自身：
+     li 高度覆盖整行，hover 链从 trigger 无缝延续到面板。 */
+  /* 注意：这里不能写 position: relative——mega 面板锚定在 .main-nav__desktop
+     上（整行宽），li 一旦创建定位上下文，面板就会缩回单项宽度。 */
+  .main-nav__item {
+    min-inline-size: 0;
+    padding-block: 1rem;
+  }
+
+  .main-nav__link {
+    display: flex;
+    align-items: center;
+    /* 链接自身抬层（z-index 1）垫在药丸之上——ul/wrap 去定位后（第五轮，
+       为 mega 让出锚点），分层职责收拢到链接自身 */
+    position: relative;
+    z-index: 1;
+    /* 水平 padding 承担条目间距（2026-10-12 第三轮）：padding 计入 trigger 的
+       测量范围，药丸覆盖整宽，hover 区域与药丸完全重合 */
+    padding-inline: 1.25rem;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-height: 44px;
+    padding-block: 0.5rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    /* 反色随药丸滑动同步过渡 */
+    transition: color 0.18s ease;
+  }
+
+  /* 焦点态必须可见（SDD §8.2）。下拉靠 :focus-within 展开，但展开不等于
+     有可见指示——键盘用户需要知道自己在哪一项上。 */
+  .main-nav__link:focus-visible,
+  .main-nav__logo:focus-visible,
+  .nav-drawer__link:focus-visible,
+  .main-nav__burger:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* 当前页（2026-10-12 第二轮）：品牌色文字。深色药丸改由滑动指示器承担
+     hover 反馈，但静态"你在哪"不能跟着悬浮态一起消失（SDD §8.2 / aria-current），
+     所以当前页降为文字色指示，不再用药丸底色。 */
+  .main-nav__link--current,
+  .main-nav__item--in-branch > .main-nav__link {
+    color: var(--color-brand);
+  }
+
+  /* ---- 滑动药丸指示器（2026-10-12 第二轮，配 assets/nav-pill.js） ----
+     品牌色（主题色）药丸滑动跟随 hover / 键盘焦点，鼠标离开整个导航区即隐藏还原。
+     JS（nav-pill--ready）接管时链接自身不出底色，文字反色由下方规则处理。 */
+  .main-nav__pill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 999px;
+    background-color: var(--color-brand);
+    opacity: 0;
+    transition: transform 0.25s ease, width 0.25s ease, height 0.25s ease, opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  .main-nav__pill--on {
+    opacity: 1;
+  }
+
+  /* JS 接管后：悬浮 / 焦点项文字反色（品牌色药丸垫底）。
+     文字反色到页面底色，覆盖在品牌色药丸之上。 */
+  .nav-pill--ready .main-nav__item:hover > .main-nav__link,
+  .nav-pill--ready .main-nav__item:focus-within > .main-nav__link {
+    color: var(--color-background);
+  }
+
+  /* 无 JS 降级：custom element 未升级时，hover/focus 项自身显品牌色药丸（无滑动），
+     mega 面板展开不受影响。 */
+  .main-nav__list-wrap:not(.nav-pill--ready) .main-nav__item:hover > .main-nav__link,
+  .main-nav__list-wrap:not(.nav-pill--ready) .main-nav__item:focus-within > .main-nav__link {
+    color: var(--color-background);
+    background-color: var(--color-brand);
+    border-radius: 999px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .main-nav__pill,
+    .main-nav__mega,
+    .main-nav__mega-inner,
+    .main-nav__mega-group,
+    .main-nav__mega-card-img,
+    .main-nav__desktop::after {
+      transition: none;
+    }
+  }
+
+  /* ---- Mega 面板（2026-10-12 第五轮）：通栏、整面板滑入滑出、层级行下面 ----
+     锚定 .main-nav__desktop（整行宽），内容区由 inner 对齐内容列。
+     "在导航层级之下滑入"用 clip-path 揭示实现：面板固定在行下方，
+     隐藏态从顶部裁到 0 高（裁切边缘贴着行底边），展开时向下揭示——
+     视觉上就是面板从导航行底下抽出，且不需要任何 z-index 层游戏
+     （层游戏做过一版被否：inner 抬层会创建层叠上下文把面板兜住）。
+     内容位移（inner 的 translate）叠加在揭示上，强化"滑"的动感。
+     展开纯 CSS：hover / focus-within，无 JS 依赖（T-1.3 底线不变）。 */
+  .main-nav__mega {
+    display: none;
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    z-index: 10;
+    /* 通栏实底：与导航行同色，底部圆角；阴影用 drop-shadow——
+       box-shadow 画在盒外，会被 clip-path 一并裁掉；drop-shadow
+       基于裁切后的形状绘制，静止与动画中都可见 */
+    background-color: var(--color-background);
+    border-radius: 0 0 12px 12px;
+    filter: drop-shadow(0 18px 32px rgb(0 0 0 / 16%));
+    /* 面板紧贴导航行（无缝隙）；露出的行界靠细线分隔 */
+    border-block-start: 1px solid rgb(0 0 0 / 8%);
+    /* 整面板滑入滑出：隐藏态 = 从底部裁掉 100%（只留贴行的一条缝），
+       展开态 = 完整。裁切边始终贴着行底边 → "从行下钻出"。
+       display 的显隐用 allow-discrete 延迟到动画播完再摘除；
+       旧浏览器不支持时忽略该单独声明——揭示动画保留（关闭瞬时） */
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path 0.25s ease, display 0.25s;
+    transition-behavior: allow-discrete;
+  }
+
+  .main-nav__item--group:hover > .main-nav__mega,
+  .main-nav__item--group:focus-within > .main-nav__mega,
+  /* is-open：鼠标路径延迟关闭时由 JS 维持展开（飞越间隙保护，2026-10-27 刘工） */
+  .main-nav__item--group.is-open > .main-nav__mega {
+    display: block;
+    clip-path: inset(0 0 -3rem 0);
+  }
+
+  @starting-style {
+    .main-nav__item--group:hover > .main-nav__mega,
+    .main-nav__item--group:focus-within > .main-nav__mega {
+      clip-path: inset(0 0 100% 0);
+    }
+  }
+
+  /* ---- 普通下拉（2026-10-28）：一级项的子项全是页面/博客等非集合链接时，
+     用它替代 mega 三栏面板。锚在 li 上——本主题里唯一给 li 加
+     position: relative 的一支（mega 项仍锚在 .main-nav__desktop，
+     见上方 BUG-034 注释），两者互不干扰：mega 项没有 dropdown 子元素。 ---- */
+  .main-nav__item--dropdown {
+    position: relative;
+  }
+
+  .main-nav__dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    z-index: 10;
+    min-inline-size: 15rem;
+    padding: 0.5rem;
+    background-color: var(--color-background);
+    border-radius: 0 0 12px 12px;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    /* 投影用 drop-shadow（与 mega 面板同款，"压商品图/投影"是颜色规范的合法例外） */
+    filter: drop-shadow(0 18px 32px rgb(0 0 0 / 16%));
+    /* 导航行的 nowrap 约定不外溢到面板文字 */
+    white-space: normal;
+  }
+
+  /* 纯 CSS 开合：面板是 li 的后代，鼠标移进面板时 li 的 :hover 链不断，
+     所以不需要 mega 那套 JS 延迟关闭（is-open 拖尾）。 */
+  .main-nav__item--dropdown:hover > .main-nav__dropdown,
+  .main-nav__item--dropdown:focus-within > .main-nav__dropdown {
+    display: block;
+  }
+
+  .main-nav__dropdown-list {
+    display: grid;
+    gap: 0.125rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-nav__dropdown-link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9375rem;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .main-nav__dropdown-link:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+
+  .main-nav__dropdown-link--current {
+    color: var(--color-brand);
+    font-weight: 600;
+  }
+
+  /* 内容区：只管对齐内容列，视觉（底色/投影/圆角）全在通栏面板上。
+     位移与面板揭示同步：从 -0.75rem 滑到 0，"抽出"的动感主要来自这里。 */
+  .main-nav__mega-inner {
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 2.5rem;
+    padding: 2.25rem 2.5rem;
+    translate: 0 -0.75rem;
+    transition: translate 0.25s ease;
+    /* 导航行的不换行约定只属于行本身——面板里的产品名/价格必须可换行
+       （2026-10-13 刘工：卡内文字溢出）。左列分类名单独恢复 nowrap。 */
+    white-space: normal;
+  }
+
+  .main-nav__item--group:hover > .main-nav__mega .main-nav__mega-inner,
+  .main-nav__item--group:focus-within > .main-nav__mega .main-nav__mega-inner,
+  .main-nav__item--group.is-open > .main-nav__mega .main-nav__mega-inner {
+    translate: 0 0;
+  }
+
+  /* ---- 页面背景模糊遮罩（2026-10-12 第七轮，刘工，apple.com 风格） ----
+     mega 展开时行下方整屏"暗化 + backdrop blur"。
+     挂在 desktop::after 而非 mega——mega 有 clip-path，会把伪元素一起裁掉。
+     top:100% 从行底向下延伸一屏：不盖导航行（行文字保持清晰），
+     sticky 吸顶时随行走，始终覆盖可视页面区域。
+     显示条件与 mega 完全一致（hover / focus-within），用 :has() 上溯表达。
+     pointer-events: none：纯视觉层，不拦截页面交互；
+     面板关闭仍由"鼠标离开导航列表"驱动。 */
+  .main-nav__desktop::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    block-size: 100vh;
+    /* mega(10) 之下、页面内容之上 */
+    z-index: 5;
+    pointer-events: none;
+    background-color: rgb(0 0 0 / 25%);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    visibility: hidden;
+    /* visibility 离散过渡：淡出播完才真正隐藏，避免残影闪断 */
+    transition: opacity 0.25s ease, visibility 0.25s;
+  }
+
+  .main-nav__desktop:has(.main-nav__item--group:hover)::after,
+  .main-nav__desktop:has(.main-nav__item--group:focus-within)::after,
+  .main-nav__desktop:has(.main-nav__item--group.is-open)::after {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* ---- 面板三段（2026-10-13 第八轮，参考 demo）：分类列 / 内容区 / 二级集合网格 ---- */
+  .main-nav__mega-nav {
+    flex: 0 0 12rem;
+    /* 左列纵向排布：分类列表在上，View all 出口压到底部 */
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    /* 滑动药丸 .main-nav__mega-pill 的定位父级（2026-10-27） */
+    position: relative;
+  }
+
+  .main-nav__mega-label {
+    display: block;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding-inline: 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    /* color: color-mix(in srgb, var(--color-foreground) 60%, transparent); */
+    /* 与搜索抽屉标题同款工业小标签风格；对比度 5.74:1（T-2.2 实测） */
+  }
+
+  .main-nav__mega-cats {
+    margin: 0;
+    padding: 0;
+    padding-inline: 0.625rem;
+    list-style: none;
+    display: grid;
+    gap: 0.125rem;
+  }
+
+  .main-nav__mega-cat-link {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    min-height: 44px;
+    /* 文字层抬到滑动药丸之上（2026-10-27） */
+    position: relative;
+    z-index: 1;
+    /* hover 文字反色（背景由 .main-nav__mega-pill 滑动提供，与顶部导航同机制：
+       JS 接管后链接自身不出底色）；降级时自身出背景见下方 :not(.nav-mega-tabs--ready) */
+    padding-inline: 0.75rem;
+    border-radius: 999px;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    /* 文字反色跟随药丸（--lit 由 JS 在药丸移动时同步设置），
+       color 时长对齐药丸 transform 0.25s，确保"文字变白"与"药丸滑到"同步，
+       不抢拍（修复 hover 文字先白、底色滞后 bug，2026-10-27） */
+    transition: color 0.25s ease, background-color 0.15s ease;
+    /* 分类名短，不折行（面板整体已恢复 normal） */
+    white-space: nowrap;
+  }
+
+  /* 有 JS 接管：文字反色跟随药丸（--lit 由 nav-pill.js 在药丸移动时同步设置），
+     不靠 :hover 即时反色——否则文字会比滑动药丸抢拍变白（2026-10-27 修复 hover
+     文字先白、底色滞后 bug）。特异性高于 --current，确保当前页项被药丸垫底时
+     文字也反色、可读。 */
+  .main-nav__mega-cats .main-nav__mega-cat-link--lit {
+    color: var(--color-background);
+    font-weight: 700;
+  }
+
+  /* 无 JS 降级：custom element 未升级（无 nav-mega-tabs--ready）时，
+     hover / 焦点项自身显品牌色药丸（无滑动），功能不丢——与顶部导航
+     :not(.nav-pill--ready) 兜底同源。 */
+  .main-nav__list-wrap:not(.nav-mega-tabs--ready) .main-nav__mega-cat-link:hover,
+  .main-nav__list-wrap:not(.nav-mega-tabs--ready) .main-nav__mega-cat-link:focus-visible {
+    color: var(--color-background);
+    background-color: var(--color-brand);
+  }
+
+  /* 左列激活项（JS 切换）：--active 仅作面板标记（_switchTabs 维护），
+     文字反色已改由 --lit（药丸所在项）驱动，避免与 hover 其他项时药丸移走冲突。
+     故此处不再设反色，避免"白字无底"。 */
+
+  /* mega 左列滑动药丸（2026-10-27，复用 nav-pill.js 测量/滑动算法，纵向套用）：
+     垫在分类项下方，hover 跟手滑动、松手停在激活项做常驻高亮；
+     文字反色由 .main-nav__cat-link 的 --lit 配合（药丸滑到该项即反色，与药丸同步）。
+     无 JS 时本元素不存在（由 JS 创建），无无效 DOM。 */
+  .main-nav__mega-pill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    border-radius: 999px;
+    background-color: var(--color-brand);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.25s ease, width 0.25s ease, height 0.25s ease, opacity 0.15s ease;
+  }
+
+  .main-nav__mega-pill--on {
+    opacity: 1;
+  }
+
+  .main-nav__mega-cat-link--current {
+    color: var(--color-brand);
+    font-weight: 700;
+  }
+
+  /* 面板切换：hidden 属性的 UA 默认 display:none 已生效，
+     这里显式兜底防未来 display 规则覆盖；无 JS（未升级）时不加 hidden，
+     全部组可见——底线不破 */
+  .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group[hidden] {
+    display: none;
+  }
+
+  /* 切换过渡（2026-10-13 刘工：0.45s + 位移）：新组从下方 0.5rem 浮入 + 淡入。
+     只做单侧入场——两组都在文档流里，旧组若延迟消失会布局跳动。
+     @starting-style 不支持的浏览器降级瞬时显隐。 */
+  .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group {
+    opacity: 1;
+    translate: 0 0;
+    transition: opacity 0.45s ease, translate 0.45s ease;
+  }
+
+  @starting-style {
+    .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group:not([hidden]) {
+      opacity: 0;
+      translate: 0 0.5rem;
+    }
+  }
+
+  /* 中区：二级分组的集合卡组，纵向堆叠（无切换依赖，无 JS 可用） */
+  .main-nav__mega-content {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    display: grid;
+    gap: 2.25rem;
+    align-content: start;
+  }
+
+  .main-nav__mega-group-title {
+    display: block;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-foreground);
+  }
+
+  .main-nav__mega-cards {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    /* 固定 3 列（2026-10-28 第三版，两次踩坑后的定论）。
+       ⚠️ 踩过的两个坑，别再绕回去：
+       ① repeat(auto-fill, minmax(12rem, 1fr)) 在中区 1088px 里算出 5 列，
+          3 张卡只坐满 3 列、右边空掉约 450px（这就是最初"面板太空"）。
+       ② repeat(auto-fit, minmax(12rem, 20rem)) 的 20rem 上限会把**列数**
+          也压掉：CSS Grid 规范里 max 是固定长度时轨道数按 max 算，
+          1130 视口算成 floor(802/344)=2 列 —— 想防卡太大，结果卡更大还换行。
+       所以列数只由下限决定，上限一律不写进 minmax。
+       这里直接写死 3 列：模板里每组卡固定 `limit: 3` 张，最多就是 3 张，
+       写死比让 auto-fit 去猜更可预期——**某组只有 2 张卡时（80V Battery）
+       不会把仅有的两张拉成 532px 大块**，右侧留白是数据决定的，不是布局错。
+       ⚠️ 若以后把模板的 `limit: 3` 改大，这里的 3 必须同步。
+       实测：990 → 3×197；1130 → 3×243；1440 → 3×347（图 323，接近 300 目标）。 */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* 等高卡：li 是 grid item（默认 stretch 等行高），link 拉满列向，
+     价格/计数用 auto margin 沉底——内容差异不影响卡底色高度 */
+  .main-nav__mega-card {
+    display: flex;
+  }
+
+  .main-nav__mega-card-link {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    text-decoration: none;
+    /* 视觉对齐集合页 product-card：实底背景 + 描边 + 圆角 + 内距同款 */
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 12px;
+    padding: 0.75rem;
+    transition: border-color 0.15s ease, translate 0.15s ease;
+  }
+
+  .main-nav__mega-card-link:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    /* 上浮量走全站卡签名（2026-10-30）：与商品卡 / 配件卡同一个 -2px */
+    translate: 0 var(--card-hover-lift);
+  }
+
+  /* 图在卡内上缘，跟随卡圆角内缩 */
+  .main-nav__mega-card-media {
+    display: block;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+  }
+
+  .main-nav__mega-card-media--empty {
+    /* 集合无图占位：色块内嵌一圈极淡描边，读作"图位"而不是破图 */
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+
+  .main-nav__mega-card-img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+
+  /* 产品图 hover 动画：图片缩放 + 标题着色（2026-10-13 刘工） */
+  .main-nav__mega-card-link:hover .main-nav__mega-card-img,
+  .main-nav__mega-card-link:focus-visible .main-nav__mega-card-img {
+    transform: scale(1.06);
+  }
+
+  /* ===== hover 绿色渐变光晕（视觉对齐集合页 product-card 的 hover 反馈）=====
+     移植 product-card.css 的 ::before 光晕 + 品牌绿投影。光晕垫在图片下面、
+     只从图片透明区域透出（koutu alpha 图可见，不透明图自动隐没），产品像素零接触。
+     仅 hover:hover + pointer:fine 生效。
+
+     2026-10-29 刘工：浓度改走 --card-glow-1/2/3 与 --card-hover-shadow（定义在
+     snippets/css-variables.liquid，按内容区背景明暗分流）。原来这里写死 65%/32%/5%，
+     Noir 浅绿光晕在深底上会化成一块绿板——与产品列表两侧必须同源，改一处即同步。
+     注：mega 面板在页头组内，但 --card-glow-* / --card-hover-shadow 不在骨架映射表，
+     始终取 :root 那份；当前两个 preset 的内容区与骨架同明暗，结果一致。 */
+  @media (hover: hover) and (pointer: fine) {
+    .main-nav__mega-card-link {
+      /* 0.8s → 0.2s（2026-10-30）：投影换成全站卡签名后拍子必须同步，
+         否则同一组值在 mega 面板里慢四倍 */
+      transition: border-color 0.15s ease, translate 0.15s ease, box-shadow 0.2s ease;
+    }
+    .main-nav__mega-card-link:hover {
+      /* 与 product-card:hover 同源（--card-hover-shadow / --card-hover-lift，
+         口径见 snippets/css-variables.liquid） */
+      box-shadow: var(--card-hover-shadow);
+    }
+    .main-nav__mega-card-media {
+      position: relative;
+    }
+    .main-nav__mega-card-media::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        var(--card-glow-1) 0%,
+        var(--card-glow-2) 55%,
+        var(--card-glow-3) 100%
+      );
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+    }
+    .main-nav__mega-card-img {
+      position: relative; /* 压到 ::before 之上，光晕只在其透明区域可见 */
+    }
+    .main-nav__mega-card-link:hover .main-nav__mega-card-media::before {
+      opacity: 1;
+    }
+  }
+
+  .main-nav__mega-card-title {
+    display: block;
+    margin-block-start: 0.625rem;
+    /* 对齐 product-card 标题：weight 500 + line-height 1.35 */
+    font-size: 0.92rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--color-foreground);
+    transition: color 0.15s ease;
+  }
+
+  .main-nav__mega-card-link:hover .main-nav__mega-card-title {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-card-count {
+    display: block;
+    /* auto margin 沉底（等高卡，与 price 同机制） */
+    margin-block-start: auto;
+    padding-block-start: 0.375rem;
+    font-size: 0.8125rem;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+  }
+
+  .main-nav__mega-card-link--current .main-nav__mega-card-title {
+    color: var(--color-brand);
+  }
+
+  /* 左列底部 View all 出口（2026-10-13 刘工）：/collections/all 官方路由。
+     箭头符合准则（View All 链接）。 */
+  .main-nav__mega-viewall {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-start: auto;
+    padding-block: 0.75rem;
+    padding-inline: 0.625rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    color: var(--color-foreground);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .main-nav__mega-viewall:hover {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-viewall-arrow {
+    transition: translate 0.15s ease;
+  }
+
+  .main-nav__mega-viewall:hover .main-nav__mega-viewall-arrow {
+    translate: 0.25rem 0;
+  }
+
+  /* 组头：分类名（左）+ All 集合出口（右，View All 型链接，箭头合规） */
+  .main-nav__mega-group-head {
+    display: flex;
+    align-items: baseline;
+  }
+
+  /* 组头入口（一段式，2026-10-28）：同时是组标题与集合入口，
+     所以字号/字重取组标题规格，而不是原来右侧 All 链接的次级小字。 */
+  .main-nav__mega-group-title-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 44px;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-foreground);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+  }
+
+  .main-nav__mega-group-title-link:hover {
+    color: var(--color-brand);
+  }
+
+  .main-nav__mega-group-all-arrow {
+    transition: translate 0.15s ease;
+  }
+
+  .main-nav__mega-group-title-link:hover .main-nav__mega-group-all-arrow {
+    translate: 0.25rem 0;
+  }
+
+  /* 产品卡：名称与价格（对齐 product-card 价格：weight 500） */
+  .main-nav__mega-card-price {
+    display: block;
+    /* auto margin 沉底（等高卡），0.375rem 是与标题的最小间距 */
+    margin-block-start: auto;
+    padding-block-start: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-foreground);
+  }
+
+  .main-nav__mega-card-vendor {
+    display: block;
+    margin-block-start: 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+  }
+
+  .main-nav__mega-card-vendor + .main-nav__mega-card-title {
+    margin-block-start: 0.25rem;
+  }
+
+  /* 组底三级小链接行：产品卡阵列模式下三级入口不丢 */
+  .main-nav__mega-sublinks {
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.5rem;
+  }
+
+  .main-nav__mega-sublink {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .main-nav__mega-sublink:hover {
+    color: var(--color-foreground);
+  }
+
+  .main-nav__mega-sublink--current {
+    color: var(--color-brand);
+    font-weight: 600;
+  }
+
+  .main-nav__mega-cat-link:focus-visible,
+  .main-nav__mega-card-link:focus-visible,
+  .main-nav__dropdown-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
+     必须有实底——否则吸顶时页面内容会透过菜单透出来。
+     position: relative 是 mega 面板的锚点（整行宽），不能移到 li / ul 上。
+
+     2026-10-28 刘工（两轮定稿）：页头与内容区原本同为纯白，没有任何分界。
+     现在底色与投影都由 snippets/css-variables.liquid 按骨架明暗算好：
+       浅色 → 底色 = 背景色（视觉上等于没底色）、不画分隔线，只留一层下投影；
+       深色 → 纯黑底 + 一道亮发丝线 + 更实的投影。
+     两个变量必须成对用，不要在这里写死其中一半——移动行同理。 */
+  .main-nav__desktop {
+    position: relative;
+    background-color: var(--color-header-surface);
+    /* 阴影默认不给（2026-10-29 刘工）：页面停在顶部时，页头与内容区之间应当
+       毫无分界。只在**真的吸住**之后才由 <nav-sticky> 往包裹层打 is-stuck
+       浮起来（规则见下方 min-width: 990px 断点，与 sticky 同处一段）。
+       注意移动端行不受此约束——移动端没有 sticky，也就谈不上「触发」，
+       那一行的阴影保持常驻，否则手机上页头与内容区之间完全没有分界。 */
+    box-shadow: none;
+    transition: box-shadow 0.22s ease;
+  }
+
+  /* 移动端抽屉相关：桌面隐藏汉堡与 dialog */
+  .main-nav__mobile {
+    display: none;
+  }
+
+  /* ---- 抽屉：<dialog> + scroll-lock 锁背景（critical.css 已配套） ----
+     2026-10-13 刘工（参考效果图）：移动抽屉改为底部面板——全宽、满高，
+     点击汉堡后从屏幕底边往上滑入。滚动发生在列表内部（见 __list），
+     dialog 自身 overflow hidden。
+     2026-11-03：滑入 / 滑出移交 <bottom-sheet>（keyframes 在 critical.css），
+     这里只留几何。顶部两角改圆 + 抓手，与购物车抽屉 / 筛选面板同一副面孔。
+     高度仍是满屏：菜单展开后可能很长，收高度会让面板在每次展开时上下跳。 */
+  /* 自定义元素本身不生成盒子：里面只有 <bottom-sheet>（display:contents）
+     与 top layer 的 <dialog>，多一层 inline 盒只会在页头里留个空的基线缝。 */
+  nav-drawer {
+    display: contents;
+  }
+
+  .nav-drawer {
+    inset: 0;
+    /* 由 showModal() 置于 top layer，无需 z-index */
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 16px 16px 0 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    overflow: hidden;
+  }
+
+  /* display 只在打开时给：作者样式 `.nav-drawer { display: flex }` 会压过
+     UA 的 `dialog:not([open]) { display: none }`——闭着的抽屉会整屏铺出来。
+     纵向 flex 链：抓手 / 头行 / 列表（滚动区）/ 底部行。 */
+  .nav-drawer[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav-drawer::backdrop {
+    background-color: rgb(0 0 0 / 45%);
+  }
+
+  /* ---- 搜索抽屉：右侧滑出，桌面 + 移动共用（2026-10-10 刘工） ----
+     结构与 nav-drawer 同款（原生 <dialog> + showModal + template 惰性实例化），
+     差异只有宽度与内部排版。 */
+  .search-drawer {
+    inset-block: 0;
+    inset-inline: auto 0;
+    /* 由 showModal() 置于 top layer，无需 z-index */
+    /* 宽度（2026-10-10 刘工：最小 600px）：窄屏用 92vw 兜底，≥600px 时锁 600 起 */
+    width: max(600px, min(40rem, 92vw));
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-inline-end: 1px solid rgb(0 0 0 / 12%);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* 竖屏手机：全宽（600px 下限在手机上必然溢出） */
+  @media screen and (max-width: 749px) {
+    .search-drawer {
+      width: 100vw;
+    }
+  }
+
+  .search-drawer::backdrop {
+    background-color: rgb(0 0 0 / 45%);
+  }
+
+  .search-drawer__inner {
+    /* 纵向 flex：head 固定，body（含结果面板）吃满剩余高度。
+       结果多时滚动只发生在列表上，dialog 自身不再出滚动条。 */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 0.5rem 1rem 1.5rem;
+  }
+
+  .search-drawer__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .search-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-end: 0.5rem;
+  }
+
+  .search-drawer__title {
+    margin: 0;
+    /* 工业小标签风格：与结果分组标题同款（uppercase + 大字距） */
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(0 0 0 / 45%);
+  }
+
+  .search-drawer__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .search-drawer__close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .search-drawer__close svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* ---- 抽屉滑入 / 滑出动画 ----
+     搜索抽屉仍用 @starting-style + allow-discrete（开 → 从右侧滑入；关 → 等滑动完再摘除），
+     旧浏览器不支持时降级为瞬时显隐，无功能损失（渐进增强）。
+     translate 是物理属性：本主题仅 en（LTR），100% 恒为屏外。
+     导航抽屉已改由 <bottom-sheet> 播 keyframes（2026-11-03）——dialog 从
+     display:none 打开的同一帧里 transition 没有起点，写在这里只会闪现。 */
+  .search-drawer {
+    translate: 100% 0;
+    transition: translate 0.25s ease, display 0.25s allow-discrete, overlay 0.25s allow-discrete;
+  }
+
+  .search-drawer[open] {
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .search-drawer[open] {
+      translate: 100% 0;
+    }
+    .search-drawer[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* 遮罩同步淡入淡出 */
+  .search-drawer::backdrop {
+    opacity: 1;
+    transition: opacity 0.25s ease;
+  }
+
+  /* WCAG 2.1 / SDD §8.2：用户要求减少动效时全部关闭
+     （导航抽屉的滑入滑出由 <bottom-sheet> 自己判断 reduced-motion，不在这里） */
+  @media (prefers-reduced-motion: reduce) {
+    .search-drawer,
+    .search-drawer::backdrop,
+    .nav-drawer__sub,
+    .nav-drawer__chevron {
+      transition: none;
+    }
+  }
+
+  /* 抽屉宽度即输入框宽度（snippet 已无 32rem 上限，此规则留作宽度解耦的文档锚点） */
+
+  /* ---- 抓手横线（2026-11-03 刘工） ----
+     与购物车抽屉 / 集合页筛选面板完全同一套系数：视觉条 56×6、前景色 18%、
+     命中区 120×54。三个底部面板的手感必须一致，改一处要三处一起看。 */
+  .nav-drawer__grabber {
+    position: relative;
+    flex: none;
+    inline-size: 56px;
+    block-size: 6px;
+    /* 离面板顶边 16px：既是与另外两个面板同值的间距，也是下面伪元素
+       向上扩的那一段不被 dialog 的 overflow:hidden 裁掉的余量 */
+    margin: 1rem auto 0.25rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
+    /* 抓手要能被拖：touch-action:none 让浏览器不把手势抢给滚动 */
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* 只吃指针、不参与绘制：命中区 120×54（视觉条 56×6） */
+  .nav-drawer__grabber::after {
+    content: '';
+    position: absolute;
+    inset: -16px -32px -32px;
+  }
+
+  /* ---- 手风琴（2026-11-03 刘工）：一级 / 二级在同一列表内就地展开 ----
+     动画走 grid-template-rows 0fr → 1fr：吃内容真实高度，不用猜 max-height 的
+     魔数；内层必须 overflow:hidden 才裁得干净（不然 1fr 也照样露出来）。
+     收起态的 inert 由 nav-drawer.js 同步打上——视觉裁切挡不住 Tab 焦点。 */
+  .nav-drawer__sub {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.28s ease;
+  }
+
+  .nav-drawer__sub.is-open {
+    grid-template-rows: 1fr;
+  }
+
+  .nav-drawer__sub-inner {
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  /* 二级列表：整块换一档底色，层级靠底色 + 缩进表达，不靠分割线
+     （菜单本身已有行间 hairline，再加线会成一堆横杠）。 */
+  .nav-drawer__sublist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav-drawer__sublist:not(.nav-drawer__sublist--deep) {
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+  }
+
+  /* 二级项之间的发丝线：一级那次由 .nav-drawer__item 承担，这里同名类复用，
+     但二级列表已有底色分档，线只留极淡一条，免得两层线打架。
+     （二级行的字号 / 缩进写在 .nav-drawer__link--sub，位置必须在
+     .nav-drawer__link 之后，理由见那一条。） */
+  .nav-drawer__item--sub {
+    border-block-end-color: color-mix(in srgb, var(--color-foreground) 5%, transparent);
+  }
+
+  /* 展开箭头（2026-11-03）：从"右箭头 = 进入下一屏"改成"下箭头 = 就地展开"，
+     展开后转 180°。旋转用 rotate 属性，和 translate 轴互不干扰。 */
+  .nav-drawer__chevron {
+    display: flex;
+    flex: none;
+    transition: rotate 0.2s ease;
+  }
+
+  .nav-drawer__link[aria-expanded='true'] .nav-drawer__chevron {
+    rotate: 180deg;
+  }
+
+  /* 抽屉头部：品牌区（logo + 名称，参考图）+ 搜索 + 关闭。
+     2026-11-03 起子菜单走手风琴，不再有"返回 / 标题 / 关闭"那种子面板头行，
+     所以这里只有一种头。 */
+  .nav-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: none;
+    padding: 0.5rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+
+  .nav-drawer__head--root {
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    /* 头部行也是拖拽热区（抓手只有 6px 高，手指按不准）；关闭 / 搜索按钮在
+       JS 里从热区排除，点它们不会开始拖拽 */
+    touch-action: none;
+    user-select: none;
+  }
+
+  .nav-drawer__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex: 1;
+    min-inline-size: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .nav-drawer__brand:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .nav-drawer__brand-img {
+    /* 同 .main-nav__logo-img：高度定死、宽度按比例，不写死方形 */
+    block-size: 2rem;
+    inline-size: auto;
+    max-inline-size: 5rem;
+    object-fit: contain;
+    flex: none;
+  }
+
+  .nav-drawer__brand-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .nav-drawer__close,
+  .nav-drawer__search {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .nav-drawer__close svg,
+  .nav-drawer__search svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .nav-drawer__close:focus-visible,
+  .nav-drawer__search:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* 列表是面板内的滚动区：head / footer 固定，长菜单只滚列表 */
+  .nav-drawer__list {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    padding: 0.5rem 0;
+    list-style: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .nav-drawer__item {
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+
+  .nav-drawer__item:last-child {
+    border-block-end: 0;
+  }
+
+  /* 行：分组是 <button>（BUG-023：GROUP 无 url，绝不渲染成 <a>），
+     叶子是 <a>——两者共用行样式，button 侧补表单元素重置。
+     font-weight 600 贴参考图（2026-10-13）。 */
+  .nav-drawer__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    text-align: start;
+    text-decoration: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  /* 箭头颜色从前景色派生（原先写死 rgb(0 0 0 / 45%)，Noir 深底上等于隐形的
+     黑色——BUG-059 同款问题） */
+  .nav-drawer__link svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+
+  .nav-drawer__link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+  }
+
+  /* 二级行（2026-11-03 手风琴）：字号降一档、去掉一级那种 600 的重感；
+     左缩进 2rem 让层级读得出来。**必须写在 .nav-drawer__link 之后**——
+     同一特异性下后写者胜，写在上面会被基础行的 padding/font 整个盖掉。 */
+  .nav-drawer__link--sub {
+    min-height: 44px;
+    padding: 0.5rem 1rem 0.5rem 2rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+
+  /* 三级再缩一档：左缩进与二级的文字起点错开半个字宽，字号再降 0.5px */
+  .nav-drawer__sublist--deep .nav-drawer__link--sub {
+    padding-inline-start: 2.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* 当前路由（2026-11-03 刘工）：浅品牌底 + 品牌字。
+     底色从 --color-brand 派生（不写死浅绿）——Noir 预设下自动变成"深底上的一层浅绿"。
+     取 10% 而不是更淡：二级列表本身已有 4% 前景底，叠上去还要能一眼分辨。 */
+  .nav-drawer__link--current {
+    color: var(--color-brand);
+    font-weight: 700;
+    background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
+  }
+
+  /* 抽屉底部固定区（2026-10-13 参考图）：Account / Cart 竖排两行，
+     行内边距与菜单行对齐，行间 hairline 同菜单列表 */
+  .nav-drawer__footer {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin-block-start: auto;
+    padding: 0;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+
+  /* 抽屉内账户组件的 sheet 从抽屉顶部弹出，与桌面端不同 */
+  .account--in-drawer .account__component {
+    --shopify-account-dialog-position-top: 0;
+  }
+
+  /* 账户行：占满一行；触发器是平台组件（内部结构不可控），只对齐行距 */
+  .account--in-drawer {
+    padding: 0.5rem 1rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+
+  /* 购物车行：图标 + "Cart" 文字 + 右上角计数徽标（snippet 传 show_label）。
+     徽标保持绝对定位——不占布局空间，cart-updated 同步不会推移布局（防 CLS）。 */
+  .cart-entry--in-drawer .cart-entry__link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .cart-entry--in-drawer .cart-entry__label {
+    flex: 1;
+  }
+
+  /* ---- 断点：以下为移动端 ---- */
+  @media screen and (max-width: 989px) {
+    .main-nav__desktop {
+      display: none;
+    }
+
+    .main-nav__mobile {
+      display: flex;
+      align-items: center;
+      /* 移动导航行上下 16px，与桌面行一致（第六轮） */
+      padding-block: 1rem;
+      /* 与桌面行同一套分层（2026-10-28）：底色 + 投影都取 css-variables 里算好的
+         那两个变量，见 .main-nav__desktop 的注释。
+         横向内边距一并补上——移动行原先只有 padding-block，汉堡贴死在视口
+         左缘；加了色带之后这个贴边会非常显眼，且与其余 section 的内容列不齐。 */
+      padding-inline: var(--page-margin);
+      background-color: var(--color-header-surface);
+      box-shadow: var(--header-shadow);
+    }
+
+    /* 汉堡居左，(搜索 + 购物车) 推到最右 */
+    .main-nav__search-toggle--mobile {
+      margin-inline-start: auto;
+    }
+
+    /* 两个 44px 触摸目标相邻，留一点缝避免误触 */
+    .main-nav__mobile .cart-entry {
+      margin-inline-start: 0.35rem;
+    }
+
+    .main-nav__burger {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      color: inherit;
+      background: none;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .main-nav__burger svg {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  /* ---- sticky：全断点（2026-11-02 刘工：移动端也要吸顶）----
+     BUG-032：sticky 不能挂在 .main-nav 上——它的父级是 Shopify 生成的
+     .shopify-section 包裹层，高度只有导航行自身，sticky 没有可黏的滚动余量。
+     必须挂在包裹层（schema "class": "main-nav-section"）上：包裹层是 body
+     （flex 列）的直接子项、纵贯整页，sticky 才有作用空间。 */
+  .main-nav-section {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  @media screen and (min-width: 990px) {
+    /* 吸住才浮投影（2026-10-29 刘工）。is-stuck 由 assets/nav-sticky.js 打上，
+       判据与像素阈值无关，见该文件头部说明。
+       移动块自带常驻投影（见下方断点），不需要这层"吸住才亮"的状态。 */
+    .main-nav-section.is-stuck .main-nav__desktop {
+      box-shadow: var(--header-shadow);
+    }
+
+    /* 桌面端汉堡与抽屉不出现；桌面区是唯一可见部分 */
+    .main-nav__desktop {
+      display: block;
+    }
+  }
+
+  /* ============ 账户与购物车（方案 A：与菜单同处吸顶行） ============
+     原 account.liquid / cart-entry.liquid 的样式随 section 合并至此——
+     那两个 section 已不再是独立节点（否则 sticky 只黏住菜单，图标会滑走）。 */
+
+  .cart-entry__link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .cart-entry__link svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  /* 徽标：压在图标的右上角、脱离文档流（加购后计数刷新不推移布局），
+     尺寸固定，两位数自动横向撑开（border-radius 999px 不会破形）。
+     定位写在这里而不是加一层 :not()——PC 与移动端页头都吃这一条，
+     抽屉那一行再显式撤销（下面紧跟的一条），与 .compare-entry--in-drawer 同一路子。 */
+  .cart-entry__count {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-end: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 视觉小，但数字不被压缩 */
+    min-inline-size: 1.125rem;
+    block-size: 1.125rem;
+    padding-inline: 0.25rem;
+    font-size: 0.6875rem;
+    line-height: 1;
+    color: var(--color-background);
+    background-color: var(--color-brand);
+    border-radius: 999px;
+  }
+
+  /* 抽屉里那枚回到文档流（2026-11-03 刘工）：这一行是「图标 + Cart 文字 + 数字」的行式，
+     数字排在行尾，压不到图标上。判定用修饰类而不是断点——同一个组件换个容器行为跟着变，
+     跟屏幕多宽无关。 */
+  .cart-entry--in-drawer .cart-entry__count {
+    position: static;
+    inset: auto;
+  }
+
+  .cart-entry__link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+
+  /* ============ 对比入口（SDD §6.2.8，2026-10-22） ============
+     与购物车同规格：44×44 触摸目标、图标 1.5rem、角标绝对定位（不占流，避免 CLS）。
+     移动端页头已被 ☰/logo/搜索/账号/购物车占满，常驻会挤爆 ——
+     data-empty 由 JS 按清单是否为空切换，这里只负责移动端隐藏。 */
+
+  compare-entry {
+    display: inline-flex;
+  }
+
+  /* 没有任何分组配置对比页 → snippet 输出 hidden，整个入口不占位 */
+  compare-entry[hidden] {
+    display: none;
+  }
+
+  /* JS 接管前保留布局空间：图标稍后出现时不推动相邻元素（CLS） */
+  compare-entry[data-pending] {
+    visibility: hidden;
+  }
+
+  .compare-entry__link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  .compare-entry__link svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  /* 该组尚无对比页时 href 落空：视觉弱化且不可点，但仍占位（不引起页头跳动） */
+  .compare-entry__link[aria-disabled='true'] {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .compare-entry__count {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-end: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 1.125rem;
+    block-size: 1.125rem;
+    padding-inline: 0.25rem;
+    font-size: 0.6875rem;
+    line-height: 1;
+    color: var(--color-background);
+    background-color: var(--color-brand);
+    border-radius: 999px;
+  }
+
+  .compare-entry__count[hidden] {
+    display: none;
+  }
+
+  .compare-entry__link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+
+  /* 抽屉行式：图标 + 文字 + 角标靠右，与购物车那一行对齐 */
+  .compare-entry--in-drawer {
+    display: block;
+  }
+
+  .compare-entry--in-drawer .compare-entry__link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-block-size: 48px;
+    padding: 0.75rem 1rem;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .compare-entry--in-drawer .compare-entry__label {
+    flex: 1;
+  }
+
+  /* 角标在行式里不悬浮，跟在文字后面 */
+  .compare-entry--in-drawer .compare-entry__count {
+    position: static;
+    inset: auto;
+  }
+
+  /* 没有选择时页头图标不显示（2026-10-22）：它是「现在有几款在比」的状态指示，
+     清单为空时没有信息量。抽屉里那份不在此列——那是发现入口，要常驻。 */
+  compare-entry[data-empty]:not(.compare-entry--in-drawer) {
+    display: none;
+  }
+
+  .account {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Only CSS variables and ::part() — never restructure the component (see header note). */
+  .account__component {
+    --shopify-account-avatar-size: 1.75rem;
+    --shopify-account-radius-base: var(--style-border-radius-inputs);
+    --shopify-account-color-accent: var(--color-brand);
+    --shopify-account-color-background: var(--color-background);
+    --shopify-account-color-text: var(--color-foreground);
+    --shopify-account-font-body: var(--font-primary--family);
+    --shopify-account-font-heading: var(--font-primary--family);
+    /* Sheet opens below the header, not at the very top of the viewport */
+    --shopify-account-dialog-position-top: 3.5rem;
+  }
+
+  /* 触摸目标 ≥ 44×44（AGENTS §8）：组件默认头像小于此，用伪元素把命中区扩到 44px。
+     负 50% 是相对自身尺寸的居中，与书写方向无关（inline-start 已是逻辑轴）。 */
+  .account__component::part(signed-out-avatar) {
+    position: relative;
+  }
+
+  .account__component::part(signed-out-avatar)::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 44px;
+    block-size: 44px;
+    translate: -50% -50%;
+  }
+
+  .account__avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    /* 图标随前景色走，不硬编码色值（AGENTS §6） */
+    color: var(--color-foreground);
+  }
+
+  .account__avatar svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* Follow on Shop 按钮保持组件自带配色，只调间距 */
+  .account__follow {
+    display: flex;
+    align-items: center;
+  }
+
+  /* ===== 预测搜索输入框（原 snippets/predictive-search-entry.liquid，2026-10-18 迁入）
+     该片段被下方 <search-drawer> 的 template 渲染。样式原先写在片段里，
+     导致一个 section 内出现两个样式块，编辑器装载 header 组时整组渲染失败。 ===== */
+  /* 视觉基调（2026-10-10 刘工：极简 / 高端 / 沉浸式 / 工业力量感）：
+     输入框去边框只留发丝底线，聚焦换品牌色；加载用一条细扫描线。
+     布局（2026-10-10 刘工）：抽屉是纵向 flex 链——结果面板作为
+     flex 子项吃满 dialog 剩余高度，滚动只发生在列表上。 */
+  .predictive-search {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    inline-size: 100%;
+    flex: 1;
+    /* 经典 flex 陷阱：子项默认 min-height:auto，不锁 0 就无法收缩，
+       溢出会把 dialog 撑出滚动而不是列表自己滚 */
+    min-height: 0;
+  }
+
+  .predictive-search__form {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 输入区：放大镜 / 输入框 / 清空按钮 / 扫描线的共同锚点 */
+  .predictive-search__field {
+    position: relative;
+    flex: none;
+  }
+
+  .predictive-search__submit {
+    position: absolute;
+    inset-inline-start: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    /* 图标压在输入框左侧，输入框留出等宽内边距 */
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    /* 2026-10-29：改从 foreground 派生（原 rgb(0 0 0 / 45%) 在深色骨架下不可见，BUG-059） */
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+    background: none;
+    border: 0;
+    cursor: pointer;
+    pointer-events: none; /* 点击穿透到输入框：它只是视觉图标 */
+  }
+
+  .predictive-search__submit svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .predictive-search__input {
+    inline-size: 100%;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    min-block-size: 48px;
+    padding: 0.625rem 2.75rem 0.625rem 2.75rem;
+    color: var(--color-foreground);
+    background-color: var(--color-background);
+    /* 极简线型：无框，只有发丝底线；聚焦换品牌色加粗 */
+    border: 0;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
+    border-radius: 0;
+    font: inherit;
+    font-size: 1.0625rem;
+    appearance: none;
+  }
+
+  /* 原生 WebKit search 清除 X 无法定制，隐藏——用下方自定义清空按钮替代 */
+  .predictive-search__input::-webkit-search-cancel-button,
+  .predictive-search__input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .predictive-search__input::placeholder {
+    color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+
+  /* 焦点指示：底线由灰转品牌色并加粗（可见变化，替代外框 outline）。
+     outline: none 是刻意的——线型输入框外框 outline 破坏极简基调，
+     且底线变化满足 WCAG 2.1「焦点位置可见」要求（SDD §8.2）。 */
+  .predictive-search__input:focus {
+    outline: none;
+    border-block-end: 2px solid var(--color-brand-accent);
+    padding-block-end: calc(0.625rem - 1px);
+  }
+
+  /* ---- 加载扫描线：请求进行中，输入框下沿一条细线往返 ----
+     aria-busy 由 JS 在请求生命周期内驱动（过期的请求不会误关）。
+     锚在 field 上（form 的底边现在是面板底，不再是输入框下沿）。 */
+  .predictive-search__field::after {
+    content: '';
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    inline-size: 35%;
+    block-size: 2px;
+    background-color: var(--color-brand-accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .predictive-search[aria-busy='true'] .predictive-search__field::after {
+    opacity: 1;
+    animation: predictive-search-sweep 0.9s ease-in-out infinite;
+  }
+
+  @keyframes predictive-search-sweep {
+    0% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 186% 0;
+    }
+    100% {
+      translate: 0 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .predictive-search[aria-busy='true'] .predictive-search__field::after {
+      animation: none;
+      inline-size: 100%;
+      opacity: 0.4;
+    }
+  }
+
+  /* 结果面板：沉浸式——与抽屉同底色、无框无圆角，分区靠发丝线（见 section 样式） */
+  /* 清空按钮：与抽屉右上角关闭键（.search-drawer__close）同款。
+     垂直位置必须显式居中——form 改纵向 flex 后，绝对定位元素的
+     "静态位置"在输入框下方，不设 top 会被挤出去（BUG 2026-10-10）。 */
+  .predictive-search__clear {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 0;
+    translate: 0 -50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  /* 无输入时隐藏（JS 用 hidden 属性控制，此处兜底初始态） */
+  .predictive-search__clear[hidden] {
+    display: none;
+  }
+
+  .predictive-search__clear svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  .predictive-search__clear:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+    border-radius: 2px;
+  }
+
+  /* 结果面板：不再是绝对定位浮层——form 纵向 flex 的最后一个子项，
+     flex:1 吃满 dialog 剩余高度，滚动条只出现在列表上 */
+  .predictive-search__panel {
+    flex: 1;
+    min-height: 0;
+    margin-block-start: 0.75rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    background-color: var(--color-background);
+  }
+
+  .predictive-search__panel[hidden] {
+    display: none;
+  }
+
+  /* ---- 结果骨架屏（predictive-search.js 的 _queueSkeleton，2026-10-29） ----
+     只在"面板还是空的"这一刻出现：首次查询，或上一次查无结果。已有上一轮结果时
+     保持原样——边搜边换会把列表闪掉，比没有反馈更难受。
+     尺寸复刻真实结果行（112px 缩略图 + 两行文字 + 发丝线），换入结果时不跳。
+     底色一律从 foreground 派生：黑 alpha 硬编码在 Noir 深底上不可见（BUG-043 教训）。 */
+  .predictive-search__skeleton {
+    padding-block-end: 0.75rem;
+  }
+
+  .predictive-search__skeleton-heading,
+  .predictive-search__skeleton-thumb,
+  .predictive-search__skeleton-line {
+    background-color: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+    animation: predictive-search-skeleton-pulse 1.4s ease-in-out infinite;
+  }
+
+  /* 分组标签占位：对位真实 .predictive-search__heading 的 padding + 行高 */
+  .predictive-search__skeleton-heading {
+    inline-size: 5rem;
+    block-size: 0.5rem;
+    margin: 1.5rem 1.5rem 0.75rem;
+    border-radius: 3px;
+  }
+
+  .predictive-search__skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.75rem 1.5rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 7%, transparent);
+  }
+
+  .predictive-search__skeleton-thumb {
+    flex: 0 0 auto;
+    inline-size: 112px;
+    block-size: 112px;
+  }
+
+  .predictive-search__skeleton-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-inline-size: 0;
+  }
+
+  .predictive-search__skeleton-line {
+    block-size: 0.625rem;
+    inline-size: 70%;
+    border-radius: 3px;
+  }
+
+  .predictive-search__skeleton-line--short {
+    block-size: 0.5rem;
+    inline-size: 30%;
+  }
+
+  @keyframes predictive-search-skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  /* 无障碍红线：脉冲关停，保留静态灰块（仍能读出"这里有内容要来"） */
+  @media (prefers-reduced-motion: reduce) {
+    .predictive-search__skeleton-heading,
+    .predictive-search__skeleton-thumb,
+    .predictive-search__skeleton-line {
+      animation: none;
+    }
+  }
+</style>
+</head><body>
+<div class="page-note">核对稿：移动端导航抽屉（手风琴 + 抓手）</div>
+<div class="main-nav">
+  <div class="main-nav__mobile">
+    <button type="button" class="main-nav__burger" aria-label="Menu">
+      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+    </button>
+    <button type="button" class="main-nav__search-toggle main-nav__search-toggle--mobile" aria-label="Search"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" /></svg></button>
+    <div class="cart-entry cart-entry--mobile" data-cart-entry>
+      <a class="cart-entry__link" href="#"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6" /></svg><span class="cart-entry__count" aria-hidden="true">12</span></a>
+    </div>
+  </div>
+</div>
+
+<nav-drawer>
+  <bottom-sheet>
+    <dialog class="nav-drawer" data-nav-drawer>
+      <div class="nav-drawer__grabber" aria-hidden="true"></div>
+      <div class="nav-drawer__head nav-drawer__head--root">
+        <a class="nav-drawer__brand" href="#"><span class="nav-drawer__brand-name">Northbark</span></a>
+        <h2 class="nav-drawer__title visually-hidden">Menu</h2>
+        <button type="button" class="nav-drawer__search" aria-label="Search"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-3.5-3.5" /></svg></button>
+        <button type="button" class="nav-drawer__close" aria-label="Close"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" /></svg></button>
+      </div>
+      <ul class="nav-drawer__list" role="list">
+        
+      <li class="nav-drawer__item">
+        <button type="button" class="nav-drawer__link nav-drawer__link--group"
+          data-nav-toggle aria-expanded="true">
+          <span>Shop</span>
+          <span class="nav-drawer__chevron" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg></span>
+        </button>
+        <div class="nav-drawer__sub is-open">
+          <div class="nav-drawer__sub-inner">
+            <ul class="nav-drawer__sublist" role="list">
+          <li class="nav-drawer__item nav-drawer__item--sub">
+            <button type="button" class="nav-drawer__link nav-drawer__link--sub nav-drawer__link--group"
+              data-nav-toggle aria-expanded="true">
+              <span>Mowers</span>
+              <span class="nav-drawer__chevron" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg></span>
+            </button>
+            <div class="nav-drawer__sub is-open">
+              <div class="nav-drawer__sub-inner">
+                <ul class="nav-drawer__sublist nav-drawer__sublist--deep" role="list">
+                  <li class="nav-drawer__item nav-drawer__item--sub">
+                    <a class="nav-drawer__link nav-drawer__link--sub" href="#">Walk-behind</a>
+                  </li>
+                  <li class="nav-drawer__item nav-drawer__item--sub">
+                    <a class="nav-drawer__link nav-drawer__link--sub" href="#">Ride-on</a>
+                  </li>
+                  <li class="nav-drawer__item nav-drawer__item--sub">
+                    <a class="nav-drawer__link nav-drawer__link--sub" href="#">Robotic</a>
+                  </li></ul>
+              </div>
+            </div>
+          </li>
+          <li class="nav-drawer__item nav-drawer__item--sub">
+            <a class="nav-drawer__link nav-drawer__link--sub"
+               href="#">Trimmers</a>
+          </li>
+          <li class="nav-drawer__item nav-drawer__item--sub">
+            <a class="nav-drawer__link nav-drawer__link--sub"
+               href="#">Chainsaws</a>
+          </li>
+          <li class="nav-drawer__item nav-drawer__item--sub">
+            <a class="nav-drawer__link nav-drawer__link--sub nav-drawer__link--current"
+               href="#">Batteries</a>
+          </li></ul>
+          </div>
+        </div>
+      </li>
+        
+      <li class="nav-drawer__item">
+        <button type="button" class="nav-drawer__link nav-drawer__link--group"
+          data-nav-toggle aria-expanded="false">
+          <span>Support</span>
+          <span class="nav-drawer__chevron" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg></span>
+        </button>
+        <div class="nav-drawer__sub">
+          <div class="nav-drawer__sub-inner">
+            <ul class="nav-drawer__sublist" role="list">
+          <li class="nav-drawer__item nav-drawer__item--sub">
+            <a class="nav-drawer__link nav-drawer__link--sub"
+               href="#">Contact</a>
+          </li>
+          <li class="nav-drawer__item nav-drawer__item--sub">
+            <a class="nav-drawer__link nav-drawer__link--sub"
+               href="#">Warranty</a>
+          </li>
+          <li class="nav-drawer__item nav-drawer__item--sub">
+            <a class="nav-drawer__link nav-drawer__link--sub"
+               href="#">Manuals</a>
+          </li></ul>
+          </div>
+        </div>
+      </li>
+        <li class="nav-drawer__item"><a class="nav-drawer__link" href="#"><span>Journal</span></a></li>
+        <li class="nav-drawer__item"><a class="nav-drawer__link" href="#"><span>Contact</span></a></li>
+      </ul>
+      <div class="nav-drawer__footer">
+        <div class="account--in-drawer">Account</div>
+        <div class="cart-entry cart-entry--in-drawer" data-cart-entry>
+          <a class="cart-entry__link" href="#"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6" /></svg>
+            <span class="cart-entry__label">Cart</span>
+            <span class="cart-entry__count" aria-hidden="true">12</span>
+          </a>
+        </div>
+      </div>
+    </dialog>
+  </bottom-sheet>
+</nav-drawer>
+<script>
+  /* ?header → 只看移动端页头行（抽屉不打开）：核对购物车角标压在图标的右上角 */
+  if (location.search.includes('header')) {
+    document.querySelector('nav-drawer').remove();
+    document.querySelector('.page-note').textContent = '核对稿：移动端页头行（购物车角标应压在图标右上角）';
+  } else {
+    /* ?closed → 全部收起，用于核对首帧（列表滚动与底部固定行） */
+    if (location.search.includes('closed')) {
+      document.querySelectorAll('.nav-drawer__sub.is-open').forEach((sub) => {
+        sub.classList.remove('is-open');
+        sub.inert = true;
+        sub.parentElement.querySelector('[data-nav-toggle]').setAttribute('aria-expanded', 'false');
+      });
+    }
+    document.querySelector('dialog').showModal();
+    /* showModal 会把焦点扔给第一个可聚焦元素（品牌链接），
+       截图里会多出一圈黑色焦点框，核对版式时很碍眼 —— 挪开 */
+    document.activeElement?.blur();
+  }
+</script>
+</body></html>

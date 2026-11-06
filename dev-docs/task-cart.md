@@ -407,7 +407,8 @@ Total               {{ cart.total_price | money }}
 - `<dialog>` + `showModal()`：焦点锁定、背景 `inert`、`Esc`、`::backdrop` 全由平台给，不手写焦点陷阱；配 `scroll-lock` 属性用 critical.css 里已有的滚动锁。
 - 打开即刷新：`?sections=<自身 id>` 取回本 section 渲染，替换 `[data-cart-section]`（连小计与按钮一起换）。
 - 加购自动打开：监听 document 的 `cart:added`（quick-add 派发，项目既有约定）。
-- 抽屉内改数量/删除复用 `cart-items.js`，靠 `data-sections="{{ section.id }}"` 把自己和购物车页的刷新范围隔开。
+- 抽屉内改数量/删除复用 `cart-items.js`；脚本**由本 section（抽屉）全站加载**，购物车页不再单独引入（2026-11-03：只在 cart-lines 引入时，商品页/集合页上的抽屉是个没有行为的空元素）。
+- **结构约束（2026-11-03）**：`<cart-items>` 必须在**外**、`[data-cart-section]` 在**内**。反过来（旧做法）会让「改数量 → 整块替换」把发出请求的元素自己也换掉：监听器、按行去重表、在飞的请求一起丢。外壳用 `display: contents` 退出布局。
 - **兜底**：`?sections=` 拿不到结果时用 `/cart.js` 核对 `item_count`，与标题计数不符就跳 `/cart` —— 绝不让顾客加了东西却看到抽屉写着"购物车是空的"。
 - 关闭后焦点还给触发按钮；点遮罩关闭（`event.target === dialog`）。
 
