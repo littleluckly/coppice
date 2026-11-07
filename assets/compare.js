@@ -726,86 +726,9 @@
 
   // ------------------------------------------------- 对比页：客户端接管表格
 
-  /**
-   * 服务端默认表在无 JS / JS 报错时是最终答案；这里只在「清单里有本组商品」时
-   * 用同一套 class 结构重建（SDD §6.2.4 要求两份标记逐项一致）。
-   * 数据岛只含 metafield 值，缩略图取自加入时存下的 120px 派生图。
-   */
-  /**
-   * 列切换导航（SDD §6.2.4）：移动端横向滚动对键盘/屏读用户不可用，
-   * 这条「上一款 / 下一款」是等价路径。表格没溢出时整块不显示。
-   */
-  function initColumnNav(wrap) {
-    const host = wrap.parentNode;
-    const nav = host && host.querySelector('[data-compare-cols]');
-    if (!nav) return;
-
-    /* 表格可能被重建（JS 接管），重复初始化前先拆掉旧监听 */
-    if (nav.__cleanup) nav.__cleanup();
-    const controller = new AbortController();
-    const { signal } = controller;
-    nav.__cleanup = () => controller.abort();
-
-    const table = wrap.querySelector('table');
-    if (!table) return;
-
-    const headerCells = Array.from(table.querySelectorAll('thead th')).slice(1);
-    if (headerCells.length < 2) {
-      nav.removeAttribute('data-overflow');
-      return;
-    }
-
-    const prev = nav.querySelector('[data-compare-prev]');
-    const next = nav.querySelector('[data-compare-next]');
-    const status = nav.querySelector('[data-compare-col-status]');
-
-    const overflow = wrap.scrollWidth - wrap.clientWidth > 4;
-    nav.toggleAttribute('data-overflow', overflow);
-    if (!overflow) return;
-
-    let index = 0;
-
-    const paint = () => {
-      if (prev) prev.disabled = index <= 0;
-      if (next) next.disabled = index >= headerCells.length - 1;
-      if (status) status.textContent = `${index + 1} / ${headerCells.length}`;
-    };
-
-    const go = (target) => {
-      index = Math.max(0, Math.min(headerCells.length - 1, target));
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      wrap.scrollTo({
-        left: headerCells[index].offsetLeft,
-        behavior: reduce ? 'auto' : 'smooth',
-      });
-      paint();
-    };
-
-    if (prev) prev.addEventListener('click', () => go(index - 1), { signal });
-    if (next) next.addEventListener('click', () => go(index + 1), { signal });
-
-    /* 用户直接横滚时也要让按钮状态跟上 */
-    wrap.addEventListener(
-      'scroll',
-      () => {
-        let best = 0;
-        let bestDist = Infinity;
-        headerCells.forEach((cell, i) => {
-          const dist = Math.abs(cell.offsetLeft - wrap.scrollLeft);
-          if (dist < bestDist) {
-            bestDist = dist;
-            best = i;
-          }
-        });
-        index = best;
-        paint();
-      },
-      { passive: true, signal },
-    );
-
-    paint();
-  }
-
+  /* 对比页策略：服务端默认表在无 JS / JS 报错时是最终答案；这里只在
+     「清单里有本组商品」时用同一套 class 结构重建（SDD §6.2.4 要求两份标记
+     逐项一致）。数据岛只含 metafield 值，缩略图取自加入时存下的 120px 派生图。 */
   /**
    * 把清单里存的缩略图地址升到 480px 宽。
    *
@@ -892,7 +815,6 @@
     }
 
     recomputeDiff(table.querySelector('tbody'));
-    initColumnNav(wrap);
   }
 
   /**
@@ -1132,7 +1054,6 @@
     wrap.appendChild(table);
     wrap.setAttribute('data-ready', '');
     if (empty) empty.hidden = true;
-    initColumnNav(wrap); /* 表格换了，导航要按新的列数重装 */
 
     /* 表头 × 移除该列（委托挂在 wrap 上，列是动态生成的） */
     wrap.addEventListener('click', (event) => {

@@ -450,6 +450,20 @@
 - **修复**：① `sections/cart-drawer.liquid` 引入 `cart-items.js`（抽屉永远在页面上，这才是全站加载点），`sections/cart-lines.liquid` 里那份删除，避免购物车页塞两次；② 守卫改成 `if (!this.dataset.cartChangeUrl) return;`——判据取"有没有改数量的接口"，不取页面专属的 id；③ 抽屉结构调换成 `<cart-items>` 在外、`[data-cart-section]` 在内，外壳 `display: contents` 不参与布局，替换只发生在内层，元素实例与监听器全程存活；④ 顺带修 `cart-drawer.js` 的 `_refresh`：**去掉 `Accept: application/json`**（商品页上带它 Shopify 会走 AJAX Product API 返回 `{"product":…}`，`payload[id]` 恒 undefined，与 SDD §6.2 的 compare-lookup 同一条坑），改 `cache: 'no-store'`；⑤ `cart:updated` 增加 `detail.source = 'items'`，抽屉据此区分"自己改的（内容已换过，别再刷）"与"外部加购 / 另一个标签页（抽屉开着就得再刷一次）"——`cart:added` 是点击即发的，`_show()` 里那次刷新常常跑在 `/cart/add.js` 之前，抽屉会打开却看不到刚加的商品；⑥ `_announceTotal` 补 `[data-cart-drawer-subtotal]` 兜底（原先只认 `.cart-summary__total-value`，抽屉里小计播报一直是哑的）；⑦ 抽屉标题补 `tabindex="-1"`，`_restoreFocus` 的落点兜底认 `.cart-drawer__title`。
 - **预防**：**全站组件的脚本必须由全站 section 加载，且"能不能用"不能靠页面专属的 DOM 结构来判断**。可执行做法：① 新增/移动任何 `assets/*.js` 时 `grep -rn "<脚本名>" sections snippets layout` 确认引入点覆盖**所有**渲染该元素的页面（抽屉、页头这类 `{% section %}`/`{% render %}` 在 layout 的一律按全站算）；② 自定义元素的 `connectedCallback` 守卫只允许判 `data-*` 能力标记（接口地址、模板字符串），不允许判 `#id` / 某个页面才有的子元素——`#cart-form` 这一条就是反例；③ **可交互元素在哪出现，就要在那份 DOM 里点一次实测**：本次三处 JS 都在购物车页验过、唯独抽屉没跑过，坏了两周没人发现（无报错、无网络请求，肉眼只看得到"没反应"）；④ 抽屉/浮层类组件，可刷新区域必须是组件的**子节点**，绝不能让组件成为被替换的节点本身（`display: contents` 外壳是最省事的写法）。
 
+### BUG-063 · 对比页在移动端滚不动：表格被 `margin-inline: auto` 撑成了 fit-content，超出部分又被 `overflow-x: clip` 裁掉
+
+- **日期**：2026-11-06 ｜ **状态**：Fixed
+- **现象**：手机上打开对比页，表格右侧的列（第 3、4 款商品）看不到，**左右滑也滑不动**。不是"滚到一半卡住"，是滚动容器根本没有可滚空间；页面既不报错，列切换导航（上一款/下一款）也不出现——因为它的显示条件是 `scrollWidth - clientWidth > 4`，而这个差值恒为 0。
+- **根因**：`.compare-page` 同时写了 `max-inline-size: 1400px` + `margin-inline: auto`，而它是 `.shopify-section`（三列 grid：`margin | content | margin`）的 grid item。**grid item 上的 auto margin 会让 `justify-self: stretch` 失效**——auto margin 先把轨道里的剩余空间吸走，元素宽度退化成 `fit-content`，于是被表格的 `min-inline-size: 640px` 撑到 **680**（= 640 + 两侧 padding 40），早已超出 460 的内容列。宽度传下去：`.compare-table-wrap` 拿到 640，与表格自身宽度相同 ⇒ `clientWidth == scrollWidth` ⇒ `overflow-x: auto` 永不触发。多出来的 700 落在包裹层，被 `.compare-page-section` 的 `overflow-x: clip` 裁掉——所以是"滚不动"**加**"看不见"两个症状同源。
+  无头 Chrome 实测（500 视口，未修复）：列宽 `20px 460px 20px`，`section.compare-page w=680 minW=0px`，`wrap clientW=640 scrollW=640`，`canScroll=false`，包裹层 `scrollW=700 > clientW=500` 且 `overflow-x: clip`。
+- **为什么 2026-10-22 的修复没兜住**：当时给 `.compare-page` 加的 `min-inline-size: 0` 解决的是"automatic minimum size"这一层，但本例里宽度不是被 min-content 撑开的（实测 `minWidth` 计算值已是 `0px`，宽度照旧 680）——是 auto margin 让 stretch 退出，`fit-content` 接管。**`min-inline-size` 与 auto margin 是两条独立通路，前者管"最小能收到多小"，后者管"是否参与拉伸"。**
+- **修复**：① `.compare-page` 显式 `inline-size: 100%`——宽度不再由内容决定，stretch 恢复，auto margin 退化为纯居中（宽屏 `max-inline-size` 生效时仍然居中）；② `.compare-page__notice` 同款写法一并补上（同为 grid item + auto margin，只是内容窄没暴露）；③ 改写两处注释，把"能滚是因为 main 的 min-inline-size"和"clip 只是兜底"这两句**错误归因**纠正过来——原注释会让下一个人继续往 min-inline-size 上打补丁。
+  实测（修复后，375 布局 / 500 视口）：`section.compare-page 335 / 460`（= 列宽），`wrap 293 / 420`，`scrollW 640`，`scrollLeft 0→120 成功`，包裹层 `scrollW == clientW`（clip 不再裁任何东西）。宽屏 1600 下修复前后完全一致（item 1160 / wrap 1080），**桌面端零变化**。
+- **预防**：**判断"滚动容器不滚"，只看 `overflow-x` 是错的，必须量三件套：容器 `clientWidth`、内容 `scrollWidth`、以及容器自身是不是被撑成了 fit-content。** 可执行做法：
+  1. `grep -rn "margin-inline: \\s*auto" sections assets --include=*.liquid --include=*.css`，每一处都要确认该元素的父级是不是 `display: grid` / `flex`——是的话，检查元素是否还有明确的 `width`；没有就补 `inline-size: 100%`。（当前全站 7 处：compare-page 2 处已修；`.template-cart #MainContent` 与 `.collection__layout` 各自显式写了 `inline-size` / `width`，安全；`.main-nav__inner`、`.main-nav__mega-inner`、`.product-highlights` 属同模式但内容不会超出列宽，暂未暴露，**将来这几块若要加横向滚动，先按本条补 `inline-size: 100%`**，否则会以完全相同的症状复现。）
+  2. 无头 Chrome 验收脚本固定断言：`wrap.clientWidth < table.offsetWidth` 且 `(wrap.scrollLeft = 120) > 0`。只断言 `scrollWidth > clientWidth` 不够——本 bug 里这条恰好是 false，而那些用了 `overflow: hidden` 的错误实现里它可能是 true。
+  3. 新写 grid item 的居中，**优先用容器的 `justify-items` / 列布局实现**，不要用 `margin-inline: auto` + `max-inline-size`；非要居中就给死 `inline-size: 100%`。
+
 ## 记录模板（追加新 bug 用）
 
 ```

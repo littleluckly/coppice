@@ -327,10 +327,6 @@
       "missing": "No data",
       "diff_only": "Show differences only",
       "editor_warning": "This group has {{ count }} products, over the platform limit of {{ limit }}. The comparison table only covers the first {{ limit }}; products beyond that cannot show specs. Consider splitting this group into smaller ones.",
-      "columns_nav": "Compare table columns",
-      "prev_column": "Previous product",
-      "next_column": "Next product",
-      "column_status": "Product {{ current }} of {{ total }}",
       "empty_selection": "You have not picked any products to compare yet.",
       "no_js": "Comparison needs JavaScript. Enable it to compare products side by side."
     },
