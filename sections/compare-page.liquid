@@ -139,20 +139,6 @@
       </a>
     </div>
 
-    {%- comment -%}
-      列切换导航（SDD §6.2.4）：移动端横向滚动对键盘用户不可用，
-      这条是等价路径。无 JS 时整块隐藏（html:not(.js)），有 JS 才按需弹出。
-    {%- endcomment -%}
-    <nav class="compare-cols" data-compare-cols aria-label="{{ 'compare.page.columns_nav' | t }}" hidden>
-      <button type="button" class="compare-cols__btn" data-compare-prev>
-        {{- 'compare.page.prev_column' | t -}}
-      </button>
-      <span class="compare-cols__status" data-compare-col-status aria-live="polite"></span>
-      <button type="button" class="compare-cols__btn" data-compare-next>
-        {{- 'compare.page.next_column' | t -}}
-      </button>
-    </nav>
-
     {%- if over_limit -%}
       <p class="compare-page__limit">
         {{ 'compare.page.over_limit' | t: count: compare_total, limit: 50 }}
@@ -329,59 +315,6 @@ html:not(.js) .compare-empty__js {
   border-radius: 4px;
   color: var(--color-foreground);
   text-decoration: none;
-}
-
-/* 列切换导航（§6.2.4）：只在表格真的溢出时由 JS 点亮 */
-.compare-cols {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-block-start: 0.75rem;
-  min-inline-size: 0;
-}
-
-.compare-cols[data-overflow] {
-  display: flex;
-}
-
-html:not(.js) .compare-cols {
-  display: none;
-}
-
-.compare-cols__btn {
-  /* 触摸目标 ≥ 44×44（AGENTS §8） */
-  min-block-size: 44px;
-  /* 文字长时允许收缩换行，别把导航撑出容器（窄屏实测曾把文档撑宽） */
-  min-inline-size: 0;
-  flex: 0 1 auto;
-  padding: 0 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--color-foreground) 30%, transparent);
-  border-radius: 4px;
-  background-color: transparent;
-  color: var(--color-foreground);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.compare-cols__btn[disabled] {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.compare-cols__status {
-  flex: 1 1 auto;
-  text-align: center;
-  font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--compare-muted);
-}
-
-.compare-cols__btn:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
 }
 
 /* 超出数据岛范围的列（集合 > 50 款时排在后面的商品）：
@@ -578,12 +511,8 @@ html:not(.js) .compare-cols {
     background-color: var(--color-background);
   }
 
-  .compare-table__row-label {
-    position: sticky;
-    inset-inline-start: 0;
-    z-index: 1;
-    background-color: var(--color-background);
-  }
+  /* 行标签（首列）不固定（2026-11-06 刘工定）：横向滚动时随表格一起走，
+     不再吸在左边。相应地也不需要底色与 z-index —— 它们只为遮挡滚动内容。 */
 }
 {% endstylesheet %}
 
