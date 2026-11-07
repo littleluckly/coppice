@@ -213,22 +213,32 @@
 .compare-page-section {
   --compare-border: color-mix(in srgb, var(--color-foreground) 14%, transparent);
   --compare-muted: color-mix(in srgb, var(--color-foreground) 60%, transparent);
-  /* 兜底裁切。真正让表格能横向滚动的是 critical.css 里 .main-content 的
-     `min-inline-size: 0`（body 是 flex，main 默认被 min-content 撑到 640px）；
-     这里只是防止任何残余溢出传到文档级，连带把抽屉撑宽。 */
+  /* 兜底裁切：只负责拦住残余溢出、别让它传到文档级（连带把抽屉撑宽）。
+     ⚠️ 它**不负责**让表格能滚。一旦内部真的溢出，这里会把右侧直接裁掉 ——
+     手机上"滚不动 + 看不见"的可见症状就是它造成的（BUG-063）。
+     能滚的前提只有一个：滚动容器的宽度窄于内容宽度，见 .compare-page 的注释。 */
   overflow-x: clip;
   min-inline-size: 0;
 }
 
 .compare-page {
+  /* ⚠️ inline-size: 100% 不能省，也不能只留 max-inline-size。
+     .shopify-section 是三列 grid（margin | content | margin），本元素是 grid item。
+     grid item 上的 `margin-inline: auto` 会让 justify-self: stretch **失效**
+     （auto margin 先吸走剩余空间），宽度改由内容 fit-content 决定 ⇒ 被表格的
+     640px 撑到 680（= 640 + 两侧 padding）。于是滚动容器与表格同宽，横向滚动
+     永不触发，超出的部分被包裹层的 overflow-x: clip 裁掉 —— 手机上就是
+     "滚不动 + 看不见"。显式给 100% 后宽度回到列宽内，auto margin 只负责
+     宽屏下 max-inline-size 生效时的居中。
+     2026-11-06 实测（500 视口）：列宽 460、item 宽 680、wrap clientW 640 = scrollW；
+     补上本行后 item 460 / wrap 420 / scrollW 640，横向滚动恢复。 */
+  inline-size: 100%;
   max-inline-size: 1400px;
   margin-inline: auto;
   padding-block: clamp(2rem, 5vw, 4rem);
   padding-inline: clamp(1rem, 4vw, 2.5rem);
-  /* ⚠️ 这一条不能省：Shopify 的 section 包裹 div 是 display: grid，
-     本元素是 grid item，默认 min-inline-size: auto ⇒ 被表格 640px 撑到 675px
-     （= 640 + 两侧 padding），于是表格容器与内容同宽、横向滚动永不触发。
-     2026-10-22 祖先链实测：SECTION.compare-page w=675 minW=auto。 */
+  /* 拦 automatic minimum size：即使将来有人删掉 inline-size: 100%，
+     这一条也能保证 item 不被 min-content 顶出轨道。 */
   min-inline-size: 0;
 }
 
@@ -299,6 +309,9 @@ html:not(.js) .compare-empty__js {
 }
 
 .compare-page__notice {
+  /* 同 .compare-page：grid item + margin-inline: auto 会退化成 fit-content，
+     显式 100% 让 stretch 生效（内容窄，视觉无变化，只防同类回归）。 */
+  inline-size: 100%;
   max-inline-size: 62ch;
   margin-inline: auto;
   padding-block: clamp(3rem, 8vw, 6rem);
