@@ -950,14 +950,18 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .footer__text,
-    .footer__contact,
+    /* 正文占两列（句子挤在 232px 里会碎成六行），联系占一列：
+       2 + 1 刚好铺满三列，联系列因此有 1/3 宽（768 上 232px），
+       187px 的邮箱放得下——实测过，这一档正是邮箱被拆行的地方。 */
+    .footer__text {
+      grid-column: span 2;
+    }
+
+    /* 社交整行：塞进 1/3 列时 5 枚图标（220px）会折成 4+1 */
     .footer__social,
     .footer__custom {
       grid-column: 1 / -1;
     }
-
-    /* 整行后正文会拉成一条长线，按阅读舒适度封顶（62ch ≈ 460px @15px） */
     .footer__rte {
       max-inline-size: 62ch;
     }
