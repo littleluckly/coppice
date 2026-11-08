@@ -705,6 +705,9 @@
     z-index: 0;
     /* 纯装饰：不吃点击，否则会挡住页脚左侧的空白区 */
     pointer-events: none;
+    /* 必须裁：图片为了兜住 blur 的透明边做了 scale 放大，
+       不裁的话会撑出容器 7.5%，而那一条没有蒙层覆盖 —— 实测会在右缘留下一条没压住的绿边 */
+    overflow: hidden;
   }
 
   .footer__media-image {
@@ -718,11 +721,12 @@
       文字压在图上之后（2026-11-08），照片必须退成"色晕"而不是"照片"：
       · blur 的作用不是提对比度——它只打散细节，深绿树模糊后仍是深绿；
       · 它真正的用处是让残留的那一点图像看起来像刻意做的光晕，而不是"没擦干净的半张图"；
-      · 顺带把底层最暗的局部（前景树丛）跟周围的亮部平均掉，蒙层才好统一算。
-      scale 放大 15% 是为了兜住 blur 在四条边上渗出的透明边。
+      · 半径给到 60px 是有原因的：26px 只够糊掉细节，糊不平"亮天空 / 暗树丛"的大块明暗差，
+        结果就是蒙层下面透出一块可辨认的矩形（实测）。60px 之后只剩上下方向的明暗过渡。
+      scale 放大 20% 是为了兜住 blur 在四条边上渗出的透明边（配合 .footer__media 的 overflow: hidden）。
     */
-    filter: blur(26px) saturate(1.12);
-    scale: 1.15;
+    filter: blur(60px) saturate(1.15);
+    scale: 1.2;
   }
 
   /*
@@ -753,7 +757,9 @@
         var(--footer-surface) 100%
       ),
       linear-gradient(to bottom, var(--footer-surface) 0%, transparent 15%),
-      linear-gradient(to top, var(--footer-surface) 0%, var(--footer-surface) 12%, transparent 36%);
+      /* 底部压到 30% 实色：版权行从页面左边距起排，正落在图片下缘；
+         它的次级文字是 70%（作用域不在品牌栏里），必须完全站在纸面上才达标。 */
+      linear-gradient(to top, var(--footer-surface) 0%, var(--footer-surface) 30%, transparent 55%);
   }
 
   .footer__leaf {
