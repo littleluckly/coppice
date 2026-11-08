@@ -862,7 +862,12 @@ bottom-sheet > dialog.is-close-anim {
   vertical-align: top;
 }
 .rte th {
+<<<<<<< HEAD
+  /* 同上面的理由：本主题没有 500，写 500 = 写 400 */
+  font-weight: 700;
+=======
   font-weight: 500;
+>>>>>>> 83dabb9b9ac38495078703257b71212687e4dddc
   color: var(--color-foreground);
 }
 
