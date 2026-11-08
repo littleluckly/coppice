@@ -412,6 +412,7 @@
                   name="contact[email]"
                   value="{{ form.email }}"
                   autocomplete="email"
+                  placeholder="{{ 'sections.footer.newsletter.label' | t }}"
                   required
                   {% if form.errors %}
                     aria-invalid="true" aria-describedby="{{ error_id }}"
@@ -781,6 +782,13 @@
   .footer__newsletter-input:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
+  }
+
+  /* 占位文字只是「补充提示」，真标签是那个 visually-hidden 的 <label>。
+     颜色走 muted（70% 前景）——不能比它更淡，否则深色预设下看不见。 */
+  .footer__newsletter-input::placeholder {
+    color: var(--color-foreground-muted);
+    opacity: 1;
   }
 
   .footer__newsletter-input[aria-invalid='true'] {
