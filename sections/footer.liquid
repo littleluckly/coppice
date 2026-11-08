@@ -877,8 +877,13 @@
     margin-block-start: 0.625rem;
     font-size: 1.0625rem;
     line-height: 1.35;
-    /* 78% 前景色：比 muted 还深一档，它是"第二句品牌话"而不是辅助信息 */
-    color: color-mix(in srgb, var(--color-foreground) 78%, transparent);
+    /*
+      92% 前景色（原 78%）：品牌栏压在图片蒙层上之后，78% 反而比提深后的 muted(85%)
+      更浅，层级就颠倒了。改成 92% 让它稳在"第二句品牌话"这一档，
+      与下面描述的区别改由字号承担（17px vs 13px）。
+      92% 压白底是 #3F3F3F（10.3:1），压蒙层最暗处 ≈6.6:1。
+    */
+    color: color-mix(in srgb, var(--color-foreground) 92%, transparent);
   }
 
   .footer__brand-text {
@@ -1373,8 +1378,14 @@
       background: linear-gradient(to bottom, transparent 46%, var(--footer-surface) 97%);
     }
 
-    .site-footer--with-media .footer__main {
-      padding-inline-start: 0;
+    /*
+      移动端图片是横幅、文字在下方纸面上，没有任何文字压在图上——
+      所以这里不需要桌面那套"糊掉 + 蒙层"，图片保持清晰。
+      同一条规则在两个断点下产出两种正确结果，不是不一致。
+    */
+    .footer__media-image {
+      filter: none;
+      scale: 1;
     }
 
     .footer__columns {
