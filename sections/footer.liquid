@@ -791,8 +791,18 @@
     opacity: 1;
   }
 
+  /*
+    错误色不能直接用 var(--color-sale)：那个红是给"白底浅粉卡片上的降价徽标"定的
+    （#c62828 压白底 5.9:1），压在 Noir 的 #0F1012 上只有 ≈2.8:1，13px 的错误提示
+    根本读不出来。往当前前景色混 30% 就两头都成立——浅底上混出更深的红
+    （≈6.5:1），深底上混出偏粉的红（≈4.9:1），且不需要判断明暗。
+  */
+  .footer__newsletter-message--error {
+    color: color-mix(in srgb, var(--color-sale) 70%, var(--color-foreground));
+  }
+
   .footer__newsletter-input[aria-invalid='true'] {
-    border-color: var(--color-sale);
+    border-color: color-mix(in srgb, var(--color-sale) 70%, var(--color-foreground));
   }
 
   .footer__newsletter-submit {
@@ -806,10 +816,6 @@
     margin-block-start: 0.5rem;
     font-size: 0.8125rem;
     line-height: 1.5;
-  }
-
-  .footer__newsletter-message--error {
-    color: var(--color-sale);
   }
 
   .footer__newsletter-message--success {
