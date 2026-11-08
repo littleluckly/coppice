@@ -16,12 +16,6 @@
  * 所以滚完把焦点交给页头品牌链接（没有则 #MainContent）。
  * `preventScroll: true` 不能省：不带它浏览器会先把目标元素滚进视口，
  * 平滑滚动当场被截断，变成瞬间跳顶（实测就是这个现象）。
- *
- * **页脚在场时让位**（2026-11-08）：页脚 v3.0 的底栏右侧有自己的「回到顶部」圆钮
- * （纯 `<a href="#top">`，无 JS 可用）。两个按钮同功能、同角落，滚到页脚就会重叠。
- * 这里用 IntersectionObserver 观察 `.site-footer`，它在视口里时收起浮动按钮——
- * 判定放在组件自己身上，而不是让 footer.js 去操作别人的 DOM。
- * 阈值留了底部 40px 余量：页脚刚探进屏幕时浮动按钮还该在，避免"还没到页脚就消失"。
  */
 class BackToTop extends HTMLElement {
   connectedCallback() {
@@ -38,36 +32,14 @@ class BackToTop extends HTMLElement {
     window.addEventListener('resize', () => this.requestSync(), { passive: true, signal });
     button.addEventListener('click', () => this.scrollToTop(), { signal });
 
-    this.observeFooter();
-
     /* 刷新后停在半页（浏览器恢复滚动位置）时，首帧就得是可见的 */
     this.sync();
-  }
-
-  /* 页脚进入视口 → 收起浮动按钮（页脚自带一个）。拿不到 footer / 不支持 IO 时静默跳过 */
-  observeFooter() {
-    const footer = document.querySelector('.site-footer');
-    if (!footer || typeof IntersectionObserver !== 'function') return;
-
-    this._footerObserver?.disconnect();
-    this._footerObserver = new IntersectionObserver(
-      (entries) => {
-        this.footerVisible = entries.some((entry) => entry.isIntersecting);
-        this.requestSync();
-      },
-      { rootMargin: '0px 0px -40px 0px' }
-    );
-    this._footerObserver.observe(footer);
   }
 
   disconnectedCallback() {
     if (this.controller) {
       this.controller.abort();
       this.controller = null;
-    }
-    if (this._footerObserver) {
-      this._footerObserver.disconnect();
-      this._footerObserver = null;
     }
   }
 
@@ -83,8 +55,7 @@ class BackToTop extends HTMLElement {
 
   sync() {
     const threshold = (window.innerHeight || document.documentElement.clientHeight) * 0.75;
-    /* 页脚在场时让位给页脚自带的圆钮：两个同功能按钮不该在同一屏的同一角落 */
-    const visible = window.scrollY > threshold && !this.footerVisible;
+    const visible = window.scrollY > threshold;
     /* 只在跨过阈值时改属性，避免每帧写 DOM 让 CSS 过渡不断重启 */
     if (visible !== this.hasAttribute('data-visible')) {
       this.toggleAttribute('data-visible', visible);
