@@ -769,9 +769,14 @@ bottom-sheet > dialog.is-close-anim {
 
 .rte :is(h2, h3, h4, h5, h6) {
   color: var(--color-foreground);
-  /* 500 与商品描述 .product-description__rte 同一档：本主题只加载 regular/bold
-     两档字重，700 的标题压在中段正文里过重 */
-  font-weight: 500;
+  /* 700，不是 500（2026-11-07 刘工指出后修正）。
+     两个理由叠在一起，任一条都足以定 700：
+     ① 本主题只 font_face 了两档字重（snippets/css-variables.liquid：原字重 + bold），
+        500 没有对应字体面，按 CSS 字重匹配规则退到最近的 400 ⇒ 标题渲染成常规字重，
+        等于"没加粗"。任何介于 400 和 700 之间的值在这个主题里都是无效值。
+     ② 富文本编辑器和浏览器 UA 默认给 h1–h6 的就是 bold，商家在后台看到的是加粗，
+        前台的默认预期也应一致；调成 500 属于"主题偷偷改了商家的排版意图"。 */
+  font-weight: 700;
   text-wrap: balance;
 }
 
@@ -857,7 +862,8 @@ bottom-sheet > dialog.is-close-anim {
   vertical-align: top;
 }
 .rte th {
-  font-weight: 500;
+  /* 同上面的理由：本主题没有 500，写 500 = 写 400 */
+  font-weight: 700;
   color: var(--color-foreground);
 }
 
