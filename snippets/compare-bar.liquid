@@ -9,6 +9,9 @@
   · **移动端**：只显示胶囊，点击直接进对比页（不展开整条——底部整条在手机上挡内容）。
   · DOM 惰性构建：内容放在 `<template>` 里，首次需要时才实例化。
   · 没有分组配置对比页时不渲染（`compare-page-urls` 输出 hidden 时无从跳转）。
+  · **内容页与博客不渲染**（2026-11-07 刘工：Support 栏目下的页面都不需要展示）：
+    宿主 layout 按 `template.name` 判 page / article / blog 直接跳过，不在脚本里藏。
+    那些页面没有可加入对比的商品卡，常驻条只挡内容。
   · 关闭后焦点交还 `#MainContent`，不落回 body。
 
   @param {string} [class] - 追加到根元素的 class
