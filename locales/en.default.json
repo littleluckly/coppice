@@ -289,7 +289,7 @@
         "submit": "Signup",
         "success": "Thanks for signing up. Check your inbox to confirm your email.",
         "error": "Check the email address and try again.",
-        "consent": "Unsubscribe at any time. We only email about seasonal maintenance and new arrivals."
+        "consent": "Unsubscribe at any time."
       },
       "localization": {
         "country": "Country or region",

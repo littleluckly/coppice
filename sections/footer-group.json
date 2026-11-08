@@ -30,7 +30,7 @@
           "type": "text",
           "settings": {
             "heading": "Parts and service",
-            "richtext": "<p>Every machine ships with a parts list and a maintenance guide. Blades, bars, chains, and batteries are listed for every model, and the serial number on the box label is the fastest way to find the right part.</p>"
+            "richtext": "<p>Every machine ships with a parts list and a maintenance guide. The serial number on the box label is the fastest way to find the right part.</p>"
           }
         },
         "contact": {

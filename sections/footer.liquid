@@ -684,11 +684,13 @@
   .footer__social-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.125rem;
+    /* 不设 gap：每个图标占 44×44 的盒子、字形只有 22px，盒内自带 11px 留白，
+       相邻字形天然相隔 22px。加了 gap 反而让 5 枚图标（5×44=220）在
+       160–240px 的列里挤成 4+1 两行——实测过的取舍，别把它改回去。 */
+    gap: 0;
     margin: 0;
-    /* 图标自带 44px 视觉留白（链接盒就是触摸目标），这里左移半格，
-       让图标左缘与同列的列标题对齐 */
-    margin-inline-start: -0.625rem;
+    /* 左移半个「盒内留白」，让图标的左缘与同列的列标题对齐 */
+    margin-inline-start: -0.6875rem;
     padding: 0;
     list-style: none;
   }
@@ -948,7 +950,7 @@
     }
 
     .footer__social-list {
-      margin-inline-start: -0.625rem;
+      margin-inline-start: -0.6875rem;
     }
 
     /* sub-footer 纵排：newsletter 一行、选择器一行（不与导航列挤在一起，F-6） */
