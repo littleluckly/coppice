@@ -547,10 +547,9 @@
         {{ powered_by_link }}
       </p>
 
-      <div class="footer__bottom-end">
-        {%- if has_localization -%}
-          {%- for block in section.blocks -%}
-            {%- if block.type == 'localization' -%}
+      {%- if has_localization -%}
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'localization' -%}
               {%- comment -%}
                 D-3 的基线：原生 <select> + 可见的提交按钮，无 JS 完全可用
                 （官方对「custom element 方案」明确要求带 fallback）。
@@ -635,17 +634,14 @@
           {%- endfor -%}
         {%- endif -%}
 
-        {%- comment -%}
-          回到顶部：用 `<a href="#top">` 而不是按钮 + JS。
-          HTML 规范里 "#top" 在没有同名元素时就是「文档顶部」，所有浏览器原生支持，
-          因此无 JS 也可用、也不需要在 footer.js 里加一套滚动逻辑。
-          全站那个浮动 FAB（assets/back-to-top.js）会在页脚进入视口时自动让位，
-          同一屏不会出现两个「回到顶部」。
-        {%- endcomment -%}
-        <a class="footer__to-top" href="#top" aria-label="{{ 'sections.footer.to_top' | t }}">
-          {{- 'icon-arrow-up.svg' | inline_asset_content -}}
-        </a>
-      </div>
+      {%- comment -%}
+        这里**刻意不做**页脚自带的「回到顶部」圆钮（v3.0 首版做过，2026-11-08 刘工定案撤掉）。
+        全站已经有浮动 FAB（snippets/back-to-top.liquid + assets/back-to-top.js），
+        它是 fixed、贴在右下角 16px 处；页脚底栏的圆钮距页面底边 28px、横向几乎同一条线，
+        末屏实测重叠 36×32px（占圆钮面积 89%），等于被 FAB 整个盖住。
+        两个同功能按钮不该抢同一个角落——保留全站那个，页脚不再重复。
+        底栏因此以语言/国家选择器收尾，右侧那条竖分隔线也随之取消。
+      {%- endcomment -%}
     </div>
   </div>
 </footer>
