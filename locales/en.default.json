@@ -279,6 +279,30 @@
     },
     "product_complementary": {
       "default_heading": "Pairs well with"
+    },
+    "footer": {
+      "follow_us": "Follow us",
+      "menu_label": "Footer menu",
+      "payment": "Payment methods",
+      "newsletter": {
+        "label": "Email address",
+        "submit": "Signup",
+        "success": "Thanks for signing up. Check your inbox to confirm your email.",
+        "error": "Check the email address and try again.",
+        "consent": "Unsubscribe at any time. We only email about seasonal maintenance and new arrivals."
+      },
+      "localization": {
+        "country": "Country or region",
+        "language": "Language",
+        "update": "Update"
+      },
+      "social": {
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "youtube": "YouTube",
+        "tiktok": "TikTok",
+        "pinterest": "Pinterest"
+      }
     }
   },
   "compare": {

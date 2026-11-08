@@ -361,6 +361,62 @@
         "enable_personalized_info": "Tries product-specific complementary recommendations first and falls back to the collection below. Requires the merchant to configure complementary products in Search & Discovery.",
         "collection_info": "Fallback list. Shown when personalised recommendations are unavailable — point it at the accessories collection so the cart keeps selling consumables."
       }
+    },
+    "footer": {
+      "name": "Footer",
+      "blocks": {
+        "brand": {
+          "name": "Brand"
+        },
+        "menu": {
+          "name": "Menu"
+        },
+        "text": {
+          "name": "Text"
+        },
+        "contact": {
+          "name": "Contact"
+        },
+        "social": {
+          "name": "Social media"
+        },
+        "newsletter": {
+          "name": "Newsletter"
+        },
+        "localization": {
+          "name": "Country and language"
+        },
+        "custom_liquid": {
+          "name": "Custom Liquid"
+        }
+      },
+      "labels": {
+        "logo": "Logo",
+        "logo_info": "Leave empty to use the store name as the wordmark.",
+        "tagline": "Tagline",
+        "menu": "Footer menu",
+        "menu_info": "Each top-level link that has sub-links becomes its own column, titled with the top-level link. Leaving the menu empty hides the column group.",
+        "menu_heading": "Heading",
+        "menu_heading_info": "Only used for top-level links that have no sub-links. Leave empty to skip the heading.",
+        "text": "Text",
+        "phone": "Phone",
+        "email": "Email",
+        "contact_page": "Contact page",
+        "platform": "Platform",
+        "social_url": "Profile URL",
+        "social_url_info": "Leave empty to hide this icon. The theme never fills in a URL for you.",
+        "custom_liquid": "Liquid",
+        "custom_liquid_info": "Runs as Liquid, not rich text. Use it for a snippet or a short app-free block of markup."
+      },
+      "options": {
+        "platform": {
+          "facebook": "Facebook",
+          "instagram": "Instagram",
+          "youtube": "YouTube",
+          "tiktok": "TikTok",
+          "pinterest": "Pinterest"
+        }
+      }
     }
   },
   "labels": {
