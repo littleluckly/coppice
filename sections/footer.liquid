@@ -130,7 +130,7 @@
                 class: 'footer__logo'
             }}
           {%- else -%}
-            {{ shop.name }}
+            {{ shop.name | escape }}
           {%- endif -%}
         </a>
         {%- if block.settings.tagline != blank -%}
@@ -284,7 +284,7 @@
                       | remove: '.'
                     -%}
                     <li class="footer__link-item">
-                      <a class="footer__link" href="tel:{{ tel_href }}">{{ contact_phone | escape }}</a>
+                      <a class="footer__link" href="tel:{{ tel_href | escape }}">{{ contact_phone | escape }}</a>
                     </li>
                   {%- endif -%}
                   {%- if contact_email != blank -%}
