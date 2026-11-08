@@ -391,6 +391,8 @@
         }
       },
       "labels": {
+        "image": "Background image",
+        "image_info": "Optional landscape photo that bleeds in from the left edge and fades into the footer. On mobile it becomes a band above the content. Leave empty for a plain footer.",
         "logo": "Logo",
         "logo_info": "Leave empty to use the store name as the wordmark.",
         "tagline": "Tagline",

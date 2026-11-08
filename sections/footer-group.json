@@ -17,22 +17,19 @@
         "brand": {
           "type": "brand",
           "settings": {
-            "tagline": "Built for the backyard."
+            "tagline": "Built for the backyard.",
+            "description": "<p>Powerful tools. A greener tomorrow.<br/>Together, we can make outdoor life better.</p>"
           }
         },
         "menu": {
           "type": "menu",
           "settings": {
-            "menu": "footer",
-            "heading": ""
+            "menu": "footer"
           }
         },
         "support_text": {
           "type": "text",
-          "settings": {
-            "heading": "Parts and service",
-            "richtext": "<p>Every machine ships with a parts list and a maintenance guide. The serial number on the box label is the fastest way to find the right part.</p>"
-          }
+          "settings": {}
         },
         "contact": {
           "type": "contact",
@@ -47,21 +44,21 @@
           "type": "social",
           "settings": {
             "platform": "facebook",
-            "url": "https://www.facebook.com/shopify"
+            "url": ""
           }
         },
         "social_instagram": {
           "type": "social",
           "settings": {
             "platform": "instagram",
-            "url": "https://www.instagram.com/shopify"
+            "url": ""
           }
         },
         "social_youtube": {
           "type": "social",
           "settings": {
             "platform": "youtube",
-            "url": "https://www.youtube.com/user/shopify"
+            "url": ""
           }
         },
         "social_tiktok": {
@@ -81,8 +78,8 @@
         "newsletter": {
           "type": "newsletter",
           "settings": {
-            "heading": "Get the seasonal guide",
-            "text": "One email a season: what to service, what to sharpen, and what to store."
+            "heading": "",
+            "text": "Get the latest tips, deals and more."
           }
         },
         "localization": {

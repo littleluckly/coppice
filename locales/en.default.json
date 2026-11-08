@@ -284,9 +284,11 @@
       "follow_us": "Follow us",
       "menu_label": "Footer menu",
       "payment": "Payment methods",
+      "rights": "All rights reserved.",
+      "to_top": "Back to top",
       "newsletter": {
         "label": "Email address",
-        "submit": "Signup",
+        "submit": "Subscribe",
         "success": "Thanks for signing up. Check your inbox to confirm your email.",
         "error": "Check the email address and try again.",
         "consent": "Unsubscribe at any time."

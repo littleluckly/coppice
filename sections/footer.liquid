@@ -1,13 +1,16 @@
 {% comment %}
   ============================================================================
-  Footer — 品牌收口型页脚（task-footer.md v2.0，刘工 2026-11-07 拍板「方案 B」）
+  Footer — 图片通栏型页脚（v3.0，刘工 2026-11-08 参考图重做）
   ============================================================================
 
-  四段结构（桌面）：
-    ① brand 行      wordmark（logo 图或 shop.name）+ 可选定位语
-    ② 列区 grid     menu（一组一列）/ text / contact / custom_liquid + social
-    ③ sub-footer    newsletter + 国家语言选择器（同一排，符合官方 F-6 的「相邻」）
-    ④ bottom bar    版权 + powered_by_link + 支付图标
+  桌面结构（一句话）：左边一张景观图通栏淡出 → 右边一条内容带，内容带里再分三区。
+
+    ┌──────────────┬───────────────────────────────────────────────────────┐
+    │              │  brand + newsletter │ SHOP SUPPORT COMPANY │ FOLLOW US │
+    │   景观图      │  （第一区）          │ （菜单列，一组一列）   │ 社交+支付  │
+    │  淡出到米白   ├───────────────────────────────────────────────────────┤
+    │              │  © year 店名 · Powered by   [国家][语言]  (↑)          │
+    └──────────────┴───────────────────────────────────────────────────────┘
 
   三条不能碰的约束
     · 根元素必须保留 class="site-footer"。assets/critical.css 的骨架配色映射就是
@@ -16,54 +19,59 @@
     · `{% stylesheet %}` 只能出现在 section 顶层、每文件一个（BUG-014 已二犯）。
     · 任何富文本输出必须套 `<div class="rte">`（BUG-064：顶部 reset 把块间距清零）。
 
+  为什么底部版权栏不从图片右侧起排
+    参考图里版权行从页面左边距起，比主内容带更靠左（主内容带要给图片让位）。
+    所以「让位」只加在 .footer__main 上，.footer__inner 保持正常页边距——
+    两个容器，两条左边界，不要合并成一个 padding。
+
+  为什么三区用 flex 而不是 grid
+    三区都可能缺席（没有 brand block、菜单为空、社交 URL 全空时整区消失）。
+    grid 写死三列时缺席的区会留下一个空轨道，内容挤在前两列；
+    flex 下缺失的 item 直接把空间让给邻居，不需要为 5 种组合各写一套模板列。
+
+  为什么桌面行高是 24px 而不是 44px
+    AGENTS §8 的 44×44 是**触摸目标**口径。参考图是细密的信息型页脚，44px 行高会把它
+    撑成两倍高、彻底跑形。这里按指针类型分档：细指针 24px（WCAG 2.5.8 AA 要求 24×24，
+    达标），粗指针（触摸屏）仍是 44px（2.5.5 AAA）。不是省事，是有依据的取舍。
+
   空态总则（AGENTS §6）
     任何一个 block 无内容 → 该 block 不渲染；不留空列、不留空壳、不输出 0。
-    区块遍历前先做一遍预扫描（见下方 liquid 段），因为「有没有内容」决定
-    外层容器要不要出现——空网格 + 外边距会留下一块无意义的空白。
+    区块遍历前先做一遍预扫描，因为「有没有内容」决定外层容器要不要出现。
 
   为什么 newsletter / localization 单独遍历
-    它们必须落在 sub-footer 那一排里，不在列区网格内。若在一个循环里靠
-    「遇到 newsletter 就开容器」实现，商家在编辑器里把一个 text block 拖到两个
-    newsletter 之间就会产出未闭合的标签。按职责分三段遍历，结构永远合法；
-    代价是「block 顺序」只在所属区域内生效（列区内的相对顺序仍然是商家排的）。
-
-  为什么 social 单独遍历
-    5 个平台各是一个 block（D-5：preset 预置 5 个、URL 全空），但「Follow us」
-    这个列标题只能出现一次。单独遍历后整组恒为一个网格列，且永远不会因为
-    商家把别的 block 插进社交块中间而拆成两列。
-
-  powered_by_link（F-10）
-    该对象必须原样输出，不得包裹、不得改文案——官方明文规定它「只能含
-    powered_by_link」。它自身已带 rel="nofollow"（指向 Shopify 域名，F-13），
-    因此这里不做任何二次加工。
+    newsletter 必须落在第一区（品牌下方），localization 必须落在底栏右侧。
+    若在一个循环里靠「遇到谁都开容器」实现，商家在编辑器里拖一下顺序就会产出
+    未闭合的标签。按职责分三段遍历，结构永远合法。
 {% endcomment %}
 
 {%- liquid
   # ── 预扫描：哪些区域真的有内容（决定外层容器是否出现）──
-  assign grid_count = 0
-  assign social_count = 0
+  assign has_brand_block = false
   assign has_newsletter = false
-  assign has_localization_block = false
+  assign column_count = 0
+  assign social_count = 0
 
   for block in section.blocks
     case block.type
+      when 'brand'
+        assign has_brand_block = true
       when 'menu'
         if block.settings.menu.links.size > 0
-          assign grid_count = grid_count | plus: 1
+          assign column_count = column_count | plus: 1
         endif
       when 'text'
         if block.settings.heading != blank or block.settings.richtext != blank
-          assign grid_count = grid_count | plus: 1
+          assign column_count = column_count | plus: 1
         endif
       when 'contact'
         if block.settings.heading != blank or block.settings.phone != blank or block.settings.email != blank
-          assign grid_count = grid_count | plus: 1
+          assign column_count = column_count | plus: 1
         elsif block.settings.page.title != blank
-          assign grid_count = grid_count | plus: 1
+          assign column_count = column_count | plus: 1
         endif
       when 'custom_liquid'
         if block.settings.custom_liquid != blank
-          assign grid_count = grid_count | plus: 1
+          assign column_count = column_count | plus: 1
         endif
       when 'social'
         if block.settings.url != blank
@@ -71,10 +79,29 @@
         endif
       when 'newsletter'
         assign has_newsletter = true
-      when 'localization'
-        assign has_localization_block = true
     endcase
   endfor
+
+  assign has_brand_zone = false
+  if has_brand_block or has_newsletter
+    assign has_brand_zone = true
+  endif
+
+  assign has_columns = false
+  if column_count > 0
+    assign has_columns = true
+  endif
+
+  # ── 支付图标（F-3）：来源只能是 enabled_payment_types，且必须全彩 ──
+  assign show_payment = false
+  if section.settings.show_payment_icons and shop.enabled_payment_types.size > 0
+    assign show_payment = true
+  endif
+
+  assign has_aside = false
+  if social_count > 0 or show_payment
+    assign has_aside = true
+  endif
 
   # ── 选择器条件（F-6：多于一个才输出，是官方规则不是优化）──
   assign show_country = false
@@ -87,474 +114,539 @@
   endif
 
   assign has_localization = false
-  if has_localization_block and show_country
-    assign has_localization = true
-  endif
-  if has_localization_block and show_language
-    assign has_localization = true
-  endif
+  for block in section.blocks
+    if block.type == 'localization'
+      if show_country or show_language
+        assign has_localization = true
+      endif
+    endif
+  endfor
 
-  assign has_sub = false
-  if has_newsletter
-    assign has_sub = true
-  endif
-  if has_localization
-    assign has_sub = true
-  endif
-
-  assign show_payment = false
-  if section.settings.show_payment_icons and shop.enabled_payment_types.size > 0
-    assign show_payment = true
+  # ── 左侧景观图（主题包不带照片，演示店在编辑器里上传）──
+  assign has_media = false
+  if section.settings.background_image != blank
+    assign has_media = true
   endif
 -%}
 
-<footer class="site-footer full-width">
-  {%- comment -%} ───────── ① brand 行 ───────── {%- endcomment -%}
-  {%- for block in section.blocks -%}
-    {%- if block.type == 'brand' -%}
-      <div class="footer__brand" {{ block.shopify_attributes }}>
-        <a class="footer__wordmark" href="{{ routes.root_url }}">
-          {%- if block.settings.logo != blank -%}
-            {%- comment -%}
-              alt 用 shop.name：图片替代了文字 wordmark，链接的可访问名必须仍是店铺名。
-              尺寸按行高封顶（CSS 里 max-block-size），这里给足够大的源图与 srcset。
-            {%- endcomment -%}
-            {{
-              block.settings.logo
-              | image_url: width: 600
-              | image_tag:
-                widths: '120, 180, 240, 360, 480, 600',
-                sizes: '(min-width: 750px) 240px, 160px',
-                alt: shop.name,
-                loading: 'lazy',
-                class: 'footer__logo'
-            }}
-          {%- else -%}
-            {{ shop.name | escape }}
-          {%- endif -%}
-        </a>
-        {%- if block.settings.tagline != blank -%}
-          <p class="footer__tagline">{{ block.settings.tagline | escape }}</p>
-        {%- endif -%}
-      </div>
-    {%- endif -%}
-  {%- endfor -%}
+<footer class="site-footer full-width{% if has_media %} site-footer--with-media{% endif %}">
+  {%- if has_media -%}
+    {%- comment -%}
+      纯装饰层：aria-hidden + alt=""。压在页脚底部、不接管任何指针事件。
+      浮叶是参考图里的点睛元素，只在有图片时出现——没有图片的纯色页脚上
+      飘两片叶子会很怪。
+    {%- endcomment -%}
+    <div class="footer__media" aria-hidden="true">
+      {{
+        section.settings.background_image
+        | image_url: width: 1600
+        | image_tag:
+          widths: '400, 600, 800, 1000, 1200, 1600',
+          sizes: '(min-width: 750px) 26vw, 100vw',
+          loading: 'lazy',
+          alt: '',
+          class: 'footer__media-image'
+      }}
+      <span class="footer__leaf footer__leaf--a">{{ 'icon-leaf.svg' | inline_asset_content }}</span>
+      <span class="footer__leaf footer__leaf--b">{{ 'icon-leaf.svg' | inline_asset_content }}</span>
+    </div>
+  {%- endif -%}
 
-  {%- comment -%} ───────── ② 列区 ───────── {%- endcomment -%}
-  {%- if grid_count > 0 or social_count > 0 -%}
-    <div class="footer__grid">
-      {%- for block in section.blocks -%}
-        {%- case block.type -%}
+  <div class="footer__inner">
+    <div class="footer__main">
+      {%- comment -%} ───────── 第一区：brand + newsletter ───────── {%- endcomment -%}
+      {%- if has_brand_zone -%}
+        <div class="footer__brand-col">
+          {%- for block in section.blocks -%}
+            {%- case block.type -%}
 
-          {%- when 'menu' -%}
-            {%- assign menu = block.settings.menu -%}
-            {%- if menu.links.size > 0 -%}
-              {%- comment -%}
-                D-6「一组一列」：带子项的一级项各自成一列；不带子项的一级项归入
-                一个平铺列。所以列数由后台菜单树决定，编辑器不能单独拖列——
-                商家把 footer 菜单建成全平铺时，页脚就只渲染一列（不是 bug）。
-
-                包装层 display: contents（见样式块）：它自己不能成为一个网格单元，
-                否则整组菜单只会占一列，跟 text / contact 排不齐。
-              {%- endcomment -%}
-              <div class="footer__menu" {{ block.shopify_attributes }}>
-                {%- for link in menu.links -%}
-                  {%- if link.links.size > 0 -%}
-                    {%- assign column_id = 'FooterColumn-' | append: block.id | append: '-' | append: forloop.index -%}
-                    <nav class="footer__column" aria-labelledby="{{ column_id }}">
-                      <h2 class="footer__column-title" id="{{ column_id }}">{{ link.title | escape }}</h2>
-                      <ul class="footer__links" role="list">
-                        {%- comment -%} 每列最多 8 条，超出截断；不折叠、不「更多」 {%- endcomment -%}
-                        {%- for child in link.links limit: 8 -%}
-                          <li class="footer__link-item">
-                            <a
-                              class="footer__link"
-                              href="{{ child.url }}"
-                              {% if child.current %}
-                                aria-current="page"
-                              {% endif %}
-                            >
-                              {{- child.title | escape -}}
-                            </a>
-                          </li>
-                        {%- endfor -%}
-                      </ul>
-                    </nav>
+              {%- when 'brand' -%}
+                <div class="footer__brand" {{ block.shopify_attributes }}>
+                  <a class="footer__wordmark" href="{{ routes.root_url }}">
+                    {%- comment -%}
+                      alt 用 shop.name：图片替代了文字 wordmark，链接的可访问名必须仍是店铺名。
+                    {%- endcomment -%}
+                    {%- if block.settings.logo != blank -%}
+                      {{
+                        block.settings.logo
+                        | image_url: width: 600
+                        | image_tag:
+                          widths: '120, 180, 240, 360, 480, 600',
+                          sizes: '(min-width: 750px) 220px, 160px',
+                          alt: shop.name,
+                          loading: 'lazy',
+                          class: 'footer__logo'
+                      }}
+                    {%- else -%}
+                      {{ shop.name | escape }}
+                    {%- endif -%}
+                  </a>
+                  {%- if block.settings.tagline != blank -%}
+                    <p class="footer__tagline">{{ block.settings.tagline | escape }}</p>
                   {%- endif -%}
-                {%- endfor -%}
+                  {%- if block.settings.description != blank -%}
+                    <div class="rte footer__brand-text">{{ block.settings.description }}</div>
+                  {%- endif -%}
+                </div>
 
-                {%- liquid
-                  assign plain_count = 0
-                  for link in menu.links
-                    if link.links.size == 0
-                      assign plain_count = plain_count | plus: 1
-                    endif
-                  endfor
-                -%}
-                {%- if plain_count > 0 -%}
-                  {%- assign flat_id = 'FooterFlat-' | append: block.id -%}
-                  {%- comment -%}
-                    平铺列的可访问名：商家填了整组标题就用标题当列标题，
-                    没填就退回 aria-label="Footer menu"（F-11 的术语）。
-                    不能留一个没有名字的 <nav>——屏幕阅读器会念成一串孤立链接。
-
-                    写法注意：<nav> 的**开标签只出现一次**，名字在标签内部按条件
-                    二选一。若把整个开标签写进 if/else 两个分支（各写一个 <nav>），
-                    标记没有错，但 theme check 无法判断两个分支互斥，会对
-                    闭合的 </nav> 报 UnclosedHTMLElement——三个 warning 全是这么来的。
-                  {%- endcomment -%}
-                  {%- assign flat_has_heading = false -%}
+              {%- when 'newsletter' -%}
+                {%- assign email_id = 'FooterEmail-' | append: block.id -%}
+                {%- assign error_id = 'FooterEmailError-' | append: block.id -%}
+                <div class="footer__newsletter" {{ block.shopify_attributes }}>
                   {%- if block.settings.heading != blank -%}
-                    {%- assign flat_has_heading = true -%}
+                    <h2 class="footer__newsletter-heading">{{ block.settings.heading | escape }}</h2>
                   {%- endif -%}
-                  <nav
-                    class="footer__column"
-                    {% if flat_has_heading %}
-                      aria-labelledby="{{ flat_id }}"
-                    {% else %}
-                      aria-label="{{ 'sections.footer.menu_label' | t }}"
-                    {% endif %}
-                  >
-                    {%- if flat_has_heading -%}
-                      <h2 class="footer__column-title" id="{{ flat_id }}">
-                        {{- block.settings.heading | escape -}}
-                      </h2>
+
+                  {%- comment -%}
+                    F-9：form 'customer' + input[name="contact[email]"]。字段名错一位，
+                    表单会静默不提交（不报错、不建客户），所以这两处不能改。
+                    无 JS 必须可提交 —— 这里输出的是真实 <form>，不是 JS 组件。
+                  {%- endcomment -%}
+                  {%- form 'customer', class: 'footer__newsletter-form' -%}
+                    {%- comment -%}
+                      contact[tags] = newsletter 是**社区惯例，不是官方文档要求**
+                      （官方 email-consent 文档只规定 contact[email]）。用途是让商家
+                      在后台按 tag 筛出订阅者；去掉它不影响订阅本身成立。
+                    {%- endcomment -%}
+                    <input type="hidden" name="contact[tags]" value="newsletter">
+
+                    <label class="visually-hidden" for="{{ email_id }}">
+                      {{- 'sections.footer.newsletter.label' | t -}}
+                    </label>
+                    <div class="footer__newsletter-field">
+                      <div class="footer__newsletter-wrap">
+                        <span class="footer__newsletter-icon" aria-hidden="true">
+                          {{- 'icon-mail.svg' | inline_asset_content -}}
+                        </span>
+                        <input
+                          class="footer__newsletter-input"
+                          id="{{ email_id }}"
+                          type="email"
+                          name="contact[email]"
+                          value="{{ form.email }}"
+                          autocomplete="email"
+                          placeholder="{{ 'sections.footer.newsletter.label' | t }}"
+                          required
+                          {% if form.errors %}
+                            aria-invalid="true" aria-describedby="{{ error_id }}"
+                          {% endif %}
+                        >
+                      </div>
+                      <button class="btn-solid footer__newsletter-submit" type="submit">
+                        {{- 'sections.footer.newsletter.submit' | t -}}
+                      </button>
+                    </div>
+
+                    {%- if form.errors -%}
+                      {%- comment -%}
+                        错误文案刻意笼统：Shopify 在这个表单上可能返回「邮箱无效」
+                        也可能返回别的失败原因，逐条翻译会漏。role="alert" 让读屏
+                        在重载后立刻播报，aria-describedby 让输入框读到同一句。
+                      {%- endcomment -%}
+                      <p class="footer__newsletter-message footer__newsletter-message--error" id="{{ error_id }}" role="alert">
+                        {{- 'sections.footer.newsletter.error' | t -}}
+                      </p>
+                    {%- elsif form.posted_successfully? -%}
+                      <p class="footer__newsletter-message footer__newsletter-message--success" role="status">
+                        {{- 'sections.footer.newsletter.success' | t -}}
+                      </p>
+                    {%- endif -%}
+
+                    {%- if block.settings.text != blank -%}
+                      <p class="footer__newsletter-text">
+                        <span class="footer__newsletter-leaf" aria-hidden="true">
+                          {{- 'icon-leaf.svg' | inline_asset_content -}}
+                        </span>
+                        <span>{{ block.settings.text | escape }}</span>
+                      </p>
+                    {%- endif -%}
+
+                    <p class="footer__newsletter-consent">
+                      {{- 'sections.footer.newsletter.consent' | t -}}
+                    </p>
+                  {%- endform -%}
+                </div>
+
+            {%- endcase -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ───────── 第二区：菜单列 / 文本 / 联系 / 自定义 ───────── {%- endcomment -%}
+      {%- if has_columns -%}
+        <div class="footer__columns{% if has_brand_zone %} footer__columns--divided{% endif %}">
+          {%- for block in section.blocks -%}
+            {%- case block.type -%}
+
+              {%- when 'menu' -%}
+                {%- assign menu = block.settings.menu -%}
+                {%- if menu.links.size > 0 -%}
+                  {%- comment -%}
+                    D-6「一组一列」：带子项的一级项各自成一列；不带子项的一级项归入
+                    一个平铺列。所以列数由后台菜单树决定，编辑器不能单独拖列——
+                    商家把 footer 菜单建成全平铺时，页脚就只渲染一列（不是 bug）。
+
+                    包装层 display: contents（见样式块）：它自己不能成为一个网格单元，
+                    否则整组菜单只会占一列，跟 text / contact 排不齐。
+                  {%- endcomment -%}
+                  <div class="footer__menu" {{ block.shopify_attributes }}>
+                    {%- for link in menu.links -%}
+                      {%- if link.links.size > 0 -%}
+                        {%- assign column_id = 'FooterColumn-' | append: block.id | append: '-' | append: forloop.index -%}
+                        <nav class="footer__column" aria-labelledby="{{ column_id }}">
+                          <h2 class="footer__column-title" id="{{ column_id }}">{{ link.title | escape }}</h2>
+                          <ul class="footer__links" role="list">
+                            {%- comment -%} 每列最多 8 条，超出截断；不折叠、不「更多」 {%- endcomment -%}
+                            {%- for child in link.links limit: 8 -%}
+                              <li class="footer__link-item">
+                                <a
+                                  class="footer__link"
+                                  href="{{ child.url }}"
+                                  {% if child.current %}
+                                    aria-current="page"
+                                  {% endif %}
+                                >
+                                  {{- child.title | escape -}}
+                                </a>
+                              </li>
+                            {%- endfor -%}
+                          </ul>
+                        </nav>
+                      {%- endif -%}
+                    {%- endfor -%}
+
+                    {%- liquid
+                      assign plain_count = 0
+                      for link in menu.links
+                        if link.links.size == 0
+                          assign plain_count = plain_count | plus: 1
+                        endif
+                      endfor
+                    -%}
+                    {%- if plain_count > 0 -%}
+                      {%- assign flat_id = 'FooterFlat-' | append: block.id -%}
+                      {%- comment -%}
+                        平铺列的可访问名：商家填了整组标题就用标题当列标题，
+                        没填就退回 aria-label="Footer menu"（F-11 的术语）。
+                        不能留一个没有名字的 <nav>——屏幕阅读器会念成一串孤立链接。
+
+                        写法注意：<nav> 的**开标签只出现一次**，名字在标签内部按条件
+                        二选一。若把整个开标签写进 if/else 两个分支（各写一个 <nav>），
+                        标记没有错，但 theme check 无法判断两个分支互斥，会对
+                        闭合的 </nav> 报 UnclosedHTMLElement——三个 warning 全是这么来的。
+                      {%- endcomment -%}
+                      {%- assign flat_has_heading = false -%}
+                      {%- if block.settings.heading != blank -%}
+                        {%- assign flat_has_heading = true -%}
+                      {%- endif -%}
+                      <nav
+                        class="footer__column"
+                        {% if flat_has_heading %}
+                          aria-labelledby="{{ flat_id }}"
+                        {% else %}
+                          aria-label="{{ 'sections.footer.menu_label' | t }}"
+                        {% endif %}
+                      >
+                        {%- if flat_has_heading -%}
+                          <h2 class="footer__column-title" id="{{ flat_id }}">
+                            {{- block.settings.heading | escape -}}
+                          </h2>
+                        {%- endif -%}
+                        <ul class="footer__links" role="list">
+                          {%- assign flat_rendered = 0 -%}
+                          {%- for link in menu.links -%}
+                            {%- if link.links.size == 0 -%}
+                              {%- if flat_rendered >= 8 -%}
+                                {%- break -%}
+                              {%- endif -%}
+                              <li class="footer__link-item">
+                                <a
+                                  class="footer__link"
+                                  href="{{ link.url }}"
+                                  {% if link.current %}
+                                    aria-current="page"
+                                  {% endif %}
+                                >
+                                  {{- link.title | escape -}}
+                                </a>
+                              </li>
+                              {%- assign flat_rendered = flat_rendered | plus: 1 -%}
+                            {%- endif -%}
+                          {%- endfor -%}
+                        </ul>
+                      </nav>
+                    {%- endif -%}
+                  </div>
+                {%- endif -%}
+
+              {%- when 'text' -%}
+                {%- if block.settings.heading != blank or block.settings.richtext != blank -%}
+                  <div class="footer__text" {{ block.shopify_attributes }}>
+                    {%- if block.settings.heading != blank -%}
+                      <h2 class="footer__column-title">{{ block.settings.heading | escape }}</h2>
+                    {%- endif -%}
+                    {%- if block.settings.richtext != blank -%}
+                      {%- comment -%} BUG-064：不套 .rte，段落与标题会挤成一坨 {%- endcomment -%}
+                      <div class="rte footer__rte">{{ block.settings.richtext }}</div>
+                    {%- endif -%}
+                  </div>
+                {%- endif -%}
+
+              {%- when 'contact' -%}
+                {%- assign contact_phone = block.settings.phone -%}
+                {%- assign contact_email = block.settings.email -%}
+                {%- assign contact_page = block.settings.page -%}
+                {%- assign contact_heading = block.settings.heading -%}
+                {%- if contact_heading != blank or contact_phone != blank or contact_email != blank or contact_page.title != blank -%}
+                  <div class="footer__contact" {{ block.shopify_attributes }}>
+                    {%- if contact_heading != blank -%}
+                      <h2 class="footer__column-title">{{ contact_heading | escape }}</h2>
                     {%- endif -%}
                     <ul class="footer__links" role="list">
-                      {%- assign flat_rendered = 0 -%}
-                      {%- for link in menu.links -%}
-                        {%- if link.links.size == 0 -%}
-                          {%- if flat_rendered >= 8 -%}
-                            {%- break -%}
-                          {%- endif -%}
-                          <li class="footer__link-item">
-                            <a
-                              class="footer__link"
-                              href="{{ link.url }}"
-                              {% if link.current %}
-                                aria-current="page"
-                              {% endif %}
-                            >
-                              {{- link.title | escape -}}
-                            </a>
-                          </li>
-                          {%- assign flat_rendered = flat_rendered | plus: 1 -%}
-                        {%- endif -%}
-                      {%- endfor -%}
+                      {%- if contact_phone != blank -%}
+                        {%- comment -%}
+                          tel: 里不能有空格和括号（RFC 3966），可见文本保持商家输入的
+                          排版。归一化只做字符剥离，不做 +1 → 00 之类的猜测性改写。
+                        {%- endcomment -%}
+                        {%- assign tel_href = contact_phone
+                          | remove: ' '
+                          | remove: '('
+                          | remove: ')'
+                          | remove: '-'
+                          | remove: '.'
+                        -%}
+                        <li class="footer__link-item">
+                          <a class="footer__link" href="tel:{{ tel_href | escape }}">{{ contact_phone | escape }}</a>
+                        </li>
+                      {%- endif -%}
+                      {%- if contact_email != blank -%}
+                        <li class="footer__link-item">
+                          <a class="footer__link" href="mailto:{{ contact_email | escape }}">
+                            {{- contact_email | escape -}}
+                          </a>
+                        </li>
+                      {%- endif -%}
+                      {%- if contact_page.title != blank -%}
+                        {%- comment -%}
+                          page 设置返回的是 page 对象，链接走 page.url（不手拼路径）；
+                          判存在用 .title，不能只判对象真值——见 MEMORY「空的 drop 是 truthy」。
+                        {%- endcomment -%}
+                        <li class="footer__link-item">
+                          <a class="footer__link" href="{{ contact_page.url }}">{{ contact_page.title | escape }}</a>
+                        </li>
+                      {%- endif -%}
                     </ul>
-                  </nav>
+                  </div>
                 {%- endif -%}
-              </div>
-            {%- endif -%}
 
-          {%- when 'text' -%}
-            {%- if block.settings.heading != blank or block.settings.richtext != blank -%}
-              <div class="footer__text" {{ block.shopify_attributes }}>
-                {%- if block.settings.heading != blank -%}
-                  <h2 class="footer__column-title">{{ block.settings.heading | escape }}</h2>
+              {%- when 'custom_liquid' -%}
+                {%- if block.settings.custom_liquid != blank -%}
+                  {%- comment -%}
+                    F-14「Introduce Custom Liquid blocks into certain sections」。
+                    这里是**原始 Liquid**，不是富文本，因此不套 .rte。
+                  {%- endcomment -%}
+                  <div class="footer__custom" {{ block.shopify_attributes }}>{{ block.settings.custom_liquid }}</div>
                 {%- endif -%}
-                {%- if block.settings.richtext != blank -%}
-                  {%- comment -%} BUG-064：不套 .rte，段落与标题会挤成一坨 {%- endcomment -%}
-                  <div class="rte footer__rte">{{ block.settings.richtext }}</div>
-                {%- endif -%}
-              </div>
-            {%- endif -%}
 
-          {%- when 'contact' -%}
-            {%- assign contact_phone = block.settings.phone -%}
-            {%- assign contact_email = block.settings.email -%}
-            {%- assign contact_page = block.settings.page -%}
-            {%- assign contact_heading = block.settings.heading -%}
-            {%- if contact_heading != blank or contact_phone != blank or contact_email != blank or contact_page.title != blank -%}
-              <div class="footer__contact" {{ block.shopify_attributes }}>
-                {%- if contact_heading != blank -%}
-                  <h2 class="footer__column-title">{{ contact_heading | escape }}</h2>
-                {%- endif -%}
-                <ul class="footer__links" role="list">
-                  {%- if contact_phone != blank -%}
-                    {%- comment -%}
-                      tel: 里不能有空格和括号（RFC 3966），可见文本保持商家输入的
-                      排版。归一化只做字符剥离，不做 +1 → 00 之类的猜测性改写。
-                    {%- endcomment -%}
-                    {%- assign tel_href = contact_phone
-                      | remove: ' '
-                      | remove: '('
-                      | remove: ')'
-                      | remove: '-'
-                      | remove: '.'
+            {%- endcase -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ───────── 第三区：社交 + 支付 ───────── {%- endcomment -%}
+      {%- if has_aside -%}
+        <div class="footer__aside{% if has_brand_zone or has_columns %} footer__aside--divided{% endif %}">
+          {%- if social_count > 0 -%}
+            {%- comment -%}
+              F-4 / F-5：5 个平台都可选；URL 为空则该图标不渲染，主题不预置任何网址、
+              不放占位文案。全部为空时整列消失（social_count 已判过）。
+            {%- endcomment -%}
+            <div class="footer__social">
+              <h2 class="footer__column-title">{{ 'sections.footer.follow_us' | t }}</h2>
+              <ul class="footer__social-list" role="list">
+                {%- for block in section.blocks -%}
+                  {%- if block.type == 'social' and block.settings.url != blank -%}
+                    {%- liquid
+                      assign social_icon = blank
+                      assign social_label = blank
+                      case block.settings.platform
+                        when 'facebook'
+                          assign social_icon = 'icon-facebook.svg'
+                          assign social_label = 'sections.footer.social.facebook' | t
+                        when 'instagram'
+                          assign social_icon = 'icon-instagram.svg'
+                          assign social_label = 'sections.footer.social.instagram' | t
+                        when 'youtube'
+                          assign social_icon = 'icon-youtube.svg'
+                          assign social_label = 'sections.footer.social.youtube' | t
+                        when 'tiktok'
+                          assign social_icon = 'icon-tiktok.svg'
+                          assign social_label = 'sections.footer.social.tiktok' | t
+                        when 'pinterest'
+                          assign social_icon = 'icon-pinterest.svg'
+                          assign social_label = 'sections.footer.social.pinterest' | t
+                      endcase
                     -%}
-                    <li class="footer__link-item">
-                      <a class="footer__link" href="tel:{{ tel_href | escape }}">{{ contact_phone | escape }}</a>
-                    </li>
+                    {%- if social_icon != blank -%}
+                      <li class="footer__social-item" {{ block.shopify_attributes }}>
+                        <a
+                          class="footer__social-link"
+                          href="{{ block.settings.url }}"
+                          target="_blank"
+                          rel="noopener"
+                          aria-label="{{ social_label }}"
+                        >
+                          {{- social_icon | inline_asset_content -}}
+                        </a>
+                      </li>
+                    {%- endif -%}
                   {%- endif -%}
-                  {%- if contact_email != blank -%}
-                    <li class="footer__link-item">
-                      <a class="footer__link" href="mailto:{{ contact_email | escape }}">
-                        {{- contact_email | escape -}}
-                      </a>
-                    </li>
-                  {%- endif -%}
-                  {%- if contact_page.title != blank -%}
-                    {%- comment -%}
-                      page 设置返回的是 page 对象，链接走 page.url（不手拼路径）；
-                      判存在用 .title，不能只判对象真值——见 MEMORY「空的 drop 是 truthy」。
-                    {%- endcomment -%}
-                    <li class="footer__link-item">
-                      <a class="footer__link" href="{{ contact_page.url }}">{{ contact_page.title | escape }}</a>
-                    </li>
-                  {%- endif -%}
-                </ul>
-              </div>
-            {%- endif -%}
+                {%- endfor -%}
+              </ul>
+            </div>
+          {%- endif -%}
 
-          {%- when 'custom_liquid' -%}
-            {%- if block.settings.custom_liquid != blank -%}
-              {%- comment -%}
-                F-14「Introduce Custom Liquid blocks into certain sections」。
-                这里是**原始 Liquid**，不是富文本，因此不套 .rte。
-                注意它不解决「主题缺 Custom Liquid section」这个主题级缺口
-                （task-compliance.md G-01）。
-              {%- endcomment -%}
-              <div class="footer__custom" {{ block.shopify_attributes }}>{{ block.settings.custom_liquid }}</div>
-            {%- endif -%}
+          {%- if show_payment -%}
+            {%- comment -%}
+              F-3：支付图标必须来自 enabled_payment_types 且为全彩（不套滤镜/灰阶）。
+              可访问名说明：payment_type_svg_tag 输出的 SVG 自带 role="img" +
+              aria-labelledby + <title>（如 <title>Visa</title>），屏幕阅读器能念出
+              支付方式名。因此**不能**给它加 aria-hidden，也不需要再补一个
+              visually-hidden 的同名文本——那会让每张图标被念两遍。
 
-        {%- endcase -%}
-      {%- endfor -%}
-
-      {%- if social_count > 0 -%}
-        {%- comment -%}
-          F-4 / F-5：5 个平台都可选；URL 为空则该图标不渲染，主题不预置任何网址、
-          不放占位文案。全部为空时整列消失（social_count 已判过）。
-        {%- endcomment -%}
-        <div class="footer__social">
-          <h2 class="footer__column-title">{{ 'sections.footer.follow_us' | t }}</h2>
-          <ul class="footer__social-list" role="list">
-            {%- for block in section.blocks -%}
-              {%- if block.type == 'social' and block.settings.url != blank -%}
-                {%- liquid
-                  assign social_icon = blank
-                  assign social_label = blank
-                  case block.settings.platform
-                    when 'facebook'
-                      assign social_icon = 'icon-facebook.svg'
-                      assign social_label = 'sections.footer.social.facebook' | t
-                    when 'instagram'
-                      assign social_icon = 'icon-instagram.svg'
-                      assign social_label = 'sections.footer.social.instagram' | t
-                    when 'youtube'
-                      assign social_icon = 'icon-youtube.svg'
-                      assign social_label = 'sections.footer.social.youtube' | t
-                    when 'tiktok'
-                      assign social_icon = 'icon-tiktok.svg'
-                      assign social_label = 'sections.footer.social.tiktok' | t
-                    when 'pinterest'
-                      assign social_icon = 'icon-pinterest.svg'
-                      assign social_label = 'sections.footer.social.pinterest' | t
-                  endcase
-                -%}
-                {%- if social_icon != blank -%}
-                  <li class="footer__social-item" {{ block.shopify_attributes }}>
-                    <a
-                      class="footer__social-link"
-                      href="{{ block.settings.url }}"
-                      target="_blank"
-                      rel="noopener"
-                      aria-label="{{ social_label }}"
-                    >
-                      {{- social_icon | inline_asset_content -}}
-                    </a>
-                  </li>
-                {%- endif -%}
-              {%- endif -%}
-            {%- endfor -%}
-          </ul>
+              位置刻意跟社交同区（参考图）：它属于「信任信号」，和 Follow us 是一组；
+              放底栏右侧会和语言/货币选择器抢同一行的宽度。
+            {%- endcomment -%}
+            <ul class="footer__payment" role="list" aria-label="{{ 'sections.footer.payment' | t }}">
+              {%- for type in shop.enabled_payment_types -%}
+                <li class="footer__payment-item">
+                  {{ type | payment_type_svg_tag: class: 'footer__payment-icon' }}
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
         </div>
       {%- endif -%}
     </div>
-  {%- endif -%}
 
-  {%- comment -%} ───────── ③ sub-footer：newsletter + 选择器 ───────── {%- endcomment -%}
-  {%- if has_sub -%}
-    <div class="footer__sub">
-      {%- for block in section.blocks -%}
-        {%- if block.type == 'newsletter' -%}
-          {%- assign email_id = 'FooterEmail-' | append: block.id -%}
-          {%- assign error_id = 'FooterEmailError-' | append: block.id -%}
-          <div class="footer__newsletter" {{ block.shopify_attributes }}>
-            {%- if block.settings.heading != blank -%}
-              <h2 class="footer__newsletter-heading">{{ block.settings.heading | escape }}</h2>
-            {%- endif -%}
-            {%- if block.settings.text != blank -%}
-              <p class="footer__newsletter-text">{{ block.settings.text | escape }}</p>
-            {%- endif -%}
+    {%- comment -%} ───────── 底栏：版权 + 国家语言 + 回到顶部 ───────── {%- endcomment -%}
+    <div class="footer__bottom">
+      <p class="footer__copyright">
+        {%- comment -%}
+          这两句刻意包在同一个 <span> 里：`.footer__copyright` 是 flex 容器，
+          gap 会插在**每一个**直接子元素之间——拆成 4 段会渲染成
+          "© 2026 Coppice . All rights reserved."（句号被 gap 推开，实测过）。
+          句号紧跟店铺名，靠标记里的空格维持自然间距。
+        {%- endcomment -%}
+        <span>
+          &copy; {{ 'now' | date: '%Y' }}
+          <a class="footer__copyright-link" href="{{ routes.root_url }}">{{ shop.name }}</a>. {{ 'sections.footer.rights' | t }}
+        </span>
+        <span class="footer__copyright-sep" aria-hidden="true">&middot;</span>
+        {%- comment -%} F-10：原样输出，不包裹、不改文案 {%- endcomment -%}
+        {{ powered_by_link }}
+      </p>
 
-            {%- comment -%}
-              F-9：form 'customer' + input[name="contact[email]"]。字段名错一位，
-              表单会静默不提交（不报错、不建客户），所以这两处不能改。
-              无 JS 必须可提交 —— 这里输出的是真实 <form>，不是 JS 组件。
-            {%- endcomment -%}
-            {%- form 'customer', class: 'footer__newsletter-form' -%}
+      <div class="footer__bottom-end">
+        {%- if has_localization -%}
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'localization' -%}
               {%- comment -%}
-                contact[tags] = newsletter 是**社区惯例，不是官方文档要求**
-                （官方 email-consent 文档只规定 contact[email]）。用途是让商家
-                在后台按 tag 筛出订阅者；去掉它不影响订阅本身成立。
+                D-3 的基线：原生 <select> + 可见的提交按钮，无 JS 完全可用
+                （官方对「custom element 方案」明确要求带 fallback）。
+                assets/footer.js 只做两件增强：改选即提交、把按钮收起来。
               {%- endcomment -%}
-              <input type="hidden" name="contact[tags]" value="newsletter">
+              <locale-selector class="footer__localization" {{ block.shopify_attributes }}>
+                {%- form 'localization', class: 'footer__localization-form' -%}
+                  <div class="footer__localization-fields">
+                    {%- if show_country -%}
+                      <div class="footer__select">
+                        <span class="footer__select-icon" aria-hidden="true">
+                          {{- 'icon-globe.svg' | inline_asset_content -}}
+                        </span>
+                        <label class="visually-hidden" for="FooterCountry-{{ block.id }}">
+                          {{- 'sections.footer.localization.country' | t -}}
+                        </label>
+                        {%- comment -%}
+                          F-7 的国家项格式：全名 + ISO 代码 + 货币符号，
+                          例 "United States (USD $)" / "Canada (CAD $)"。
+                        {%- endcomment -%}
+                        <select
+                          class="footer__select-input"
+                          id="FooterCountry-{{ block.id }}"
+                          name="country_code"
+                        >
+                          {%- for country in localization.available_countries -%}
+                            <option
+                              value="{{ country.iso_code }}"
+                              {% if country.iso_code == localization.country.iso_code %}
+                                selected
+                              {% endif %}
+                            >
+                              {{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})
+                            </option>
+                          {%- endfor -%}
+                        </select>
+                        <span class="footer__select-chevron" aria-hidden="true">
+                          {{- 'icon-chevron-down.svg' | inline_asset_content -}}
+                        </span>
+                      </div>
+                    {%- endif -%}
 
-              <label class="visually-hidden" for="{{ email_id }}">
-                {{- 'sections.footer.newsletter.label' | t -}}
-              </label>
-              <div class="footer__newsletter-field">
-                <input
-                  class="footer__newsletter-input"
-                  id="{{ email_id }}"
-                  type="email"
-                  name="contact[email]"
-                  value="{{ form.email }}"
-                  autocomplete="email"
-                  placeholder="{{ 'sections.footer.newsletter.label' | t }}"
-                  required
-                  {% if form.errors %}
-                    aria-invalid="true" aria-describedby="{{ error_id }}"
-                  {% endif %}
-                >
-                <button class="btn-solid footer__newsletter-submit" type="submit">
-                  {{- 'sections.footer.newsletter.submit' | t -}}
-                </button>
-              </div>
+                    {%- if show_language -%}
+                      <div class="footer__select">
+                        <span class="footer__select-icon" aria-hidden="true">
+                          {{- 'icon-language.svg' | inline_asset_content -}}
+                        </span>
+                        <label class="visually-hidden" for="FooterLanguage-{{ block.id }}">
+                          {{- 'sections.footer.localization.language' | t -}}
+                        </label>
+                        <select
+                          class="footer__select-input"
+                          id="FooterLanguage-{{ block.id }}"
+                          name="language_code"
+                        >
+                          {%- for language in localization.available_languages -%}
+                            <option
+                              value="{{ language.iso_code }}"
+                              lang="{{ language.iso_code }}"
+                              hreflang="{{ language.iso_code }}"
+                              {% if language.iso_code == localization.language.iso_code %}
+                                selected
+                              {% endif %}
+                            >
+                              {{ language.endonym_name | capitalize }}
+                            </option>
+                          {%- endfor -%}
+                        </select>
+                        <span class="footer__select-chevron" aria-hidden="true">
+                          {{- 'icon-chevron-down.svg' | inline_asset_content -}}
+                        </span>
+                      </div>
+                    {%- endif -%}
 
-              {%- if form.errors -%}
-                {%- comment -%}
-                  错误文案刻意笼统：Shopify 在这个表单上可能返回「邮箱无效」
-                  也可能返回别的失败原因，逐条翻译会漏。role="alert" 让读屏
-                  在重载后立刻播报，aria-describedby 让输入框读到同一句。
-                {%- endcomment -%}
-                <p class="footer__newsletter-message footer__newsletter-message--error" id="{{ error_id }}" role="alert">
-                  {{- 'sections.footer.newsletter.error' | t -}}
-                </p>
-              {%- elsif form.posted_successfully? -%}
-                <p class="footer__newsletter-message footer__newsletter-message--success" role="status">
-                  {{- 'sections.footer.newsletter.success' | t -}}
-                </p>
-              {%- endif -%}
-
-              <p class="footer__newsletter-consent">
-                {{- 'sections.footer.newsletter.consent' | t -}}
-              </p>
-            {%- endform -%}
-          </div>
+                    <button class="footer__localization-submit" type="submit">
+                      {{- 'sections.footer.localization.update' | t -}}
+                    </button>
+                  </div>
+                {%- endform -%}
+              </locale-selector>
+            {%- endif -%}
+          {%- endfor -%}
         {%- endif -%}
-      {%- endfor -%}
 
-      {%- if has_localization -%}
-        {%- for block in section.blocks -%}
-          {%- if block.type == 'localization' -%}
-            {%- comment -%}
-              D-3 的基线：原生 <select> + 可见的提交按钮，无 JS 完全可用
-              （官方对「custom element 方案」明确要求带 fallback）。
-              assets/footer.js 只做两件增强：改选即提交、把按钮收起来。
-            {%- endcomment -%}
-            <locale-selector class="footer__localization" {{ block.shopify_attributes }}>
-              {%- form 'localization', class: 'footer__localization-form' -%}
-                <div class="footer__localization-fields">
-                  {%- if show_country -%}
-                    <div class="footer__select">
-                      <label class="visually-hidden" for="FooterCountry-{{ block.id }}">
-                        {{- 'sections.footer.localization.country' | t -}}
-                      </label>
-                      {%- comment -%}
-                        F-7 的国家项格式：全名 + ISO 代码 + 货币符号，
-                        例 "United States (USD $)" / "Canada (CAD $)"。
-                      {%- endcomment -%}
-                      <select
-                        class="footer__select-input"
-                        id="FooterCountry-{{ block.id }}"
-                        name="country_code"
-                      >
-                        {%- for country in localization.available_countries -%}
-                          <option
-                            value="{{ country.iso_code }}"
-                            {% if country.iso_code == localization.country.iso_code %}
-                              selected
-                            {% endif %}
-                          >
-                            {{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})
-                          </option>
-                        {%- endfor -%}
-                      </select>
-                      <span class="footer__select-chevron" aria-hidden="true">
-                        {{- 'icon-chevron-down.svg' | inline_asset_content -}}
-                      </span>
-                    </div>
-                  {%- endif -%}
-
-                  {%- if show_language -%}
-                    <div class="footer__select">
-                      <label class="visually-hidden" for="FooterLanguage-{{ block.id }}">
-                        {{- 'sections.footer.localization.language' | t -}}
-                      </label>
-                      <select
-                        class="footer__select-input"
-                        id="FooterLanguage-{{ block.id }}"
-                        name="language_code"
-                      >
-                        {%- for language in localization.available_languages -%}
-                          <option
-                            value="{{ language.iso_code }}"
-                            lang="{{ language.iso_code }}"
-                            hreflang="{{ language.iso_code }}"
-                            {% if language.iso_code == localization.language.iso_code %}
-                              selected
-                            {% endif %}
-                          >
-                            {{ language.endonym_name | capitalize }}
-                          </option>
-                        {%- endfor -%}
-                      </select>
-                      <span class="footer__select-chevron" aria-hidden="true">
-                        {{- 'icon-chevron-down.svg' | inline_asset_content -}}
-                      </span>
-                    </div>
-                  {%- endif -%}
-
-                  <button class="footer__localization-submit" type="submit">
-                    {{- 'sections.footer.localization.update' | t -}}
-                  </button>
-                </div>
-              {%- endform -%}
-            </locale-selector>
-          {%- endif -%}
-        {%- endfor -%}
-      {%- endif -%}
+        {%- comment -%}
+          回到顶部：用 `<a href="#top">` 而不是按钮 + JS。
+          HTML 规范里 "#top" 在没有同名元素时就是「文档顶部」，所有浏览器原生支持，
+          因此无 JS 也可用、也不需要在 footer.js 里加一套滚动逻辑。
+          全站那个浮动 FAB（assets/back-to-top.js）会在页脚进入视口时自动让位，
+          同一屏不会出现两个「回到顶部」。
+        {%- endcomment -%}
+        <a class="footer__to-top" href="#top" aria-label="{{ 'sections.footer.to_top' | t }}">
+          {{- 'icon-arrow-up.svg' | inline_asset_content -}}
+        </a>
+      </div>
     </div>
-  {%- endif -%}
-
-  {%- comment -%} ───────── ④ bottom bar ───────── {%- endcomment -%}
-  <div class="footer__bottom">
-    <p class="footer__copyright">
-      <span class="footer__copyright-year">&copy; {{ 'now' | date: '%Y' }}</span>
-      <a class="footer__copyright-link" href="{{ routes.root_url }}">{{ shop.name }}</a>
-      <span class="footer__copyright-sep" aria-hidden="true">&middot;</span>
-      {%- comment -%} F-10：原样输出，不包裹、不改文案 {%- endcomment -%}
-      {{ powered_by_link }}
-    </p>
-
-    {%- if show_payment -%}
-      {%- comment -%}
-        F-3：支付图标必须来自 enabled_payment_types 且为全彩（不套滤镜/灰阶）。
-        可访问名说明：payment_type_svg_tag 输出的 SVG 自带 role="img" +
-        aria-labelledby + <title>（如 <title>Visa</title>），屏幕阅读器能念出
-        支付方式名。因此**不能**给它加 aria-hidden，也不需要再补一个
-        visually-hidden 的同名文本——那会让每张图标被念两遍。
-      {%- endcomment -%}
-      <ul class="footer__payment" role="list" aria-label="{{ 'sections.footer.payment' | t }}">
-        {%- for type in shop.enabled_payment_types -%}
-          <li class="footer__payment-item">
-            {{ type | payment_type_svg_tag: class: 'footer__payment-icon' }}
-          </li>
-        {%- endfor -%}
-      </ul>
-    {%- endif -%}
   </div>
 </footer>
 
@@ -562,21 +654,31 @@
 
 {% stylesheet %}
   /* ==========================================================================
-     页脚版式（task-footer.md §0.3 线框）
+     页脚版式（v3.0 参考图重做，2026-11-08）
 
      颜色纪律：全部走 var(--color-*) / color-mix。.site-footer 上有 critical.css
      的骨架映射，所以这里的 --color-background / --color-foreground / --color-brand
      在深色预设下自动变成骨架色——不要在这里写死任何色值。
+
+     唯一的"派生色"是 --footer-surface：品牌色 4% 混背景色。参考图的页脚是米白纸面、
+     页面是纯白，靠这一档微差把页脚和内容区拉开。深色预设下它变成近黑带一点品牌色相，
+     同样成立，所以不需要按明暗分两支。
      ========================================================================== */
 
   .site-footer {
-    /* 通栏后补回内容列边距。不能用 --page-margin：宽屏时内容列被 --page-width
-       收窄，直接补页边距会失准（与改造前的写法一致，勿改）。 */
-    padding-inline: calc((100% - var(--content-width)) / 2);
-    padding-block: clamp(2rem, 4vw, 3rem) 1.25rem;
-    margin-block-start: 2rem;
-    background-color: var(--color-skeleton-background);
-    color: var(--color-skeleton-foreground);
+    --footer-surface: color-mix(in srgb, var(--color-brand) 5%, var(--color-background));
+    /* 发丝线：分隔列区、底栏。14% 前景色在浅底上 ≈ #E5E5E5，够看见但不抢 */
+    --footer-hairline: color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    /* 图片右侧让位宽度。19vw 跟着视口走，21rem 封顶，避免超宽屏出现一条空走廊 */
+    --footer-rail: clamp(0px, 19vw, 21rem);
+
+    position: relative;
+    /* 图片与浮叶都要被裁在这块矩形里；isolation 让它们的 z-index 只在本层生效 */
+    isolation: isolate;
+    overflow: hidden;
+    padding-block: clamp(2rem, 3.6vw, 3.25rem) 1.5rem;
+    background-color: var(--footer-surface);
+    color: var(--color-foreground);
   }
 
   .site-footer a {
@@ -584,199 +686,253 @@
     text-decoration: none;
   }
 
-  /* ---------- ① brand 行 ---------- */
+  .footer__inner {
+    position: relative;
+    /* 内容压在图片层之上 */
+    z-index: 1;
+    padding-inline: calc((100% - var(--content-width)) / 2);
+  }
+
+  /*
+    有图片时**只把主内容带**往右让，底栏仍从页面左边距起排。
+    让位写在 .footer__main 而不是 .footer__inner 上，就是这个原因——写在 inner 上
+    会连版权行、底栏那条分隔线一起推右（第一版实测：版权行从 294px 起，参考图在 20px）。
+    这里只写图片宽度：.footer__main 的包含块已经是收窄到 --content-width 的 inner 内容盒，
+    页边距已经在外面扣过一次了。
+  */
+  .site-footer--with-media .footer__main {
+    padding-inline-start: var(--footer-rail);
+  }
+
+  /* ---------- 左侧景观图 ---------- */
+
+  .footer__media {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: calc((100% - var(--content-width)) / 2 + var(--footer-rail));
+    z-index: 0;
+    /* 纯装饰：不吃点击，否则会挡住页脚左侧的空白区 */
+    pointer-events: none;
+  }
+
+  .footer__media-image {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    /* 焦点偏右：山脊通常在中上部，偏右能把天空留给文字区 */
+    object-position: 62% 50%;
+  }
+
+  /*
+    淡出：不靠 mask-image（Safari 需要前缀、mask-composite 写法还分两派），
+    改用页脚底色叠三层渐变。代价是页脚底色必须是不透明纯色——它确实是。
+
+    三层顺序 = 右侧淡出 → 顶部淡出 → 底部淡出。多层渐变是按顺序叠加的，
+    最右一层覆盖最左一层，所以把「右侧」放第一层（最先铺、被后两层局部再盖），
+    边缘才不会出现硬角。
+  */
+  .footer__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to right, transparent 34%, var(--footer-surface) 92%),
+      linear-gradient(to bottom, var(--footer-surface) 0%, transparent 15%),
+      /* 底部多留一段实色：版权行从页面左边距起排，会正好压在图片下缘。
+         不把它压住，muted 小字会在照片上失去对比度（实测看不清）。 */
+      linear-gradient(to top, var(--footer-surface) 0%, var(--footer-surface) 12%, transparent 36%);
+  }
+
+  .footer__leaf {
+    position: absolute;
+    display: block;
+    /* 品牌色压在半透明上：浅天空底上是一片深绿叶子，深色预设下同样成立 */
+    color: var(--color-brand);
+    opacity: 0.5;
+  }
+
+  .footer__leaf svg {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  .footer__leaf--a {
+    inset-block-start: 14%;
+    inset-inline-start: 58%;
+    inline-size: 1.5rem;
+    rotate: 22deg;
+  }
+
+  .footer__leaf--b {
+    inset-block-start: 66%;
+    inset-inline-start: 6%;
+    inline-size: 1.125rem;
+    rotate: -18deg;
+  }
+
+  /* ---------- 三区骨架 ---------- */
+
+  .footer__main {
+    display: flex;
+    flex-wrap: wrap;
+    /* stretch 而不是 start：竖分隔线要贯穿整段高度，不能只画到文字末尾 */
+    align-items: stretch;
+    gap: clamp(1.25rem, 1.8vw, 2rem);
+  }
+
+  .footer__brand-col {
+    flex: 1 1 14rem;
+    /* 品牌区的句子按阅读舒适度封顶，宽屏下不跟着拉成一条长线 */
+    max-inline-size: 25rem;
+    min-inline-size: 0;
+  }
+
+  .footer__columns {
+    display: grid;
+    /*
+      轨道取 max-content 而不是 1fr，是个刻意的取舍：
+      `1fr` 把容器宽度平均分给每条轨道，3 列菜单在 1100px 的内容带里各得 170px，
+      列与列之间于是拉出 70px 的空白——参考图是 104px 的密排节奏，不是这种松排。
+      max-content 让每列只占自己需要的最少宽度（`minmax(8rem, …)` 兜住最窄档）。
+
+      代价与兜底：max-content 会把**不换行的整段文字**算进轨道宽度，所以
+      text / contact / custom_liquid 三个块各自加了 max-inline-size（见下），
+      否则一段落就能把一列撑到 600px。菜单链接本身短，且已有 overflow-wrap。
+    */
+    grid-template-columns: repeat(auto-fit, minmax(8rem, max-content));
+    justify-content: start;
+    align-content: start;
+    gap: clamp(1.5rem, 2.4vw, 2.25rem) clamp(1rem, 1.6vw, 1.75rem);
+    flex: 1 1 auto;
+    /* 封顶：不封的话省下的宽度会一路堆到「FOLLOW US」前面，右区被推成孤岛 */
+    max-inline-size: 32rem;
+    min-inline-size: 0;
+  }
+
+  .footer__aside {
+    /* auto 外边距把右区顶到内容带右缘，中间的空档留在菜单列之后（参考图就是这个节奏） */
+    margin-inline-start: auto;
+    flex: 0 0 auto;
+    min-inline-size: 8.5rem;
+  }
+
+  /* 竖发丝线只画在「前面确实有区」的位置，由 Liquid 决定加不加这个修饰类 */
+  .footer__columns--divided,
+  .footer__aside--divided {
+    border-inline-start: 1px solid var(--footer-hairline);
+    padding-inline-start: clamp(1.25rem, 2vw, 2rem);
+  }
+
+  /* ---------- 第一区：品牌 ---------- */
 
   .footer__wordmark {
-    display: inline-block;
-    font-size: clamp(1.375rem, 1.05rem + 1.5vw, 2rem);
+    display: inline-flex;
+    align-items: center;
+    font-size: clamp(1.375rem, 1.1rem + 0.9vw, 1.75rem);
     font-weight: 700;
     line-height: 1.1;
-    /* 收紧字距：wordmark 的字距应比正文字距紧一点，大字才不会散 */
-    letter-spacing: -0.01em;
+    /* 大写高比正文字高，字距必须收紧，否则大字显得松垮 */
+    letter-spacing: -0.02em;
+    color: var(--color-brand);
   }
 
   .footer__logo {
     display: block;
     inline-size: auto;
     block-size: auto;
-    /* 双封顶：既不超过 240px，也不超过内容列宽（窄屏 / 超长 logo） */
-    max-inline-size: min(240px, 100%);
-    max-block-size: 2.5rem;
+    /* 双封顶：既不超过 220px，也不超过列宽（窄屏 / 超长 logo） */
+    max-inline-size: min(220px, 100%);
+    max-block-size: 2.25rem;
     object-fit: contain;
     object-position: left center;
   }
 
   .footer__tagline {
-    margin-block-start: 0.5rem;
-    max-inline-size: 46ch;
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    color: var(--color-foreground-muted);
+    margin-block-start: 0.625rem;
+    font-size: 1.0625rem;
+    line-height: 1.35;
+    /* 78% 前景色：比 muted 还深一档，它是"第二句品牌话"而不是辅助信息 */
+    color: color-mix(in srgb, var(--color-foreground) 78%, transparent);
   }
 
-  /* ---------- ② 列区 ---------- */
-
-  .footer__grid {
-    display: grid;
-    /* auto-fit + 160px：6 列在宽屏排开、到中屏自动减列，不需要逐档写断点 */
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: clamp(1.5rem, 3.5vw, 2.75rem) clamp(1rem, 2vw, 2rem);
-    margin-block-start: clamp(1.75rem, 3.5vw, 2.75rem);
-  }
-
-  /* 菜单组自身不占格子：它内部的每个 <nav> 才是网格单元（D-6 的多列要能跟
-     text / contact / social 对齐）。注意 display: contents 元素的
-     shopify_attributes 仍在 DOM 上，编辑器照常能选中它。 */
-  .footer__menu {
-    display: contents;
-  }
-
-  .footer__column-title {
-    margin-block-end: 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    line-height: 1.4;
-    /* 小号全大写标签：字距必须松开，否则大写字母会粘在一起 */
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .footer__links {
-    display: grid;
-    gap: 0.125rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .footer__link {
-    display: flex;
-    align-items: center;
-    /* 触摸目标 ≥ 44×44（AGENTS §8）。行高 44 是页脚变高的主因，
-       这是 D-1 已经接受的代价——不要为了紧凑把它压到 32。 */
-    min-block-size: 44px;
-    padding-inline-end: 0.5rem;
-    font-size: 0.9375rem;
-    line-height: 1.4;
-    /* 长链接（长邮箱 / 电话）在窄列里必须能断行，不能顶破网格 */
-    overflow-wrap: anywhere;
-  }
-
-  .footer__link:hover,
-  .footer__wordmark:hover,
-  .footer__copyright-link:hover {
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
-  }
-
-  .footer__rte {
-    font-size: 0.9375rem;
+  .footer__brand-text {
+    margin-block-start: 0.875rem;
+    max-inline-size: 34ch;
+    font-size: 0.8125rem;
     line-height: 1.6;
     color: var(--color-foreground-muted);
   }
 
-  .footer__custom {
-    font-size: 0.9375rem;
-    line-height: 1.6;
+  .footer__brand-text > :first-child {
+    margin-block-start: 0;
   }
 
-  /* ---------- 社交 ---------- */
-
-  .footer__social-list {
-    display: flex;
-    flex-wrap: wrap;
-    /* 不设 gap：每个图标占 44×44 的盒子、字形只有 22px，盒内自带 11px 留白，
-       相邻字形天然相隔 22px。加了 gap 反而让 5 枚图标（5×44=220）在
-       160–240px 的列里挤成 4+1 两行——实测过的取舍，别把它改回去。 */
-    gap: 0;
-    margin: 0;
-    /* 左移半个「盒内留白」，让图标的左缘与同列的列标题对齐 */
-    margin-inline-start: -0.6875rem;
-    padding: 0;
-    list-style: none;
+  .footer__brand-text > :last-child {
+    margin-block-end: 0;
   }
 
-  .footer__social-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    inline-size: 44px;
-    block-size: 44px;
-    border-radius: 50%;
-    transition:
-      color 0.15s ease,
-      background-color 0.15s ease;
-  }
-
-  .footer__social-link svg {
-    inline-size: 1.375rem;
-    block-size: 1.375rem;
-  }
-
-  @media (hover: hover) {
-    .footer__social-link:hover {
-      color: var(--color-brand);
-      background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .footer__social-link {
-      transition: none;
-    }
-  }
-
-  /* ---------- ③ sub-footer ---------- */
-
-  .footer__sub {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1.25rem 2rem;
-    margin-block-start: clamp(2rem, 4vw, 3rem);
-    padding-block-start: clamp(1.25rem, 2.5vw, 1.75rem);
-    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
-  }
+  /* ---------- 订阅 ---------- */
 
   .footer__newsletter {
-    /* flex-basis 320px：够放「输入框 + 按钮」，再窄就整块换行占满 */
-    flex: 1 1 320px;
-    max-inline-size: 30rem;
+    margin-block-start: 1.5rem;
+  }
+
+  .footer__newsletter-form {
+    max-inline-size: 23rem;
   }
 
   .footer__newsletter-heading {
-    font-size: 0.9375rem;
+    margin-block-end: 0.5rem;
+    font-size: 0.8125rem;
     font-weight: 700;
     line-height: 1.4;
-  }
-
-  .footer__newsletter-text {
-    margin-block-start: 0.25rem;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: var(--color-foreground-muted);
   }
 
   .footer__newsletter-field {
     display: flex;
     gap: 0.5rem;
-    margin-block-start: 0.625rem;
+    margin-block-start: 0.75rem;
   }
 
-  .footer__newsletter-input {
+  .footer__newsletter-wrap {
+    position: relative;
+    display: flex;
     /* flex item 的自动最小尺寸是 min-content：长邮箱地址会把输入框撑破容器。
        必须给**输入框自己**加 min-inline-size: 0（给父级无效，见 BUG-063 同通路） */
     flex: 1 1 auto;
     min-inline-size: 0;
-    min-block-size: 44px;
-    padding-inline: 0.875rem;
+  }
+
+  .footer__newsletter-icon {
+    position: absolute;
+    inset-inline-start: 0.9375rem;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    display: flex;
+    /* 图标只是装饰，不能吃掉点击（点图标要能聚焦输入框，标签文字已兜底） */
+    pointer-events: none;
+    color: var(--color-foreground-muted);
+  }
+
+  .footer__newsletter-icon svg {
+    inline-size: 0.9375rem;
+    block-size: 0.9375rem;
+  }
+
+  .footer__newsletter-input {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    min-block-size: 2.75rem;
     padding-block: 0.5rem;
-    /* --color-background 在 .site-footer 内已被骨架映射接管，深色预设自动跟随 */
+    padding-inline: 2.5rem 0.875rem;
     background-color: var(--color-background);
     color: var(--color-foreground);
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
-    font-size: 0.9375rem;
+    border: 1px solid var(--footer-hairline);
+    border-radius: 999px;
+    font-size: 0.8125rem;
   }
 
   .footer__newsletter-input:focus-visible {
@@ -789,6 +945,17 @@
   .footer__newsletter-input::placeholder {
     color: var(--color-foreground-muted);
     opacity: 1;
+  }
+
+  /* 覆盖 .btn-solid 的 44px + 品牌色投影：页脚里它是个内联小按钮，
+     常驻光晕在这一行里显得脏。形状与颜色仍走 .btn-solid（不重复写一遍）。 */
+  .footer__newsletter-submit {
+    flex: 0 0 auto;
+    min-block-size: 2.75rem;
+    padding-inline: 1.25rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    box-shadow: none;
   }
 
   /*
@@ -805,16 +972,9 @@
     border-color: color-mix(in srgb, var(--color-sale) 70%, var(--color-foreground));
   }
 
-  .footer__newsletter-submit {
-    flex: 0 0 auto;
-    padding-inline: 1.25rem;
-    font-size: 0.9375rem;
-    font-weight: 700;
-  }
-
   .footer__newsletter-message {
     margin-block-start: 0.5rem;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     line-height: 1.5;
   }
 
@@ -822,11 +982,228 @@
     color: var(--color-brand);
   }
 
-  .footer__newsletter-consent {
-    margin-block-start: 0.5rem;
+  .footer__newsletter-text {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.375rem;
+    margin-block-start: 0.75rem;
     font-size: 0.75rem;
     line-height: 1.5;
     color: var(--color-foreground-muted);
+  }
+
+  .footer__newsletter-leaf {
+    display: flex;
+    flex: 0 0 auto;
+    /* 与首行文字的视觉中线对齐（不是与整段顶端对齐） */
+    margin-block-start: 0.1875rem;
+    color: var(--color-brand);
+  }
+
+  .footer__newsletter-leaf svg {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+  }
+
+  .footer__newsletter-consent {
+    margin-block-start: 0.375rem;
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+
+  /* ---------- 第二区：菜单列 ---------- */
+
+  /* 菜单组自身不占格子：它内部的每个 <nav> 才是网格单元（D-6 的多列要能跟
+     text / contact 排齐）。display: contents 元素的 shopify_attributes 仍在 DOM 上，
+     编辑器照常能选中它。 */
+  .footer__menu {
+    display: contents;
+  }
+
+  .footer__column-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.4;
+    /* 小号全大写标签：字距必须松开，否则大写字母会粘在一起 */
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .footer__links {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .footer__link {
+    display: inline-flex;
+    align-items: center;
+    /* 细指针 24px：一行一条的紧凑节奏（WCAG 2.5.8 AA 的 24×24 下限）；
+       触摸屏在下面的 (pointer: coarse) 里抬到 44px。见文件头的取舍说明。 */
+    min-block-size: 1.5rem;
+    padding-inline-end: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+    /* 长链接（长邮箱 / 电话）在窄列里必须能断行，不能顶破网格 */
+    overflow-wrap: anywhere;
+    transition: color 0.15s ease;
+  }
+
+  @media (hover: hover) {
+    .footer__link:hover,
+    .footer__wordmark:hover,
+    .footer__copyright-link:hover {
+      color: var(--color-brand);
+    }
+  }
+
+  @media (pointer: coarse) {
+    .footer__link {
+      min-block-size: 2.75rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .footer__link {
+      transition: none;
+    }
+  }
+
+  .footer__rte {
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--color-foreground-muted);
+  }
+
+  /* max-inline-size 不是排版偏好，是 max-content 轨道的安全阀：见 .footer__columns 的说明 */
+  .footer__text,
+  .footer__contact,
+  .footer__custom {
+    max-inline-size: 22rem;
+  }
+
+  .footer__custom {
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+
+  /* ---------- 第三区：社交 + 支付 ---------- */
+
+  .footer__social-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .footer__social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border: 1px solid var(--footer-hairline);
+    /* 10px：参考图是圆角方块而不是圆——圆形在这行里太软，方块更"工具感" */
+    border-radius: 0.625rem;
+    color: var(--color-foreground);
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .footer__social-link svg {
+    inline-size: 1.0625rem;
+    block-size: 1.0625rem;
+  }
+
+  @media (hover: hover) {
+    .footer__social-link:hover {
+      color: var(--color-brand);
+      border-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+      background-color: color-mix(in srgb, var(--color-brand) 6%, transparent);
+    }
+  }
+
+  /* 触摸屏把 36px 的图标盒抬到 44px（AGENTS §8） */
+  @media (pointer: coarse) {
+    .footer__social-link {
+      inline-size: 2.75rem;
+      block-size: 2.75rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .footer__social-link {
+      transition: none;
+    }
+  }
+
+  .footer__payment {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .footer__payment-icon {
+    display: block;
+    /* payment_type_svg_tag 自带 38×24，这里只统一样式、不加滤镜（F-3 要求全彩） */
+    block-size: 22px;
+    inline-size: auto;
+  }
+
+  /* ---------- 底栏 ---------- */
+
+  .footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    margin-block-start: clamp(1.75rem, 3.2vw, 2.75rem);
+    padding-block-start: 1.25rem;
+    border-block-start: 1px solid var(--footer-hairline);
+  }
+
+  .footer__copyright {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    /* 底栏允许 muted（70% 前景色，白底 4.95:1 / Noir 8:1）；
+       再淡就不达 AA 小字线了——不要在这里换更低的百分比 */
+    color: var(--color-foreground-muted);
+  }
+
+  .footer__copyright-sep {
+    /* 分隔点两侧的间距由 flex gap 提供，这里不再叠加 margin */
+    margin-inline: 0;
+  }
+
+  .footer__bottom-end {
+    display: flex;
+    align-items: center;
+  }
+
+  /* 选择器 / 回到顶部之间的竖线：只画在「不是第一个」的子项上。
+     用 margin+padding 而不是 gap，否则 border 会贴在 gap 外侧、离内容太远。 */
+  .footer__bottom-end > * + * {
+    margin-inline-start: 1rem;
+    padding-inline-start: 1rem;
+    border-inline-start: 1px solid var(--footer-hairline);
   }
 
   /* ---------- 国家 / 语言选择器 ---------- */
@@ -834,37 +1211,65 @@
   /* 自定义元素默认 inline，做 flex item 必须是块级 */
   .footer__localization {
     display: block;
-    flex: 0 1 auto;
   }
 
   .footer__localization-fields {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.25rem 1rem;
   }
 
   .footer__select {
     position: relative;
     display: flex;
     align-items: center;
+    gap: 0.375rem;
+    color: var(--color-foreground-muted);
   }
 
+  /* 国家与语言之间的竖线（参考图） */
+  .footer__select + .footer__select {
+    margin-inline-start: 0.25rem;
+    padding-inline-start: 1rem;
+    border-inline-start: 1px solid var(--footer-hairline);
+  }
+
+  .footer__select-icon {
+    display: flex;
+    flex: 0 0 auto;
+  }
+
+  .footer__select-icon svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  /*
+    参考图里选择器是「图标 + 文字 + 小箭头」的裸排，没有描边盒子。
+    这里保留原生 <select>（无 JS 的 fallback 基线），只把它剥成文字：
+    appearance: none 去掉系统箭头，右侧留出 1.125rem 给自绘箭头。
+  */
   .footer__select-input {
     appearance: none;
-    min-block-size: 44px;
-    /* 逻辑属性：RTL 下内边距与箭头一起翻面，不写 left/right */
-    padding-block: 0.4rem;
-    padding-inline: 0.75rem 2.25rem;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
-    border-radius: var(--style-border-radius-inputs);
-    font-size: 0.875rem;
+    min-block-size: 2.75rem;
+    padding: 0;
+    padding-inline-end: 1.125rem;
+    border: 0;
+    background-color: transparent;
+    color: inherit;
+    font-size: 0.8125rem;
     cursor: pointer;
+  }
+
+  .footer__select-input:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
 
   .footer__select-chevron {
     position: absolute;
-    inset-inline-end: 0.75rem;
+    inset-inline-end: 0;
     display: flex;
     /* 箭头只是装饰，不能吃掉点击（点箭头要能开原生选择器） */
     pointer-events: none;
@@ -876,151 +1281,182 @@
     block-size: 0.75rem;
   }
 
+  /* 无 JS 时的提交按钮：小号文字按钮，读起来像底栏的一部分而不是控件。
+     增强生效后由 assets/footer.js 写 data-enhanced 收起来（顺序是刻意的：
+     脚本没跑 → 按钮在 → 无 JS 也能提交）。 */
   .footer__localization-submit {
-    min-block-size: 44px;
-    padding-inline: 1rem;
-    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
-    border-radius: var(--style-border-radius-inputs);
+    min-block-size: 2.75rem;
+    padding: 0;
+    border: 0;
     background-color: transparent;
-    color: inherit;
-    font-size: 0.875rem;
+    color: var(--color-brand);
+    font-size: 0.8125rem;
     font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
     cursor: pointer;
   }
 
-  .footer__localization-submit:hover {
-    border-color: var(--color-brand);
-    color: var(--color-brand);
-  }
-
-  /* 增强生效后才收起提交按钮（assets/footer.js 写 data-enhanced）。
-     顺序是刻意的：脚本没跑 → 按钮在 → 无 JS 也能提交。 */
   locale-selector[data-enhanced] .footer__localization-submit {
     display: none;
   }
 
-  /* ---------- ④ bottom bar ---------- */
+  /* ---------- 回到顶部 ---------- */
 
-  .footer__bottom {
+  .footer__to-top {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem 1.5rem;
-    margin-block-start: 1.25rem;
-    padding-block-start: 1.25rem;
-    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    justify-content: center;
+    flex: 0 0 auto;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border: 1px solid var(--footer-hairline);
+    border-radius: 50%;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    /* 页脚底色比页面底色深一档，白圆片自己就浮起来了；只补极淡一层 */
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease,
+      box-shadow 0.2s ease;
   }
 
-  .footer__copyright {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    /* 底栏允许 muted（70% 前景色，白底 4.95:1 / Noir 8:1）；
-       再淡就不达 AA 小字线了——不要在这里换更低的百分比 */
-    color: var(--color-foreground-muted);
+  .footer__to-top svg {
+    inline-size: 1rem;
+    block-size: 1rem;
   }
 
-  .footer__copyright-sep {
-    /* 分隔点在换行后不该出现在行首 */
-    margin-inline: -0.125rem;
+  @media (hover: hover) {
+    .footer__to-top:hover {
+      border-color: var(--color-brand);
+      color: var(--color-brand);
+      box-shadow: 0 4px 14px color-mix(in srgb, var(--color-brand) 22%, transparent);
+    }
   }
 
-  .footer__payment {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.375rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  @media (pointer: coarse) {
+    .footer__to-top {
+      inline-size: 2.75rem;
+      block-size: 2.75rem;
+    }
   }
 
-  .footer__payment-icon {
-    display: block;
-    /* payment_type_svg_tag 自带 38×24，这里只统一样式、不加滤镜（F-3 要求全彩） */
-    block-size: 24px;
-    inline-size: auto;
+  @media (prefers-reduced-motion: reduce) {
+    .footer__to-top {
+      transition: none;
+    }
   }
 
-  /* ---------- 平板：3 列菜单 + 信息块整行 ---------- */
+  /* ---------- 中屏：三区改纵排，竖发丝线转横向 ---------- */
 
-  /*
-    为什么 750–1279 不用 auto-fit，而要写死 3 列：
-    列宽 = 内容宽 ÷ item 数（auto-fit 下空轨道会塌缩、1fr 平分）。1440 上
-    6 个 item 分到 ≈216px，邮箱 187px 刚好放得下；但 768–1200 区间 6 个 item
-    只分到 160–190px，`support@…` 就会被 anywhere 拆成两行——实测过的真实缺陷。
-    这一档改成「菜单 3 列并排 → 正文 2 列 + 联系 1 列 → 社交整行」，
-    每个信息块都拿到够用的宽度，长邮箱、长句子都不再被挤。
-
-    平板档不写 `auto-fit`：菜单列数由后台菜单树决定（D-6），写死 3 列能让
-    3 个菜单组刚好铺满一行；只有 1 个平铺列时它占 1/3（与移动端同一表现）。
-  */
-  @media screen and (min-width: 750px) and (max-width: 1279px) {
-    .footer__grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+  @media screen and (max-width: 989px) {
+    .footer__brand-col {
+      flex-basis: 100%;
+      max-inline-size: 34rem;
     }
 
-    /* 正文占两列（句子挤在 232px 里会碎成六行），联系占一列：
-       2 + 1 刚好铺满三列，联系列因此有 1/3 宽（768 上 232px），
-       187px 的邮箱放得下——实测过，这一档正是邮箱被拆行的地方。 */
-    .footer__text {
-      grid-column: span 2;
+    .footer__columns,
+    .footer__aside {
+      flex-basis: 100%;
     }
 
-    /* 社交整行：塞进 1/3 列时 5 枚图标（220px）会折成 4+1 */
-    .footer__social,
-    .footer__custom {
-      grid-column: 1 / -1;
+    /*
+      中屏下三区改为整行纵排，这里必须把桌面那条 32rem 封顶解除：
+      封顶在纵排时会变成「这一行的分隔线只画到 512px」，跟下面整宽的
+      FOLLOW US 分隔线对不齐（820 实测）。同时把轨道改回 1fr 让菜单列
+      均分整行，避免全部挤在左边。
+    */
+    .footer__columns {
+      max-inline-size: none;
+      grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
     }
-    .footer__rte {
-      /* 两列宽后正文会拉成一条长线，按阅读舒适度封顶（62ch ≈ 460px @15px） */
-      max-inline-size: 62ch;
+
+    .footer__aside {
+      min-inline-size: 0;
+    }
+
+    .footer__columns--divided,
+    .footer__aside--divided {
+      border-inline-start: 0;
+      padding-inline-start: 0;
+      border-block-start: 1px solid var(--footer-hairline);
+      padding-block-start: clamp(1.25rem, 3vw, 1.75rem);
     }
   }
 
   /* ---------- 移动端 ---------- */
 
   @media screen and (max-width: 749px) {
-    /* 6 列收成 2 列：菜单组的多列并排（display: contents 已让它们成为网格单元） */
-    .footer__grid {
+    .site-footer {
+      /* 图片改成顶部一条带，页脚顶部不再留白，让图片贴边 */
+      padding-block-start: 0;
+    }
+
+    /*
+      小屏把绝对定位换成流内：图片占一条 9rem 的横幅，内容紧随其后。
+      绝对定位在手机上会被内容压住（内容随文案变高，图片区高度不可控）。
+    */
+    .footer__media {
+      position: relative;
+      inset: auto;
+      inline-size: 100%;
+      block-size: 9rem;
+      margin-block-end: 1.75rem;
+    }
+
+    /* 顶部横幅只需要底部淡出，右侧淡出在这里会把右半边整块抹掉 */
+    .footer__media::after {
+      background: linear-gradient(to bottom, transparent 46%, var(--footer-surface) 97%);
+    }
+
+    .site-footer--with-media .footer__main {
+      padding-inline-start: 0;
+    }
+
+    .footer__columns {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    /* 文本 / 联系方式 / 社交 / 自定义 Liquid 跨满整行：
+    /* 文本 / 联系方式 / 自定义 Liquid 跨满整行：
        这些块的内容是句子而不是短链接，挤在半栏里既难读又会把行高撑爆 */
     .footer__text,
     .footer__contact,
-    .footer__social,
     .footer__custom {
       grid-column: 1 / -1;
     }
 
-    .footer__social-list {
-      margin-inline-start: -0.6875rem;
-    }
-
-    /* sub-footer 纵排：newsletter 一行、选择器一行（不与导航列挤在一起，F-6） */
-    .footer__sub {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .footer__newsletter {
+    .footer__newsletter-form,
+    .footer__brand-text {
       max-inline-size: none;
     }
 
     .footer__bottom {
       flex-direction: column;
-      align-items: center;
-      text-align: center;
+      align-items: flex-start;
     }
 
-    .footer__copyright {
-      justify-content: center;
+    .footer__bottom-end {
+      flex-wrap: wrap;
+      /* 不用 space-between：换行后「回到顶部」会被甩到新行的左端（375 实测） */
+      justify-content: flex-start;
+      inline-size: 100%;
+    }
+
+    /* 窄屏的竖发丝线会随换行断成孤立的短杠，直接去掉，靠间距分组 */
+    .footer__bottom-end > * + * {
+      margin-inline-start: 0;
+      padding-inline-start: 0;
+      border-inline-start: 0;
+    }
+
+    /*
+      圆钮永远贴本行右缘：选择器换行时它跟着换行，但仍靠右，不会孤零零落在左边。
+      选择器必须写到 `> .footer__to-top` 这一档（0,2,0）——上面那条 `> * + *`
+      同样是 (0,1,0) 且写在后面，同档会被它清零（375 实测：圆钮跑到左端）。
+    */
+    .footer__bottom-end > .footer__to-top {
+      margin-inline-start: auto;
     }
   }
 
@@ -1039,6 +1475,12 @@
   "class": "footer-section",
   "max_blocks": 20,
   "settings": [
+    {
+      "type": "image_picker",
+      "id": "background_image",
+      "label": "t:sections.footer.labels.image",
+      "info": "t:sections.footer.labels.image_info"
+    },
     {
       "type": "checkbox",
       "id": "show_payment_icons",
@@ -1062,6 +1504,11 @@
           "type": "text",
           "id": "tagline",
           "label": "t:sections.footer.labels.tagline"
+        },
+        {
+          "type": "richtext",
+          "id": "description",
+          "label": "t:labels.description"
         }
       ]
     },
