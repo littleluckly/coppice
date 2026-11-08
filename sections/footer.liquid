@@ -529,7 +529,7 @@
       {%- endif -%}
     </div>
 
-    {%- comment -%} ───────── 底栏：版权 + 国家语言 + 回到顶部 ───────── {%- endcomment -%}
+    {%- comment -%} ───────── 底栏：版权 + 国家语言选择器 ───────── {%- endcomment -%}
     <div class="footer__bottom">
       <p class="footer__copyright">
         {%- comment -%}
@@ -1370,29 +1370,6 @@
     .footer__bottom {
       flex-direction: column;
       align-items: flex-start;
-    }
-
-    .footer__bottom-end {
-      flex-wrap: wrap;
-      /* 不用 space-between：换行后「回到顶部」会被甩到新行的左端（375 实测） */
-      justify-content: flex-start;
-      inline-size: 100%;
-    }
-
-    /* 窄屏的竖发丝线会随换行断成孤立的短杠，直接去掉，靠间距分组 */
-    .footer__bottom-end > * + * {
-      margin-inline-start: 0;
-      padding-inline-start: 0;
-      border-inline-start: 0;
-    }
-
-    /*
-      圆钮永远贴本行右缘：选择器换行时它跟着换行，但仍靠右，不会孤零零落在左边。
-      选择器必须写到 `> .footer__to-top` 这一档（0,2,0）——上面那条 `> * + *`
-      同样是 (0,1,0) 且写在后面，同档会被它清零（375 实测：圆钮跑到左端）。
-    */
-    .footer__bottom-end > .footer__to-top {
-      margin-inline-start: auto;
     }
   }
 
