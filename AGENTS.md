@@ -167,5 +167,6 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 主题 v1.0 范围不含发电机（演示店仅含 Hardware 分支配件分类 2 条）。
 - `assets/wishlist-toggle.js` 与 §4 红线「不实现愿望清单」冲突，**提交前必须移除**（其交互可迁至商品卡的对比/加购按钮）。`assets/compare-toggle.js` 待按 §6 新规重构为 Custom Element。
 - 页头任务清单见 `dev-docs/task-header.md`；O-1 ~ O-5 已于 2026-10-09 拍板（结论写在该文件 §1）。
+- **提交前合规对账见 `dev-docs/task-compliance.md`（2026-11-07）**：13 条缺口，其中 6 条 S1 拒审级——缺 Custom Liquid **section**、产品主 section 无 `@app` block、无 favicon 设置、礼品卡页无二维码、图片焦点未实现、`theme_info` 作者仍写着 Shopify。**新增 section / 模板 / 全局设置后重跑该文件 §4.2 的检查。**
 - **cart 交互本期不做**（抽屉本体、`<cart-toggle>`、计数 AJAX 同步、`cart_action` 配置项），后续单独开任务清单；页头 T-1.6 仅做静态入口 + 服务端计数，开工前先确认该清单是否已立项。
 
