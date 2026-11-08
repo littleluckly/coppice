@@ -866,8 +866,13 @@ bottom-sheet > dialog.is-close-anim {
   /* 同上面的理由：本主题没有 500，写 500 = 写 400 */
   font-weight: 700;
 =======
+<<<<<<< HEAD
+  /* 同上面的理由：本主题没有 500，写 500 = 写 400 */
+  font-weight: 700;
+=======
   font-weight: 500;
 >>>>>>> 83dabb9b9ac38495078703257b71212687e4dddc
+>>>>>>> e40547d6ef4376a2ffb7f46fc8acbc7738e9727a
   color: var(--color-foreground);
 }
 
