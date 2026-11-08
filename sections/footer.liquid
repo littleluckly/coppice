@@ -134,8 +134,9 @@
   {%- if has_media -%}
     {%- comment -%}
       纯装饰层：aria-hidden + alt=""。压在页脚底部、不接管任何指针事件。
-      浮叶是参考图里的点睛元素，只在有图片时出现——没有图片的纯色页脚上
-      飘两片叶子会很怪。
+      **不再放"飘叶"装饰**（2026-11-08）：图片退成色晕之后，叶子的对比对象没了，
+      在浅底上就是几粒灰点，看着像脏东西。参考图里的叶子是压在有内容的照片上的，
+      条件变了，装饰也跟着撤。
     {%- endcomment -%}
     <div class="footer__media" aria-hidden="true">
       {{
@@ -148,8 +149,6 @@
           alt: '',
           class: 'footer__media-image'
       }}
-      <span class="footer__leaf footer__leaf--a">{{ 'icon-leaf.svg' | inline_asset_content }}</span>
-      <span class="footer__leaf footer__leaf--b">{{ 'icon-leaf.svg' | inline_asset_content }}</span>
     </div>
   {%- endif -%}
 
@@ -760,34 +759,6 @@
       /* 底部压到 30% 实色：版权行从页面左边距起排，正落在图片下缘；
          它的次级文字是 70%（作用域不在品牌栏里），必须完全站在纸面上才达标。 */
       linear-gradient(to top, var(--footer-surface) 0%, var(--footer-surface) 30%, transparent 55%);
-  }
-
-  .footer__leaf {
-    position: absolute;
-    display: block;
-    /* 品牌色压在半透明上：浅天空底上是一片深绿叶子，深色预设下同样成立 */
-    color: var(--color-brand);
-    opacity: 0.5;
-  }
-
-  .footer__leaf svg {
-    display: block;
-    inline-size: 100%;
-    block-size: auto;
-  }
-
-  .footer__leaf--a {
-    inset-block-start: 14%;
-    inset-inline-start: 58%;
-    inline-size: 1.5rem;
-    rotate: 22deg;
-  }
-
-  .footer__leaf--b {
-    inset-block-start: 66%;
-    inset-inline-start: 6%;
-    inline-size: 1.125rem;
-    rotate: -18deg;
   }
 
   /* ---------- 三区骨架 ---------- */
