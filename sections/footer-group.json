@@ -23,7 +23,8 @@
         "menu": {
           "type": "menu",
           "settings": {
-            "menu": "footer"
+            "menu": "footer",
+            "heading": ""
           }
         },
         "support_text": {
@@ -46,21 +47,21 @@
           "type": "social",
           "settings": {
             "platform": "facebook",
-            "url": ""
+            "url": "https://www.facebook.com/shopify"
           }
         },
         "social_instagram": {
           "type": "social",
           "settings": {
             "platform": "instagram",
-            "url": ""
+            "url": "https://www.instagram.com/shopify"
           }
         },
         "social_youtube": {
           "type": "social",
           "settings": {
             "platform": "youtube",
-            "url": ""
+            "url": "https://www.youtube.com/user/shopify"
           }
         },
         "social_tiktok": {
