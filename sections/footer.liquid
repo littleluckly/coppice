@@ -1189,19 +1189,6 @@
     margin-inline: 0;
   }
 
-  .footer__bottom-end {
-    display: flex;
-    align-items: center;
-  }
-
-  /* 选择器 / 回到顶部之间的竖线：只画在「不是第一个」的子项上。
-     用 margin+padding 而不是 gap，否则 border 会贴在 gap 外侧、离内容太远。 */
-  .footer__bottom-end > * + * {
-    margin-inline-start: 1rem;
-    padding-inline-start: 1rem;
-    border-inline-start: 1px solid var(--footer-hairline);
-  }
-
   /* ---------- 国家 / 语言选择器 ---------- */
 
   /* 自定义元素默认 inline，做 flex item 必须是块级 */
@@ -1295,53 +1282,6 @@
 
   locale-selector[data-enhanced] .footer__localization-submit {
     display: none;
-  }
-
-  /* ---------- 回到顶部 ---------- */
-
-  .footer__to-top {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    inline-size: 2.25rem;
-    block-size: 2.25rem;
-    border: 1px solid var(--footer-hairline);
-    border-radius: 50%;
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    /* 页脚底色比页面底色深一档，白圆片自己就浮起来了；只补极淡一层 */
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-foreground) 8%, transparent);
-    transition:
-      border-color 0.15s ease,
-      color 0.15s ease,
-      box-shadow 0.2s ease;
-  }
-
-  .footer__to-top svg {
-    inline-size: 1rem;
-    block-size: 1rem;
-  }
-
-  @media (hover: hover) {
-    .footer__to-top:hover {
-      border-color: var(--color-brand);
-      color: var(--color-brand);
-      box-shadow: 0 4px 14px color-mix(in srgb, var(--color-brand) 22%, transparent);
-    }
-  }
-
-  @media (pointer: coarse) {
-    .footer__to-top {
-      inline-size: 2.75rem;
-      block-size: 2.75rem;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .footer__to-top {
-      transition: none;
-    }
   }
 
   /* ---------- 中屏：三区改纵排，竖发丝线转横向 ---------- */
