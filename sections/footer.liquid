@@ -197,15 +197,29 @@
                     平铺列的可访问名：商家填了整组标题就用标题当列标题，
                     没填就退回 aria-label="Footer menu"（F-11 的术语）。
                     不能留一个没有名字的 <nav>——屏幕阅读器会念成一串孤立链接。
+
+                    写法注意：<nav> 的**开标签只出现一次**，名字在标签内部按条件
+                    二选一。若把整个开标签写进 if/else 两个分支（各写一个 <nav>），
+                    标记没有错，但 theme check 无法判断两个分支互斥，会对
+                    闭合的 </nav> 报 UnclosedHTMLElement——三个 warning 全是这么来的。
                   {%- endcomment -%}
+                  {%- assign flat_has_heading = false -%}
                   {%- if block.settings.heading != blank -%}
-                    <nav class="footer__column" aria-labelledby="{{ flat_id }}">
+                    {%- assign flat_has_heading = true -%}
+                  {%- endif -%}
+                  <nav
+                    class="footer__column"
+                    {% if flat_has_heading %}
+                      aria-labelledby="{{ flat_id }}"
+                    {% else %}
+                      aria-label="{{ 'sections.footer.menu_label' | t }}"
+                    {% endif %}
+                  >
+                    {%- if flat_has_heading -%}
                       <h2 class="footer__column-title" id="{{ flat_id }}">
                         {{- block.settings.heading | escape -}}
                       </h2>
-                  {%- else -%}
-                    <nav class="footer__column" aria-label="{{ 'sections.footer.menu_label' | t }}">
-                  {%- endif -%}
+                    {%- endif -%}
                     <ul class="footer__links" role="list">
                       {%- assign flat_rendered = 0 -%}
                       {%- for link in menu.links -%}
