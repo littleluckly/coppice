@@ -105,6 +105,7 @@
         "localization"
       ],
       "settings": {
+        "background_image": "shopify://shop_images/footer-bg_webp.webp",
         "show_payment_icons": true
       }
     }
