@@ -24,12 +24,16 @@
         "menu": {
           "type": "menu",
           "settings": {
-            "menu": "footer"
+            "menu": "footer",
+            "heading": ""
           }
         },
         "support_text": {
           "type": "text",
-          "settings": {}
+          "settings": {
+            "heading": "",
+            "richtext": ""
+          }
         },
         "contact": {
           "type": "contact",
@@ -44,7 +48,7 @@
           "type": "social",
           "settings": {
             "platform": "facebook",
-            "url": ""
+            "url": "https://www.facebook.com/shopify/"
           }
         },
         "social_instagram": {
