@@ -113,8 +113,16 @@
     {% comment %}
       底部对比确认条（SDD §6.2.8）：全站唯一的浮层，挂 layout 而非某个 section ——
       商品卡在首页 / 集合页 / 搜索结果都会出现，浮层不能跟着哪个 section 走。
+
+      但它只属于「选购路径」（2026-11-07 刘工：Support 栏目下的页面都不需要展示）：
+      内容页（page 模板：配送说明、保修政策、对比页…）与博客（文章页 + 列表页）
+      上面没有可加入对比的商品卡，常驻的底部条在那里只挡内容。
+      判据用模板类型，不用页面 handle 清单 —— 商家在 Support 下新增页面、改 handle，
+      这里都不用跟着改；列表页/文章页也一并覆盖，不会漏掉 Maintenance Guides。
     {% endcomment %}
-    {% render 'compare-bar' %}
+    {%- unless template.name == 'page' or template.name == 'article' or template.name == 'blog' -%}
+      {% render 'compare-bar' %}
+    {%- endunless -%}
     {% render 'compare-toast' %}
 
     {% comment %}
