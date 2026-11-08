@@ -3,11 +3,19 @@
   or Contact us.
 
   https://shopify.dev/docs/storefronts/themes/architecture/templates/page
+
+  结构说明（2026-11-07，BUG-064）：
+  · `<div class="rte">` 包住 page.content —— 后台富文本输出的 h2/p/ul 是裸标签，
+    本主题的 `* { margin: 0 }` reset 会把它们的块间距清零，必须靠 .rte 恢复；
+  · `.page-content` 提供阅读宽度上限（720px），见 assets/critical.css。
+  两者都不要删：删了前台就是"全部挤在一起"，而它不报错、后台编辑器里还很好看。
 {% endcomment %}
 
-<h1>{{ page.title }}</h1>
+<div class="page-content">
+  <h1>{{ page.title }}</h1>
 
-{{ page.content }}
+  <div class="rte">{{ page.content }}</div>
+</div>
 
 {% schema %}
 {

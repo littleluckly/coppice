@@ -464,6 +464,32 @@
   2. 无头 Chrome 验收脚本固定断言：`wrap.clientWidth < table.offsetWidth` 且 `(wrap.scrollLeft = 120) > 0`。只断言 `scrollWidth > clientWidth` 不够——本 bug 里这条恰好是 false，而那些用了 `overflow: hidden` 的错误实现里它可能是 true。
   3. 新写 grid item 的居中，**优先用容器的 `justify-items` / 列布局实现**，不要用 `margin-inline: auto` + `max-inline-size`；非要居中就给死 `inline-size: 100%`。
 
+### BUG-064 · 自定义页 / 文章页正文全部挤在一起：`* { margin: 0 }` reset 之后没有任何富文本排版层
+
+- **日期**：2026-11-07 ｜ **状态**：Fixed
+- **现象**：商家在后台「页面」里用富文本编辑器写的正文（配送说明、政策条款），**后台编辑器里排版正常，前台打开标题与段落贴在一起、列表项行距极小、整页像一坨**。不报错、主题编辑器也看不出异常。整页正文横跨内容区全宽（大屏超过 1000px），阅读极难跟行。
+- **根因**（三层，缺一层都不会有这症状）：
+  1. **`assets/critical.css` 顶部的 reset** `* { box-sizing: border-box; margin: 0 }` 把 `h1–h6 / p / ul / ol` 的块间距**全部清零**，且文件里再没有一处恢复它——reset 区之后只有 `overflow-wrap` 和 `:is(p,h1…):first-child { margin-block-start: 0 }` 这类"减间距"规则，没有一条"加间距"的。无头 Chrome 实测（只加载 critical.css）：`h2 margin-block = 0px/0px`、`p = 0px/0px`、`ul = 0px/0px`，`line-height` 全部 `normal`。
+  2. **`sections/page.liquid` / `sections/article.liquid` 是 Skeleton 原版骨架**，正文部分是裸的 `{{ page.content }}` / `{{ article.content }}`——既没有 `.rte` 包裹层，也没有任何 `{% stylesheet %}` 补排版，也没有限宽容器。也就是说 reset 清掉的间距从头到尾没人补回来。
+  3. **后台编辑器展示的不是前台渲染**。Shopify 富文本编辑器的 iframe 自带一套 h2/p/ul 的默认 margin 与行高，跟主题 CSS 完全无关。所以"后台看着不错"对前台没有任何参考价值——这条是本 bug 被拖到上线后才发现的直接原因。
+  附带：`dev-docs/pages-ui.md §6` 规划的是「page-content section = 标题 + 富文本 + rich-text/image/button 通用块，桌面限宽 ~720px」，**实际实现从没落地过**（一直是 Skeleton 原版），所以全文也没有阅读宽度约束。
+- **修复**：
+  1. `assets/critical.css` 追加 `.rte` 富文本排版层（h2–h6 的字号/字重/上下间距、`p`/`ul`/`ol`/`blockquote`/`table` 的块间距 0.875rem、列表缩进 1.25rem、`li + li` 0.375rem、链接品牌色、`blockquote` 左边框、`hr`、`table`/`th`/`td`）。放全局而不是各 section 的 `{% stylesheet %}`，因为富文本出现在 page / article / 将来的 page-content blocks 多处，写三份必然漂移。
+     **字重必须是 700**：初版照抄 `.product-description__rte` 写了 `font-weight: 500`，刘工反馈"h2 以后不加粗"。本主题只 `font_face` 两档（`snippets/css-variables.liquid`：原字重 + bold；当前字体 `work_sans_n4`），**500 没有对应字体面，按 CSS 字重匹配规则退到 400**——等于写了个"没加粗"。实测（只声明 400/700 的字族，22px 同一串文字）：`w400=269.45 / w500=269.45 / w700=282.95`，500 与 400 逐像素等宽。且 h1–h6 的 UA 默认就是 bold、后台编辑器也按 bold 显示，改成 500 等于主题偷偷改了商家的排版意图。
+  2. 两个 section 用 `<div class="rte">` 包裹正文，外层各套 `.page-content` / `.article-content`：`max-inline-size: min(720px, 100%)` + `margin-inline: auto` + **显式 `inline-size: 100%`**（BUG-063 那条通路：grid item 上 auto margin 会让 stretch 失效）。
+  3. 页面 h1 补字号 `clamp(1.75rem, 1.15rem + 1.8vw, 2.25rem)`（reset 也没给标题字号，浏览器默认 32px 与 1rem 正文的比例失衡）。
+  **刻意不恢复 `p:empty`**（reset 区有 `p:empty { display: none }`）：商家靠敲空行控距时，空行高度与段间距会叠加成双倍空白；段间节奏交给 margin，分段交给标题层级。
+  实测（1200 视口，无头 Chrome 渲染等价结构）：`.page-content` `x=240 w=720`（居中正确），`.rte p` `margin-block 14px`、`line-height 27.2px`，`.rte h2` `margin-block-start 0`（首子元素）/ `margin-block-end 10px`。
+- **预防**：
+  1. **凡输出 `{{ xxx.content }}` 或 `rich_text_field` metafield 的地方，必须套 `<div class="rte">`**。可执行检查：`grep -rn '{{ *\(page\|article\)\.content' sections` 命中的每一行，上下 3 行内必须能看到 `class="rte"`。
+  2. **reset 里的 `margin: 0` 是"清场"，不是"排版"**。任何靠 reset 起手的主题，都必须配一份显式的正文排版层（本主题即 `.rte`）；新增内容类 section 时不要写自己的一套 `h2 { margin }`，直接复用 `.rte`——否则第三份副本出现时就开始漂移。
+  3. **后台编辑器的显示不能当验收**。新页面类型上线前，必须在前台真页面上看一次：`shopify theme dev` 打开 `/pages/<handle>`，量 `p` 的 `marginTop` 是否 > 0、正文容器宽度是否 ≤ 760。
+  4. `pages-ui.md §6` 的 page-content section（标题 + 富文本 + 通用 blocks）仍未落地，本修复只解决排版的"挤"，**不含 blocks 能力**；该工单项保持 Open，别把它当成已完成。
+  5. **字重只允许写 400 / 700**。`snippets/css-variables.liquid` 的 `font_face` 只声明原字重与 bold 两档，`font_modify: 'weight'` 也只有 bold 一种 ⇒ **500 / 600 在本主题里没有对应字体面，一律按 CSS 字重匹配规则退到 400**。可执行检查：`grep -rn "font-weight: \(500\|600\)" sections assets`（2026-11-07 全量扫描：82 处）。判读方法：**先确认该规则命中的元素默认字重**——
+     · 命中 `h1–h6` / `th` / `<b>` ⇒ 默认是 700，写 500 等于**把加粗改成常规（视觉变细，是真 bug）**。已修 4 处：`.rte :is(h2..h6)`、`.rte th`、`.product-description__heading`、`.product-description__rte :is(h2,h3,h4)`。
+     · 命中 `div` / `span` / `a` / `button` / `p` ⇒ 默认就是 400，写 500 只是**无效声明**（不会变细，但作者以为存在的"半粗层级"从来没渲染出来）。
+     剩下的 82 处需要逐条对照模板判断元素标签，**未批量清理，保持 Open**；不要一次性机械替换成 700——那会把卡片标题、按钮这类本该常规的文本整体加重一档。
+
 ## 记录模板（追加新 bug 用）
 
 ```

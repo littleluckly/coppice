@@ -6,59 +6,72 @@
   https://shopify.dev/docs/storefronts/themes/architecture/templates/article
 {% endcomment %}
 
-{% if article.image %}
-  {{ article.image | image_url: width: 1000 | image_tag }}
-{% endif %}
+{% comment %}
+  结构说明（2026-11-07，BUG-064）：与 sections/page.liquid 同源的问题 ——
+  `{{ article.content }}` 裸输出遇上主题的 `* { margin: 0 }` reset，
+  正文全部挤在一起。`<div class="rte">` 恢复富文本排版，`.article-content`
+  给 720px 阅读宽度上限（样式见 assets/critical.css）。
+{% endcomment %}
 
-<h1>{{ article.title }}</h1>
+<div class="article-content">
+  {% if article.image %}
+    {{ article.image | image_url: width: 1000 | image_tag }}
+  {% endif %}
 
-{% assign date = article.published_at | time_tag: format: 'date' %}
-<p>{{ 'blog.article_metadata_html' | t: date: date, author: article.author }}</p>
+  <h1>{{ article.title }}</h1>
 
-{{ article.content }}
+  {% assign date = article.published_at | time_tag: format: 'date' %}
+  <p class="article-content__meta">{{ 'blog.article_metadata_html' | t: date: date, author: article.author }}</p>
 
-{% if blog.comments_enabled? %}
-  <h2>{{ 'blog.article_comments' | t }}</h2>
+  <div class="rte">{{ article.content }}</div>
 
-  <div id="comments">
-    {% paginate article.comments by 10 %}
-      {% for comment in article.comments %}
+  {% if blog.comments_enabled? %}
+    {% comment %} 评论正文也是富文本，沿用 .rte；外层类只负责与正文拉开距离和分隔线 {% endcomment %}
+    <div class="rte article-content__comments">
+      <h2>{{ 'blog.article_comments' | t }}</h2>
+
+      <div id="comments">
+        {% paginate article.comments by 10 %}
+          {% for comment in article.comments %}
+            <div>
+              <p>{{ comment.author }}</p>
+              <p>
+                {{- comment.created_at | time_tag: format: 'date' -}}
+              </p>
+              <p>{{ comment.content }}</p>
+            </div>
+          {% endfor %}
+
+          {{ paginate | default_pagination: anchor: 'comments' }}
+        {% endpaginate %}
+      </div>
+
+      {% form 'new_comment', article %}
+        <h2>{{ 'blog.comment_form_title' | t }}</h2>
+
+        {{ form.errors | default_errors }}
+
         <div>
-          <p>{{ comment.author }}</p>
-          <p>
-            {{- comment.created_at | time_tag: format: 'date' -}}
-          </p>
-          <p>{{ comment.content }}</p>
+          <label for="author">{{ 'blog.comment_form_name' | t }}</label>
+          <input type="text" name="comment[author]" id="author" value="{{ form.author }}" required>
         </div>
-      {% endfor %}
 
-      {{ paginate | default_pagination: anchor: 'comments' }}
-    {% endpaginate %}
-  </div>
+        <div>
+          <label for="email">{{ 'blog.comment_form_email' | t }}</label>
+          <input type="email" name="comment[email]" id="email" value="{{ form.email }}" required>
+        </div>
 
-  {% form 'new_comment', article %}
-    <h2>{{ 'blog.comment_form_title' | t }}</h2>
+        <div>
+          <label for="body">{{ 'blog.comment_form_body' | t }}</label>
+          <textarea name="comment[body]" id="body" required>{{ form.body }}</textarea>
+        </div>
 
-    {{ form.errors | default_errors }}
-
-    <div>
-      <label for="author">{{ 'blog.comment_form_name' | t }}</label>
-      <input type="text" name="comment[author]" id="author" value="{{ form.author }}" required>
+        <input type="submit" value="{{ 'blog.comment_form_submit' | t }}">
+      {% endform %}
     </div>
+  {% endif %}
+</div>
 
-    <div>
-      <label for="email">{{ 'blog.comment_form_email' | t }}</label>
-      <input type="email" name="comment[email]" id="email" value="{{ form.email }}" required>
-    </div>
-
-    <div>
-      <label for="body">{{ 'blog.comment_form_body' | t }}</label>
-      <textarea name="comment[body]" id="body" required>{{ form.body }}</textarea>
-    </div>
-
-    <input type="submit" value="{{ 'blog.comment_form_submit' | t }}">
-  {% endform %}
-{% endif %}
 
 {% schema %}
 {

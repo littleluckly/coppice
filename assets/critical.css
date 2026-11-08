@@ -723,3 +723,195 @@ bottom-sheet > dialog.is-close-anim {
     opacity: 0;
   }
 }
+
+/* ==========================================================================
+ * 富文本排版 .rte —— 页面正文 / 文章正文（2026-11-07，BUG-064）
+ *
+ * 为什么需要这一整段：
+ * 本文件顶部的 reset 是 `* { box-sizing: border-box; margin: 0 }`，它把
+ * h1–h6 / p / ul / ol 的块间距**全部清零**，且主题里没有任何一处恢复它
+ * （实测：h2 margin-block 计算值 0px/0px、line-height normal）。
+ * 商家在后台富文本编辑器里看到的是「编辑器自己的 iframe 样式」，跟前台
+ * 主题 CSS 无关，所以后台好看不代表前台好看。
+ *
+ * 为什么放 critical.css 而不是某个 section 的 {% stylesheet %}：
+ * 富文本出现在 page.content / article.content / 将来的 page-content blocks
+ * 多处，属跨 section 的通用排版；写进单个 section 会变成三份各自漂移的副本。
+ *
+ * 为什么类名用 .rte 而不是 --rte 后缀：
+ * 这是 Shopify 生态的既有约定（Theme Store 审核也按它认），商家从别的主题
+ * 迁移过来、或第三方文档描述富文本样式时都对得上。
+ *
+ * 刻意不做的一件事：不恢复 `p:empty`（顶部 reset 区有 `p:empty{display:none}`）。
+ * 富文本里靠敲空行控距会同时叠加「空行高度 + 段间距」= 双倍空白；
+ * 段间节奏交给下面的 margin，商家该用标题层级分段，不靠空行。
+ * ========================================================================== */
+/* 基础字号/行高用 :where() 包住 = 特异性 0。
+   `.rte` 这个类名在本主题里已经有两个既有消费者：sections/page.liquid、
+   sections/article.liquid（本次新增），以及 sections/collection.liquid 的
+   `.collection__description rte`（早就在用，自带 1.05rem/1.5 与 62% 前景区块）。
+   若这里写成普通 `.rte {}`，集合描述的排版会被这份基础规则按源序压掉一半。
+   :where() 让它退化成"仅在无人声明时才生效"的兜底，既有规则优先级不变。
+   子元素规则（.rte h2 / .rte p …）保持正常特异性——它们是新增能力，
+   集合描述里若有多段正文同样受益。 */
+:where(.rte) {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+/* 首尾元素贴边：避免容器上下多出一段无用的空白（特异性高于下面的 margin 规则） */
+.rte > :first-child {
+  margin-block-start: 0;
+}
+.rte > :last-child {
+  margin-block-end: 0;
+}
+
+.rte :is(h2, h3, h4, h5, h6) {
+  color: var(--color-foreground);
+  /* 700，不是 500（2026-11-07 刘工指出后修正）。
+     两个理由叠在一起，任一条都足以定 700：
+     ① 本主题只 font_face 了两档字重（snippets/css-variables.liquid：原字重 + bold），
+        500 没有对应字体面，按 CSS 字重匹配规则退到最近的 400 ⇒ 标题渲染成常规字重，
+        等于"没加粗"。任何介于 400 和 700 之间的值在这个主题里都是无效值。
+     ② 富文本编辑器和浏览器 UA 默认给 h1–h6 的就是 bold，商家在后台看到的是加粗，
+        前台的默认预期也应一致；调成 500 属于"主题偷偷改了商家的排版意图"。 */
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.rte h2 {
+  font-size: 1.375rem;
+  line-height: 1.3;
+  margin-block: 2rem 0.625rem;
+}
+.rte h3 {
+  font-size: 1.125rem;
+  line-height: 1.35;
+  margin-block: 1.5rem 0.5rem;
+}
+.rte h4 {
+  font-size: 1rem;
+  line-height: 1.4;
+  margin-block: 1.25rem 0.375rem;
+}
+.rte :is(h5, h6) {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  margin-block: 1.25rem 0.375rem;
+}
+
+.rte :is(p, ul, ol, blockquote, table, figure, pre) {
+  margin-block: 0.875rem;
+}
+
+.rte :is(ul, ol) {
+  padding-inline-start: 1.25rem;
+}
+.rte li + li {
+  margin-block-start: 0.375rem;
+}
+/* 嵌套列表：上下的 0.875rem 在紧凑的 li 里太大 */
+.rte li > :is(ul, ol) {
+  margin-block: 0.375rem;
+}
+
+.rte a {
+  color: var(--color-brand);
+  text-underline-offset: 0.2em;
+}
+.rte a:hover {
+  /* 悬停压深一档，不用第二个硬编码色值（配色纪律：一律 color-mix 派生） */
+  color: color-mix(in srgb, var(--color-brand) 78%, var(--color-foreground));
+}
+
+.rte strong,
+.rte b {
+  font-weight: 700;
+}
+
+.rte blockquote {
+  padding-inline-start: 1rem;
+  border-inline-start: 3px solid color-mix(in srgb, var(--color-brand) 45%, transparent);
+  color: var(--color-foreground-muted);
+}
+
+.rte hr {
+  margin-block: 2rem;
+  border: 0;
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+}
+
+.rte :is(img, video, iframe) {
+  margin-block: 1.25rem;
+}
+.rte img {
+  border-radius: var(--style-border-radius-inputs);
+}
+
+/* 富文本表格：商家粘贴进来的规格表常是裸 <table>，不给样式会变成一根根线 */
+.rte table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.rte :is(th, td) {
+  padding: 0.5rem 0.75rem;
+  border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  text-align: start;
+  vertical-align: top;
+}
+.rte th {
+  /* 同上面的理由：本主题没有 500，写 500 = 写 400 */
+  font-weight: 700;
+  color: var(--color-foreground);
+}
+
+/* ==========================================================================
+ * 内容页容器（page / article 模板）
+ *
+ * 两个 section 原本直接裸输出 `{{ page.content }}`，既没有排版层，也没有
+ * 阅读宽度约束——长行在大屏上会拉到 1000px 以上，读起来极难跟行。
+ * pages-ui.md §6 对 page 模板的规格是「单列内容流，桌面限宽 ~720px，移动全宽」，
+ * 这里按那条落地。
+ *
+ * `inline-size: 100%` 不能省：这两个容器是 .shopify-section（三列 grid）的
+ * grid item，item 上同时有 margin-inline: auto，会让 justify-self: stretch
+ * 失效、宽度退化成 fit-content（BUG-063 的同一通路）。
+ * ========================================================================== */
+.page-content,
+.article-content {
+  inline-size: 100%;
+  max-inline-size: min(720px, 100%);
+  margin-inline: auto;
+  padding-block: 1.5rem 3rem;
+}
+
+/* 页面自己的 h1（page.title / article.title）——reset 没给字号，浏览器默认 32px，
+   标题与正文的比例在这里定 */
+:is(.page-content, .article-content) > h1 {
+  font-size: clamp(1.75rem, 1.15rem + 1.8vw, 2.25rem);
+  line-height: 1.15;
+  margin-block-end: 1.25rem;
+  text-wrap: balance;
+}
+
+/* 文章页的发布日期/作者行 */
+.article-content__meta {
+  font-size: 0.875rem;
+  color: var(--color-foreground-muted);
+  margin-block-end: 1.5rem;
+}
+
+/* 文章页大图与标题之间不要贴死 */
+.article-content > img {
+  margin-block-end: 1.5rem;
+  border-radius: var(--style-border-radius-inputs);
+}
+
+/* 评论区与正文拉开距离并加一道分隔线（评论块自身也带 .rte，见 sections/article.liquid） */
+.article-content__comments {
+  margin-block-start: 3rem;
+  padding-block-start: 2rem;
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+}
