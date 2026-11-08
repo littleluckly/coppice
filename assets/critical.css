@@ -746,7 +746,15 @@ bottom-sheet > dialog.is-close-anim {
  * 富文本里靠敲空行控距会同时叠加「空行高度 + 段间距」= 双倍空白；
  * 段间节奏交给下面的 margin，商家该用标题层级分段，不靠空行。
  * ========================================================================== */
-.rte {
+/* 基础字号/行高用 :where() 包住 = 特异性 0。
+   `.rte` 这个类名在本主题里已经有两个既有消费者：sections/page.liquid、
+   sections/article.liquid（本次新增），以及 sections/collection.liquid 的
+   `.collection__description rte`（早就在用，自带 1.05rem/1.5 与 62% 前景区块）。
+   若这里写成普通 `.rte {}`，集合描述的排版会被这份基础规则按源序压掉一半。
+   :where() 让它退化成"仅在无人声明时才生效"的兜底，既有规则优先级不变。
+   子元素规则（.rte h2 / .rte p …）保持正常特异性——它们是新增能力，
+   集合描述里若有多段正文同样受益。 */
+:where(.rte) {
   font-size: 1rem;
   line-height: 1.7;
 }
