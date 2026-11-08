@@ -725,22 +725,33 @@
   }
 
   /*
-    淡出：不靠 mask-image（Safari 需要前缀、mask-composite 写法还分两派），
+    淡出 / 蒙层：不靠 mask-image（Safari 需要前缀、mask-composite 写法还分两派），
     改用页脚底色叠三层渐变。代价是页脚底色必须是不透明纯色——它确实是。
 
-    三层顺序 = 右侧淡出 → 顶部淡出 → 底部淡出。多层渐变是按顺序叠加的，
-    最右一层覆盖最左一层，所以把「右侧」放第一层（最先铺、被后两层局部再盖），
-    边缘才不会出现硬角。
+    **第一层是纸色蒙层，不是普通淡出，这是可读性的唯一保证。**
+    文字压到图片上之后（2026-11-08），照片必须先被压到接近纸面，否则 12–13px 的
+    次级文字一定不达标。算术依据（背景亮度 Lbg 与 #515151 的文字 L≈0.088 要 4.5:1）：
+        Lbg ≥ 4.5 × (0.088 + 0.05) − 0.05 = 0.57   ⇒ 底色必须 ≈ #C7 或更亮
+    而照片最暗处（前景树丛）即使模糊后也只在 sRGB 60 上下，反推蒙层必须 ≥ 76%：
+        0.76 × 244 + 0.24 × 60 ≈ 200  ⇒ 刚好 #C8
+    所以左侧取 80%（余量给不同照片的暗部差异），到右端直接 100% 收干净。
+    **这个 80% 不是审美值，低于它就会出现"看起来还行、量起来不达标"的文字。**
+
+    后两层 = 顶部淡出 + 底部实色。底部那段是给版权行留的：版权行从页面左边距起排，
+    会正好压在图片下缘。
   */
   .footer__media::after {
     content: '';
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(to right, transparent 34%, var(--footer-surface) 92%),
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--footer-surface) 80%, transparent) 0%,
+        color-mix(in srgb, var(--footer-surface) 88%, transparent) 62%,
+        var(--footer-surface) 100%
+      ),
       linear-gradient(to bottom, var(--footer-surface) 0%, transparent 15%),
-      /* 底部多留一段实色：版权行从页面左边距起排，会正好压在图片下缘。
-         不把它压住，muted 小字会在照片上失去对比度（实测看不清）。 */
       linear-gradient(to top, var(--footer-surface) 0%, var(--footer-surface) 12%, transparent 36%);
   }
 
@@ -787,6 +798,19 @@
     /* 品牌区的句子按阅读舒适度封顶，宽屏下不跟着拉成一条长线 */
     max-inline-size: 25rem;
     min-inline-size: 0;
+  }
+
+  /*
+    只有桌面档的品牌栏压在图片上（移动端图片是顶部横幅，文字在干净的纸面上）。
+    所以次级文字色只在这一档提深：70% → 85%。
+    改的是**变量**而不是逐条改颜色——描述、订阅小字、同意语、图标、placeholder
+    全都消费 --color-foreground-muted，一行覆盖，不会有漏网的。
+    85% 压在白底是 #515151（8.6:1）；压在 80% 蒙层上最暗处仍有 ≈5.1:1。
+  */
+  @media screen and (min-width: 750px) {
+    .footer__brand-col {
+      --color-foreground-muted: color-mix(in srgb, var(--color-foreground) 85%, transparent);
+    }
   }
 
   .footer__columns {
