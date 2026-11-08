@@ -902,3 +902,10 @@ bottom-sheet > dialog.is-close-anim {
   margin-block-end: 1.5rem;
   border-radius: var(--style-border-radius-inputs);
 }
+
+/* 评论区与正文拉开距离并加一道分隔线（评论块自身也带 .rte，见 sections/article.liquid） */
+.article-content__comments {
+  margin-block-start: 3rem;
+  padding-block-start: 2rem;
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+}
