@@ -665,6 +665,13 @@
     --footer-surface: color-mix(in srgb, var(--color-brand) 5%, var(--color-background));
     /* 发丝线：分隔列区、底栏。14% 前景色在浅底上 ≈ #E5E5E5，够看见但不抢 */
     --footer-hairline: color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    /*
+      次级文字统一 85%（全局 :root 那份是 70%）。页脚里有两种底：纸面、和压在照片上的
+      色晕。70% 只对纯纸面成立，压到色晕上会在 4.4–4.5:1 的边界上反复横跳（实测版权行
+      4.45:1）。85% 在纸面上是 #515151（7.6:1）、在色晕最暗处仍有 6:1 以上，
+      一个值两头都站得住，不用逐块判断。
+    */
+    --color-foreground-muted: color-mix(in srgb, var(--color-foreground) 85%, transparent);
     /* 图片右侧让位宽度。19vw 跟着视口走，21rem 封顶，避免超宽屏出现一条空走廊 */
     --footer-rail: clamp(0px, 19vw, 21rem);
 
@@ -778,17 +785,6 @@
     min-inline-size: 0;
   }
 
-  /*
-    只有桌面档的品牌栏压在图片上（移动端图片是顶部横幅，文字在干净的纸面上）。
-    所以次级文字色只在这一档提深：70% → 85%。
-    改的是**变量**而不是逐条改颜色——描述、订阅小字、同意语、图标、placeholder
-    全都消费 --color-foreground-muted，一行覆盖，不会有漏网的。
-    85% 压在白底是 #515151（8.6:1）；压在 80% 蒙层上最暗处仍有 ≈5.1:1。
-  */
-  @media screen and (min-width: 750px) {
-    .footer__brand-col {
-      --color-foreground-muted: color-mix(in srgb, var(--color-foreground) 85%, transparent);
-    }
   }
 
   .footer__columns {
