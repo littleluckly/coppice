@@ -133,18 +133,20 @@
 <footer class="site-footer full-width{% if has_media %} site-footer--with-media{% endif %}">
   {%- if has_media -%}
     {%- comment -%}
-      纯装饰层：aria-hidden + alt=""。压在页脚底部、不接管任何指针事件。
-      **不再放"飘叶"装饰**（2026-11-08）：图片退成色晕之后，叶子的对比对象没了，
-      在浅底上就是几粒灰点，看着像脏东西。参考图里的叶子是压在有内容的照片上的，
-      条件变了，装饰也跟着撤。
+      顶部景观带（2026-11-11 定案）：图片独占一条横跨整幅的带，文字整体在它下方。
+      纯装饰层 —— aria-hidden + alt="" + pointer-events: none，不进阅读顺序、不吃点击。
+
+      sizes/widths 按「整幅」给：这条带在桌面是 100vw，不能再沿用早期左侧竖条的
+      26vw——浏览器会挑一张只够 26% 宽度的图，铺满后立刻糊。
+      loading 保持 lazy：页脚在首屏之外，不该跟 LCP 抢带宽。
     {%- endcomment -%}
     <div class="footer__media" aria-hidden="true">
       {{
         section.settings.background_image
-        | image_url: width: 1600
+        | image_url: width: 2400
         | image_tag:
-          widths: '400, 600, 800, 1000, 1200, 1600',
-          sizes: '(min-width: 750px) 26vw, 100vw',
+          widths: '600, 900, 1200, 1600, 2000, 2400',
+          sizes: '100vw',
           loading: 'lazy',
           alt: '',
           class: 'footer__media-image'
@@ -665,15 +667,6 @@
     --footer-surface: color-mix(in srgb, var(--color-brand) 5%, var(--color-background));
     /* 发丝线：分隔列区、底栏。14% 前景色在浅底上 ≈ #E5E5E5，够看见但不抢 */
     --footer-hairline: color-mix(in srgb, var(--color-foreground) 14%, transparent);
-    /*
-      次级文字统一 85%（全局 :root 那份是 70%）。页脚里有两种底：纸面、和压在照片上的
-      色晕。70% 只对纯纸面成立，压到色晕上会在 4.4–4.5:1 的边界上反复横跳（实测版权行
-      4.45:1）。85% 在纸面上是 #515151（7.6:1）、在色晕最暗处仍有 6:1 以上，
-      一个值两头都站得住，不用逐块判断。
-    */
-    --color-foreground-muted: color-mix(in srgb, var(--color-foreground) 85%, transparent);
-    /* 图片右侧让位宽度。19vw 跟着视口走，21rem 封顶，避免超宽屏出现一条空走廊 */
-    --footer-rail: clamp(0px, 19vw, 21rem);
 
     position: relative;
     /* 图片与浮叶都要被裁在这块矩形里；isolation 让它们的 z-index 只在本层生效 */
@@ -701,18 +694,26 @@
     于是图片从「并排的图」变成「压在文字下面的底纹」——见 .footer__media 的蒙层说明。
   */
 
-  /* ---------- 左侧景观图 ---------- */
+  /* ---------- 顶部景观带 ---------- */
 
+  /*
+    图片独占一条带（2026-11-11 定案）。前两版都不成立，记在这里免得再走一遍：
+      · 首版给内容带让位 → 文字从图片右侧起排，和上方商品网格对不齐（刘工否掉）；
+      · 第二版把图压成 80% 纸色蒙层当底纹 → 对齐对了，但图只剩 15 个色阶的色差，
+        等于白传一张图（推导见 task-footer §0.3）。
+    结论：**照片和文字不能抢同一块像素**。这条带横跨整幅、文字整体下移，
+    两者彻底分开——对齐不受影响，照片还是清晰的。
+  */
   .footer__media {
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 0;
-    inline-size: calc((100% - var(--content-width)) / 2 + var(--footer-rail));
-    z-index: 0;
-    /* 纯装饰：不吃点击，否则会挡住页脚左侧的空白区 */
+    position: relative;
+    /* 横跨整幅：.site-footer 是 full-width，100% 就是视口宽 */
+    inline-size: 100%;
+    /* 16vw 跟着视口走、12rem 封顶：超宽屏上不至于变成一张巨幅海报 */
+    block-size: clamp(8rem, 16vw, 12rem);
+    /* 与下面内容留一口气。别指望靠 ::after 的渐隐来当间距——
+       渐隐到 100% 只是"看不见"，元素本身仍然占着这一条的高度 */
+    margin-block-end: clamp(1.5rem, 2.6vw, 2.25rem);
     pointer-events: none;
-    /* 必须裁：图片为了兜住 blur 的透明边做了 scale 放大，
-       不裁的话会撑出容器 7.5%，而那一条没有蒙层覆盖 —— 实测会在右缘留下一条没压住的绿边 */
     overflow: hidden;
   }
 
@@ -721,51 +722,25 @@
     inline-size: 100%;
     block-size: 100%;
     object-fit: cover;
-    /* 焦点偏右：山脊通常在中上部，偏右能把天空留给文字区 */
-    object-position: 62% 50%;
-    /*
-      文字压在图上之后（2026-11-08），照片必须退成"色晕"而不是"照片"：
-      · blur 的作用不是提对比度——它只打散细节，深绿树模糊后仍是深绿；
-      · 它真正的用处是让残留的那一点图像看起来像刻意做的光晕，而不是"没擦干净的半张图"；
-      · 半径给到 60px 是有原因的：26px 只够糊掉细节，糊不平"亮天空 / 暗树丛"的大块明暗差，
-        结果就是蒙层下面透出一块可辨认的矩形（实测）。60px 之后只剩上下方向的明暗过渡。
-      scale 放大 20% 是为了兜住 blur 在四条边上渗出的透明边（配合 .footer__media 的 overflow: hidden）。
-    */
-    filter: blur(60px) saturate(1.15);
-    scale: 1.2;
+    /* 焦点偏上：山脊/地平线通常在中上部，裁掉前景地面比裁掉天空好看 */
+    object-position: center 45%;
   }
 
   /*
-    淡出 / 蒙层：不靠 mask-image（Safari 需要前缀、mask-composite 写法还分两派），
-    改用页脚底色叠三层渐变。代价是页脚底色必须是不透明纯色——它确实是。
-
-    **第一层是纸色蒙层，不是普通淡出，这是可读性的唯一保证。**
-    文字压到图片上之后（2026-11-08），照片必须先被压到接近纸面，否则 12–13px 的
-    次级文字一定不达标。算术依据（背景亮度 Lbg 与 #515151 的文字 L≈0.088 要 4.5:1）：
-        Lbg ≥ 4.5 × (0.088 + 0.05) − 0.05 = 0.57   ⇒ 底色必须 ≈ #C7 或更亮
-    而照片最暗处（前景树丛）即使模糊后也只在 sRGB 60 上下，反推蒙层必须 ≥ 76%：
-        0.76 × 244 + 0.24 × 60 ≈ 200  ⇒ 刚好 #C8
-    所以左侧取 80%（余量给不同照片的暗部差异），到右端直接 100% 收干净。
-    **这个 80% 不是审美值，低于它就会出现"看起来还行、量起来不达标"的文字。**
-
-    后两层 = 顶部淡出 + 底部实色。底部那段是给版权行留的：版权行从页面左边距起排，
-    会正好压在图片下缘。
+    只留一层底部渐隐。不靠 mask-image（Safari 要前缀、mask-composite 还分两派写法），
+    用页脚底色叠上去；代价是页脚底色必须不透明——它确实是。
+    42% 起坡、带底完全变成纸色，图和内容的交界就看不出接缝。
   */
   .footer__media::after {
     content: '';
     position: absolute;
     inset: 0;
-    background:
-      linear-gradient(
-        to right,
-        color-mix(in srgb, var(--footer-surface) 80%, transparent) 0%,
-        color-mix(in srgb, var(--footer-surface) 88%, transparent) 62%,
-        var(--footer-surface) 100%
-      ),
-      linear-gradient(to bottom, var(--footer-surface) 0%, transparent 15%),
-      /* 底部压到 30% 实色：版权行从页面左边距起排，正落在图片下缘；
-         它的次级文字是 70%（作用域不在品牌栏里），必须完全站在纸面上才达标。 */
-      linear-gradient(to top, var(--footer-surface) 0%, var(--footer-surface) 30%, transparent 55%);
+    background: linear-gradient(
+      to bottom,
+      transparent 42%,
+      color-mix(in srgb, var(--footer-surface) 55%, transparent) 74%,
+      var(--footer-surface) 100%
+    );
   }
 
   /* ---------- 三区骨架 ---------- */
