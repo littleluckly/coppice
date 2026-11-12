@@ -27,6 +27,10 @@
       {%- endif -%}
     </div>
 
+    {%- if section.settings.subheading != blank -%}
+      <p class="featured-collection__subheading">{{ section.settings.subheading | escape }}</p>
+    {%- endif -%}
+
     <ul class="featured-collection__grid" role="list">
       {%- for product in card_collection.products limit: limit -%}
         <li class="featured-collection__item">

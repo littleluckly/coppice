@@ -36,6 +36,10 @@
       {%- endif -%}
     </div>
 
+    {%- if section.settings.subheading != blank -%}
+      <p class="platform-cards__subheading">{{ section.settings.subheading | escape }}</p>
+    {%- endif -%}
+
     <ul class="platform-cards__grid" role="list">
       {%- for block in section.blocks -%}
         {%- unless visible_ids contains block.id -%}
