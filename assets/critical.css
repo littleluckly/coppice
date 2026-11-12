@@ -241,19 +241,20 @@ body {
 }
 
 /**
- * 有副标题时把标题行原本的 0.75rem 下边距归零，交给副标题的 margin-bottom 承接，
- * 否则会出现「标题 0.75rem + 副标题 0.75rem」的双倍间距。
- * use-case 的 heading 本来就是 margin: 0；它的 grid margin-top 0.9rem 与
- * 副标题 margin-bottom 0.75rem 相邻折叠后取 0.9rem，与改前逐像素一致。
+ * 间距承接（2026-11-12 刘工：四个区块的「标题→副标题」「副标题→内容」要逐像素一致）。
+ * 上间距 0.25rem 由全站签名的 margin-top 统一给；下间距按结构分两路，结果都是 12px：
+ *   ① 无 View All 的 use-case / blog：由副标题自己的 margin-bottom 给
+ *      （use-case 的 grid margin-top 同为 0.75rem，相邻折叠后仍是 12px）；
+ *   ② 有 View All 的 platform / featured：副标题在 heading-group 内，下边距归零，
+ *      改由 header 的 margin-block-end: 0.75rem 给，否则 header 内会多出 12px 空白。
+ * blog 的 heading 原本带 0.75rem 下边距，有副标题时归零，避免双倍间距。
  */
-/* 后两条压掉 h2 的 UA 默认 margin-bottom（platform / featured 的 heading
-   原本没有显式 margin），否则这两个区块的「标题→副标题」会比另两个多出约 1em，
-   四个区块的间距就不齐了。只在有副标题时生效，无副标题的区块零回归。 */
-.platform-cards:has(.platform-cards__subheading) .platform-cards__header,
-.featured-collection:has(.featured-collection__subheading) .featured-collection__header,
-.blog-posts__heading:has(+ .blog-posts__subheading),
-.platform-cards:has(.platform-cards__subheading) .platform-cards__heading,
-.featured-collection:has(.featured-collection__subheading) .featured-collection__heading {
+.blog-posts__heading:has(+ .blog-posts__subheading) {
+  margin-block-end: 0;
+}
+/* 0,2,0 特异性压过上面 :is() 的 0,1,0；只对 group 内的副标题生效 */
+.platform-cards__heading-group .platform-cards__subheading,
+.featured-collection__heading-group .featured-collection__subheading {
   margin-block-end: 0;
 }
 
