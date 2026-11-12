@@ -24,16 +24,12 @@
         "menu": {
           "type": "menu",
           "settings": {
-            "menu": "footer",
-            "heading": ""
+            "menu": "footer"
           }
         },
         "support_text": {
           "type": "text",
-          "settings": {
-            "heading": "",
-            "richtext": ""
-          }
+          "settings": {}
         },
         "contact": {
           "type": "contact",
@@ -48,21 +44,21 @@
           "type": "social",
           "settings": {
             "platform": "facebook",
-            "url": "https://www.facebook.com/shopify/"
+            "url": ""
           }
         },
         "social_instagram": {
           "type": "social",
           "settings": {
             "platform": "instagram",
-            "url": "https://www.instagram.com/shopify"
+            "url": ""
           }
         },
         "social_youtube": {
           "type": "social",
           "settings": {
             "platform": "youtube",
-            "url": "https://youtube.com/shopify"
+            "url": ""
           }
         },
         "social_tiktok": {
@@ -105,7 +101,6 @@
         "localization"
       ],
       "settings": {
-        "background_image": "shopify://shop_images/footer-bg_webp.webp",
         "show_payment_icons": true
       }
     }
