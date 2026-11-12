@@ -101,7 +101,11 @@
     display: grid;
     grid-template-columns: 70% 30%;
     min-inline-size: 0;
-    min-block-size: clamp(11rem, 15vw, 13.5rem);
+    /* 恒定下限要盖住两种状态里更高的那一份内容（hover 展开描述后）。
+       两态都够放 ⇒ 行高恒定 ⇒ 列宽过渡时卡片不会忽高忽矮，
+       同行的另一张卡也不会被一起拉动（grid 同行共享行高）。
+       实测：默认约 150px、hover 约 172px，留 44px 余量。 */
+    min-block-size: 13.5rem;
     border-radius: 12px;
     overflow: hidden;
     /* 百分比列宽可插值：Chrome 107+ / Safari 16+ / Firefox 支持过渡；
@@ -115,9 +119,17 @@
     min-inline-size: 0;
   }
   .use-case-grid__media {
+    position: relative;
+    min-block-size: 0;
     overflow: hidden;
   }
+  /* 图片必须脱离流：留在流里时，img 的固有宽高比会按列宽算出高度并参与
+     grid 行高（实测 70% 列宽 → 245px，50% 列宽 → 175px），
+     列宽一过渡，整张卡片就跟着变高变矮，且无报错。绝对定位后
+     行高只由下面这块下限与文字内容决定。 */
   .use-case-grid__media img {
+    position: absolute;
+    inset: 0;
     display: block;
     inline-size: 100%;
     block-size: 100%;
