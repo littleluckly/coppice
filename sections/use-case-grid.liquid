@@ -7,6 +7,8 @@
     - hover / focus-within 时列宽过渡到 5:5，并在标题下方展开一句话描述；
     - 描述用 grid-template-rows 0fr→1fr 折叠，不用 max-height 魔法数字，
       任意长度文案都能平滑展开；元素始终留在 DOM 与可访问性树里（不是 display:none）。
+    - hover 上浮 + 阴影走全站卡签名（--card-hover-lift / --card-hover-shadow），
+      与列宽展开、描述展开同一个触发条件，不做第二套阴影。
     - 触屏（hover: none）与窄屏直接落终态（描述常显、比例放宽）——
       否则触屏用户永远看不到描述，112px 宽的窄栏也放不下长标题。
     - 无图时整卡退化为纯文字卡（--no-image），不留灰色空壳。
@@ -305,6 +307,7 @@
           "type": "text",
           "id": "button_label",
           "label": "t:labels.button_label",
+          "info": "t:sections.use_case_grid.blocks.use_case.labels.button_info",
           "default": "t:sections.use_case_grid.blocks.use_case.defaults.button_label"
         }
       ]
