@@ -223,6 +223,36 @@ body {
 }
 
 /**
+ * 首页内容区块副标题 —— 四个区块共用的「全站签名」（2026-11-12 刘工）。
+ * platform-cards / use-case-grid / featured-collection / blog-posts 全部走这一套，
+ * 与 .btn-solid 同理：口径只写一处，改一处全站同步，不再各 section 自行发挥。
+ * 字色取 --color-foreground-muted（70% 前景，AA 达标），不硬编码色值。
+ */
+:is(
+  .platform-cards__subheading,
+  .use-case-grid__subheading,
+  .featured-collection__subheading,
+  .blog-posts__subheading
+) {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-foreground-muted);
+}
+
+/**
+ * 有副标题时把标题行原本的 0.75rem 下边距归零，交给副标题的 margin-bottom 承接，
+ * 否则会出现「标题 0.75rem + 副标题 0.75rem」的双倍间距。
+ * use-case 的 heading 本来就是 margin: 0；它的 grid margin-top 0.9rem 与
+ * 副标题 margin-bottom 0.75rem 相邻折叠后取 0.9rem，与改前逐像素一致。
+ */
+.platform-cards:has(.platform-cards__subheading) .platform-cards__header,
+.featured-collection:has(.featured-collection__subheading) .featured-collection__header,
+.blog-posts__heading:has(+ .blog-posts__subheading) {
+  margin-block-end: 0;
+}
+
+/**
  * Main landmark — the skip link target (see layout/theme.liquid).
  *
  * 这里刻意【不限宽、不加内边距】（2026-10-10 刘工）：
