@@ -123,22 +123,29 @@
     content: '→';
     margin-inline-start: 0.3rem;
   }
+  /* minmax(0, 1fr) 而非裸 1fr：列数随配置变化时，长标题/规格胶囊的 min-content
+     会把轨道撑出视口（grid item 的 automatic minimum size 是横向溢出头号原因）。
+     item 本身同样补 min-inline-size: 0，两处一起才截断 min-content 传导。 */
   .featured-collection__grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
     list-style: none;
     padding: 0;
     margin: 0;
   }
+  .featured-collection__item {
+    min-inline-size: 0;
+  }
   @media (min-width: 750px) {
     .featured-collection__grid {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
   @media (min-width: 1100px) {
     .featured-collection__grid {
-      grid-template-columns: repeat(6, 1fr);
+      /* 变量由 Liquid 按实际卡片数下发；fallback 6 覆盖编辑器刚拖入、尚未渲染 style 的瞬间 */
+      grid-template-columns: repeat(var(--featured-columns, 6), minmax(0, 1fr));
       gap: 0.6rem;
     }
   }
