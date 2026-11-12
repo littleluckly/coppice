@@ -112,7 +112,13 @@
     overflow: hidden;
     /* 百分比列宽可插值：Chrome 107+ / Safari 16+ / Firefox 支持过渡；
        不支持的浏览器瞬时切换，功能不受影响（渐进增强）。 */
-    transition: grid-template-columns 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    transition:
+      grid-template-columns 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+      /* 全站卡 hover 签名（2026-10-30 定稿，口径见 snippets/css-variables.liquid，
+         消费方还有 product-card / product-supplies / main-nav mega 卡）：
+         上浮 2px + 0 6px 20px 浅绿光晕，0.2s。深底 Noir 下自动换深底版。 */
+      translate 0.2s ease,
+      box-shadow 0.2s ease;
   }
   /* 两个 grid item 都必须能缩到 0：长标题/长按钮的 min-content 会顶穿 30% 列宽，
      把最近的 grid item 撑到同宽，造成整页横向溢出（本项目踩过多次）。 */
@@ -208,10 +214,14 @@
     border-radius: 1rem;
   }
 
-  /* ===== 展开态：鼠标 + 键盘 ===== */
+  /* ===== 展开态：鼠标 + 键盘 =====
+     列宽、描述、上浮、阴影四件事共用一个触发条件，避免出现
+     "触屏点了有阴影却没展开" 这类状态错位。参数不写字面值，统一取全站变量。 */
   @media (hover: hover) and (pointer: fine) {
     .use-case-grid__item:hover {
       grid-template-columns: 50% 50%;
+      translate: 0 var(--card-hover-lift);
+      box-shadow: var(--card-hover-shadow);
     }
     .use-case-grid__item:hover .use-case-grid__reveal {
       grid-template-rows: 1fr;
@@ -220,6 +230,8 @@
   }
   .use-case-grid__item:focus-within {
     grid-template-columns: 50% 50%;
+    translate: 0 var(--card-hover-lift);
+    box-shadow: var(--card-hover-shadow);
   }
   .use-case-grid__item:focus-within .use-case-grid__reveal {
     grid-template-rows: 1fr;
@@ -242,6 +254,11 @@
     .use-case-grid__item,
     .use-case-grid__reveal {
       transition: none;
+    }
+    /* 位移属动效：reduce 下取消上浮，只留阴影作状态反馈 */
+    .use-case-grid__item:hover,
+    .use-case-grid__item:focus-within {
+      translate: none;
     }
   }
 
