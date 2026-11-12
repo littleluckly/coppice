@@ -200,12 +200,6 @@
     text-align: center;
     text-decoration: none;
   }
-  /* CTA 箭头走伪元素，不写进商家可编辑的文案里；aria 无关（装饰符号）。 */
-  .use-case-grid__link::after {
-    content: '\2192';
-    flex: none;
-    margin-inline-start: 0.4rem;
-  }
   /* 7:3 下文字区只有约 138px，长按钮文案必然折 2–3 行。沿用 .btn-solid
      的 999px 全圆角会把按钮压成圆球/椭圆，且两张卡行数不同时形状还不一致。
      这里统一收敛成 16px 圆角矩形：任意行数都是同一个形状，单行时仍近胶囊。
