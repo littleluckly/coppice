@@ -246,9 +246,14 @@ body {
  * use-case 的 heading 本来就是 margin: 0；它的 grid margin-top 0.9rem 与
  * 副标题 margin-bottom 0.75rem 相邻折叠后取 0.9rem，与改前逐像素一致。
  */
+/* 后两条压掉 h2 的 UA 默认 margin-bottom（platform / featured 的 heading
+   原本没有显式 margin），否则这两个区块的「标题→副标题」会比另两个多出约 1em，
+   四个区块的间距就不齐了。只在有副标题时生效，无副标题的区块零回归。 */
 .platform-cards:has(.platform-cards__subheading) .platform-cards__header,
 .featured-collection:has(.featured-collection__subheading) .featured-collection__header,
-.blog-posts__heading:has(+ .blog-posts__subheading) {
+.blog-posts__heading:has(+ .blog-posts__subheading),
+.platform-cards:has(.platform-cards__subheading) .platform-cards__heading,
+.featured-collection:has(.featured-collection__subheading) .featured-collection__heading {
   margin-block-end: 0;
 }
 
