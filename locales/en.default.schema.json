@@ -115,7 +115,8 @@
     "use_case_grid": {
       "name": "Use case grid",
       "defaults": {
-        "heading": "Shop by yard size"
+        "heading": "Shop by yard size",
+        "subheading": "From small yards to large properties, we have the right equipment for your space."
       },
       "blocks": {
         "use_case": {
