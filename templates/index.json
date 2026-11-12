@@ -187,7 +187,7 @@
     "blog": {
       "type": "blog-posts",
       "settings": {
-        "blog": "maintenance-guides",
+        "blog": "buying-guides",
         "heading": "Buying guides",
         "subheading": "Straightforward guides to choosing the right machine and keeping it running.",
         "posts_to_show": 3
