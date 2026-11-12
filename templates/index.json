@@ -132,6 +132,7 @@
       ],
       "settings": {
         "heading": "Shop by platform",
+        "subheading": "From gas to battery platforms, start with the power system that fits how you work.",
         "view_all_label": "View all platforms",
         "view_all_link": ""
       }
@@ -174,7 +175,8 @@
       "settings": {
         "collection": "featured",
         "heading": "Featured mowers",
-        "products_to_show": 6,
+        "subheading": "A focused selection of machines, with the key specs up front.",
+        "products_to_show": 5,
         "show_spec_width": true,
         "show_spec_cc": true,
         "show_spec_power": true,
@@ -187,6 +189,7 @@
       "settings": {
         "blog": "maintenance-guides",
         "heading": "Buying guides",
+        "subheading": "Straightforward guides to choosing the right machine and keeping it running.",
         "posts_to_show": 3
       }
     }
