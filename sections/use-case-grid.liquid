@@ -198,6 +198,13 @@
     flex: none;
     margin-inline-start: 0.4rem;
   }
+  /* 7:3 下文字区只有约 138px，长按钮文案必然折 2–3 行。沿用 .btn-solid
+     的 999px 全圆角会把按钮压成圆球/椭圆，且两张卡行数不同时形状还不一致。
+     这里统一收敛成 16px 圆角矩形：任意行数都是同一个形状，单行时仍近胶囊。
+     覆盖形状属于改 critical.css 的定义 → 用 0,2,0 特异性，不赌注入顺序。 */
+  .use-case-grid .use-case-grid__link {
+    border-radius: 1rem;
+  }
 
   /* ===== 展开态：鼠标 + 键盘 ===== */
   @media (hover: hover) and (pointer: fine) {
