@@ -26,19 +26,20 @@
 {%- if visible_ids.size > 0 -%}
   <div class="platform-cards">
     <div class="platform-cards__header">
-      {%- if section.settings.heading != blank -%}
-        <h2 class="platform-cards__heading">{{ section.settings.heading | escape }}</h2>
-      {%- endif -%}
+      <div class="platform-cards__heading-group">
+        {%- if section.settings.heading != blank -%}
+          <h2 class="platform-cards__heading">{{ section.settings.heading | escape }}</h2>
+        {%- endif -%}
+        {%- if section.settings.subheading != blank -%}
+          <p class="platform-cards__subheading">{{ section.settings.subheading | escape }}</p>
+        {%- endif -%}
+      </div>
       {%- if section.settings.view_all_label != blank and section.settings.view_all_link != blank -%}
         <a class="platform-cards__view-all" href="{{ section.settings.view_all_link }}">
           {{ section.settings.view_all_label | escape }}
         </a>
       {%- endif -%}
     </div>
-
-    {%- if section.settings.subheading != blank -%}
-      <p class="platform-cards__subheading">{{ section.settings.subheading | escape }}</p>
-    {%- endif -%}
 
     <ul class="platform-cards__grid" role="list">
       {%- for block in section.blocks -%}
