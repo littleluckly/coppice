@@ -100,6 +100,7 @@
       "name": "Platform cards",
       "defaults": {
         "heading": "Shop by platform",
+        "subheading": "From gas to battery platforms, start with the power system that fits how you work.",
         "view_all_label": "View all platforms"
       },
       "blocks": {
@@ -149,6 +150,7 @@
       "name": "Featured collection",
       "defaults": {
         "heading": "Featured products",
+        "subheading": "A focused selection of machines, with the key specs up front.",
         "view_all_label": "View all"
       },
       "headers": {
@@ -165,7 +167,8 @@
     "blog_posts": {
       "name": "Blog posts",
       "defaults": {
-        "heading": "Buying guides"
+        "heading": "Buying guides",
+        "subheading": "Straightforward guides to choosing the right machine and keeping it running."
       },
       "read_more": "Read guide"
     },
