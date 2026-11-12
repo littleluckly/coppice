@@ -205,14 +205,6 @@
     opacity: 1;
   }
 
-  /* 无图卡片只有一列，任何状态下都不 참여 7:3 / 5:5 的分配。
-     写在这里（且特异性 0,2,0）确保在下面所有媒体查询之后仍然生效。 */
-  .use-case-grid__item--no-image,
-  .use-case-grid__item--no-image:hover,
-  .use-case-grid__item--no-image:focus-within {
-    grid-template-columns: 100%;
-  }
-
   /* ===== 触屏 / 窄屏：直接给终态 =====
      没有 hover 就没有展开时机；窄屏单卡若还守 7:3，文字区只剩百来像素，
      标题会折成四行。这里描述常显、比例放宽到 55:45。 */
@@ -225,19 +217,20 @@
       opacity: 1;
     }
   }
-  @media (hover: none), (max-width: 749px) {
-    .use-case-grid__item--no-image,
-    .use-case-grid__item--no-image:hover,
-    .use-case-grid__item--no-image:focus-within {
-      grid-template-columns: 100%;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .use-case-grid__item,
     .use-case-grid__reveal {
       transition: none;
     }
+  }
+
+  /* 无图卡片只有一列，任何状态下都不参与 7:3 / 5:5 的分配。
+     刻意放在最后：与上文各比例规则同特异性时靠源序取胜，
+     带 :hover / :focus-within 的 0,2,0 变体则压过展开态。 */
+  .use-case-grid__item--no-image,
+  .use-case-grid__item--no-image:hover,
+  .use-case-grid__item--no-image:focus-within {
+    grid-template-columns: 100%;
   }
 {% endstylesheet %}
 
