@@ -1,7 +1,15 @@
 {% comment %}
   Use case grid — 首页"按用途收敛"区（task-index T-2.3，SDD §4.1）。
-  图文块 ×2–3：图 + 标题 + 一句话 + 目标集合链接。
-  演示店 v1 只配置小院（→走步式）与大草坪（→骑乘式）两张（pages-ui §2）。
+  视觉基准：左图右文横条卡 ×2–3（图 + 标题 + 一句话 + 目标集合链接）。
+
+  交互（2026-11-12 刘工）：
+    - 默认 图:文 = 7:3，文字区只露「标题 + 按钮」；
+    - hover / focus-within 时列宽过渡到 5:5，并在标题下方展开一句话描述；
+    - 描述用 grid-template-rows 0fr→1fr 折叠，不用 max-height 魔法数字，
+      任意长度文案都能平滑展开；元素始终留在 DOM 与可访问性树里（不是 display:none）。
+    - 触屏（hover: none）与窄屏直接落终态（描述常显、比例放宽）——
+      否则触屏用户永远看不到描述，112px 宽的窄栏也放不下长标题。
+    - 无图时整卡退化为纯文字卡（--no-image），不留灰色空壳。
 {% endcomment %}
 
 {%- if section.blocks.size > 0 -%}
@@ -9,39 +17,56 @@
     {%- if section.settings.heading != blank -%}
       <h2 class="use-case-grid__heading">{{ section.settings.heading | escape }}</h2>
     {%- endif -%}
+    {%- if section.settings.subheading != blank -%}
+      <p class="use-case-grid__subheading">{{ section.settings.subheading | escape }}</p>
+    {%- endif -%}
 
     <ul class="use-case-grid__grid" role="list">
       {%- for block in section.blocks -%}
         {%- liquid
-          assign block_link = block.settings.link
+          assign block_link = ''
           if block.settings.collection != blank
             assign block_link = block.settings.collection.url
           endif
         -%}
-        <li class="use-case-grid__item" {{ block.shopify_attributes }}>
+        <li
+          class="use-case-grid__item{% if block.settings.image == blank %} use-case-grid__item--no-image{% endif %}"
+          {{ block.shopify_attributes }}
+        >
           {%- if block.settings.image != blank -%}
-            {{
-              block.settings.image
-              | image_url: width: 1200
-              | image_tag:
-                widths: '600, 900, 1200',
-                sizes: '(min-width: 750px) 33vw, 90vw',
-                width: block.settings.image.width,
-                height: block.settings.image.height,
-                loading: 'lazy',
-                alt: block.settings.heading
-            }}
+            <div class="use-case-grid__media">
+              {{
+                block.settings.image
+                | image_url: width: 1200
+                | image_tag:
+                  widths: '600, 900, 1200',
+                  sizes: '(min-width: 750px) 42vw, 90vw',
+                  width: block.settings.image.width,
+                  height: block.settings.image.height,
+                  loading: 'lazy',
+                  alt: block.settings.heading
+              }}
+            </div>
           {%- endif -%}
-          <div class="use-case-grid__overlay">
+
+          <div class="use-case-grid__panel">
             <div class="use-case-grid__body">
               {%- if block.settings.heading != blank -%}
                 <h3 class="use-case-grid__item-heading">{{ block.settings.heading | escape }}</h3>
               {%- endif -%}
+
               {%- if block.settings.text != blank -%}
-                <p class="use-case-grid__text">{{ block.settings.text | escape }}</p>
+                <div class="use-case-grid__reveal">
+                  <div class="use-case-grid__reveal-inner">
+                    <p class="use-case-grid__text">{{ block.settings.text | escape }}</p>
+                  </div>
+                </div>
               {%- endif -%}
+
               {%- if block_link != blank and block.settings.button_label != blank -%}
-                <a class="use-case-grid__link" href="{{ block_link }}">{{ block.settings.button_label | escape }}</a>
+                <a class="btn-solid use-case-grid__link" href="{{ block_link }}">
+                  {{ block.settings.button_label | escape }}
+                </a>
               {%- endif -%}
             </div>
           </div>
@@ -54,63 +79,165 @@
 {% stylesheet %}
   .use-case-grid__heading {
     font-size: 1.25rem;
-    font-weight: 500;
-    margin-block-end: 0.75rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .use-case-grid__subheading {
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+    color: var(--color-foreground-muted);
   }
   .use-case-grid__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+    /* 26rem 下限：2 张卡时各占约半页宽，文字区 30% 仍放得下标题与按钮；
+       3 张卡不会挤成三根 118px 的窄栏，而是自动换成 2+1 行。 */
+    grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr));
     gap: 0.75rem;
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 0.9rem 0 0;
   }
   .use-case-grid__item {
-    position: relative;
+    display: grid;
+    grid-template-columns: 70% 30%;
+    min-inline-size: 0;
+    min-block-size: clamp(11rem, 15vw, 13.5rem);
     border-radius: 12px;
     overflow: hidden;
-    min-height: 15rem;
-    display: flex;
-    align-items: flex-end;
+    /* 百分比列宽可插值：Chrome 107+ / Safari 16+ / Firefox 支持过渡；
+       不支持的浏览器瞬时切换，功能不受影响（渐进增强）。 */
+    transition: grid-template-columns 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .use-case-grid__item img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+  /* 两个 grid item 都必须能缩到 0：长标题/长按钮的 min-content 会顶穿 30% 列宽，
+     把最近的 grid item 撑到同宽，造成整页横向溢出（本项目踩过多次）。 */
+  .use-case-grid__media,
+  .use-case-grid__panel {
+    min-inline-size: 0;
+  }
+  .use-case-grid__media {
+    overflow: hidden;
+  }
+  .use-case-grid__media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
     object-fit: cover;
   }
-  .use-case-grid__overlay {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    padding: 2.5rem 1rem 1rem;
-    color: #ffffff;
-    background: linear-gradient(to top, rgb(0 0 0 / 70%), rgb(0 0 0 / 25%) 55%, transparent);
+  .use-case-grid__panel {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    /* 效果图的浅灰绿底。走 color-mix 而非硬编码：浅色预设下 ≈ 白+8% 品牌绿，
+       Noir 深底预设下自动翻成深色，文字仍用 --color-foreground 保持对比度。 */
+    background-color: color-mix(in srgb, var(--color-background) 92%, var(--color-brand) 8%);
+  }
+  .use-case-grid__body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+    inline-size: 100%;
+    min-inline-size: 0;
   }
   .use-case-grid__item-heading {
-    font-size: 1.1rem;
-    font-weight: 500;
+    margin: 0;
+    font-size: clamp(0.95rem, 1.15vw, 1.125rem);
+    font-weight: 600;
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+  /* 折叠容器：0fr 行 + 内层 overflow:hidden，占位为 0 但内容仍在 a11y 树里。
+     hover 时 0fr→1fr 平滑展开，不依赖文案长度。 */
+  .use-case-grid__reveal {
+    display: grid;
+    grid-template-rows: 0fr;
+    inline-size: 100%;
+    opacity: 0;
+    transition:
+      grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.3s ease;
+  }
+  .use-case-grid__reveal-inner {
+    min-block-size: 0;
+    overflow: hidden;
   }
   .use-case-grid__text {
-    font-size: 0.88rem;
-    opacity: 0.9;
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
   }
+  /* 形状/配色/光晕/扫光全部继承自全站 .btn-solid，这里只补尺寸与排版。 */
   .use-case-grid__link {
-    display: inline-block;
-    margin-block-start: 0.4rem;
-    min-height: 44px;
-    padding-block: 10px;
-    color: #ffffff;
-    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    text-align: center;
+    text-decoration: none;
   }
-  .use-case-grid__link {
-    display: inline-block;
-    margin-block-start: 0.4rem;
-    min-height: 44px;
-    padding-block: 10px;
-    color: #ffffff;
-    font-weight: 500;
+  /* CTA 箭头走伪元素，不写进商家可编辑的文案里；aria 无关（装饰符号）。 */
+  .use-case-grid__link::after {
+    content: '\2192';
+    flex: none;
+    margin-inline-start: 0.4rem;
+  }
+
+  /* ===== 展开态：鼠标 + 键盘 ===== */
+  @media (hover: hover) and (pointer: fine) {
+    .use-case-grid__item:hover {
+      grid-template-columns: 50% 50%;
+    }
+    .use-case-grid__item:hover .use-case-grid__reveal {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+  }
+  .use-case-grid__item:focus-within {
+    grid-template-columns: 50% 50%;
+  }
+  .use-case-grid__item:focus-within .use-case-grid__reveal {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  /* 无图卡片只有一列，任何状态下都不 참여 7:3 / 5:5 的分配。
+     写在这里（且特异性 0,2,0）确保在下面所有媒体查询之后仍然生效。 */
+  .use-case-grid__item--no-image,
+  .use-case-grid__item--no-image:hover,
+  .use-case-grid__item--no-image:focus-within {
+    grid-template-columns: 100%;
+  }
+
+  /* ===== 触屏 / 窄屏：直接给终态 =====
+     没有 hover 就没有展开时机；窄屏单卡若还守 7:3，文字区只剩百来像素，
+     标题会折成四行。这里描述常显、比例放宽到 55:45。 */
+  @media (hover: none), (max-width: 749px) {
+    .use-case-grid__item {
+      grid-template-columns: 55% 45%;
+    }
+    .use-case-grid__reveal {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+  }
+  @media (hover: none), (max-width: 749px) {
+    .use-case-grid__item--no-image,
+    .use-case-grid__item--no-image:hover,
+    .use-case-grid__item--no-image:focus-within {
+      grid-template-columns: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .use-case-grid__item,
+    .use-case-grid__reveal {
+      transition: none;
+    }
   }
 {% endstylesheet %}
 
@@ -126,6 +253,12 @@
       "id": "heading",
       "label": "t:labels.heading",
       "default": "t:sections.use_case_grid.defaults.heading"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "t:labels.subheading",
+      "default": "t:sections.use_case_grid.defaults.subheading"
     }
   ],
   "blocks": [
