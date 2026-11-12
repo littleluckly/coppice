@@ -165,7 +165,8 @@
         "case-2"
       ],
       "settings": {
-        "heading": "Find the Right Equiment for Your Space"
+        "heading": "Find the Right Equiment for Your Space",
+        "subheading": "From small yards to large properties, we have the right equipment for your space."
       }
     },
     "featured": {
@@ -184,7 +185,7 @@
     "blog": {
       "type": "blog-posts",
       "settings": {
-        "blog": "",
+        "blog": "maintenance-guides",
         "heading": "Buying guides",
         "posts_to_show": 3
       }
