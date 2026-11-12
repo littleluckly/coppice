@@ -19,6 +19,9 @@
     仍按 6 列的 15vw 选图，卡片变宽后会拿到偏小的派生图。
     90/N 是从原 6 列 = 15vw 反推的（余量留给页边距与 gap）；
     平板 3 列 / 手机 2 列是响应式折行，值与原先一致。
+    products_to_show 上限锁 6（2026-11-12 刘工拍板）：桌面是单行展示，
+    N 越大单卡越窄 —— 实测 12 张时单卡 91.2px、卡内内容仅约 65px，
+    价格三件套/规格胶囊/Compare/加购会挤爆。别再把 max 调回去。
   {%- endcomment -%}
   {%- liquid
     assign card_count = card_collection.products_count
@@ -180,7 +183,7 @@
       "type": "range",
       "id": "products_to_show",
       "min": 3,
-      "max": 12,
+      "max": 6,
       "step": 1,
       "label": "t:labels.products_to_show",
       "default": 6
