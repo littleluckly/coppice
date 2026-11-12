@@ -127,7 +127,8 @@
             "button_label": "Shop walk-behind mowers"
           },
           "labels": {
-            "collection_info": "Links to the collection that matches this yard type."
+            "collection_info": "Links to the collection that matches this yard type.",
+            "button_info": "Keep the label short. In the default 7:3 state the text column is narrow, so long labels wrap."
           }
         }
       },
