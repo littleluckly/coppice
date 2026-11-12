@@ -129,7 +129,7 @@
       回到顶部按钮（2026-10-30）：全站浮层，同上——不能跟着某个 section 走。
       放在最后：浮层 DOM 靠后，无 JS 时它默认隐藏，不影响内容顺序。
     {% endcomment %}
-    {% render 'back-to-top' %}
+    {% comment %} {% render 'back-to-top' %} {% endcomment %}
 
     {% comment %}
       购物车抽屉（2026-11-02）：全站唯一，挂 layout 而非某个 section ——
