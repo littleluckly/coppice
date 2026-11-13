@@ -250,8 +250,9 @@
   /* ============================================================
      集合列表页 /collections（list-collections 模板主体）
 
-     版式与本主题其余页面同源：卡片 = 白底 + 1px 细边 + 12px 圆角 +
-     内嵌 8px 圆角媒体（与 product-card / blog-posts 同一套），
+     版式与本主题其余页面同源：卡片 = 白底 + 1px 细边 + 12px 圆角；
+     区别只有一处 —— 媒体图**通栏**（分类卡的图就是内容，不内缩留画框），
+     圆角由卡片的 overflow: hidden 裁。
      hover 走全站签名（上浮 --card-hover-lift + --card-hover-shadow）。
      配色一律从 --color-* 派生（color-mix），Noir 预设自动翻转。
 
