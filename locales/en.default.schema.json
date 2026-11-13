@@ -56,6 +56,12 @@
     "search": {
       "name": "Search results",
       "settings": {
+        "hero_image": "Hero image",
+        "hero_image_info": "Landscape photo for the search banner. Leave empty to use the theme's default lawn photo.",
+        "suggested_searches": "Suggested searches",
+        "suggested_searches_info": "Comma-separated words shown below the search field. These are suggestions you choose, not automatically generated popular searches.",
+        "show_categories": "Show category sidebar",
+        "show_categories_info": "Lists up to six collections. Counts show total products in each collection, not matches for the current search.",
         "results_per_page": "Results per page",
         "results_per_page_info": "Shopify allows up to 50 results per page. Lower values keep the page lighter.",
         "show_quick_add": "Show quick add on product cards",
