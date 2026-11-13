@@ -1,0 +1,52 @@
+{% comment %}
+  Shared brand logo: picks the right image for the active color preset and
+  outputs ONE <img>. Outputs nothing when no logo is configured — every caller
+  must supply its own text fallback (shop.name / brand name).
+
+  Why Liquid instead of CSS: switching a theme preset changes color values in
+  settings_data.json, not a media query, so CSS cannot know which logo to show.
+  A customer-side color switch was declined (2026-11-12), so the server always
+  knows the active palette and there is no need to emit both images.
+
+  ⚠️ The 128 threshold MUST stay in sync with `snippets/css-variables.liquid`
+  (header_luma): that file uses the same number to pick the header surface
+  color. If the two drift apart, a dark header can be paired with the
+  light-background logo. Both use `color_brightness` (0–255, 128 = midpoint)
+  and fall back to 255 when the color cannot be read.
+
+  @param logo_class   {String} class on the generated <img>
+  @param logo_width   {Number} base width passed to image_url
+  @param logo_widths  {String} comma separated widths for the image_tag srcset
+  @param logo_sizes   {String} sizes attribute
+  @param logo_alt     {String} alt text; pass '' for decorative images
+  @param logo_loading {String} lazy or eager
+{% endcomment %}
+
+{%- liquid
+  assign skeleton_bg = settings.skeleton_background_color | default: settings.background_color
+  assign skeleton_luma = skeleton_bg | color_brightness | default: 255
+
+  assign brand_logo = settings.logo
+  if skeleton_luma <= 128 and settings.logo_dark != blank
+    assign brand_logo = settings.logo_dark
+  endif
+
+  assign img_width = logo_width | default: 160
+  assign img_widths = logo_widths | default: '80, 120, 160, 240'
+  assign img_sizes = logo_sizes | default: '40px'
+  assign img_alt = logo_alt | default: ''
+  assign img_loading = logo_loading | default: 'eager'
+-%}
+
+{%- if brand_logo != blank -%}
+  {{
+    brand_logo
+    | image_url: width: img_width
+    | image_tag:
+      widths: img_widths,
+      sizes: img_sizes,
+      alt: img_alt,
+      loading: img_loading,
+      class: logo_class
+  }}
+{%- endif -%}
