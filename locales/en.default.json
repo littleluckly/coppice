@@ -236,7 +236,8 @@
     "type_article": "Article",
     "type_label": "Filter results by type",
     "type_page": "Page",
-    "view_all": "View all results for \"{{ terms }}\""
+    "view_all": "View all results for \"{{ terms }}\"",
+    "view_all_types": "Search all result types instead"
   },
   "sections": {
     "announcement_bar": {
