@@ -1246,6 +1246,46 @@
     .search-hero__subtitle {
       margin-block-end: 1rem;
     }
+    .search-hero__bg {
+      /* 窄屏按高度裁切，取景下移一点才保得住机器，不然只剩一片草纹理 */
+      object-position: 70% 62%;
+    }
+    /* 推荐词改单行横滑：五个胶囊折三行会把 hero 撑到 400px+ */
+    .search-hero__suggestions {
+      display: block;
+    }
+    .search-hero__suggestions-label {
+      display: block;
+      margin-block-end: 0.4rem;
+    }
+    .search-hero__suggestions-list {
+      flex-wrap: nowrap;
+      min-inline-size: 0;
+      max-inline-size: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .search-hero__suggestions-list::-webkit-scrollbar {
+      display: none;
+    }
+    .search-hero__suggestion {
+      flex: 0 0 auto;
+    }
+    /* 两列分类每列只有 ~148px：图标/间距/字号各收一档，
+       否则 Accessories 这类长词会被 break-word 从中间拆断 */
+    .search-page__category-link {
+      gap: 0.4rem;
+      padding-inline: 0.3rem;
+      font-size: 0.8rem;
+    }
+    .search-page__category-icon {
+      width: 26px;
+      height: 26px;
+    }
+    .search-page__category-icon svg {
+      width: 16px;
+      height: 16px;
+    }
     /* 四个类型标签收进一行：默认 padding 下 Pages 会单独掉到第二行 */
     .search-page__types-list {
       gap: 0.4rem;
