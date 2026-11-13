@@ -1,70 +1,862 @@
 {% comment %}
-  This section is used in the search template to render search results for
-  products, articles, and pages.
+  Search results — 搜索结果页主体（pages-ui §11 / SDD §4.1 #16）。
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/search
+  2026-11-12 整页重写：原文件是 Skeleton 自带的 71 行裸结构（h1 + 一个 input +
+  一个按钮 + 一个 200px auto-fill 网格），与全站版式完全脱节。现在的结构：
+
+    面包屑 → 品牌色 hero（唯一 h1 + 结果数 + 大搜索条）
+      → 类型标签（All / Products / Articles / Pages）
+      → 商品结果（复用 snippets/product-card.liquid，网格断点对齐集合页）
+      → 文章 / 页面结果（下方独立分组，行卡）
+      → 圆形分页
+    无结果 → 空态（提示 + 全部商品入口 + 热门集合）
+    未搜索 → 起始态（提示 + 热门集合）
+
+  复用与依据：
+  - 商品卡走 product-card snippet + assets/product-card.css（该 CSS 文件头本来就写着
+    "首页 / 集合页 / 搜索页共用"，此前搜索页一直没接上）。三件套脚本与集合页同款。
+  - 断点（2 / 3 / 4 列，750 / 1280）、圆形分页、color-mix 配色全部对齐 collection.liquid。
+  - 类型切换用**官方 `type` 查询参数**（逗号分隔 product/page/article，默认全部），
+    激活态回读 `search.types`；纯 GET 链接、零 JS，URL 天然可分享。
+    见 https://shopify.dev/docs/storefronts/themes/navigation-search/search
+  - 结果类型判别按官方示例：object_type 明确是 article / page 的进内容组，
+    其余一律按商品处理（search.results 只可能是 product / article / page 三种）。
+
+  明确的取舍（不要误当成遗漏）：
+  - **本轮不做 `search.filters` 筛选，也不做排序下拉**。前者依赖 Search & Discovery
+    后台配置 + faceted-filters.js 的 Section Rendering 改造，是 pages-ui §6.1 的独立工单；
+    后者默认按 relevance 排序，对搜索结果是最合理的默认，加控件反而稀释重点。
+    本轮的范围是"把骨架样式补齐"，结构已把结果区独立成 .search-page__results，
+    后续接筛选时不用再动版式。
+  - 热门集合读全局 `collections`（limit 4），不引入 collection 类型设置：
+    主题包带不了集合，设置会诱导演示店写回 templates/search.json，打包前还得清。
+    没有集合时整块不渲染（判 `collection.title != blank`，不判 `if collection`）。
 {% endcomment %}
 
-<h1>{{ 'search.title' | t }}</h1>
+<script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
+<script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+<script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
+{{ 'product-card.css' | asset_url | stylesheet_tag }}
 
-<form action="{{ routes.search_url }}" method="get" role="search">
-  <input
-    type="search"
-    size="50"
-    name="q"
-    value="{{ search.terms | escape }}"
-    placeholder="{{ 'search.placeholder' | t }}"
-  >
-  <button type="submit">{{ 'search.submit' | t }}</button>
-</form>
+{%- liquid
+  assign per_page = section.settings.results_per_page | default: 12
+  # search.types 是本次搜索实际命中的类型数组。我们的标签只产生单类型 URL，
+  # 所以「size == 1」即代表用户点了某个类型；不带 type 参数（或全类型）一律视为 All。
+  assign active_type = ''
+  if search.types.size == 1
+    assign active_type = search.types.first
+  endif
+  assign encoded_terms = search.terms | url_encode
+  assign all_results_url = routes.search_url | append: '?q=' | append: encoded_terms
+-%}
 
-{% if search.performed %}
-  {% if search.results_count == 0 %}
-    <p>{{ 'search.no_results_html' | t: terms: search.terms }}</p>
-  {% else %}
-    <p>{{ 'search.results_for_html' | t: terms: search.terms, count: search.results_count }}</p>
+{%- comment -%}
+  热门集合入口在「未搜索」与「无结果」两处复用。先 capture 成字符串再判空，
+  避免依赖 capture 内 assign 的作用域，也避免先输出标题才发现一个集合都没有。
+{%- endcomment -%}
+{%- capture popular_markup -%}
+  {%- for collection in collections limit: 4 -%}
+    {%- if collection.title != blank -%}
+      <li class="search-page__popular-item">
+        <a class="search-page__popular-link" href="{{ collection.url }}">
+          {%- if collection.image -%}
+            {{
+              collection.image
+              | image_url: width: 96
+              | image_tag:
+                class: 'search-page__popular-image',
+                widths: '96, 192',
+                sizes: '48px',
+                loading: 'lazy',
+                alt: ''
+            }}
+          {%- else -%}
+            <span class="search-page__popular-image search-page__popular-image--empty" aria-hidden="true">
+              {{- 'icon-leaf.svg' | inline_asset_content -}}
+            </span>
+          {%- endif -%}
+          <span class="search-page__popular-name">{{ collection.title | escape }}</span>
+        </a>
+      </li>
+    {%- endif -%}
+  {%- endfor -%}
+{%- endcapture -%}
+{%- assign popular_trimmed = popular_markup | strip -%}
+{%- assign has_popular = false -%}
+{%- if popular_trimmed != blank -%}
+  {%- assign has_popular = true -%}
+{%- endif -%}
+{%- comment -%} 未执行搜索时 results_count 可能不是数字 0，用 has_results 统一判定 {%- endcomment -%}
+{%- assign has_results = false -%}
+{%- if search.performed and search.results_count > 0 -%}
+  {%- assign has_results = true -%}
+{%- endif -%}
 
-    <div class="search-results">
-      {% paginate search.results by 20 %}
-        {% # Search result items may be an article, a page, or a product. %}
-        {% for result in search.results %}
-          <div class="search-result">
-            {% assign featured_image = result.featured_image | default: result.image %}
-            {% if featured_image %}
-              {% render 'image', class: 'search-result__image', image: featured_image, url: result.url, width: 400 %}
-            {% endif %}
-            <div class="search-result__content">
-              <p>
-                {{ result.title | link_to: result.url }}
-                {% if result.price %}
-                  {{ result.price | money_with_currency }}
-                {% endif %}
-              </p>
-            </div>
-          </div>
-        {% endfor %}
+<div class="search-page">
+  <nav class="search-page__breadcrumb" aria-label="{{ 'general.breadcrumb' | t }}">
+    <ol class="search-page__breadcrumb-list" role="list">
+      <li class="search-page__breadcrumb-item">
+        <a href="{{ routes.root_url }}">{{ 'collections.breadcrumb_home' | t }}</a>
+      </li>
+      <li class="search-page__breadcrumb-item" aria-current="page">{{ 'search.title' | t }}</li>
+    </ol>
+  </nav>
 
-        {{ paginate | default_pagination }}
-      {% endpaginate %}
+  <div class="search-page__hero">
+    <h1 class="search-page__title">{{ 'search.title' | t }}</h1>
+
+    {%- if search.performed -%}
+      {%- comment -%} 读屏播报用完整句；视觉行把关键词单独做成高亮 chip {%- endcomment -%}
+      <p class="visually-hidden" role="status">
+        {{ 'search.results_for_html' | t: terms: search.terms, count: search.results_count }}
+      </p>
+      <p class="search-page__summary">
+        {{ 'search.results_count' | t: count: search.results_count }}
+        <span class="search-page__terms">“{{ search.terms | escape }}”</span>
+      </p>
+    {%- else -%}
+      <p class="search-page__summary">{{ 'search.intro' | t }}</p>
+    {%- endif -%}
+
+    <form class="search-page__form" action="{{ routes.search_url }}" method="get" role="search">
+      <div class="search-page__field">
+        <label class="visually-hidden" for="SearchPageInput">{{ 'search.label' | t }}</label>
+        <span class="search-page__icon" aria-hidden="true">{{ 'icon-search.svg' | inline_asset_content }}</span>
+        <input
+          id="SearchPageInput"
+          class="search-page__input"
+          type="search"
+          name="q"
+          value="{{ search.terms | escape }}"
+          placeholder="{{ 'search.placeholder' | t | escape }}"
+          autocomplete="off"
+        >
+        <button type="submit" class="search-page__submit btn-solid">{{ 'search.submit' | t }}</button>
+      </div>
+      {%- comment -%} 重新搜索时保留当前类型，否则用户从「Articles」页再搜会静默跳回全部 {%- endcomment -%}
+      {%- if active_type != '' -%}
+        <input type="hidden" name="type" value="{{ active_type | escape }}">
+      {%- endif -%}
+    </form>
+  </div>
+
+  {%- if search.performed and search.results_count == 0 -%}
+    {%- comment -%} ── 无结果 ── {%- endcomment -%}
+    <div class="search-page__empty">
+      <span class="search-page__empty-icon" aria-hidden="true">{{ 'icon-search.svg' | inline_asset_content }}</span>
+      <h2 class="search-page__empty-title">{{ 'search.no_results_html' | t: terms: search.terms }}</h2>
+      <p class="search-page__empty-body">{{ 'search.empty_body' | t }}</p>
+      <ul class="search-page__tips" role="list">
+        <li class="search-page__tip">{{ 'search.tip_spelling' | t }}</li>
+        <li class="search-page__tip">{{ 'search.tip_shorter' | t }}</li>
+      </ul>
+      <a class="search-page__empty-cta btn-solid" href="{{ routes.all_products_collection_url }}">
+        {{ 'search.browse_all' | t }}
+      </a>
     </div>
-  {% endif %}
-{% endif %}
+  {%- endif -%}
+
+  {%- if search.performed and search.results_count > 0 -%}
+    <nav class="search-page__types" aria-label="{{ 'search.type_label' | t }}">
+      <ul class="search-page__types-list" role="list">
+        <li>
+          <a class="search-page__type" href="{{ all_results_url }}"{% if active_type == '' %} aria-current="page"{% endif %}>
+            {{ 'search.type_all' | t }}
+          </a>
+        </li>
+        <li>
+          <a class="search-page__type" href="{{ all_results_url }}&amp;type=product"{% if active_type == 'product' %} aria-current="page"{% endif %}>
+            {{ 'search.products' | t }}
+          </a>
+        </li>
+        <li>
+          <a class="search-page__type" href="{{ all_results_url }}&amp;type=article"{% if active_type == 'article' %} aria-current="page"{% endif %}>
+            {{ 'search.articles' | t }}
+          </a>
+        </li>
+        <li>
+          <a class="search-page__type" href="{{ all_results_url }}&amp;type=page"{% if active_type == 'page' %} aria-current="page"{% endif %}>
+            {{ 'search.pages' | t }}
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="search-page__results">
+      {%- paginate search.results by per_page -%}
+        {%- liquid
+          assign product_count = 0
+          assign content_count = 0
+          for result in search.results
+            if result.object_type == 'article' or result.object_type == 'page'
+              assign content_count = content_count | plus: 1
+            else
+              assign product_count = product_count | plus: 1
+            endif
+          endfor
+        -%}
+
+        {%- if product_count > 0 -%}
+          <section class="search-page__group" aria-labelledby="SearchProductsHeading">
+            <div class="search-page__group-head">
+              <h2 class="search-page__group-title" id="SearchProductsHeading">{{ 'search.products' | t }}</h2>
+              <span class="search-page__group-count">{{ product_count }}</span>
+            </div>
+            <ul class="search-page__grid" role="list">
+              {%- for result in search.results -%}
+                {%- unless result.object_type == 'article' or result.object_type == 'page' -%}
+                  <li class="search-page__grid-item">
+                    {%- liquid
+                      assign card_lazy = true
+                      if forloop.index <= 4
+                        assign card_lazy = false
+                      endif
+                    -%}
+                    {% render 'product-card',
+                      product: result,
+                      lazy: card_lazy,
+                      quick_add: section.settings.show_quick_add,
+                      show_width: section.settings.show_specs,
+                      show_cc: false,
+                      show_power: section.settings.show_specs,
+                      show_weight: false,
+                      sizes: '(min-width: 1280px) 19vw, (min-width: 750px) 25vw, 45vw'
+                    %}
+                  </li>
+                {%- endunless -%}
+              {%- endfor -%}
+            </ul>
+          </section>
+        {%- endif -%}
+
+        {%- if content_count > 0 -%}
+          <section class="search-page__group" aria-labelledby="SearchContentHeading">
+            <div class="search-page__group-head">
+              <h2 class="search-page__group-title" id="SearchContentHeading">{{ 'search.content_heading' | t }}</h2>
+              <span class="search-page__group-count">{{ content_count }}</span>
+            </div>
+            <ul class="search-page__content-list" role="list">
+              {%- for result in search.results -%}
+                {%- if result.object_type == 'article' or result.object_type == 'page' -%}
+                  {%- liquid
+                    assign result_image = result.image | default: result.featured_image
+                    if result.object_type == 'article'
+                      assign result_type_label = 'search.type_article' | t
+                    else
+                      assign result_type_label = 'search.type_page' | t
+                    endif
+                  -%}
+                  <li class="search-page__content-item">
+                    <a class="search-page__content-link" href="{{ result.url }}">
+                      {%- if result_image -%}
+                        {{
+                          result_image
+                          | image_url: width: 240
+                          | image_tag:
+                            class: 'search-page__content-image',
+                            widths: '120, 240',
+                            sizes: '88px',
+                            loading: 'lazy',
+                            alt: ''
+                        }}
+                      {%- else -%}
+                        <span class="search-page__content-image search-page__content-image--empty" aria-hidden="true">
+                          {{- 'icon-leaf.svg' | inline_asset_content -}}
+                        </span>
+                      {%- endif -%}
+                      <span class="search-page__content-text">
+                        <span class="search-page__content-type">{{ result_type_label }}</span>
+                        <span class="search-page__content-title">{{ result.title | highlight: search.terms }}</span>
+                        {%- if result.content != blank -%}
+                          <span class="search-page__content-excerpt">
+                            {{- result.content | strip_html | truncatewords: 24 | highlight: search.terms -}}
+                          </span>
+                        {%- endif -%}
+                      </span>
+                    </a>
+                  </li>
+                {%- endif -%}
+              {%- endfor -%}
+            </ul>
+          </section>
+        {%- endif -%}
+
+        {%- if paginate.pages > 1 -%}
+          {%- comment -%} 与集合页同款：走 paginate.parts 自定义结构，不用 default_pagination（输出无法控形） {%- endcomment -%}
+          <nav class="search-page__pagination" aria-label="{{ 'search.pagination_label' | t }}">
+            {%- if paginate.previous -%}
+              <a class="search-page__pagination-nav" href="{{ paginate.previous.url }}" aria-label="{{ 'search.pagination_previous' | t }}">
+                <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+              </a>
+            {%- else -%}
+              <span class="search-page__pagination-nav" aria-disabled="true">
+                <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+              </span>
+            {%- endif -%}
+
+            {%- for part in paginate.parts -%}
+              {%- if part.is_link -%}
+                <a class="search-page__pagination-page" href="{{ part.url }}" aria-label="{{ 'search.page_number' | t: number: part.title }}">{{ part.title }}</a>
+              {%- elsif part.title == paginate.current_page -%}
+                <span class="search-page__pagination-page" aria-current="page">{{ part.title }}</span>
+              {%- else -%}
+                <span class="search-page__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+              {%- endif -%}
+            {%- endfor -%}
+
+            {%- if paginate.next -%}
+              <a class="search-page__pagination-nav" href="{{ paginate.next.url }}" aria-label="{{ 'search.pagination_next' | t }}">
+                <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+              </a>
+            {%- else -%}
+              <span class="search-page__pagination-nav" aria-disabled="true">
+                <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+              </span>
+            {%- endif -%}
+          </nav>
+        {%- endif -%}
+      {%- endpaginate -%}
+    </div>
+  {%- endif -%}
+
+  {%- comment -%} 热门集合：未搜索 / 无结果两种状态都给一条不依赖搜索词的退路 {%- endcomment -%}
+  {%- if has_popular and search.results_count == 0 -%}
+    <section class="search-page__popular" aria-labelledby="SearchPopularHeading">
+      <h2 class="search-page__popular-title" id="SearchPopularHeading">{{ 'search.popular_heading' | t }}</h2>
+      <ul class="search-page__popular-list" role="list">{{ popular_markup }}</ul>
+    </section>
+  {%- endif -%}
+</div>
 
 {% stylesheet %}
-  .search-results {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  /* ===================================================================
+     Search results — 页面骨架
+     配色纪律（AGENTS §6 / css-variables.liquid）：所有色值从
+     --color-background / --color-foreground / --color-brand* 派生，
+     不写 rgb(0 0 0 / x) / rgb(255 255 255 / x)，Noir 预设自动适配。
+     =================================================================== */
+  .search-page {
+    padding-block: 1.5rem clamp(3rem, 6vw, 5rem);
   }
-  .search-results .prev,
-  .search-results .page,
-  .search-results .next {
-    grid-column: 1 / -1;
+
+  /* 面包屑：与集合页同款发丝线 + 斜杠分隔 */
+  .search-page__breadcrumb {
+    margin-block-end: 1.25rem;
+  }
+  .search-page__breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.8rem;
+    color: var(--color-foreground-muted);
+  }
+  .search-page__breadcrumb-item + .search-page__breadcrumb-item::before {
+    content: '/';
+    margin-inline-end: 0.5rem;
+    color: color-mix(in srgb, var(--color-foreground) 35%, transparent);
+  }
+  .search-page__breadcrumb-item a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .search-page__breadcrumb-item a:hover {
+    color: var(--color-brand);
+    text-decoration: underline;
+  }
+
+  /* Hero：品牌色浅染卡片。右上角一层极淡的径向光，避免大块平涂发闷。 */
+  .search-page__hero {
+    padding: clamp(1.25rem, 3.5vw, 2.5rem);
+    border: 1px solid color-mix(in srgb, var(--color-brand) 16%, transparent);
+    border-radius: 20px;
+    background:
+      radial-gradient(
+        120% 160% at 100% 0%,
+        color-mix(in srgb, var(--color-brand) 10%, transparent),
+        transparent 62%
+      ),
+      color-mix(in srgb, var(--color-brand) 4%, var(--color-background));
+  }
+  .search-page__title {
+    margin: 0;
+    font-size: clamp(1.75rem, 4vw, 2.6rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+  .search-page__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-block: 0.6rem 1.5rem;
+    font-size: 0.95rem;
+    color: var(--color-foreground-muted);
+  }
+  .search-page__terms {
+    font-weight: 600;
+    color: var(--color-foreground);
+    overflow-wrap: anywhere;
+  }
+
+  /* 搜索条：白底胶囊 + 左侧放大镜 + 右侧品牌实心按钮。
+     flex item 自身带 min-inline-size: 0，否则长关键词会把整条撑出视口
+     （AGENTS §5 的横向溢出教训，加在祖先上无效）。 */
+  .search-page__field {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    max-inline-size: 48rem;
+    padding: 0.35rem 0.35rem 0.35rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .search-page__field:focus-within {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 18%, transparent);
+  }
+  .search-page__icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+  }
+  .search-page__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .search-page__input {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    min-height: 44px;
+    padding: 0.5rem 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 1rem;
+  }
+  .search-page__input::placeholder {
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+  /* 隐藏 WebKit 自带的清除叉：它与右侧提交按钮挤在一起，且无法定制 */
+  .search-page__input::-webkit-search-cancel-button {
+    display: none;
+  }
+  .search-page__submit {
+    flex: 0 0 auto;
+    padding-inline: 1.5rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  /* 类型标签：胶囊，当前项品牌绿实心。44px 触摸目标。 */
+  .search-page__types {
+    margin-block: 1.5rem 1.25rem;
+  }
+  .search-page__types-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .search-page__type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.4rem 1.1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: inherit;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+  .search-page__type:hover {
+    border-color: var(--color-brand-accent);
+    color: var(--color-brand);
+  }
+  .search-page__type[aria-current='page'] {
+    border-color: transparent;
+    background-color: var(--color-brand);
+    /* 用背景色作前景色：Noir 下品牌是亮 lime，白字压上去不达 AA */
+    color: var(--color-background);
+  }
+
+  /* 分组头 */
+  .search-page__group + .search-page__group {
+    margin-block-start: 2.75rem;
+  }
+  .search-page__group-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    padding-block-end: 0.75rem;
+    margin-block-end: 1.25rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+  .search-page__group-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .search-page__group-count {
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
+    color: var(--color-brand);
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  /* 商品网格：minmax(0, 1fr) 从源头掐断 min-content 传导（不是靠 overflow 裁） */
+  .search-page__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .search-page__grid-item {
+    min-inline-size: 0;
+  }
+  @media (min-width: 750px) {
+    .search-page__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1280px) {
+    .search-page__grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  /* 文章 / 页面行卡：缩略图 + 类型标签 + 标题 + 两行摘要。
+     整卡可点、不额外放行尾箭头（同屏箭头总数要克制，见 AGENTS §6）。 */
+  .search-page__content-list {
+    display: grid;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .search-page__content-link {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 12px;
+    background-color: var(--color-background);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .search-page__content-link:hover {
+    border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+    box-shadow: var(--card-hover-shadow);
+    transform: translateY(var(--card-hover-lift));
+  }
+  .search-page__content-image {
+    width: 88px;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+  }
+  .search-page__content-image--empty {
+    display: grid;
+    place-items: center;
+    color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  }
+  .search-page__content-image--empty svg {
+    width: 28px;
+    height: 28px;
+  }
+  .search-page__content-text {
+    display: grid;
+    gap: 0.2rem;
+    min-inline-size: 0;
+  }
+  .search-page__content-type {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-brand);
+  }
+  .search-page__content-title {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .search-page__content-excerpt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--color-foreground-muted);
+  }
+  /* highlight filter 输出 <strong class="highlight">，不自带样式 */
+  .search-page__content-title .highlight,
+  .search-page__content-excerpt .highlight {
+    padding-inline: 0.1em;
+    border-radius: 3px;
+    background-color: color-mix(in srgb, var(--color-brand) 14%, transparent);
+    color: inherit;
+    font-weight: 700;
+  }
+
+  /* 分页：与集合页同款白圆按钮，当前页品牌绿实心 */
+  .search-page__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-block-start: 2rem;
+  }
+  .search-page__pagination-nav,
+  .search-page__pagination-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: inherit;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .search-page__pagination a:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+  .search-page__pagination [aria-disabled='true'] {
+    opacity: 0.35;
+  }
+  .search-page__pagination [aria-current='page'] {
+    border-color: transparent;
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+  .search-page__pagination-gap {
+    min-width: 24px;
+    text-align: center;
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+
+  /* 空态：比集合页的虚线框更进一步，给可执行的下一步 */
+  .search-page__empty {
+    display: grid;
+    justify-items: center;
+    gap: 0.65rem;
+    margin-block-start: 1.75rem;
+    padding: clamp(2rem, 6vw, 3.5rem) 1.25rem;
+    border: 1px dashed color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: 20px;
+    text-align: center;
+  }
+  .search-page__empty-icon {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-block-end: 0.35rem;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
+    color: var(--color-brand);
+  }
+  .search-page__empty-icon svg {
+    width: 30px;
+    height: 30px;
+  }
+  .search-page__empty-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+  .search-page__empty-body {
+    max-inline-size: 46ch;
+    font-size: 0.92rem;
+    color: var(--color-foreground-muted);
+  }
+  .search-page__tips {
+    display: grid;
+    gap: 0.3rem;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.85rem;
+    color: var(--color-foreground-muted);
+  }
+  .search-page__tip::before {
+    content: '·';
+    margin-inline-end: 0.5rem;
+    color: var(--color-brand);
+  }
+  .search-page__empty-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-block-start: 0.85rem;
+    padding-inline: 1.5rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  /* 热门集合 / 起始态入口 */
+  .search-page__popular {
+    margin-block-start: clamp(2rem, 5vw, 3rem);
+  }
+  .search-page__popular-title {
+    margin-block-end: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .search-page__popular-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 750px) {
+    .search-page__popular-list {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .search-page__popular-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 64px;
+    padding: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 12px;
+    background-color: var(--color-background);
+    color: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .search-page__popular-link:hover {
+    border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+    box-shadow: var(--card-hover-shadow);
+    transform: translateY(var(--card-hover-lift));
+  }
+  .search-page__popular-image {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  .search-page__popular-image--empty {
+    display: grid;
+    place-items: center;
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+    color: var(--color-brand);
+  }
+  .search-page__popular-image--empty svg {
+    width: 24px;
+    height: 24px;
+  }
+  .search-page__popular-name {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* 窄栏：搜索条改圆角矩形，给按钮和输入留足空间，胶囊不会挤成球 */
+  @media (max-width: 480px) {
+    .search-page__field {
+      padding-inline-start: 0.75rem;
+      border-radius: var(--style-border-radius-inputs);
+    }
+    .search-page__submit {
+      padding-inline: 1rem;
+    }
+    .search-page__content-link {
+      grid-template-columns: 64px minmax(0, 1fr);
+      gap: 0.75rem;
+    }
+    .search-page__content-image {
+      width: 64px;
+    }
+  }
+
+  .search-page a:focus-visible,
+  .search-page button:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .search-page__field,
+    .search-page__type,
+    .search-page__content-link,
+    .search-page__popular-link {
+      transition: none;
+    }
+    .search-page__content-link:hover,
+    .search-page__popular-link:hover {
+      transform: none;
+    }
   }
 {% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.search",
-  "settings": []
+  "settings": [
+    {
+      "type": "range",
+      "id": "results_per_page",
+      "min": 8,
+      "max": 24,
+      "step": 4,
+      "default": 12,
+      "label": "t:sections.search.settings.results_per_page",
+      "info": "t:sections.search.settings.results_per_page_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_quick_add",
+      "default": true,
+      "label": "t:sections.search.settings.show_quick_add"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_specs",
+      "default": true,
+      "label": "t:sections.search.settings.show_specs",
+      "info": "t:sections.search.settings.show_specs_info"
+    }
+  ],
+  "presets": [
+    { "name": "t:general.search" }
+  ]
 }
 {% endschema %}
