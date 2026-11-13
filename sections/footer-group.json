@@ -24,12 +24,16 @@
         "menu": {
           "type": "menu",
           "settings": {
-            "menu": "footer"
+            "menu": "footer",
+            "heading": ""
           }
         },
         "support_text": {
           "type": "text",
-          "settings": {}
+          "settings": {
+            "heading": "",
+            "richtext": ""
+          }
         },
         "contact": {
           "type": "contact",
@@ -101,6 +105,7 @@
         "localization"
       ],
       "settings": {
+        "background_image": "shopify://shop_images/footer-bg_webp.webp",
         "show_payment_icons": true
       }
     }
