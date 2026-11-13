@@ -136,10 +136,6 @@
                     {{- 'icon-leaf.svg' | inline_asset_content -}}
                   </span>
                 {%- endif -%}
-
-                <span class="collections-list__count">
-                  {{- 'navigation.products_count' | t: count: collection.all_products_count -}}
-                </span>
               </span>
 
               {%- comment -%}
@@ -155,6 +151,16 @@
                     {{- collection.description | strip_html | truncatewords: 20 -}}
                   </p>
                 {%- endif -%}
+
+                {%- comment -%}
+                  工具数压在卡底（margin-block-start: auto），不是压在图上：
+                  手机两列时卡宽 145px，一枚"11 products"胶囊要占掉近一半，
+                  比标题还抢眼；钉在卡底后同排卡片计数对齐，任何断点都成立，
+                  也不必为压在照片上的文字另做对比度兜底。
+                {%- endcomment -%}
+                <p class="collections-list__count">
+                  {{- 'navigation.products_count' | t: count: collection.all_products_count -}}
+                </p>
               </div>
             </a>
           </li>
@@ -421,21 +427,16 @@
     height: 34px;
   }
 
-  /* 计数胶囊：压在照片上，但底色取页面底色而非白/黑硬编码 ——
-     Noir 下自动变深底浅字，对比度与正文同级（前景/背景基准对）。 */
+  /* 工具数：钉在卡底（margin-block-start: auto），同排卡片计数落在同一条基线上。
+     与描述的区别靠字号 + 不换行，而不是靠颜色分层（两者都是次级信息）。 */
   .collections-list__count {
-    position: absolute;
-    inset-block-end: 0.5rem;
-    inset-inline-start: 0.5rem;
-    padding: 0.1rem 0.45rem;
-    border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-background) 94%, transparent);
-    color: var(--color-foreground);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    line-height: 1.6;
+    margin-block-start: auto;
+    padding-block-start: 0.45rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
 
   .collections-list__body {
