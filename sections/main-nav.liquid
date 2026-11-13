@@ -87,34 +87,28 @@
         Zone 0: logo + brand name. Links home. The image is decorative
         (alt="") because the visible brand text already names the link.
 
-        2026-10-21 两处修正：
-        1. 没有 logo 时**不渲染 img**，只留品牌名。旧注释说"回落到内置的
-           logo_webp.webp"，但那段代码从来没写过——`logo_src` 只在 if 里 assign，
-           商家清空 logo 后会输出 `<img src="">`（一个 40×40 的破图框）。
-           不回落内置资源是刻意的：assets/logo_webp.webp 是 156 KB 原图，
-           `image_url` 对 assets 无效、无法缩放，为一个 40px 图标拉 156 KB 不值。
-        2. width/height 用图片**真实固有尺寸**，不再写死 40×40。尺寸由 CSS 收
-           （block-size 固定、inline-size 按比例），所以任何比例的 logo 都不会被压扁；
-           写死 40×40 会让非方形 logo 变形，并被 Lighthouse image-aspect-ratio 判失败。
+        2026-11-12: the logo now comes from the GLOBAL Brand settings
+        (settings.logo / settings.logo_dark), not from this section. The
+        section-level image_picker was removed so merchants have one place
+        to change it. `snippets/brand-logo.liquid` picks the dark-background
+        variant from the skeleton color and outputs nothing when no logo is
+        configured — this <a> then falls back to the plain brand name.
+
+        No bundled theme logo fallback, on purpose: assets/logo_webp.webp is
+        a 156 KB original, image_url cannot resize assets, and pulling 156 KB
+        for a 40px icon is wasteful. Dimensions stay intrinsic (image_tag)
+        and CSS pins block-size only, so a wide wordmark is never squashed
+        into a square (Lighthouse image-aspect-ratio).
       {%- endcomment -%}
       <a class="main-nav__logo" href="{{ routes.root_url }}">
-        {%- if logo_image != blank -%}
-          <img
-            class="main-nav__logo-img"
-            src="{{ logo_image | image_url: width: 160 }}"
-            srcset="
-              {{- logo_image | image_url: width: 80 }} 80w,
-              {{- logo_image | image_url: width: 120 }} 120w,
-              {{- logo_image | image_url: width: 160 }} 160w,
-              {{- logo_image | image_url: width: 240 }} 240w
-            "
-            sizes="40px"
-            alt=""
-            width="{{ logo_image.width }}"
-            height="{{ logo_image.height }}"
-            loading="eager"
-          >
-        {%- endif -%}
+        {% render 'brand-logo',
+          logo_class: 'main-nav__logo-img',
+          logo_width: 160,
+          logo_widths: '80, 120, 160, 240',
+          logo_sizes: '40px',
+          logo_alt: '',
+          logo_loading: 'eager'
+        %}
         <span class="main-nav__brand">{{ brand_name }}</span>
       </a>
 
