@@ -134,6 +134,15 @@ class NavPill extends HTMLElement {
              清掉其它组的 is-open，避免从 A 划到 B 时 A 残留展开 */
           if (item.classList.contains('main-nav__item--group')) {
             this._openGroup(item);
+          } else {
+            /* BUG-068（2026-11-12）：hover 到非 group 的一级项（普通下拉 / 叶子链接）
+               必须立即撤掉所有 group 的 is-open。is-open 是不依赖 :hover 的持久展开态，
+               原先只有两条清理路径——_openGroup() 的互斥清理（仅 group→group）和
+               _scheduleClose()（仅 mouseleave 整个 list 时排期）。
+               group A → Support 下拉全程都在 list 内：既不触发 mouseleave，
+               也不进 _openGroup，而 handler 开头的 _cancelClose() 还会取消上一轮
+               挂起的关闭 ⇒ A 的 mega 恒开，Support 的下拉叠在它上面。 */
+            this._closeGroups();
           }
         }
       },
@@ -155,7 +164,14 @@ class NavPill extends HTMLElement {
           this._moveMega(tab, true);
         }
         const item = event.target.closest('.main-nav__item');
-        if (item && this.contains(item)) this._move(item);
+        if (item && this.contains(item)) {
+          this._move(item);
+          /* 键盘路径同 BUG-068：焦点落到非 group 的一级项时，清掉鼠标路径
+             残留在 group 上的 is-open（group 的 :focus-within 已随焦点移走，
+             但 is-open 不会自己消失）。焦点在 group 内（含其 mega 面板后代）时
+             closest() 仍返回该 group li，不会误关。 */
+          if (!item.classList.contains('main-nav__item--group')) this._closeGroups();
+        }
       },
       { signal }
     );
