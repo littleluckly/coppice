@@ -1,6 +1,13 @@
 {% comment %}
   Blog posts — 首页选购指南引流（task-index T-2.5，pages-ui §2）。
-  文章块 ×3：图（lazy，缺图退化纯文字不裂版）+ 标题 + 日期 + 摘要。
+  文章块 ×3：左图右文行卡 + 标题 + 摘要 + 阅读更多。
+
+  2026-11-12 刘工：图位改为**恒定存在**。原实现只在 article.image 非空时输出
+  media，演示店多数博文没配图 ⇒ 三张卡里两三张是纯文字灰卡，看起来完全不像图文卡。
+  现在缺图一律用 icon-leaf.svg 占位，口径照抄 sections/search.liquid 的博文默认图
+  （品牌淡底 + 55% 品牌色绿叶），整块与搜索页行卡是同一套视觉语言。
+  卡片 hover 走全站签名 --card-hover-shadow / --card-hover-lift，配色全部从
+  --color-* 派生（原 rgb(0 0 0 / x) 硬编码在 Noir 深底上摘要几乎不可读）。
 {% endcomment %}
 
 {%- liquid
@@ -25,21 +32,23 @@
           style="--reveal-delay: {{ forloop.index0 | times: 80 }}ms"
         >
           <a class="blog-posts__card" href="{{ article.url }}">
-            {%- if article.image != blank -%}
-              <span class="blog-posts__media">
+            <span class="blog-posts__media">
+              {%- if article.image != blank -%}
                 {{
                   article.image
                   | image_url: width: 600
                   | image_tag:
                     widths: '300, 600',
-                    sizes: '(min-width: 750px) 20vw, 90vw',
-                    width: article.image.width,
-                    height: article.image.height,
+                    sizes: '(min-width: 750px) 14vw, 36vw',
                     loading: 'lazy',
                     alt: article.image.alt
                 }}
-              </span>
-            {%- endif -%}
+              {%- else -%}
+                <span class="blog-posts__media-placeholder" aria-hidden="true">
+                  {{- 'icon-leaf.svg' | inline_asset_content -}}
+                </span>
+              {%- endif -%}
+            </span>
             <span class="blog-posts__body">
               <h3 class="blog-posts__title">{{ article.title | escape }}</h3>
               {%- if article.excerpt != blank -%}
