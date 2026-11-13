@@ -452,6 +452,14 @@
     line-height: 1.45;
     color: var(--color-foreground-muted);
   }
+  /* 手机两列时卡内容宽约 145px，两行描述只能塞下 20 来个字符，
+     断在半句上的省略号比没有更碍眼 —— 窄断点整段不显示，
+     信息靠标题 + 计数胶囊（集合描述在集合页本身还有一席之地）。 */
+  @media (max-width: 749px) {
+    .collections-list__card-desc {
+      display: none;
+    }
+  }
 
   /* ---------- 空态 ---------- */
 
