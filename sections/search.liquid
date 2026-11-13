@@ -292,7 +292,12 @@
     {%- endif -%}
   </div>
 
-  {%- if has_results -%}
+  {%- comment -%}
+    工具条的渲染条件是 search.performed，**不是** has_results（2026-11-12 修复）：
+    切到某个 0 结果的类型（如 Pages）时 results_count 为 0，若跟着结果一起隐藏，
+    用户就没有标签可以切回 All，等于被困在空结果页。
+  {%- endcomment -%}
+  {%- if search.performed -%}
     <div class="search-page__toolbar">
       <nav class="search-page__types" aria-label="{{ 'search.type_label' | t }}">
         <ul class="search-page__types-list" role="list">
