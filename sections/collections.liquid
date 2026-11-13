@@ -433,17 +433,23 @@
     margin-block-start: auto;
     padding-block-start: 0.45rem;
     font-size: 0.75rem;
+    font-weight: 500;
     line-height: 1.4;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+    /* 次级文字一律走 --color-foreground-muted（70% 前景，AA 达标）。
+       不要在这里写 60%：那是 3.69:1，低于 AA 对小字的要求。 */
+    color: var(--color-foreground-muted);
   }
 
   .collections-list__body {
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: 0.2rem;
     min-inline-size: 0;
+    /* flex: 1 必须有：卡片被 grid 拉到等高后，多出来的高度默认留在 body 之外，
+       计数（margin-block-start: auto）就钉不到卡底，同排计数会参差。 */
     padding: 0.7rem 0.85rem 0.85rem;
   }
   .collections-list__card-title {
