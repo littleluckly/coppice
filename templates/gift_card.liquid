@@ -12,6 +12,12 @@
     {% # Social, title, etc. %}
     {% render 'meta-tags' %}
 
+    {% # Keep the same favicon as the storefront; this page uses layout none. %}
+    {%- if settings.favicon != blank -%}
+      <link rel="icon" href="{{ settings.favicon | image_url: width: 32, height: 32, crop: 'center' }}" sizes="32x32">
+      <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180, crop: 'center' }}">
+    {%- endif -%}
+
     {% style %}
       main {
         text-align: center;
