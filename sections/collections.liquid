@@ -379,12 +379,17 @@
     }
   }
 
-  /* 媒体盒：4:3 定比 + 图片绝对定位铺满。图片若留在流里，固有宽高比会参与
-     行高计算（use-case-grid 7:3→5:5 的教训），同排卡片会被拉得忽高忽矮。 */
+  /* 媒体盒：1:1 定比 + 图片绝对定位铺满。图片若留在流里，固有宽高比会参与
+     行高计算（use-case-grid 7:3→5:5 的教训），同排卡片会被拉得忽高忽矮。
+     为什么是 1:1 而不是 4:3：`collection.featured_image` 在没有集合图时回落到
+     **该集合第一个商品的图**，而商品图（尤其抠底图）几乎都是方的 ——
+     4:3 的 cover 会把方形抠底图上下裁掉一截，产品被切头切脚；
+     1:1 对方图零裁切，横幅实景图只是裁两侧，观感无损。
+     与 product-card 的媒体盒同比例，两套卡在同一屏里也不会打架。 */
   .collections-list__media {
     position: relative;
     display: block;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1;
     overflow: hidden;
     border-radius: 8px;
     background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
