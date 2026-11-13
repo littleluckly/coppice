@@ -17,10 +17,10 @@
 {%- if section.blocks.size > 0 -%}
   <div class="use-case-grid">
     {%- if section.settings.heading != blank -%}
-      <h2 class="use-case-grid__heading">{{ section.settings.heading | escape }}</h2>
+      <h2 class="use-case-grid__heading" data-reveal>{{ section.settings.heading | escape }}</h2>
     {%- endif -%}
     {%- if section.settings.subheading != blank -%}
-      <p class="use-case-grid__subheading">{{ section.settings.subheading | escape }}</p>
+      <p class="use-case-grid__subheading" data-reveal>{{ section.settings.subheading | escape }}</p>
     {%- endif -%}
 
     <ul class="use-case-grid__grid" role="list">
@@ -33,6 +33,8 @@
         -%}
         <li
           class="use-case-grid__item{% if block.settings.image == blank %} use-case-grid__item--no-image{% endif %}"
+          data-reveal
+          style="--reveal-delay: {{ forloop.index0 | times: 80 }}ms"
           {{ block.shopify_attributes }}
         >
           {%- if block.settings.image != blank -%}
