@@ -1224,6 +1224,16 @@
     font-weight: 600;
     text-decoration: none;
   }
+  .search-page__empty-all {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-block-start: 0.15rem;
+    color: var(--color-brand);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 
   /* 热门集合入口 */
   .search-page__popular {
@@ -1382,6 +1392,7 @@
   @media (prefers-reduced-motion: reduce) {
     .search-hero__field,
     .search-hero__submit,
+    .search-hero__clear,
     .search-hero__suggestion,
     .search-page__type,
     .search-page__category-link,
