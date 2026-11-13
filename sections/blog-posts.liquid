@@ -51,10 +51,15 @@
             </span>
             <span class="blog-posts__body">
               <h3 class="blog-posts__title">{{ article.title | escape }}</h3>
+              {%- comment -%}
+                按词截断（与 search.liquid 的 24 词同口径），不按字符 truncate: 90 ——
+                字符截断会把 "matter" 切成 "matt..."，2 行 clamp 后特别扎眼。
+                视觉上最终由 CSS 的 2 行 clamp 收口，这里只限制 DOM 文本长度。
+              {%- endcomment -%}
               {%- if article.excerpt != blank -%}
-                <p class="blog-posts__excerpt">{{ article.excerpt | strip_html | truncate: 90 }}</p>
+                <p class="blog-posts__excerpt">{{ article.excerpt | strip_html | truncatewords: 24 }}</p>
               {%- elsif article.content != blank -%}
-                <p class="blog-posts__excerpt">{{ article.content | strip_html | truncate: 90 }}</p>
+                <p class="blog-posts__excerpt">{{ article.content | strip_html | truncatewords: 24 }}</p>
               {%- endif -%}
               <span class="blog-posts__read-more">{{ 'sections.blog_posts.read_more' | t }}</span>
             </span>
