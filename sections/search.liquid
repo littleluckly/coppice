@@ -553,6 +553,12 @@
     padding: 0;
     list-style: none;
   }
+  /* 宽屏两列：单列会被拉到 1300px+，一段两行摘要横在中间很难读 */
+  @media (min-width: 990px) {
+    .search-page__content-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
   .search-page__content-link {
     display: grid;
     grid-template-columns: 88px minmax(0, 1fr);
@@ -573,6 +579,9 @@
   }
   .search-page__content-image {
     width: 88px;
+    /* image_tag 会输出 width/height HTML 属性，那个 height 是 presentational hint；
+       不显式覆盖就会压掉 aspect-ratio，图被拉成素材的原生比例。 */
+    height: auto;
     aspect-ratio: 4 / 3;
     object-fit: cover;
     border-radius: 8px;
