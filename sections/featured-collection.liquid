@@ -36,7 +36,7 @@
   <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
   {{ 'product-card.css' | asset_url | stylesheet_tag }}
   <div class="featured-collection">
-    <div class="featured-collection__header">
+    <div class="featured-collection__header" data-reveal>
       <div class="featured-collection__heading-group">
         {%- if section.settings.heading != blank -%}
           <h2 class="featured-collection__heading">{{ section.settings.heading | escape }}</h2>
@@ -58,7 +58,11 @@
       style="--featured-columns: {{ card_count }}"
     >
       {%- for product in card_collection.products limit: limit -%}
-        <li class="featured-collection__item">
+        <li
+          class="featured-collection__item"
+          data-reveal
+          style="--reveal-delay: {{ forloop.index0 | times: 80 }}ms"
+        >
           {%- liquid
             assign card_lazy = true
             assign card_width = false
@@ -186,6 +190,7 @@
       "max": 6,
       "step": 1,
       "label": "t:labels.products_to_show",
+      "info": "t:sections.featured_collection.labels.products_to_show_info",
       "default": 6
     },
     {

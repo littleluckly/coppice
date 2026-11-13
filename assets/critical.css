@@ -382,33 +382,47 @@ body {
   }
 
 /**
- * 滚动入场（产品页区块，2026-10-28 刘工要求：去掉 tab，改垂直平铺 + 上滑入场）。
+ * 滚动入场（首页 + 产品页通用；2026-10-28 立项，2026-11-12 扩展到首页并支持卡片级联）。
  *
  * **无 JS 不隐藏**：初始隐藏态挂在 `[data-reveal-state='pending']` 上，而该属性只由
  * assets/reveal-on-scroll.js 写入 —— 脚本没跑时区块就是正常显示的。
  * 只动 opacity / transform，不动盒模型 → 零 CLS。
  * 时长与缓动刻意偏"沉"（0.5s / 先快后缓），比线性 0.3s 更像内容自己浮上来。
+ *
+ * **为什么用 animation 而不是 transition**：首页卡片自身带 hover 过渡
+ * （use-case 的 grid-template-columns / translate / box-shadow，商品卡的 hover 态），
+ * 一条全局 `transition` 简写会把那些声明整个覆盖掉，入场播完 hover 就变硬切。
+ * animation 与 transition 是两套独立机制，互不抢占。
+ * fill-mode 用 backwards：级联延迟期间保持首帧隐藏，播完不留终态，
+ * 元素自然回到自己的默认样式，不长期占着合成层。
  */
 [data-reveal-state='pending'] {
   opacity: 0;
   transform: translateY(24px);
-  will-change: opacity, transform;
 }
 [data-reveal-state='shown'] {
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1),
-    transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation: reveal-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+  /* var() 必须带兜底，且单独写长属性：解析不到时只丢 delay，
+     不会连 animation-name 一起失效（那会变成硬切，还不报错）。 */
+  animation-delay: var(--reveal-delay, 0ms);
 }
-/* 系统要求减少动效 → 直接给终态，连过渡都不注册 */
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* 系统要求减少动效 → 直接给终态，动画与级联延迟都不注册 */
 @media (prefers-reduced-motion: reduce) {
   [data-reveal-state='pending'],
   [data-reveal-state='shown'] {
     opacity: 1;
     transform: none;
-    transition: none;
-    will-change: auto;
+    animation: none;
   }
 }
 

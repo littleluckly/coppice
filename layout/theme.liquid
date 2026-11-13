@@ -78,8 +78,9 @@
     <script src="{{ 'compare.js' | asset_url }}" defer></script>
 
     {% comment %}
-      滚动入场动画（产品页区块）：多个 section 共用同一套状态机，挂在 layout 上只引一次；
-      各 section 只负责输出 `data-reveal`。样式在 critical.css，见其中的注释说明。
+      滚动入场动画（首页 + 产品页区块）：多个 section 共用同一套状态机，挂在 layout 上只引一次；
+      各 section 只负责输出 `data-reveal`（卡片另输出 `--reveal-delay` 做依次入场）。
+      首屏 / hero 不挂，样式在 critical.css，见其中的注释说明。
     {% endcomment %}
     <script src="{{ 'reveal-on-scroll.js' | asset_url }}" defer></script>
 
@@ -129,7 +130,7 @@
       回到顶部按钮（2026-10-30）：全站浮层，同上——不能跟着某个 section 走。
       放在最后：浮层 DOM 靠后，无 JS 时它默认隐藏，不影响内容顺序。
     {% endcomment %}
-    {% comment %} {% render 'back-to-top' %} {% endcomment %}
+    {% render 'back-to-top' %}
 
     {% comment %}
       购物车抽屉（2026-11-02）：全站唯一，挂 layout 而非某个 section ——
