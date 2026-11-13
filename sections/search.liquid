@@ -323,21 +323,24 @@
           </li>
         </ul>
       </nav>
-      <view-toggle class="view-toggle" data-view-toggle>
-        <button
-          type="button"
-          class="view-toggle__button"
-          aria-pressed="false"
-          aria-label="{{ 'collections.view.list_label' | t }}"
-        >
-          <span class="view-toggle__icon view-toggle__icon--grid" aria-hidden="true">
-            {{- 'icon-view-grid.svg' | inline_asset_content -}}
-          </span>
-          <span class="view-toggle__icon view-toggle__icon--list" aria-hidden="true">
-            {{- 'icon-view-list.svg' | inline_asset_content -}}
-          </span>
-        </button>
-      </view-toggle>
+      {%- comment -%} 视图切换只在真有结果时才有意义，但类型标签必须恒在 {%- endcomment -%}
+      {%- if has_results -%}
+        <view-toggle class="view-toggle" data-view-toggle>
+          <button
+            type="button"
+            class="view-toggle__button"
+            aria-pressed="false"
+            aria-label="{{ 'collections.view.list_label' | t }}"
+          >
+            <span class="view-toggle__icon view-toggle__icon--grid" aria-hidden="true">
+              {{- 'icon-view-grid.svg' | inline_asset_content -}}
+            </span>
+            <span class="view-toggle__icon view-toggle__icon--list" aria-hidden="true">
+              {{- 'icon-view-list.svg' | inline_asset_content -}}
+            </span>
+          </button>
+        </view-toggle>
+      {%- endif -%}
     </div>
   {%- endif -%}
 
