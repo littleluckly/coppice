@@ -679,7 +679,9 @@
     display: grid;
     justify-items: center;
     gap: 0.65rem;
+    max-inline-size: 52rem;
     margin-block-start: 1.75rem;
+    margin-inline: auto;
     padding: clamp(2rem, 6vw, 3.5rem) 1.25rem;
     border: 1px dashed color-mix(in srgb, var(--color-foreground) 20%, transparent);
     border-radius: 20px;
@@ -796,7 +798,8 @@
   }
   .search-page__popular-name {
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    /* break-word 只在单词本身超宽时才断，不像 anywhere 会把 Chainsaws 拆成两段 */
+    overflow-wrap: break-word;
   }
 
   /* 窄栏：搜索条改圆角矩形，给按钮和输入留足空间，胶囊不会挤成球 */
