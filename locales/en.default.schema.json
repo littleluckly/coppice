@@ -100,6 +100,7 @@
       "name": "Platform cards",
       "defaults": {
         "heading": "Shop by platform",
+        "subheading": "From gas to battery platforms, start with the power system that fits how you work.",
         "view_all_label": "View all platforms"
       },
       "blocks": {
@@ -115,7 +116,8 @@
     "use_case_grid": {
       "name": "Use case grid",
       "defaults": {
-        "heading": "Shop by yard size"
+        "heading": "Shop by yard size",
+        "subheading": "From small yards to large properties, we have the right equipment for your space."
       },
       "blocks": {
         "use_case": {
@@ -126,7 +128,8 @@
             "button_label": "Shop walk-behind mowers"
           },
           "labels": {
-            "collection_info": "Links to the collection that matches this yard type."
+            "collection_info": "Links to the collection that matches this yard type.",
+            "button_info": "Keep the label short. In the default 7:3 state the text column is narrow, so long labels wrap."
           }
         }
       },
@@ -147,6 +150,7 @@
       "name": "Featured collection",
       "defaults": {
         "heading": "Featured products",
+        "subheading": "A focused selection of machines, with the key specs up front.",
         "view_all_label": "View all"
       },
       "headers": {
@@ -163,7 +167,8 @@
     "blog_posts": {
       "name": "Blog posts",
       "defaults": {
-        "heading": "Buying guides"
+        "heading": "Buying guides",
+        "subheading": "Straightforward guides to choosing the right machine and keeping it running."
       },
       "read_more": "Read guide"
     },
@@ -360,6 +365,64 @@
         "enable_personalized": "Match recommendations to the cart",
         "enable_personalized_info": "Tries product-specific complementary recommendations first and falls back to the collection below. Requires the merchant to configure complementary products in Search & Discovery.",
         "collection_info": "Fallback list. Shown when personalised recommendations are unavailable — point it at the accessories collection so the cart keeps selling consumables."
+      }
+    },
+    "footer": {
+      "name": "Footer",
+      "blocks": {
+        "brand": {
+          "name": "Brand"
+        },
+        "menu": {
+          "name": "Menu"
+        },
+        "text": {
+          "name": "Text"
+        },
+        "contact": {
+          "name": "Contact"
+        },
+        "social": {
+          "name": "Social media"
+        },
+        "newsletter": {
+          "name": "Newsletter"
+        },
+        "localization": {
+          "name": "Country and language"
+        },
+        "custom_liquid": {
+          "name": "Custom Liquid"
+        }
+      },
+      "labels": {
+        "image": "Background image",
+        "image_info": "Optional landscape photo shown as a full-width band across the top of the footer. Content always sits below it, so no text is placed over the photo. Leave empty for a plain footer.",
+        "logo": "Logo",
+        "logo_info": "Leave empty to use the store name as the wordmark.",
+        "tagline": "Tagline",
+        "menu": "Footer menu",
+        "menu_info": "Each top-level link that has sub-links becomes its own column, titled with the top-level link. Leaving the menu empty hides the column group.",
+        "menu_heading": "Heading",
+        "menu_heading_info": "Only used for top-level links that have no sub-links. Leave empty to skip the heading.",
+        "text": "Text",
+        "phone": "Phone",
+        "email": "Email",
+        "contact_page": "Contact page",
+        "platform": "Platform",
+        "social_url": "Profile URL",
+        "social_url_info": "Leave empty to hide this icon. The theme never fills in a URL for you.",
+        "custom_liquid": "Liquid",
+        "custom_liquid_info": "Runs as Liquid, not rich text. Use it for a snippet or a short app-free block of markup."
+      },
+      "options": {
+        "platform": {
+          "facebook": "Facebook",
+          "instagram": "Instagram",
+          "youtube": "YouTube",
+          "tiktok": "TikTok",
+          "pinterest": "Pinterest"
+        }
       }
     }
   },

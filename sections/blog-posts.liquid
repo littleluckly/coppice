@@ -13,6 +13,9 @@
     {%- if section.settings.heading != blank -%}
       <h2 class="blog-posts__heading">{{ section.settings.heading | escape }}</h2>
     {%- endif -%}
+    {%- if section.settings.subheading != blank -%}
+      <p class="blog-posts__subheading">{{ section.settings.subheading | escape }}</p>
+    {%- endif -%}
 
     <ul class="blog-posts__grid" role="list">
       {%- for article in blog_source.articles limit: limit -%}
@@ -131,6 +134,12 @@
       "id": "heading",
       "label": "t:labels.heading",
       "default": "t:sections.blog_posts.defaults.heading"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "t:labels.subheading",
+      "default": "t:sections.blog_posts.defaults.subheading"
     },
     {
       "type": "range",

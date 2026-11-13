@@ -13,8 +13,94 @@
   "sections": {
     "footer": {
       "type": "footer",
+      "blocks": {
+        "brand": {
+          "type": "brand",
+          "settings": {
+            "tagline": "Built for the backyard.",
+            "description": "<p>Powerful tools. A greener tomorrow.<br/>Together, we can make outdoor life better.</p>"
+          }
+        },
+        "menu": {
+          "type": "menu",
+          "settings": {
+            "menu": "footer"
+          }
+        },
+        "support_text": {
+          "type": "text",
+          "settings": {}
+        },
+        "contact": {
+          "type": "contact",
+          "settings": {
+            "heading": "Contact",
+            "phone": "(555) 010-0182",
+            "email": "support@northbark.example",
+            "page": "shopify://pages/contact"
+          }
+        },
+        "social_facebook": {
+          "type": "social",
+          "settings": {
+            "platform": "facebook",
+            "url": ""
+          }
+        },
+        "social_instagram": {
+          "type": "social",
+          "settings": {
+            "platform": "instagram",
+            "url": ""
+          }
+        },
+        "social_youtube": {
+          "type": "social",
+          "settings": {
+            "platform": "youtube",
+            "url": ""
+          }
+        },
+        "social_tiktok": {
+          "type": "social",
+          "settings": {
+            "platform": "tiktok",
+            "url": ""
+          }
+        },
+        "social_pinterest": {
+          "type": "social",
+          "settings": {
+            "platform": "pinterest",
+            "url": ""
+          }
+        },
+        "newsletter": {
+          "type": "newsletter",
+          "settings": {
+            "heading": "",
+            "text": "Get the latest tips, deals and more."
+          }
+        },
+        "localization": {
+          "type": "localization",
+          "settings": {}
+        }
+      },
+      "block_order": [
+        "brand",
+        "menu",
+        "support_text",
+        "contact",
+        "social_facebook",
+        "social_instagram",
+        "social_youtube",
+        "social_tiktok",
+        "social_pinterest",
+        "newsletter",
+        "localization"
+      ],
       "settings": {
-        "menu": "",
         "show_payment_icons": true
       }
     }

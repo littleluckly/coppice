@@ -223,6 +223,42 @@ body {
 }
 
 /**
+ * 首页内容区块副标题 —— 四个区块共用的「全站签名」（2026-11-12 刘工）。
+ * platform-cards / use-case-grid / featured-collection / blog-posts 全部走这一套，
+ * 与 .btn-solid 同理：口径只写一处，改一处全站同步，不再各 section 自行发挥。
+ * 字色取 --color-foreground-muted（70% 前景，AA 达标），不硬编码色值。
+ */
+:is(
+  .platform-cards__subheading,
+  .use-case-grid__subheading,
+  .featured-collection__subheading,
+  .blog-posts__subheading
+) {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-foreground-muted);
+}
+
+/**
+ * 间距承接（2026-11-12 刘工：四个区块的「标题→副标题」「副标题→内容」要逐像素一致）。
+ * 上间距 0.25rem 由全站签名的 margin-top 统一给；下间距按结构分两路，结果都是 12px：
+ *   ① 无 View All 的 use-case / blog：由副标题自己的 margin-bottom 给
+ *      （use-case 的 grid margin-top 同为 0.75rem，相邻折叠后仍是 12px）；
+ *   ② 有 View All 的 platform / featured：副标题在 heading-group 内，下边距归零，
+ *      改由 header 的 margin-block-end: 0.75rem 给，否则 header 内会多出 12px 空白。
+ * blog 的 heading 原本带 0.75rem 下边距，有副标题时归零，避免双倍间距。
+ */
+.blog-posts__heading:has(+ .blog-posts__subheading) {
+  margin-block-end: 0;
+}
+/* 0,2,0 特异性压过上面 :is() 的 0,1,0；只对 group 内的副标题生效 */
+.platform-cards__heading-group .platform-cards__subheading,
+.featured-collection__heading-group .featured-collection__subheading {
+  margin-block-end: 0;
+}
+
+/**
  * Main landmark — the skip link target (see layout/theme.liquid).
  *
  * 这里刻意【不限宽、不加内边距】（2026-10-10 刘工）：

@@ -490,6 +490,69 @@
      · 命中 `div` / `span` / `a` / `button` / `p` ⇒ 默认就是 400，写 500 只是**无效声明**（不会变细，但作者以为存在的"半粗层级"从来没渲染出来）。
      剩下的 82 处需要逐条对照模板判断元素标签，**未批量清理，保持 Open**；不要一次性机械替换成 700——那会把卡片标题、按钮这类本该常规的文本整体加重一档。
 
+### BUG-065 · `assets/critical.css` 里带着未解决的合并冲突标记提交了：`.rte th` 的 `color` 声明被静默吞掉，theme check 报 0 offenses
+
+- **日期**：2026-11-07 ｜ **状态**：Fixed
+- **现象**：`git status` 显示 `UU assets/critical.css`（工作区处于未完成的合并中），文件 865–877 行留着 `<<<<<<< HEAD` / `=======` / `>>>>>>>`（三层嵌套，来自两次合并）。页面上没有立刻可见的异常——因为被吞掉的恰好是 `.rte th` 的颜色声明，而当时演示店只有浅色预设，回落到浏览器默认黑色（#000）与主题前景色（#333）肉眼几乎分不出。**在 Coppice Noir 下会直接看不见**：`#000` 压在 `#0F1012` 上。
+- **根因**：三件事叠加。
+  1. **合并冲突被当成"文件内容"留在工作区**。冲突来自「本地改 `.rte` 字重（BUG-064）」与「Shopify 后台主题编辑器回写的旧版本」两路修改；本地把 `font-weight: 500` 改成 700，后台那份还是 500，两边都改了同一行 ⇒ 冲突。
+  2. **CSS 的错误恢复让标记"看起来没坏"**。实测（无头 Chrome，同一段声明块分别带/不带标记，读 `getComputedStyle`）：带标记时 `font-weight` 仍是 **700**、`color` 变成 **rgb(0,0,0)**；不带标记时是 `700` / `rgb(51,51,51)`。机制是：`<<<<<<<` 是块内非法声明，解析器跳到下一个 `;` 后继续 → 第一条 `font-weight: 700` 生效；`=======` 同样非法，跳到下一个 `;` 时把**第二条 `font-weight: 700;` 一起吞掉**；`>>>>>>> abc123  color: #333;` 整段被当作一条非法声明丢弃 ⇒ **颜色没了**。因为块本身没断，后面的规则照常解析（同测试里 `.after-marker` 仍是 `flex`），所以整份样式表"大体正常"，只有被标记包住的那个块里、标记之后的声明会静默消失。
+  3. **静态检查完全没有拦**。实测：把标记注入一份主题副本后跑 `shopify theme check` → **77 files inspected with no offenses found**。theme check 解析 Liquid、schema、HTML 结构，但不解析 CSS 声明值的合法性。
+- **修复**：删掉三层标记，保留 HEAD 一侧（`font-weight: 700` + 那条"本主题没有 500"的注释），并把被吞掉的 `color: var(--color-foreground)` 显式写回。修完的内容与 `HEAD:assets/critical.css` **逐字节一致**（即 HEAD 里本来就是正确版本，冲突是这次进行中的合并把旧版本带回来的），索引里的 unmerged 条目随之清空（`git ls-files -u` 无输出）。⚠️ 但 `.git/MERGE_HEAD`（= `e40547d`）仍在，**这次合并本身还没收尾**，是否提交由刘工决定。
+- **预防**：
+  1. **动手写代码前先 `git status`，出现 `UU` / `AA` / `DU` 一律先解决冲突再往下做**——本次是写页脚时顺手撞见的，否则会带着一个已知损坏的文件继续开发。
+  2. **提交前跑一次全量标记扫描**（theme check 指望不上，见根因 3）：
+     ```
+     grep -rn '^\(<<<<<<<\|=======\|>>>>>>>\)' --include=*.css --include=*.js --include=*.liquid --include=*.json .
+     ```
+     命中即阻塞。`=======` 会误伤 Markdown 分隔线与 banner 注释，看路径判断。
+  3. **"theme check 0 offenses" 不等于"文件没坏"**。它的检查面是 Liquid / schema / HTML / 资源引用，**CSS 与 JS 的语义错误都在盲区**（JS 侧同理：`node --check` 只验语法，验不了运行时——见 MEMORY 的 `showToast is not defined`）。CSS 改动需要真渲染一次（无头 Chrome 建等价结构读 `getComputedStyle` 最省事）。
+  4. 后台主题编辑器（"Update from Shopify" 提交）与本地的改动**会撞在同一个文件上**。同一段时间内两边都改 `.rte` 这类全局样式时，先 `git pull` 再动，别等合并时才发现。
+
+### BUG-066 · 用 index/find 删一段 CSS 时把 `@media` 的闭合括号留在原地，页脚菜单列整片塌成一列（theme check 仍报 0 offenses）
+
+- **日期**：2026-11-08 ｜ **状态**：Fixed
+- **现象**：页脚 v3.0 改版中删掉一段 `@media (min-width: 750px) { .footer__brand-col { … } }` 覆盖后，
+  SHOP / SUPPORT / COMPANY 三列竖向叠成一列、挤在第一个轨道里。`shopify theme check` 依旧
+  **77 files inspected with no offenses found**；括号计数也"看着是平的"（443/443），因为多出来的
+  `}` 正好和被删掉的 `@media {` 配平了。
+- **根因**：删除用的是 `s[:start] + s[close:]`，`close` 取的是「`.footer__brand-col {` 之后第一个
+  `  }`」——那是**规则自己的**闭合括号，不是 `@media` 的；于是 `@media {` 的开头被删、
+  `@media` 的闭合 `}` 留下，成为游离的 `}`。
+  游离 `}` 让浏览器错误恢复，`.footer__columns` 的 `max-inline-size: 32rem` 与 `flex: 1 1 auto`
+  实际没生效 → 网格在**不确定宽度**下解析 `repeat(auto-fit, minmax(8rem, max-content))`，
+  `auto-fit` 退化成 1 条轨道。**括号总数平衡 ≠ 结构正确**，这是这次最坑的地方。
+- **修复**：删掉游离 `}`；复测 `getComputedStyle(.footer__columns).gridTemplateColumns`
+  = `128px 128px 128px`、宽度 512，视觉恢复三列。
+- **预防**：
+  1. **删 CSS 块一律按"括号配平"删**，不要用「下一个 `  }`」当终点：从块的起始 `{` 开始数层级，
+     数到归零为止。脚本里至少断言 `css.count('{') == css.count('}')` **并且**删前删后差值成对。
+  2. **括号平衡是必要条件，不是充分条件**。改完必须真渲染一次并量 **`gridTemplateColumns` /
+     `flex-basis` 这类计算结果**——游离括号不会报错、不会让总数失衡，只有布局会变。
+  3. 同类操作（删 `@media` / 删嵌套规则）优先整段替换成空字符串并保留外层选择器，
+     而不是按偏移切片。
+
+### BUG-067 · 箭头红线三犯：改版 use-case-grid 时照效果图重新加了卡内 CTA 箭头
+- **日期**：2026-11-12 ｜ **状态**：Fixed
+- **现象**：首页场景卡片改版（左图右文、默认 7:3 / hover 5:5 展开描述）时，
+  照参考效果图里的 "Shop Now →" 给 `.use-case-grid__link` 加了
+  `::after { content: '\2192' }`。刘工验收要求「去掉箭头」。
+  同一位置在 BUG-020 已被否过一次（当时卡内链接全带箭头、同屏 10 个），这是第三犯。
+- **根因**：把「参考效果图的视觉形式」当成了覆盖既有红线的授权；动这个 section 之前
+  没有先查 `dev-docs/bugs.md` 里关于它的历史决议。效果图是外部参考稿，
+  其中的箭头不进入本项目的箭头准则（AGENTS §6）。
+- **修复**：删除 `.use-case-grid__link::after` 整段规则。文案本身不含箭头（原本就是
+  伪元素），locale 与 `templates/index.json` 均无需改动。复核：该 section 已无
+  `content: '\2192'` / `&rarr;`；`shopify theme check` 77 文件 0 offenses；
+  无头 Chrome 三态 17 项断言全 PASS。
+- **预防**：
+  1. **动任一 section 前先跑** `grep -n "<section 名>" dev-docs/bugs.md`，
+     把命中的历史决议列进改动前提；命中红线的效果直接不做，而不是做完再问。
+  2. 参考稿与 AGENTS.md / bugs.md 冲突时以后者为准；确需破例必须先拿到刘工明确确认
+     **并同步改规范**，不能"先实现、再补例外"。
+  3. 新增 `content: '\2192'` 或 `&rarr;` 前，按 AGENTS §6 数同屏箭头总数并核对允许位置
+     （仅 View All 链接、行尾导航元素）；改完 `grep -n "2192\|rarr\|::after"` 复核产物。
+
 ## 记录模板（追加新 bug 用）
 
 ```

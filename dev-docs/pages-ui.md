@@ -90,24 +90,29 @@
 
 ### 1.2 `sections/footer-group.json`（各页底部，[G]）
 
-**职责**：售后承诺 + 耗材入口 + 订阅 + 社交 + 支付（SDD §4.2）。
+**职责**：品牌收口 + 售后承诺 + 耗材入口 + 订阅 + 国家/语言入口 + 社交 + 支付（SDD §4.2）。
+
+**版式**：品牌收口型（2026-11-07 刘工拍板，取代本节原「三栏 + 横条」线框；实现细则与取舍见 `task-footer.md` §0.3）。
 
 ```
-┌────────────────────────────────────┐
-│ 售后与保修 | 耗材分类链接 | 联系方式  │
-│ Newsletter 订阅表单                  │
-│ 🇺🇸 United States | USD | English ▾  │ ← 国家/货币/语言选择（#8 #9）
-│ 社交图标        │ Visa MC Amex PP… │ ← enabled_payment_types 全彩（#2 处）
-└────────────────────────────────────┘
+NORTHBARK                                       ← wordmark 一行 + 定位语
+├─ Shop / Support / Company / Contact            ← 菜单（一组一列）/ 文本 / 联系 / 社交
+├─ [email] Signup    Canada (CAD $)▾   English▾  ← newsletter + #8 #9（sub-footer 顶部）
+└─ © 2026 Northbark · Powered by Shopify  [Visa][MC]…  ← bottom bar
 ```
 
-| section | 职责 | blocks | 数据源 |
-| --- | --- | --- | --- |
-| footer-text | 售后/保修说明块 | 富文本块 ×N | settings |
-| footer-menu | 耗材/支持链接组 | 菜单块 ×N | linklists |
-| newsletter | 邮件订阅（#11） | — | `customer` 表单 |
-| localization | 国家/货币/语言选择（#8 #9，对齐官方 UX 指南） | — | `localization` 对象 |
-| social + payment | 社交图标；支付图标全彩 | — | settings / `shop.enabled_payment_types` |
+| block | 职责 | 数据源 |
+| --- | --- | --- |
+| brand | wordmark（logo 或 `shop.name`）+ 定位语 | settings |
+| menu | 页脚菜单；**一级项带子项则一项自成一列** | `footer` 菜单 |
+| text | 售后/保修说明（富文本，必须套 `.rte`） | settings |
+| contact | 电话 / 邮箱 / 联系页 | settings + `routes` |
+| social | 社交图标；URL 空则该图标不渲染 | settings |
+| newsletter | 邮件订阅（#11） | `customer` 表单 |
+| localization | 国家/货币/语言选择（#8 #9，对齐官方 UX 指南） | `localization` 对象 |
+| payment（section 设置） | 支付图标全彩 | `shop.enabled_payment_types` |
+
+**状态要点**：任一 block 无内容 → 该块不渲染（不留空列、不留空壳）；单市场单语言 → 选择器整块不渲染（官方规则，不是 bug）；`.site-footer` 类名是深色骨架的唯一映射钩子，不可改名。
 
 ---
 

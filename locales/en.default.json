@@ -279,6 +279,31 @@
     },
     "product_complementary": {
       "default_heading": "Pairs well with"
+    },
+    "footer": {
+      "follow_us": "Follow us",
+      "menu_label": "Footer menu",
+      "payment": "Payment methods",
+      "rights": "All rights reserved.",
+      "newsletter": {
+        "label": "Email address",
+        "submit": "Subscribe",
+        "success": "Thanks for signing up. Check your inbox to confirm your email.",
+        "error": "Check the email address and try again.",
+        "consent": "Unsubscribe at any time."
+      },
+      "localization": {
+        "country": "Country or region",
+        "language": "Language",
+        "update": "Update"
+      },
+      "social": {
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "youtube": "YouTube",
+        "tiktok": "TikTok",
+        "pinterest": "Pinterest"
+      }
     }
   },
   "compare": {

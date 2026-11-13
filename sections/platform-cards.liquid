@@ -26,9 +26,14 @@
 {%- if visible_ids.size > 0 -%}
   <div class="platform-cards">
     <div class="platform-cards__header">
-      {%- if section.settings.heading != blank -%}
-        <h2 class="platform-cards__heading">{{ section.settings.heading | escape }}</h2>
-      {%- endif -%}
+      <div class="platform-cards__heading-group">
+        {%- if section.settings.heading != blank -%}
+          <h2 class="platform-cards__heading">{{ section.settings.heading | escape }}</h2>
+        {%- endif -%}
+        {%- if section.settings.subheading != blank -%}
+          <p class="platform-cards__subheading">{{ section.settings.subheading | escape }}</p>
+        {%- endif -%}
+      </div>
       {%- if section.settings.view_all_label != blank and section.settings.view_all_link != blank -%}
         <a class="platform-cards__view-all" href="{{ section.settings.view_all_link }}">
           {{ section.settings.view_all_label | escape }}
@@ -96,7 +101,14 @@
     gap: 1rem;
     margin-block-end: 0.75rem;
   }
+  /* 标题 + 副标题绑成左列，View All 单独在右列。header 的 align-items: baseline
+     会以 group 的第一行（h2）基线对齐右侧链接，链接的 44px 触摸目标
+     就不再撑开「标题 → 副标题」的距离。 */
+  .platform-cards__heading-group {
+    min-inline-size: 0;
+  }
   .platform-cards__heading {
+    margin: 0;
     font-size: 1.25rem;
     font-weight: 500;
   }
@@ -250,6 +262,12 @@
       "id": "heading",
       "label": "t:labels.heading",
       "default": "t:sections.platform_cards.defaults.heading"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "t:labels.subheading",
+      "default": "t:sections.platform_cards.defaults.subheading"
     },
     {
       "type": "text",
