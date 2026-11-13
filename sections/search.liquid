@@ -501,6 +501,10 @@
             <a class="search-page__empty-cta btn-solid" href="{{ routes.all_products_collection_url }}">
               {{ 'search.browse_all' | t }}
             </a>
+            {%- comment -%} 从某个 0 结果的类型进来时，给一条不带 type 的直达退路 {%- endcomment -%}
+            {%- if active_type != '' -%}
+              <a class="search-page__empty-all" href="{{ all_results_url }}">{{ 'search.view_all_types' | t }}</a>
+            {%- endif -%}
           </div>
         {%- else -%}
           <p class="search-page__start">{{ 'search.start_prompt' | t }}</p>
