@@ -36,12 +36,19 @@
     if (reduced || typeof IntersectionObserver !== 'function') return;
 
     const viewportH = window.innerHeight || document.documentElement.clientHeight;
+
+    // 先把几何一次性读完、再统一写状态。读写交错会让每个 target 都触发一次
+    // 强制同步布局，而这段跑在 DOMContentLoaded 附近（首屏绘制的关键路径上），
+    // 20 多个目标就是 20 多次 layout —— 这笔开销不该算进 LCP。
+    const rects = targets.map((el) => el.getBoundingClientRect());
     const pending = [];
 
-    targets.forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      // 已经在首屏里（或已滚过）→ 不藏、不播、不写状态，保持默认可见
-      if (rect.top < viewportH * 0.9) return;
+    targets.forEach((el, i) => {
+      // 判据用**整屏高度**，不是 0.9 倍：视口底部那 10% 里也可能有 LCP 候选
+      // （高视口下刚露头的 featured 商品图是 eager 的）。一旦被设成 pending，
+      // opacity:0 会把它从 LCP 候选中摘掉，LCP 就被推到动画播完。
+      // 已滚过的元素 top 为负，同样落在这里 → 也不参与，行为不变。
+      if (rects[i].top < viewportH) return;
       el.setAttribute(STATE, 'pending');
       pending.push(el);
     });
