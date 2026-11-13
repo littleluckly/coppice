@@ -1,83 +1,533 @@
 {% comment %}
-  This section is used in the list-collections template to render a list of
-  collections.
+  Collections list — 集合列表页主体（list-collections 模板，路由 /collections）。
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
+  路由：Shopify 内置的集合列表页路由。Liquid 里对应 `routes.collections_url`
+  （官方 routes 对象里就有这一项，与 `routes.all_products_collection_url`
+  = /collections/all 是两个不同的页面：那个是「全部商品」伪集合）。
+
+  数据源：全局 `collections` 对象（官方 list-collections 模板的规范数据源）。
+  取值与顺序：
+  - 默认按标题字母序（官方文档：直接遍历 collections 即按字母序输出）；
+  - 本 section 提供排序设置，排序后仍由官方模板同款的 `{% paginate %}` 切片。
+    ⚠️ 官方 paginate 文档只列了 customer.addresses / customer.orders /
+    metaobject_definition.values / product.variants 四个可分页数组，**不含
+    collections**；但 Dawn 官方主题的 sections/main-list-collections.liquid 就是
+    `{%- paginate collections by paginate_by -%}`（本文件按官方主题同款写法）。
+    若该写法在某些上下文失效，最坏结果是分页链接失效而列表仍完整（不会 500），
+    因为遍历本身不依赖 paginate 生效。
+
+  空集合不渲染卡（与首页 platform-cards 同规则，pages-ui §5）：0 个商品的集合
+  对顾客是死路。判定用 `collection.all_products_count`（集合内商品总数，
+  含被当前视图过滤掉的部分），与首页平台卡一致。
+
+  图片：`collection.featured_image` 自带官方兜底链（集合图 → 集合首个商品图），
+  不必自己写 fallback；两者都没有时输出品牌占位图。
+
+  计数：`collection.all_products_count`（与首页平台卡、pages-ui §5 同口径）。
+
+  配色纪律：所有色值从 --color-* 派生（color-mix），Noir 预设自动翻转；
+  卡片 hover 走全站签名（--card-hover-lift / --card-hover-shadow）。
 {% endcomment %}
 
-<h1>{{ 'collections.title' | t }}</h1>
+{%- liquid
+  assign per_page = section.settings.collections_per_page | default: 24
+  assign columns = section.settings.columns | default: 3
+  assign tablet_columns = columns
+  if columns > 3
+    assign tablet_columns = 3
+  endif
+-%}
 
-<div
-  class="collections {{ section.settings.grid_item_width }}"
-  style="--grid-gap: {{ section.settings.grid_gap }}px"
->
-  {% for collection in collections %}
-    <a class="collection-card" href="{{ collection.url }}">
-      {% if collection.featured_image %}
-        {% render 'image',
-          class: 'collection-card__image',
-          image: collection.featured_image,
-          width: 600,
-          height: 600,
-          crop: 'center'
-        %}
-      {% endif %}
+{%- comment -%}
+  排序：与 Dawn 官方主题同款写法（sort 过滤器 + reverse）。
+  published_at / all_products_count 都是集合对象上的标量字段，可直接排序。
+{%- endcomment -%}
+{%- case section.settings.sort -%}
+  {%- when 'date' -%}
+    {%- assign collections = collections | sort: 'published_at' | reverse -%}
+  {%- when 'products_high' -%}
+    {%- assign collections = collections | sort: 'all_products_count' | reverse -%}
+  {%- when 'products_low' -%}
+    {%- assign collections = collections | sort: 'all_products_count' -%}
+{%- endcase -%}
 
-      <div class="collection-card__content">
-        <p>{{ collection.title }}</p>
+<div class="collections-list full-width">
+  <header class="collections-list__masthead">
+    <div class="collections-list__masthead-inner">
+      <nav class="collections-list__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
+        <ol class="collections-list__breadcrumb-list" role="list">
+          <li class="collections-list__breadcrumb-item">
+            <a href="{{ routes.root_url }}">{{ 'collections.breadcrumb_home' | t }}</a>
+          </li>
+          <li class="collections-list__breadcrumb-item" aria-current="page">
+            {{ section.settings.heading | escape }}
+          </li>
+        </ol>
+      </nav>
 
-        {% if collection.description %}
-          <p>{{ collection.description | strip_html | truncatewords: 15 }}</p>
-        {% endif %}
-      </div>
-    </a>
-  {% endfor %}
+      <h1 class="collections-list__title">{{ section.settings.heading | escape }}</h1>
+
+      {%- if section.settings.subheading != blank -%}
+        <p class="collections-list__subheading">{{ section.settings.subheading | escape }}</p>
+      {%- endif -%}
+    </div>
+  </header>
+
+  <div class="collections-list__body">
+    {%- paginate collections by per_page -%}
+      {%- assign rendered = 0 -%}
+      <ul
+        class="collections-list__grid"
+        role="list"
+        style="--cols-desktop: {{ columns }}; --cols-tablet: {{ tablet_columns }};"
+      >
+        {%- for collection in collections -%}
+          {%- if collection.all_products_count > 0 -%}
+            {%- assign rendered = rendered | plus: 1 -%}
+            <li class="collections-list__item">
+              <article class="collections-list__card">
+                {%- comment -%}
+                  媒体区单独一个链接且对读屏隐藏（tabindex=-1 + aria-hidden），
+                  避免同一张卡出现两个可聚焦链接；可访问名由下面的标题链接提供。
+                  另：image_tag 在 alt 为空时会把 alt 属性整条吞掉（不是输出 alt=""），
+                  Lighthouse 会判缺 alt —— 所以捕获后补一次（与集合页 banner 同一套）。
+                {%- endcomment -%}
+                <a
+                  class="collections-list__media"
+                  href="{{ collection.url }}"
+                  tabindex="-1"
+                  aria-hidden="true"
+                >
+                  {%- if collection.featured_image -%}
+                    {%- capture card_image -%}
+                      {{
+                        collection.featured_image
+                        | image_url: width: 1000
+                        | image_tag:
+                          widths: '300, 500, 750, 1000',
+                          sizes: '(min-width: 990px) 30vw, (min-width: 750px) 32vw, 46vw',
+                          width: collection.featured_image.width,
+                          height: collection.featured_image.height,
+                          loading: 'lazy',
+                          alt: ''
+                      }}
+                    {%- endcapture -%}
+                    {%- unless card_image contains ' alt=' -%}
+                      {%- assign card_image = card_image | replace: '<img ', '<img alt="" ' -%}
+                    {%- endunless -%}
+                    {{ card_image }}
+                  {%- else -%}
+                    <span class="collections-list__media-placeholder" aria-hidden="true">
+                      {{- 'icon-leaf.svg' | inline_asset_content -}}
+                    </span>
+                  {%- endif -%}
+                </a>
+
+                <div class="collections-list__card-body">
+                  <h2 class="collections-list__card-title">
+                    <a href="{{ collection.url }}">{{ collection.title | escape }}</a>
+                  </h2>
+
+                  <p class="collections-list__card-count">
+                    {{ 'navigation.products_count' | t: count: collection.all_products_count }}
+                  </p>
+
+                  {%- if section.settings.show_description and collection.description != blank -%}
+                    <p class="collections-list__card-desc">
+                      {{- collection.description | strip_html | truncatewords: 20 | escape -}}
+                    </p>
+                  {%- endif -%}
+                </div>
+              </article>
+            </li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+
+      {%- if rendered == 0 -%}
+        {%- comment -%}
+          空态：店铺还没有集合，或所有集合都是空的（都被上面的规则过滤掉）。
+          不留空白页 —— 给一句说明，页面照常渲染。
+        {%- endcomment -%}
+        <div class="collections-list__empty">
+          <p class="collections-list__empty-title">{{ 'collections.list.empty.title' | t }}</p>
+          <p class="collections-list__empty-body">{{ 'collections.list.empty.body' | t }}</p>
+        </div>
+      {%- endif -%}
+
+      {%- if paginate.pages > 1 -%}
+        {%- comment -%}
+          分页：圆形按钮（与集合页同一套视觉）。箭头恒在 —— 不可用方向渲染禁用占位，
+          行宽不跳；页码用 paginate.parts，截断部分渲染为 … 间隔。
+        {%- endcomment -%}
+        <nav class="collections-list__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
+          {%- if paginate.previous -%}
+            <a
+              class="collections-list__pagination-nav"
+              href="{{ paginate.previous.url }}"
+              aria-label="{{ 'collections.pagination_previous' | t }}"
+            >
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </a>
+          {%- else -%}
+            <span class="collections-list__pagination-nav" aria-disabled="true">
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </span>
+          {%- endif -%}
+
+          {%- for part in paginate.parts -%}
+            {%- if part.is_link -%}
+              <a
+                class="collections-list__pagination-page"
+                href="{{ part.url }}"
+                aria-label="{{ 'collections.page_number' | t: number: part.title }}"
+              >{{ part.title }}</a>
+            {%- elsif part.title == paginate.current_page -%}
+              <span class="collections-list__pagination-page" aria-current="page">{{ part.title }}</span>
+            {%- else -%}
+              <span class="collections-list__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+            {%- endif -%}
+          {%- endfor -%}
+
+          {%- if paginate.next -%}
+            <a
+              class="collections-list__pagination-nav"
+              href="{{ paginate.next.url }}"
+              aria-label="{{ 'collections.pagination_next' | t }}"
+            >
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </a>
+          {%- else -%}
+            <span class="collections-list__pagination-nav" aria-disabled="true">
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </span>
+          {%- endif -%}
+        </nav>
+      {%- endif -%}
+    {%- endpaginate -%}
+  </div>
 </div>
 
 {% stylesheet %}
-  .collections {
+  /* ============================================================
+     集合列表页 /collections（list-collections 模板主体）
+     版式与本主题其余页面同源：卡片 = 白底 + 1px 细边 + 12px 圆角，
+     hover 走全站签名（上浮 2px + 浅绿光晕，见 css-variables.liquid）。
+     配色一律从 --color-* 派生（color-mix），Noir 预设自动翻转。
+     ============================================================ */
+
+  /* 页头：品牌淡色带 + 内容列对齐（--content-width 与 section 网格的第 2 列同宽，
+     所以页头文字与下方卡片左边缘严格对齐）。 */
+  .collections-list__masthead {
+    background-color: color-mix(in srgb, var(--color-background) 92%, var(--color-brand) 8%);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+  .collections-list__masthead-inner {
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
+    padding-block: clamp(1.75rem, 4vw, 3rem);
+  }
+
+  /* 面包屑：与集合页同一口径（当前项纯文本、链接有 44px 触控高度，故 align-items:center） */
+  .collections-list__breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+    font-size: 0.82rem;
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+  }
+  .collections-list__breadcrumb-item + .collections-list__breadcrumb-item::before {
+    content: '/';
+    margin-inline-end: 0.35rem;
+  }
+  .collections-list__breadcrumb-item a {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .collections-list__breadcrumb-item a:hover {
+    text-decoration: underline;
+  }
+
+  .collections-list__title {
+    margin: 0;
+    font-size: clamp(1.9rem, 3.6vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .collections-list__subheading {
+    margin: 0.6rem 0 0;
+    max-inline-size: 58ch;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--color-foreground-muted);
+  }
+
+  /* 内容区：复刻 section 网格（内容列居中），使页头与卡片共用同一条内容列 */
+  .collections-list__body {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(var(--collection-card-size), 100%), 1fr));
-    gap: var(--grid-gap);
+    grid-template-columns: var(--content-grid);
+    padding-block: clamp(1.5rem, 3vw, 2.5rem) clamp(3rem, 6vw, 5rem);
   }
-  .collections--compact {
-    --collection-card-size: 160px;
+  .collections-list__body > * {
+    grid-column: 2;
+    min-inline-size: 0;
   }
-  .collections--full {
-    --collection-card-size: 280px;
+
+  .collections-list__grid {
+    display: grid;
+    /* minmax(0, 1fr)：长标题的 min-content 不能把轨道撑出视口 */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
   }
-  .collection-card {
+  @media (min-width: 750px) {
+    .collections-list__grid {
+      grid-template-columns: repeat(var(--cols-tablet, 3), minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+  }
+  @media (min-width: 990px) {
+    .collections-list__grid {
+      grid-template-columns: repeat(var(--cols-desktop, 3), minmax(0, 1fr));
+    }
+  }
+
+  .collections-list__item {
+    display: flex;
+    min-inline-size: 0;
+  }
+
+  .collections-list__card {
     display: flex;
     flex-direction: column;
     width: 100%;
+    height: 100%;
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 12px;
+    overflow: hidden;
+    transition:
+      translate 0.2s ease,
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .collections-list__card:hover {
+    translate: 0 var(--card-hover-lift);
+    box-shadow: var(--card-hover-shadow);
+    border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+  }
+
+  /* 媒体盒：1:1 定比 + 图片绝对定位铺满（图片若留在流里会参与行高，
+     同排卡片的标题行数一多一少就忽高忽矮）。 */
+  .collections-list__media {
+    position: relative;
+    display: block;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+  }
+  .collections-list__media img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .collections-list__card:hover .collections-list__media img {
+    transform: scale(1.05);
+  }
+  .collections-list__media-placeholder {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+  }
+  .collections-list__media-placeholder svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .collections-list__card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.8rem 0.9rem 1rem;
+    min-inline-size: 0;
+  }
+  .collections-list__card-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.35;
+    /* break-word：窄栏里 "Walk-behind mowers" 这类词不能被拆断 */
+    overflow-wrap: break-word;
+  }
+  .collections-list__card-title a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .collections-list__card:hover .collections-list__card-title a {
+    color: var(--color-brand);
+  }
+  .collections-list__card-count {
+    font-size: 0.8125rem;
+    color: var(--color-foreground-muted);
+  }
+  .collections-list__card-desc {
+    margin: 0.15rem 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  /* 空态：虚线框，页面上不留空白 */
+  .collections-list__empty {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding: 3rem 1rem;
+    text-align: center;
+    border: 1px dashed color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: 12px;
+  }
+  .collections-list__empty-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .collections-list__empty-body {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-foreground-muted);
+  }
+
+  /* 分页：白圆按钮 + 当前页品牌绿实心（与集合页同一套视觉） */
+  .collections-list__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-block-start: 2rem;
+  }
+  .collections-list__pagination-nav,
+  .collections-list__pagination-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: inherit;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .collections-list__pagination a:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+  .collections-list__pagination [aria-disabled='true'] {
+    opacity: 0.35;
+  }
+  .collections-list__pagination [aria-current='page'] {
+    border-color: transparent;
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+  .collections-list__pagination-gap {
+    min-width: 24px;
+    text-align: center;
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .collections-list__card,
+    .collections-list__media img {
+      transition: none;
+    }
   }
 {% endstylesheet %}
 
 {% schema %}
 {
-  "name": "t:general.collections_grid",
+  "name": "t:sections.collections_list.name",
+  "tag": "section",
+  "class": "collections-list-section",
   "settings": [
     {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "t:sections.collections_list.defaults.heading"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "t:labels.subheading",
+      "default": "t:sections.collections_list.defaults.subheading"
+    },
+    {
       "type": "select",
-      "id": "grid_item_width",
-      "label": "t:labels.grid_item_width",
+      "id": "sort",
+      "label": "t:sections.collections_list.labels.sort",
       "options": [
-        { "value": "collections--compact", "label": "t:options.size.small" },
-        { "value": "collections--full", "label": "t:options.size.large" }
+        { "value": "alphabetical", "label": "t:sections.collections_list.options.sort.alphabetical" },
+        { "value": "date", "label": "t:sections.collections_list.options.sort.date" },
+        { "value": "products_high", "label": "t:sections.collections_list.options.sort.products_high" },
+        { "value": "products_low", "label": "t:sections.collections_list.options.sort.products_low" }
       ],
-      "default": "collections--full"
+      "default": "alphabetical"
     },
     {
       "type": "range",
-      "id": "grid_gap",
-      "label": "t:labels.grid_gap",
-      "min": 0,
-      "max": 50,
-      "step": 5,
-      "unit": "px",
-      "default": 10
+      "id": "columns",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "label": "t:sections.collections_list.labels.columns",
+      "info": "t:sections.collections_list.labels.columns_info",
+      "default": 3
+    },
+    {
+      "type": "range",
+      "id": "collections_per_page",
+      "min": 8,
+      "max": 48,
+      "step": 4,
+      "label": "t:sections.collections_list.labels.collections_per_page",
+      "info": "t:sections.collections_list.labels.collections_per_page_info",
+      "default": 24
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "t:sections.collections_list.labels.show_description",
+      "default": true
     }
   ],
-  "presets": [{ "name": "t:general.collections_grid" }]
+  "presets": [
+    {
+      "name": "t:sections.collections_list.name"
+    }
+  ]
 }
 {% endschema %}
