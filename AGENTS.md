@@ -167,6 +167,8 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 主题 v1.0 范围不含发电机（演示店仅含 Hardware 分支配件分类 2 条）。
 - `assets/wishlist-toggle.js` 与 §4 红线「不实现愿望清单」冲突，**提交前必须移除**（其交互可迁至商品卡的对比/加购按钮）。`assets/compare-toggle.js` 待按 §6 新规重构为 Custom Element。
 - 页头任务清单见 `dev-docs/task-header.md`；O-1 ~ O-5 已于 2026-10-09 拍板（结论写在该文件 §1）。
-- **提交前合规对账见 `dev-docs/task-compliance.md`（2026-11-07）**：14 条缺口，其中 7 条 S1 拒审级——缺 Custom Liquid **section**、产品主 section 无 `@app` block、无 favicon 设置、礼品卡页无二维码、图片焦点未实现、`theme_info` 作者仍写着 Shopify、**缺 `page.contact.json` 联系表单模板**。**新增 section / 模板 / 全局设置后重跑该文件 §4.2 的检查。**
+- **提交前合规对账见 `dev-docs/task-compliance.md`（v1.1，2026-11-12）**：G-03 / G-11 / G-13 已实现（全局 Brand 设置、favicon、品牌 logo），**剩余 11 条缺口，其中 6 条 S1 拒审级**——缺 Custom Liquid **section**、产品主 section 无 `@app` block、礼品卡页无二维码、图片焦点未实现、`theme_info` 作者仍写着 Shopify、**缺 `page.contact.json` 联系表单模板**。**新增 section / 模板 / 全局设置后重跑该文件 §4.2 的检查。**
+- **全局品牌资产单一入口（2026-11-12 落地）**：`config/settings_schema.json` 的 `t:general.brand` 分组提供 `logo` / `logo_dark` / `favicon`；所有消费点统一 `{% render 'brand-logo' %}`，该 snippet 按骨架背景亮度（`color_brightness` vs **128**，与 `snippets/css-variables.liquid` 的 `header_luma` 必须同步）选图。**不要再新增 section 级 logo 设置**。`sections/footer.liquid` 的 `brand` block 自带 `image_picker` 是刻意保留的例外（页脚大尺寸 wordmark，不是页头 logo 的副本）。
+- **顾客端配色开关不做**（2026-11-12 刘工）：preset 是安装时配置、运行时不可切；不引入 `data-theme` / `localStorage` / 首屏内联脚本。成本与理由见 `task-compliance.md` §5.2，别再当待办推进。
 - **cart 交互本期不做**（抽屉本体、`<cart-toggle>`、计数 AJAX 同步、`cart_action` 配置项），后续单独开任务清单；页头 T-1.6 仅做静态入口 + 服务端计数，开工前先确认该清单是否已立项。
 
