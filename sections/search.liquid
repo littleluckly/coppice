@@ -204,7 +204,7 @@
             </div>
             <ul class="search-page__grid" role="list">
               {%- for result in search.results -%}
-                {%- unless result.object_type == 'article' or result.object_type == 'page' -%}
+                {%- if result.object_type != 'article' and result.object_type != 'page' -%}
                   <li class="search-page__grid-item">
                     {%- liquid
                       assign card_lazy = true
@@ -223,7 +223,7 @@
                       sizes: '(min-width: 1280px) 19vw, (min-width: 750px) 25vw, 45vw'
                     %}
                   </li>
-                {%- endunless -%}
+                {%- endif -%}
               {%- endfor -%}
             </ul>
           </section>
@@ -320,7 +320,7 @@
   {%- endif -%}
 
   {%- comment -%} 热门集合：未搜索 / 无结果两种状态都给一条不依赖搜索词的退路 {%- endcomment -%}
-  {%- if has_popular and search.results_count == 0 -%}
+  {%- if has_popular and has_results == false -%}
     <section class="search-page__popular" aria-labelledby="SearchPopularHeading">
       <h2 class="search-page__popular-title" id="SearchPopularHeading">{{ 'search.popular_heading' | t }}</h2>
       <ul class="search-page__popular-list" role="list">{{ popular_markup }}</ul>
