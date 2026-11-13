@@ -811,12 +811,33 @@
     .search-page__submit {
       padding-inline: 1rem;
     }
+    /* 四个类型标签收进一行：默认 padding 下 Pages 会单独掉到第二行 */
+    .search-page__types-list {
+      gap: 0.4rem;
+    }
+    .search-page__type {
+      padding-inline: 0.75rem;
+      font-size: 0.8125rem;
+    }
     .search-page__content-link {
       grid-template-columns: 64px minmax(0, 1fr);
       gap: 0.75rem;
     }
     .search-page__content-image {
       width: 64px;
+    }
+    /* 两列入口每列只有 ~150px：图标与内边距都收一档，把宽度还给文字 */
+    .search-page__popular-list {
+      gap: 0.5rem;
+    }
+    .search-page__popular-link {
+      gap: 0.45rem;
+      padding: 0.55rem;
+      font-size: 0.85rem;
+    }
+    .search-page__popular-image {
+      width: 36px;
+      height: 36px;
     }
   }
 
