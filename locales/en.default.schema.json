@@ -52,6 +52,16 @@
     "cart_drawer": "Cart drawer"
   },
   "sections": {
+    "search": {
+      "name": "Search results",
+      "settings": {
+        "results_per_page": "Results per page",
+        "results_per_page_info": "Shopify allows up to 50 results per page. Lower values keep the page lighter.",
+        "show_quick_add": "Show quick add on product cards",
+        "show_specs": "Show specification chips",
+        "show_specs_info": "Adds power source and cutting width to product cards. Leave off for a tighter results grid."
+      }
+    },
     "hero_slideshow": {
       "name": "Hero slideshow",
       "aria_label": "Highlights",
