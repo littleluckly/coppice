@@ -399,14 +399,21 @@ class NavPill extends HTMLElement {
     }, this._MEGA_CLOSE_DELAY);
   }
 
-  /* 真正关闭：撤除所有 group 的 is-open 拖尾（:hover 维持的项不受影响），
-     顶部药丸隐藏、取消待切换、左列药丸回激活项常驻高亮。 */
-  _close() {
+  /* 撤除所有 group 的 is-open 拖尾 + 取消待切换（不碰顶部药丸）。
+     :hover / :focus-within 维持的展开态由 CSS 自己管，这里不干预。
+     BUG-068：单独成方法，让「hover 到非 group 项」与「真正关闭列表」共用同一出口。 */
+  _closeGroups() {
     for (const g of this._groups) g.classList.remove('is-open');
     if (this._megaSwitchTimer) {
       clearTimeout(this._megaSwitchTimer);
       this._megaSwitchTimer = null;
     }
+  }
+
+  /* 真正关闭：撤除所有 group 的 is-open 拖尾（:hover 维持的项不受影响），
+     顶部药丸隐藏、取消待切换、左列药丸回激活项常驻高亮。 */
+  _close() {
+    this._closeGroups();
     this._hide();
     /* 各面板左列药丸回到各自激活项常驻高亮（从未切过的面板保持原位不动） */
     for (const scope of this._scopes) {
