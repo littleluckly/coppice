@@ -41,16 +41,29 @@
         {% endif %}
 
         <p>
-          {% if settings.logo %}
-            {{ settings.logo | image_url: width: 300 | image_tag: alt: shop.name }}
-          {% else %}
+          {%- comment -%}
+            G-13: this branch used to read `settings.logo` before that global
+            setting existed, so it was always false. Now the global Brand logo
+            is real; snippets/brand-logo.liquid also picks the dark variant.
+            Keep the built-in card illustration as the no-logo fallback.
+          {%- endcomment -%}
+          {%- if settings.logo != blank or settings.logo_dark != blank -%}
+            {% render 'brand-logo',
+              logo_class: 'gift-card__logo',
+              logo_width: 300,
+              logo_widths: '150, 300, 450',
+              logo_sizes: '300px',
+              logo_alt: shop.name,
+              logo_loading: 'eager'
+            %}
+          {%- else -%}
             <img
               src="{{ 'gift-card/card.svg' | shopify_asset_url }}"
               alt="{{ 'gift_card.card' | t }}"
               width="300"
               height="200"
             >
-          {% endif %}
+          {%- endif -%}
         </p>
 
         <h2>{{ shop.name }}</h2>
