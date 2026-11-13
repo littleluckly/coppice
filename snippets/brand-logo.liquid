@@ -1,4 +1,4 @@
-{% comment %}
+{% doc %}
   Shared brand logo: picks the right image for the active color preset and
   outputs ONE <img>. Outputs nothing when no logo is configured — every caller
   must supply its own text fallback (shop.name / brand name).
@@ -14,13 +14,16 @@
   light-background logo. Both use `color_brightness` (0–255, 128 = midpoint)
   and fall back to 255 when the color cannot be read.
 
-  @param logo_class   {String} class on the generated <img>
-  @param logo_width   {Number} base width passed to image_url
-  @param logo_widths  {String} comma separated widths for the image_tag srcset
-  @param logo_sizes   {String} sizes attribute
-  @param logo_alt     {String} alt text; pass '' for decorative images
-  @param logo_loading {String} lazy or eager
-{% endcomment %}
+  @param {string} [logo_class] - Class on the generated img element
+  @param {number} [logo_width] - Base width passed to image_url
+  @param {string} [logo_widths] - Comma separated widths for the image_tag srcset
+  @param {string} [logo_sizes] - sizes attribute
+  @param {string} [logo_alt] - Alt text; pass an empty string for decorative images
+  @param {string} [logo_loading] - "lazy" or "eager"
+
+  @example
+  {% render 'brand-logo', logo_class: 'main-nav__logo-img' %}
+{% enddoc %}
 
 {%- liquid
   assign skeleton_bg = settings.skeleton_background_color | default: settings.background_color
