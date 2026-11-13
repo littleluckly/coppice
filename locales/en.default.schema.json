@@ -190,6 +190,20 @@
       },
       "read_more": "Read guide"
     },
+    "collections_list": {
+      "name": "Collections list",
+      "defaults": {
+        "heading": "All series",
+        "subheading": "Every series we carry — battery platforms and gas-powered machines alike."
+      },
+      "labels": {
+        "columns": "Columns on desktop",
+        "columns_info": "Tablet tops out at three columns, mobile always shows two.",
+        "collections_per_page": "Series per page",
+        "collections_per_page_info": "Extra series move to a second page.",
+        "show_description": "Show collection descriptions"
+      }
+    },
     "collection": {
       "name": "Collection page",
       "labels": {
