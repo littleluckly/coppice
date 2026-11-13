@@ -542,25 +542,18 @@
             {%- endcomment -%}
             <a class="nav-drawer__brand" href="{{ routes.root_url }}">
               {%- comment -%}
-                与桌面 Zone 0 同一约定：装饰图 alt=""，无 logo 时不渲染 img，
-                width/height 用真实固有尺寸由 CSS 收（见 Zone 0 注释）。
+                与桌面 Zone 0 同一约定：装饰图 alt=""、无 logo 时只留品牌名文字。
+                选图统一交给 snippets/brand-logo.liquid（全局 Brand 设置），
+                移动抽屉与桌面页头因此永远不会显示不同的 logo。
               {%- endcomment -%}
-              {%- if logo_image != blank -%}
-                <img
-                  class="nav-drawer__brand-img"
-                  src="{{ logo_image | image_url: width: 96 }}"
-                  srcset="
-                    {{- logo_image | image_url: width: 64 }} 64w,
-                    {{- logo_image | image_url: width: 96 }} 96w,
-                    {{- logo_image | image_url: width: 144 }} 144w
-                  "
-                  sizes="32px"
-                  alt=""
-                  width="{{ logo_image.width }}"
-                  height="{{ logo_image.height }}"
-                  loading="lazy"
-                >
-              {%- endif -%}
+              {% render 'brand-logo',
+                logo_class: 'nav-drawer__brand-img',
+                logo_width: 96,
+                logo_widths: '64, 96, 144',
+                logo_sizes: '32px',
+                logo_alt: '',
+                logo_loading: 'lazy'
+              %}
               <span class="nav-drawer__brand-name">{{ brand_name }}</span>
             </a>
             <h2 class="nav-drawer__title visually-hidden" id="nav-drawer-title">
