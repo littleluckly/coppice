@@ -866,8 +866,11 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
   }
+  /* 只有真的渲染了左栏才切两列。--no-sidebar（商家没建集合 / 关掉分类栏）
+     时若仍套 220px + 1fr，结果区会掉进第一列被压成 220px 窄条——
+     主题包带不了集合，这个分支装完主题就会命中。 */
   @media (min-width: 990px) {
-    .search-page__body {
+    .search-page__body:not(.search-page__body--no-sidebar) {
       grid-template-columns: 220px minmax(0, 1fr);
     }
   }
