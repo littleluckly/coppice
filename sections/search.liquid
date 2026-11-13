@@ -223,7 +223,11 @@
     <p class="search-hero__subtitle">{{ 'search.hero_subtitle' | t }}</p>
 
     <form class="search-hero__form" action="{{ routes.search_url }}" method="get" role="search">
-      <div class="search-hero__field">
+      {%- comment -%}
+        <search-field> 只管「输入 / 清空」；无 JS 时它是普通 inline 元素，
+        但 .search-hero__field 的 display:flex 照旧生效，输入框仍可用原生清除叉。
+      {%- endcomment -%}
+      <search-field class="search-hero__field">
         <label class="visually-hidden" for="SearchPageInput">{{ 'search.label' | t }}</label>
         <span class="search-hero__icon" aria-hidden="true">{{ 'icon-search.svg' | inline_asset_content }}</span>
         <input
@@ -234,11 +238,21 @@
           value="{{ search.terms | escape }}"
           placeholder="{{ 'search.placeholder' | t | escape }}"
           autocomplete="off"
+          data-search-input
         >
+        <button
+          type="button"
+          class="search-hero__clear"
+          data-search-clear
+          aria-label="{{ 'search.clear' | t }}"
+          hidden
+        >
+          {{- 'icon-close.svg' | inline_asset_content -}}
+        </button>
         <button type="submit" class="search-hero__submit" aria-label="{{ 'search.submit' | t }}">
           <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </button>
-      </div>
+      </search-field>
       {%- comment -%} 重新搜索时保留当前类型，否则从「Articles」页再搜会静默跳回全部 {%- endcomment -%}
       {%- if active_type != '' -%}
         <input type="hidden" name="type" value="{{ active_type | escape }}">
