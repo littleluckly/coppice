@@ -641,9 +641,38 @@
   .search-hero__input::placeholder {
     color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
-  /* 隐藏 WebKit 自带的清除叉：它与右侧提交按钮挤在一起，且无法定制 */
-  .search-hero__input::-webkit-search-cancel-button {
+  /* 原生清除叉只在「组件没升级」时留着当降级：脚本加载失败 / 无 JS 时，
+     输入框仍可清空。组件挂上后写 data-enhanced，此处才把它收掉避免双叉。 */
+  search-field[data-enhanced] .search-hero__input::-webkit-search-cancel-button,
+  search-field[data-enhanced] .search-hero__input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .search-hero__clear {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  /* 作者样式的 display:grid 会盖过 UA 的 [hidden]{display:none}，必须显式写回 */
+  .search-hero__clear[hidden] {
     display: none;
+  }
+  .search-hero__clear:hover {
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    color: var(--color-foreground);
+  }
+  .search-hero__clear svg {
+    width: 20px;
+    height: 20px;
   }
   .search-hero__submit {
     display: grid;
