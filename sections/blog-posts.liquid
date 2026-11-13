@@ -53,8 +53,8 @@
               <h3 class="blog-posts__title">{{ article.title | escape }}</h3>
               {%- comment -%}
                 按词截断（与 search.liquid 的 24 词同口径），不按字符 truncate: 90 ——
-                字符截断会把 "matter" 切成 "matt..."，2 行 clamp 后特别扎眼。
-                视觉上最终由 CSS 的 2 行 clamp 收口，这里只限制 DOM 文本长度。
+                字符截断会在第 90 个字符处切出半词（"matter" → "matt..."）。
+                这里只限制 DOM 文本长度，视觉上的两行收口交给 CSS 的 line-clamp。
               {%- endcomment -%}
               {%- if article.excerpt != blank -%}
                 <p class="blog-posts__excerpt">{{ article.excerpt | strip_html | truncatewords: 24 }}</p>
