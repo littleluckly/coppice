@@ -125,7 +125,7 @@
           "defaults": {
             "heading": "Small & medium yards",
             "text": "Walk-behind mowers for lawns up to 10,000 sq ft — push or self-propelled, gas or battery.",
-            "button_label": "Shop walk-behind mowers"
+            "button_label": "Shop now"
           },
           "labels": {
             "collection_info": "Links to the collection that matches this yard type.",
@@ -137,12 +137,12 @@
         "case_1": {
           "heading": "Small & medium yards",
           "text": "Walk-behind mowers for lawns up to 10,000 sq ft — push or self-propelled, gas or battery.",
-          "button_label": "Shop walk-behind mowers"
+          "button_label": "Shop now"
         },
         "case_2": {
           "heading": "Large lawns & acreage",
           "text": "Riding tractors and zero-turns for properties of 10,000 sq ft and up.",
-          "button_label": "Shop riding mowers"
+          "button_label": "Shop now"
         }
       }
     },
@@ -157,6 +157,7 @@
         "card_specs": "Product card specifications"
       },
       "labels": {
+        "products_to_show_info": "All products appear in a single row on desktop. More cards means narrower cards, so this is capped at 6.",
         "show_spec_width": "Show cutting width",
         "show_spec_cc": "Show displacement (cc)",
         "show_spec_power": "Show power source",
