@@ -542,7 +542,7 @@
   }
   .blog-index__featured-title {
     margin: 0;
-    font-size: clamp(1.3rem, 2.3vw, 1.9rem);
+    font-size: clamp(1.3rem, 2.4vw, 2.05rem);
     font-weight: 600;
     line-height: 1.2;
     letter-spacing: -0.01em;
@@ -842,11 +842,13 @@
       grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
     }
     .blog-index__featured-media {
-      /* 让文字列决定卡高，图跟着填满（min-block-size 保住最低视觉分量）。
-         反过来用 aspect-ratio 定高的话，标题三行→两行时整卡会忽高忽矮。 */
+      /* 让文字列决定卡高，图跟着填满；min-block-size 只保证"最低视觉分量"。
+         反过来用 aspect-ratio 定高的话，标题三行→两行时整卡会忽高忽矮。
+         下限随视口涨（17rem→24rem）：1440 下内容列 1400 宽时，17rem 的图只有
+         2.7:1，16:9 的实拍图会被裁成一条细带；抬到 ≈2:1 才像头条。 */
       aspect-ratio: auto;
       block-size: 100%;
-      min-block-size: 17rem;
+      min-block-size: clamp(17rem, 26vw, 24rem);
     }
   }
 
