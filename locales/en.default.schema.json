@@ -54,9 +54,6 @@
   },
   "sections": {
     "main_nav": {
-      "defaults": {
-        "all_series_label": "All series"
-      },
       "labels": {
         "show_all_series": "Show \"All series\" entry",
         "show_all_series_info": "Adds a last item to the menu that opens every collection in a panel. On mobile it links straight to the collections page. The list comes from your collections, not from the menu — nothing to maintain.",
@@ -204,10 +201,6 @@
     },
     "collections_list": {
       "name": "Collections list",
-      "defaults": {
-        "heading": "All series",
-        "subheading": "Every series we carry — battery platforms and gas-powered machines alike."
-      },
       "labels": {
         "columns": "Columns on desktop",
         "columns_info": "Tablet tops out at three columns, mobile always shows two.",
