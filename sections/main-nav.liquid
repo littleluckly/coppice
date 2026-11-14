@@ -63,6 +63,10 @@
     assign series_label = 'navigation.all_series' | t
   endif
   assign series_limit = section.settings.all_series_limit | default: 12
+  # 插在菜单的哪个位置：first / before_last / last。
+  # before_last = 排在菜单最后一项之前 —— Support / Contact 这类支持项通常放最后，
+  # 这个档位让"全部系列"留在商品入口这一侧，而不是被顶到支持项后面（演示店用这一档）。
+  assign series_position = section.settings.all_series_position | default: 'last'
   # 当前页判定走 template.name，不比字符串路径：市场用语言子目录时
   # request.path 会带 /en 前缀，和 routes.collections_url 比会永远不等。
   assign series_is_current = false
@@ -702,8 +706,32 @@
             </button>
           </div>
 
+          {%- comment -%}
+            All series（移动端）：抽屉里不做手风琴 —— 桌面那个面板是"免跳转直接
+            挑系列"，手机一屏放不下，直接进 /collections（那页本身就是为窄屏做的
+            两列网格）。位置与桌面共用同一个设置。
+          {%- endcomment -%}
+          {%- capture series_drawer_markup -%}
+              <li class="nav-drawer__item">
+                <a
+                  class="nav-drawer__link{% if series_is_current %} nav-drawer__link--current{% endif %}"
+                  href="{{ routes.collections_url }}"
+                  {% if series_is_current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  <span>{{ series_label | escape }}</span>
+                </a>
+              </li>
+          {%- endcapture -%}
           <ul class="nav-drawer__list" role="list">
             {%- for link in menu.links -%}
+              {%- if show_series and series_position == 'first' and forloop.first -%}
+                {{- series_drawer_markup -}}
+              {%- endif -%}
+              {%- if show_series and series_position == 'before_last' and forloop.last and menu.links.size > 1 -%}
+                {{- series_drawer_markup -}}
+              {%- endif -%}
               <li class="nav-drawer__item">
                 {%- if link.links.size > 0 -%}
                   {%- assign sub_id = section.id | append: '-nav-sub-' | append: forloop.index -%}
@@ -791,25 +819,15 @@
                 {%- endif -%}
               </li>
             {%- endfor -%}
+            {%- if show_series and series_position == 'last' -%}
+              {{- series_drawer_markup -}}
+            {%- endif -%}
 
             {%- comment -%}
               All series（移动端，2026-11-14）：抽屉里不做手风琴 —— 桌面那个面板
               是"免跳转直接挑系列"，手机上同样一屏放不下，直接进 /collections
               列表页（那页本身就是为窄屏做的两列网格）。与桌面共用同一组设置。
             {%- endcomment -%}
-            {%- if show_series -%}
-              <li class="nav-drawer__item">
-                <a
-                  class="nav-drawer__link{% if series_is_current %} nav-drawer__link--current{% endif %}"
-                  href="{{ routes.collections_url }}"
-                  {% if series_is_current %}
-                    aria-current="page"
-                  {% endif %}
-                >
-                  <span>{{ series_label | escape }}</span>
-                </a>
-              </li>
-            {%- endif -%}
           </ul>
 
           {%- comment -%}
@@ -2826,6 +2844,27 @@
       "label": "t:sections.main_nav.labels.all_series_limit",
       "info": "t:sections.main_nav.labels.all_series_limit_info",
       "default": 12
+    },
+    {
+      "type": "select",
+      "id": "all_series_position",
+      "label": "t:sections.main_nav.labels.all_series_position",
+      "info": "t:sections.main_nav.labels.all_series_position_info",
+      "options": [
+        {
+          "value": "first",
+          "label": "t:sections.main_nav.options.all_series_position.first"
+        },
+        {
+          "value": "before_last",
+          "label": "t:sections.main_nav.options.all_series_position.before_last"
+        },
+        {
+          "value": "last",
+          "label": "t:sections.main_nav.options.all_series_position.last"
+        }
+      ],
+      "default": "last"
     },
     {
       "type": "link_list",
