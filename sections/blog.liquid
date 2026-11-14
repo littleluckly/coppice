@@ -1,35 +1,932 @@
 {% comment %}
-  This section is used in the blog template to render the blog page listing all
-  articles within a blog.
+  Blog index — 博客文章列表页主体（blog 模板，路由 /blogs/<handle>）。
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/blog
+  ## 这一页要解决的问题
+  骨架版本是「标题 + 一列裸 div + default_pagination」：没有图位、没有层级、
+  元信息是一句拼起来的 "date by author"，翻页是一串系统默认链接。这里把它做成
+  一份**编辑型索引**：第 1 页的首篇当头条（大图 + 大标题），其余进三列网格；
+  标签既是卡片元信息，也在页头生成一行可点的主题入口
+  —— Shopify 博客**没有分类**，标签就是它唯一的分类法，不另造一套。
+
+  ## 几条不能改的判断
+  1. **整张卡 = 一个 `<a>`**（与 collections.liquid / blog-posts.liquid 同构）：
+     全卡可点、每卡只有一个 tab 停靠点。由此推出一条硬约束 ——
+     **卡内不能再有交互元素**，所以标签只能是 `<span>`（`<a>` 里套 `<a>` 非法嵌套）。
+     "按标签浏览"的入口因此放在页头那行 `<a>` 里，而不是卡内。
+  2. **分页，不做无限滚动**：`paginate` 是平台原生、无 JS 可用、每页有独立 URL
+     （可抓取、可分享、可直落第 2 页）。无限滚动要自己拼 URL、自己管焦点、
+     还要给爬虫留静态副本——成本全在顾客看不见的地方，收益只是"少点一次"。
+  3. **头条只出现在第 1 页**：第 2 页起网格从头开始，翻页后版式不"跳层"。
+  4. **图位恒定存在**：没有封面的文章用 icon-leaf 占位（与 blog-posts / 搜索页
+     同一套视觉语言）。否则纯文字卡夹在图文卡中间会把网格切碎，
+     而且行高会参差。
+  5. **元信息只放真实字段**：`published_at` / `author` / 标签 / 由正文词数算出的
+     阅读时长。不造"浏览量""热度"这类平台根本不提供的数据。
+
+  ## 阅读时长口径
+  `article.content | strip_html | number_of_words` ÷ 200 词/分钟，向上取整。
+  200wpm 是英文技术读物的常用口径。词数为 0（只写了摘要、正文为空）时整段不渲染，
+  而不是硬凑一个 "1 min read"。
+
+  ## 响应式
+  < 750px：单列，头条图 16:10；≥ 750px：两列网格 + 头条左右分栏；
+  ≥ 990px：三列网格。头条的图在 ≥ 750px 用 `block-size: 100%` 跟着文字列走
+  —— 让文字决定卡高，三行标题换两行时图自己裁，卡片不会忽高忽矮。
+
+  ## 配色纪律
+  全部从 `--color-*` 派生（color-mix），Noir 预设自动翻转；hover 走上浮
+  `--card-hover-lift` + `--card-hover-shadow` 全站签名。
 {% endcomment %}
 
-<h1>{{ blog.title }}</h1>
+{%- liquid
+  assign per_page = section.settings.articles_per_page | default: 8
+  assign show_featured = section.settings.show_featured
+  assign show_excerpt = section.settings.show_excerpt
+  assign show_author = section.settings.show_author
+  assign show_reading_time = section.settings.show_reading_time
+  assign show_card_tags = section.settings.show_card_tags
+  assign show_topic_nav = section.settings.show_topic_nav
 
-{% paginate blog.articles by 5 %}
-  {% for article in blog.articles %}
-    <div>
-      {% if article.image %}
-        {{ article.image | image_url: width: 1000 | image_tag }}
-      {% endif %}
-      <h2>
-        {{ article.title | link_to: article.url }}
-      </h2>
-      {% assign date = article.published_at | time_tag: format: 'date' %}
-      <p>{{ 'blog.article_metadata_html' | t: date: date, author: article.author }}</p>
-      <p>{{ article.excerpt }}</p>
-    </div>
-  {% endfor %}
+  # sizes 提示按实际列数写：三列时单卡约 30vw，两列 45vw，单列铺满内容列（≈92vw）
+  assign card_sizes = '(min-width: 990px) 30vw, (min-width: 750px) 45vw, 92vw'
+  # 头条图在 ≥750px 占分栏的一半多一点（1.05fr / 2）
+  assign lead_sizes = '(min-width: 750px) 52vw, 92vw'
+-%}
 
-  {%- if paginate.pages > 1 -%}
-    {{- paginate | default_pagination -}}
-  {%- endif -%}
-{% endpaginate %}
+<div class="blog-index__hero full-width">
+  <div class="blog-index__hero-inner">
+    <nav class="blog-index__breadcrumb" aria-label="{{ 'blog.list.breadcrumb_label' | t }}">
+      <ol class="blog-index__breadcrumb-list" role="list">
+        <li class="blog-index__breadcrumb-item">
+          <a href="{{ routes.root_url }}">{{ 'blog.list.breadcrumb_home' | t }}</a>
+        </li>
+        <li class="blog-index__breadcrumb-item" aria-current="page">
+          {{ blog.title | escape }}
+        </li>
+      </ol>
+    </nav>
+
+    <h1 class="blog-index__title">{{ blog.title | escape }}</h1>
+
+    {%- if section.settings.subheading != blank -%}
+      <p class="blog-index__subheading">{{ section.settings.subheading | escape }}</p>
+    {%- endif -%}
+
+    {%- comment -%}
+      标签页（/blogs/<handle>/tagged/<tag>）走的是同一个模板，页头不交代就会被
+      当成"列表没变"。这里有 current_tags 就补一行说明；清除入口是下面的
+      "All guides" 药丸，不另设按钮。
+    {%- endcomment -%}
+    {%- if current_tags != blank -%}
+      <p class="blog-index__filter-note">
+        {{- 'blog.list.filtered_by' | t }}
+        <strong>{{ current_tags | join: ', ' }}</strong>
+      </p>
+    {%- endif -%}
+
+    {%- comment -%}
+      主题行：读 blog.all_tags（全局标签，与当前页无关），封顶 8 个。
+      再多就不像"入口"而像"标签云"，也会在 375px 上折三行把首篇挤下去。
+      tag URL 必须 handleize —— 标签原文带空格/大小写，直接拼会和平台不匹配。
+    {%- endcomment -%}
+    {%- if show_topic_nav and blog.all_tags.size > 0 -%}
+      <nav class="blog-index__topics" aria-label="{{ 'blog.list.topics_label' | t }}">
+        <a
+          class="blog-index__topic{% if current_tags == blank %} is-active{% endif %}"
+          href="{{ blog.url }}"
+          {% if current_tags == blank %}aria-current="page"{% endif %}
+        >
+          {{- 'blog.list.all_topics' | t -}}
+        </a>
+        {%- for tag in blog.all_tags limit: 8 -%}
+          <a
+            class="blog-index__topic{% if current_tags contains tag %} is-active{% endif %}"
+            href="{{ blog.url }}/tagged/{{ tag | handleize }}"
+            {% if current_tags contains tag %}aria-current="page"{% endif %}
+          >
+            {{- tag -}}
+          </a>
+        {%- endfor -%}
+      </nav>
+    {%- endif -%}
+  </div>
+</div>
+
+<div class="blog-index__page">
+  {%- paginate blog.articles by per_page -%}
+    {%- comment -%}
+      头条判定收在这里：paginate.current_page 只在 paginate 块内可用；
+      articles_count 是博客总数（paginate 块内 blog.articles 已被切片成当前页）。
+      只剩一篇时不升头条 —— 一张大卡旁边空着三列网格比一张普通卡更难看。
+    {%- endcomment -%}
+    {%- liquid
+      assign lead = blank
+      if show_featured and paginate.current_page == 1 and blog.articles_count > 1
+        assign lead = blog.articles.first
+      endif
+    -%}
+
+    {%- if lead != blank -%}
+      {%- liquid
+        assign lead_words = lead.content | strip_html | number_of_words
+        assign lead_minutes = lead_words | divided_by: 200.0 | ceil | at_least: 1
+        assign lead_tag = lead.tags.first
+      -%}
+      <article class="blog-index__featured" data-reveal>
+        <a class="blog-index__featured-card" href="{{ lead.url }}">
+          <span class="blog-index__featured-media">
+            {%- if lead.image != blank -%}
+              {%- comment -%}
+                alt 留空：同一链接内已有标题文字，再念一遍封面 alt 是重复。
+                image_tag 在 alt 为空时会把属性整条吞掉（不是输出 alt=""），
+                所以 capture 后补一次，否则 Lighthouse 判缺 alt。
+              {%- endcomment -%}
+              {%- capture lead_image -%}
+                {{
+                  lead.image
+                  | image_url: width: 1400
+                  | image_tag:
+                    widths: '500, 750, 1000, 1400',
+                    sizes: lead_sizes,
+                    width: lead.image.width,
+                    height: lead.image.height,
+                    loading: 'eager',
+                    fetchpriority: 'high',
+                    alt: ''
+                }}
+              {%- endcapture -%}
+              {%- unless lead_image contains ' alt=' -%}
+                {%- assign lead_image = lead_image | replace: '<img ', '<img alt="" ' -%}
+              {%- endunless -%}
+              {{ lead_image }}
+            {%- else -%}
+              <span class="blog-index__placeholder" aria-hidden="true">
+                {{- 'icon-leaf.svg' | inline_asset_content -}}
+              </span>
+            {%- endif -%}
+          </span>
+
+          <div class="blog-index__featured-body">
+            {%- if show_card_tags and lead_tag != blank -%}
+              <p class="blog-index__eyebrow">{{ lead_tag }}</p>
+            {%- endif -%}
+
+            <h2 class="blog-index__featured-title">{{ lead.title | escape }}</h2>
+
+            {%- if show_excerpt -%}
+              {%- if lead.excerpt != blank -%}
+                <p class="blog-index__featured-excerpt">
+                  {{- lead.excerpt | strip_html | truncatewords: 40 -}}
+                </p>
+              {%- elsif lead.content != blank -%}
+                <p class="blog-index__featured-excerpt">
+                  {{- lead.content | strip_html | truncatewords: 40 -}}
+                </p>
+              {%- endif -%}
+            {%- endif -%}
+
+            <div class="blog-index__featured-footer">
+              <p class="blog-index__meta">
+                {{ lead.published_at | time_tag: format: 'date' }}
+                {%- if show_author and lead.author != blank -%}
+                  <span class="blog-index__meta-sep" aria-hidden="true">·</span>
+                  <span>{{ lead.author | escape }}</span>
+                {%- endif -%}
+                {%- if show_reading_time and lead_words > 0 -%}
+                  <span class="blog-index__meta-sep" aria-hidden="true">·</span>
+                  <span>{{ 'blog.list.reading_time' | t: count: lead_minutes }}</span>
+                {%- endif -%}
+              </p>
+              <span class="blog-index__featured-cta">{{ 'blog.list.read_article' | t }}</span>
+            </div>
+          </div>
+        </a>
+      </article>
+    {%- endif -%}
+
+    {%- if blog.articles_count > 0 -%}
+      <ul class="blog-index__grid" role="list">
+        {%- for article in blog.articles -%}
+          {%- comment -%} 被选作头条的那篇不再进网格（按 handle 比对，不按下标） {%- endcomment -%}
+          {%- if lead != blank and article.handle == lead.handle -%}
+            {%- continue -%}
+          {%- endif -%}
+          {%- liquid
+            assign words = article.content | strip_html | number_of_words
+            assign minutes = words | divided_by: 200.0 | ceil | at_least: 1
+            # 入场延迟封顶 360ms：8 张卡按 60ms 递增会排到 480ms，越往下越像卡住
+            assign reveal_delay = forloop.index0 | times: 60 | at_most: 360
+          -%}
+          <li class="blog-index__item" data-reveal style="--reveal-delay: {{ reveal_delay }}ms">
+            <a class="blog-index__card" href="{{ article.url }}">
+              <span class="blog-index__media">
+                {%- if article.image != blank -%}
+                  {%- capture card_image -%}
+                    {{
+                      article.image
+                      | image_url: width: 800
+                      | image_tag:
+                        widths: '320, 480, 640, 800',
+                        sizes: card_sizes,
+                        width: article.image.width,
+                        height: article.image.height,
+                        loading: 'lazy',
+                        alt: ''
+                    }}
+                  {%- endcapture -%}
+                  {%- unless card_image contains ' alt=' -%}
+                    {%- assign card_image = card_image | replace: '<img ', '<img alt="" ' -%}
+                  {%- endunless -%}
+                  {{ card_image }}
+                {%- else -%}
+                  <span class="blog-index__placeholder" aria-hidden="true">
+                    {{- 'icon-leaf.svg' | inline_asset_content -}}
+                  </span>
+                {%- endif -%}
+              </span>
+
+              {%- comment -%}
+                body 用 div 而不是 span：h2 / p 是流内容，塞进 span 是非法嵌套。
+                `<a>` 的内容模型是 transparent，装 div + h2 合法（与集合卡同结构），
+                标题保留 h2 语义 —— 读屏可以按标题快跳各篇。
+              {%- endcomment -%}
+              <div class="blog-index__body">
+                <p class="blog-index__meta">
+                  {{ article.published_at | time_tag: format: 'date' }}
+                  {%- if show_reading_time and words > 0 -%}
+                    <span class="blog-index__meta-sep" aria-hidden="true">·</span>
+                    <span>{{ 'blog.list.reading_time' | t: count: minutes }}</span>
+                  {%- endif -%}
+                </p>
+
+                <h2 class="blog-index__card-title">{{ article.title | escape }}</h2>
+
+                {%- if show_excerpt -%}
+                  {%- if article.excerpt != blank -%}
+                    <p class="blog-index__excerpt">
+                      {{- article.excerpt | strip_html | truncatewords: 22 -}}
+                    </p>
+                  {%- elsif article.content != blank -%}
+                    <p class="blog-index__excerpt">
+                      {{- article.content | strip_html | truncatewords: 22 -}}
+                    </p>
+                  {%- endif -%}
+                {%- endif -%}
+
+                {%- comment -%}
+                  标签钉在卡底（margin-block-start: auto）：同排卡片标签行落在同一
+                  基线上，标题行数不同也不参差。封顶 3 个 —— 一篇打 8 个标签的
+                  文章会把这行折成三行，卡高全靠它撑着。只能是 span，见文件头说明。
+                {%- endcomment -%}
+                {%- if show_card_tags and article.tags.size > 0 -%}
+                  <span class="blog-index__tags">
+                    {%- for tag in article.tags limit: 3 -%}
+                      <span class="blog-index__tag">{{ tag }}</span>
+                    {%- endfor -%}
+                  </span>
+                {%- endif -%}
+              </div>
+            </a>
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- else -%}
+      {%- comment -%}
+        空态：博客还没发文章（装完主题的空店就是这种状态）。
+        页面照常渲染，不留白屏，并给一条离开这个页面的路。
+      {%- endcomment -%}
+      <div class="blog-index__empty">
+        <p class="blog-index__empty-title">{{ 'blog.list.empty.title' | t }}</p>
+        <p class="blog-index__empty-body">{{ 'blog.list.empty.body' | t }}</p>
+        <a class="blog-index__empty-link" href="{{ routes.all_products_collection_url }}">
+          {{- 'blog.list.empty.link' | t -}}
+        </a>
+      </div>
+    {%- endif -%}
+
+    {%- if paginate.pages > 1 -%}
+      {%- comment -%}
+        分页：与集合页 / 集合列表页同一套圆形按钮。箭头恒在 —— 不可用方向渲染
+        禁用占位，行宽不跳；中间截断部分渲染成 … 间隔（aria-hidden，纯视觉）。
+      {%- endcomment -%}
+      <nav class="blog-index__pagination" aria-label="{{ 'blog.list.pagination_label' | t }}">
+        {%- if paginate.previous -%}
+          <a
+            class="blog-index__pagination-nav"
+            href="{{ paginate.previous.url }}"
+            aria-label="{{ 'blog.list.pagination_previous' | t }}"
+          >
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          </a>
+        {%- else -%}
+          <span class="blog-index__pagination-nav" aria-disabled="true">
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          </span>
+        {%- endif -%}
+
+        {%- for part in paginate.parts -%}
+          {%- if part.is_link -%}
+            <a
+              class="blog-index__pagination-page"
+              href="{{ part.url }}"
+              aria-label="{{ 'blog.list.page_number' | t: number: part.title }}"
+            >{{ part.title }}</a>
+          {%- elsif part.title == paginate.current_page -%}
+            <span class="blog-index__pagination-page" aria-current="page">{{ part.title }}</span>
+          {%- else -%}
+            <span class="blog-index__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+          {%- endif -%}
+        {%- endfor -%}
+
+        {%- if paginate.next -%}
+          <a
+            class="blog-index__pagination-nav"
+            href="{{ paginate.next.url }}"
+            aria-label="{{ 'blog.list.pagination_next' | t }}"
+          >
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+          </a>
+        {%- else -%}
+          <span class="blog-index__pagination-nav" aria-disabled="true">
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+          </span>
+        {%- endif -%}
+      </nav>
+    {%- endif -%}
+  {%- endpaginate -%}
+</div>
+
+{% stylesheet %}
+  /* ============================================================
+     博客文章列表页 /blogs/<handle>
+
+     版式与 /collections 同源：页头淡品牌色带 + 内容列，卡片 = 白底 +
+     1px 细边 + 12px 圆角，hover 走全站签名（上浮 + 浅绿光晕）。
+     区别在于这里是**编辑型索引**，多一层文字优先级：
+       头条（第 1 页首篇）→ 大图 + 大标题，是全页唯一的视觉重心；
+       网格卡 → 图 4:3 + 日期/阅读时长 + 标题 + 摘要 + 标签。
+
+     布局分工（与 collections.liquid 完全一致）：
+       .blog-index__hero → full-width 通栏（背景带铺满视口）
+       .blog-index__page → .shopify-section 网格的第 2 列（内容列）
+     hero 内层 max-inline-size: var(--content-width) 收回内容列，
+     两块左边缘因此严格对齐。
+     ============================================================ */
+
+  /* ---------- 页头带 ---------- */
+
+  .blog-index__hero {
+    background-color: color-mix(in srgb, var(--color-background) 94%, var(--color-brand) 6%);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  .blog-index__hero-inner {
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
+    padding-block: clamp(1.5rem, 3.5vw, 2.75rem) clamp(1.25rem, 2.5vw, 1.75rem);
+  }
+
+  /* 面包屑：与集合页同一口径。链接给 44px 触控高度，所以用 align-items: center
+     让两行文字居中对齐，而不是把基线拉歪。 */
+  .blog-index__breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+  }
+  .blog-index__breadcrumb-item + .blog-index__breadcrumb-item::before {
+    content: '/';
+    margin-inline-end: 0.35rem;
+  }
+  .blog-index__breadcrumb-item a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .blog-index__breadcrumb-item a:hover {
+    text-decoration: underline;
+  }
+
+  .blog-index__title {
+    margin: 0;
+    font-size: clamp(1.9rem, 3.6vw, 2.75rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .blog-index__subheading {
+    margin: 0.55rem 0 0;
+    max-inline-size: 58ch;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--color-foreground-muted);
+  }
+  /* 标签页说明行：只在 /tagged/<x> 出现，位置贴着副标题，不抢 h1 */
+  .blog-index__filter-note {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--color-foreground-muted);
+  }
+  .blog-index__filter-note strong {
+    font-weight: 600;
+    color: var(--color-brand-accent);
+  }
+
+  /* ---------- 主题（标签）行 ---------- */
+
+  .blog-index__topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-block-start: 1rem;
+  }
+  /* 40px 高：低于分页按钮的 44px，因为这是一排并列的次级入口，
+     44px 会把页头带顶到两行以上；40px 仍在移动端可点范围内。 */
+  .blog-index__topic {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding-inline: 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: color-mix(in srgb, var(--color-foreground) 82%, transparent);
+    font-size: 0.8rem;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .blog-index__topic:hover {
+      border-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+      color: var(--color-brand-accent);
+    }
+  }
+  .blog-index__topic:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  .blog-index__topic.is-active {
+    border-color: transparent;
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+
+  /* ---------- 内容区 ---------- */
+
+  .blog-index__page {
+    padding-block: clamp(1.5rem, 3vw, 2.25rem) clamp(3rem, 6vw, 5rem);
+  }
+
+  /* ---------- 头条（第 1 页首篇） ---------- */
+
+  .blog-index__featured {
+    margin-block-end: clamp(1rem, 2vw, 1.5rem);
+  }
+  .blog-index__featured-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 12px;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+    /* 用 translate 而非 transform：滚动入场的 animation 也用 transform
+       （critical.css 的 reveal-in），两套机制互不抢占。 */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, translate 0.2s ease;
+  }
+  .blog-index__featured-card:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  .blog-index__featured-media {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  }
+
+  .blog-index__featured-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-inline-size: 0;
+    padding: clamp(1rem, 2.4vw, 1.75rem);
+  }
+  .blog-index__eyebrow {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-brand-accent);
+  }
+  .blog-index__featured-title {
+    margin: 0;
+    font-size: clamp(1.3rem, 2.3vw, 1.9rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    /* break-word：窄栏里 "Walk-behind mowers" 这类词不能被拆断 */
+    overflow-wrap: break-word;
+    text-wrap: pretty;
+  }
+  .blog-index__featured-excerpt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--color-foreground-muted);
+  }
+  /* 分隔线 + margin-block-start: auto：元信息与 CTA 一起钉在文字列底部，
+     图比文字高时不会在下方留一条空带。 */
+  .blog-index__featured-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-block-start: auto;
+    padding-block-start: 0.85rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  /* 全页只此一处箭头（AGENTS §6：卡内文字链接不加箭头，新增箭头先数同屏总数）。
+     头条是全页唯一的主 CTA，arrow 留给它做强调。 */
+  .blog-index__featured-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-brand-accent);
+  }
+  .blog-index__featured-cta::after {
+    content: '\2192';
+    transition: translate 0.2s ease;
+  }
+
+  /* ---------- 网格 ---------- */
+
+  .blog-index__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  @media (min-width: 750px) {
+    .blog-index__grid {
+      /* minmax(0, 1fr)：长标题的 min-content 不能把轨道撑出视口 */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+  }
+  @media (min-width: 990px) {
+    .blog-index__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .blog-index__item {
+    display: flex;
+    min-inline-size: 0;
+  }
+
+  .blog-index__card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 12px;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, translate 0.2s ease;
+  }
+  .blog-index__card:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* 媒体盒：4:3 定比 + 图绝对定位铺满。图若留在流里，固有宽高比会参与
+     grid 行高计算（use-case-grid 7:3→5:5 的教训），同排卡片会被拉得忽高忽矮。
+     为什么是 4:3：博客封面多是实拍横图，4:3 只裁两侧；1:1 会把横图裁掉近一半。
+     对照 /collections 的 1:1 —— 那里回落的是商品方图，理由相反。 */
+  .blog-index__media {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  }
+  .blog-index__media img,
+  .blog-index__featured-media img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  /* 缺图占位：图标本身放在绝对定位层里居中，图位恒定存在、大小一致 */
+  .blog-index__placeholder {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+  }
+  .blog-index__placeholder svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .blog-index__body {
+    display: flex;
+    /* flex: 1 必须有：卡片被 grid 拉到等高后，多出来的高度默认留在 body 之外，
+       标签行（margin-block-start: auto）就钉不到卡底。 */
+    flex: 1;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-inline-size: 0;
+    padding: 0.8rem 0.9rem 0.95rem;
+  }
+
+  /* 元信息：日期 · 阅读时长。压在标题**上方**——编辑型索引的常规读法
+     （先看"什么时候、多久"，再看标题值不值得点）。 */
+  .blog-index__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    font-size: 0.74rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground-muted);
+  }
+  .blog-index__meta-sep {
+    /* 圆点比字符更轻，且不会被读屏念成"中间点" */
+    color: color-mix(in srgb, var(--color-foreground) 35%, transparent);
+  }
+
+  .blog-index__card-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .blog-index__excerpt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+
+  .blog-index__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-block-start: auto;
+    padding-block-start: 0.6rem;
+  }
+  .blog-index__tag {
+    padding: 0.16rem 0.5rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+    color: var(--color-brand-accent);
+    font-size: 0.68rem;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  /* ---------- 悬停（只在真有指针的设备上：触屏 :hover 会粘住） ---------- */
+
+  @media (hover: hover) and (pointer: fine) {
+    .blog-index__featured-card:hover,
+    .blog-index__card:hover {
+      border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+      box-shadow: var(--card-hover-shadow);
+      translate: 0 var(--card-hover-lift);
+    }
+    .blog-index__featured-card:hover .blog-index__featured-media img,
+    .blog-index__card:hover .blog-index__media img {
+      transform: scale(1.04);
+    }
+    .blog-index__card:hover .blog-index__card-title {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+      text-decoration-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+    }
+    .blog-index__featured-card:hover .blog-index__featured-cta::after {
+      translate: 0.2rem 0;
+    }
+  }
+
+  /* ---------- 空态 ---------- */
+
+  .blog-index__empty {
+    display: grid;
+    justify-items: center;
+    gap: 0.4rem;
+    padding: 3rem 1rem;
+    text-align: center;
+    border: 1px dashed color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: 12px;
+  }
+  .blog-index__empty-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .blog-index__empty-body {
+    margin: 0;
+    max-inline-size: 42ch;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+  .blog-index__empty-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-block-start: 0.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-brand-accent);
+    text-underline-offset: 4px;
+  }
+
+  /* ---------- 分页（与集合页 / 集合列表页同一套视觉） ---------- */
+
+  .blog-index__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-block-start: 2rem;
+  }
+  .blog-index__pagination-nav,
+  .blog-index__pagination-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: inherit;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .blog-index__pagination a:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+  .blog-index__pagination [aria-disabled='true'] {
+    opacity: 0.35;
+  }
+  .blog-index__pagination [aria-current='page'] {
+    border-color: transparent;
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+  .blog-index__pagination-gap {
+    min-width: 24px;
+    text-align: center;
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+
+  /* ---------- 断点：头条左右分栏 + 卡片放大 ---------- */
+
+  @media (min-width: 750px) {
+    .blog-index__featured-card {
+      /* 图略宽于文字：封面是这一层的信息主体，文字列负责标题与摘要的节奏 */
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    }
+    .blog-index__featured-media {
+      /* 让文字列决定卡高，图跟着填满（min-block-size 保住最低视觉分量）。
+         反过来用 aspect-ratio 定高的话，标题三行→两行时整卡会忽高忽矮。 */
+      aspect-ratio: auto;
+      block-size: 100%;
+      min-block-size: 17rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blog-index__featured-card,
+    .blog-index__card,
+    .blog-index__media img,
+    .blog-index__featured-media img,
+    .blog-index__topic {
+      transition: none;
+    }
+    .blog-index__featured-card:hover,
+    .blog-index__card:hover {
+      translate: none;
+    }
+    .blog-index__featured-card:hover .blog-index__featured-media img,
+    .blog-index__card:hover .blog-index__media img {
+      transform: none;
+    }
+    .blog-index__featured-card:hover .blog-index__featured-cta::after {
+      translate: none;
+    }
+  }
+{% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.blog",
-  "settings": []
+  "tag": "section",
+  "class": "blog-index-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "t:labels.subheading",
+      "default": "Field notes on choosing, running and maintaining outdoor power equipment."
+    },
+    {
+      "type": "range",
+      "id": "articles_per_page",
+      "min": 4,
+      "max": 24,
+      "step": 4,
+      "label": "t:sections.blog.labels.articles_per_page",
+      "info": "t:sections.blog.labels.articles_per_page_info",
+      "default": 8
+    },
+    {
+      "type": "checkbox",
+      "id": "show_featured",
+      "label": "t:sections.blog.labels.show_featured",
+      "info": "t:sections.blog.labels.show_featured_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_topic_nav",
+      "label": "t:sections.blog.labels.show_topic_nav",
+      "info": "t:sections.blog.labels.show_topic_nav_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_excerpt",
+      "label": "t:sections.blog.labels.show_excerpt",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_author",
+      "label": "t:sections.blog.labels.show_author",
+      "info": "t:sections.blog.labels.show_author_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_reading_time",
+      "label": "t:sections.blog.labels.show_reading_time",
+      "info": "t:sections.blog.labels.show_reading_time_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_card_tags",
+      "label": "t:sections.blog.labels.show_card_tags",
+      "default": true
+    }
+  ]
 }
 {% endschema %}
