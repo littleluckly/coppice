@@ -140,6 +140,8 @@
     "menu": "Menu",
     "close": "Close",
     "back": "Back",
+    "all_series": "All series",
+    "view_all_series": "View all series",
     "view_all_products": "View all products",
     "all_collection_products": "All {{ title }} ({{ total }})",
     "products_count": {

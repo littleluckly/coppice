@@ -1540,6 +1540,85 @@
     translate: 0.25rem 0;
   }
 
+  /* ---- All series 面板（2026-11-14，刘工）：单层网格，没有左列 tab ----
+     与三段式 mega 的唯一结构差异：这里没有二级分类，所以整块内容区直接铺系列网格，
+     左列那 12rem 的空档留着只会是一片白（面板里只有一类东西）。
+     系列名左对齐、计数右对齐，扫读时计数成一条竖线。 */
+  .main-nav__mega-inner--series {
+    display: block;
+    padding-block: 1.75rem 2rem;
+  }
+
+  .main-nav__series-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-end: 0.5rem;
+  }
+
+  /* View all 出口移到头部右侧：复用 __mega-viewall 的字号/字重/箭头，
+     只摘掉它作为"左列底部出口"那几条（自动上推、上分隔线、左右内缩）。 */
+  .main-nav__series-viewall {
+    margin-block-start: 0;
+    min-height: 44px;
+    padding-block: 0;
+    border-block-start: 0;
+    gap: 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  .main-nav__series {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    /* 固定 3 列 —— 与 .main-nav__mega-cards 同一个定论：auto-fill 在中区 1088px
+       里会算出 5 列，系列数不满时右边空掉一大片。 */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.125rem 2rem;
+  }
+
+  .main-nav__series-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 44px;
+    /* 负 margin：hover 底色往外撑半格，文字仍与上面的标题左对齐 */
+    margin-inline: -0.5rem;
+    padding-inline: 0.5rem;
+    border-radius: 6px;
+    color: var(--color-foreground);
+    font-size: 0.9375rem;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+  }
+
+  /* 与普通下拉 .main-nav__dropdown-link:hover 同款反馈（8% 前景垫底），
+     不借顶部药丸那套反色——面板里同时有十几个链接，没有滑动指示器可依。 */
+  .main-nav__series-link:hover,
+  .main-nav__series-link:focus-visible {
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+
+  .main-nav__series-link--current {
+    color: var(--color-brand);
+    font-weight: 600;
+  }
+
+  .main-nav__series-name {
+    /* 窄列里 "Batteries & Chargers" 这类名字要能换行，不能把轨道撑出去 */
+    overflow-wrap: break-word;
+  }
+
+  .main-nav__series-count {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground-muted);
+  }
+
   /* 组头：分类名（左）+ All 集合出口（右，View All 型链接，箭头合规） */
   .main-nav__mega-group-head {
     display: flex;
@@ -2679,6 +2758,29 @@
       "id": "menu",
       "label": "t:labels.menu",
       "default": "main-menu"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_all_series",
+      "label": "t:sections.main_nav.labels.show_all_series",
+      "info": "t:sections.main_nav.labels.show_all_series_info",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "all_series_label",
+      "label": "t:sections.main_nav.labels.all_series_label",
+      "default": "t:sections.main_nav.defaults.all_series_label"
+    },
+    {
+      "type": "range",
+      "id": "all_series_limit",
+      "min": 6,
+      "max": 30,
+      "step": 6,
+      "label": "t:sections.main_nav.labels.all_series_limit",
+      "info": "t:sections.main_nav.labels.all_series_limit_info",
+      "default": 12
     },
     {
       "type": "link_list",
