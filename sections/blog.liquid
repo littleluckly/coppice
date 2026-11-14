@@ -192,11 +192,9 @@
               <p class="blog-index__meta">
                 {{ lead.published_at | time_tag: format: 'date' }}
                 {%- if show_author and lead.author != blank -%}
-                  <span class="blog-index__meta-sep" aria-hidden="true">·</span>
                   <span>{{ lead.author | escape }}</span>
                 {%- endif -%}
                 {%- if show_reading_time and lead_chars > 200 -%}
-                  <span class="blog-index__meta-sep" aria-hidden="true">·</span>
                   <span>{{ 'blog.list.reading_time' | t: count: lead_minutes }}</span>
                 {%- endif -%}
               </p>
@@ -257,11 +255,9 @@
                 <p class="blog-index__meta">
                   {{ article.published_at | time_tag: format: 'date' }}
                   {%- if show_author and article.author != blank -%}
-                    <span class="blog-index__meta-sep" aria-hidden="true">·</span>
                     <span>{{ article.author | escape }}</span>
                   {%- endif -%}
                   {%- if show_reading_time and chars > 200 -%}
-                    <span class="blog-index__meta-sep" aria-hidden="true">·</span>
                     <span>{{ 'blog.list.reading_time' | t: count: minutes }}</span>
                   {%- endif -%}
                 </p>
@@ -404,7 +400,8 @@
     margin: 0 0 0.5rem;
     font-size: 0.82rem;
     line-height: 1.2;
-    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+    /* 不能写 55% 前景：那是 3.15:1，13px 小字过不了 AA。走全站 muted 令牌（4.95:1）。 */
+    color: var(--color-foreground-muted);
   }
   .blog-index__breadcrumb-item + .blog-index__breadcrumb-item::before {
     content: '/';
@@ -682,16 +679,19 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0;
     margin: 0;
     font-size: 0.74rem;
     line-height: 1.4;
     font-variant-numeric: tabular-nums;
     color: var(--color-foreground-muted);
   }
-  .blog-index__meta-sep {
-    /* 圆点比字符更轻，且不会被读屏念成"中间点" */
-    color: color-mix(in srgb, var(--color-foreground) 35%, transparent);
+  /* 分隔点用伪元素而不是 <span>·</span>：文本节点会被 axe 当成
+     "对比度不足的小字"抓（35% 前景只有 2:1），生成内容不在审计范围内；
+     顺带少两个节点/条。间距全由 ::before 两侧的 margin 给。 */
+  .blog-index__meta > * + *::before {
+    content: '\00b7';
+    margin-inline: 0.35rem;
   }
 
   .blog-index__card-title {
@@ -831,7 +831,8 @@
   .blog-index__pagination-gap {
     min-width: 24px;
     text-align: center;
-    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+    /* 同面包屑：45% 前景只有 2.5:1。省略号虽是纯视觉的，但它仍是文本节点。 */
+    color: var(--color-foreground-muted);
   }
 
   /* ---------- 断点：头条左右分栏 + 卡片放大 ---------- */
