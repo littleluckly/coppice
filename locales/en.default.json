@@ -27,7 +27,25 @@
     "comment_form_email": "Email",
     "comment_form_name": "Name",
     "comment_form_submit": "Post",
-    "comment_form_title": "Add a comment"
+    "comment_form_title": "Add a comment",
+    "list": {
+      "all_topics": "All guides",
+      "breadcrumb_home": "Home",
+      "breadcrumb_label": "Breadcrumb",
+      "empty": {
+        "body": "New articles show up here as soon as they're published. Until then, everything we carry is one click away.",
+        "link": "Browse all products",
+        "title": "No guides yet"
+      },
+      "filtered_by": "Showing guides tagged",
+      "page_number": "Page {{ number }}",
+      "pagination_label": "Pagination",
+      "pagination_next": "Next page",
+      "pagination_previous": "Previous page",
+      "read_article": "Read guide",
+      "reading_time": "{{ count }} min read",
+      "topics_label": "Browse by topic"
+    }
   },
   "cart": {
     "cart_empty": "Cart, empty",

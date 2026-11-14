@@ -206,6 +206,21 @@
       },
       "read_more": "Read guide"
     },
+    "blog": {
+      "labels": {
+        "articles_per_page": "Articles per page",
+        "articles_per_page_info": "Additional articles move to the next page.",
+        "show_author": "Show author",
+        "show_card_tags": "Show tags on cards",
+        "show_excerpt": "Show excerpts",
+        "show_featured": "Feature the newest article",
+        "show_featured_info": "Shows the newest post as a wide lead story on the first page.",
+        "show_reading_time": "Show reading time",
+        "show_reading_time_info": "Estimated from the article body at 200 words per minute.",
+        "show_topic_nav": "Show tag navigation",
+        "show_topic_nav_info": "Lists the blog's tags under the heading so customers can browse by topic. Blogs have no categories — tags are the only grouping."
+      }
+    },
     "collections_list": {
       "name": "Collections list",
       "labels": {

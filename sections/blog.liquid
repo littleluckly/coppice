@@ -253,6 +253,10 @@
               <div class="blog-index__body">
                 <p class="blog-index__meta">
                   {{ article.published_at | time_tag: format: 'date' }}
+                  {%- if show_author and article.author != blank -%}
+                    <span class="blog-index__meta-sep" aria-hidden="true">·</span>
+                    <span>{{ article.author | escape }}</span>
+                  {%- endif -%}
                   {%- if show_reading_time and words > 0 -%}
                     <span class="blog-index__meta-sep" aria-hidden="true">·</span>
                     <span>{{ 'blog.list.reading_time' | t: count: minutes }}</span>
