@@ -194,6 +194,11 @@
                       </a>
                     </div>
                     <div class="main-nav__mega-content">
+                      {%- comment -%}
+                        不限条数：直接把 collections 全量铺出来（刘工 2026-11-14）。
+                        ⚠️ for 循环本身有 50 次硬上限，集合超过 50 个时第 51 个起不会出现
+                        —— 这是平台限制，不是这里的取舍；那种规模本来也该走 /collections 页。
+                      {%- endcomment -%}
                       <ul class="main-nav__mega-cards main-nav__mega-cards--series" role="list">
                         {%- for series_item in collections -%}
                           {%- if series_item.handle == 'frontpage' -%}
@@ -227,10 +232,10 @@
                                   <span class="main-nav__mega-card-media">
                                     {{
                                       series_image
-                                      | image_url: width: 640
+                                      | image_url: width: 480
                                       | image_tag:
-                                        widths: '240, 360, 480, 640',
-                                        sizes: '(min-width: 1200px) 16rem, 20rem',
+                                        widths: '160, 240, 320, 480',
+                                        sizes: '(min-width: 1200px) 11rem, 14rem',
                                         loading: 'lazy',
                                         alt: '',
                                         class: 'main-nav__mega-card-img'
@@ -1630,31 +1635,34 @@
     translate: 0.25rem 0;
   }
 
-  /* ---- All series 面板（2026-11-14 第三版，刘工：集合要"上图下文，类似商品卡"）----
-     骨架仍是两栏（12rem 左轨 + 内容区），中区直接复用另两个面板的商品卡
-     .main-nav__mega-card —— 白底 / 1px 描边 / 12px 圆角 / 0.75rem 内距 /
-     hover 上浮 + 图片缩放，全是同一份样式，所以三个面板现在是同一套卡，只是数据不同。
+  /* ---- All series 面板（2026-11-14 第四版，刘工：6 列 + 不限条数）----
+     骨架仍是两栏（12rem 左轨 + 内容区），中区整套复用另两个面板的商品卡
+     .main-nav__mega-card（白底 / 1px 描边 / 12px 圆角 / 0.75rem 内距 /
+     hover 上浮 + 图片缩放），三个面板是同一套卡，只是数据不同。
      只在 --series 修饰类里覆盖两件事：
-       ① 列数 4（商品卡是 3 列）：集合通常十几个，3 列要排 4 行，面板会顶出视口；
+       ① 列数 6（商品卡是 3 列）：列多了行数才压得住 —— 集合不再限制条数，
+          "展示全部"只能靠列数消化，否则十几个集合就是 5 行、面板顶穿视口；
        ② 图从 1:1 改 4:3：集合图多是横幅实景，1:1 会裁掉两侧；4:3 还省纵向空间。 */
 
   .main-nav__mega-cards--series {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1.25rem;
+    /* 1440 视口内容列 1088px → 单卡 ~165px（图 141×106），6 列三行能装 18 个集合 */
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem 1.25rem;
   }
 
   .main-nav__mega-cards--series .main-nav__mega-card-media {
     aspect-ratio: 4 / 3;
   }
 
-  /* 990–1199：内容列只剩 638px，四列每张 147px，"Batteries & Chargers" 会折两行 */
+  /* 990–1199：内容列只剩 672px，6 列每张 95px —— "Batteries & Chargers" 会被拆成
+     三四行，收回 4 列（每张 155px）。这一档行数会变多，超出由下面的高度兜底接管。 */
   @media (max-width: 1199px) {
     .main-nav__mega-cards--series {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
 
-  /* 高度兜底：条数调大后卡片会顶出视口，而面板贴着吸顶行、页面本身滚不动 ——
+  /* 高度兜底：集合多到装不下时卡片会顶出视口，而面板贴着吸顶行、页面本身滚不动 ——
      底边被切掉就再也够不着。这一种面板限高 + 内部滚动，宁可有滚动条也不丢内容。 */
   .main-nav__mega:has(.main-nav__mega-cards--series) {
     max-block-size: calc(100dvh - 7rem);
