@@ -1572,52 +1572,33 @@
     translate: 0.25rem 0;
   }
 
-  /* ---- All series 面板（2026-11-14，刘工）：单层网格，没有左列 tab ----
-     与三段式 mega 的唯一结构差异：这里没有二级分类，所以整块内容区直接铺系列网格，
-     左列那 12rem 的空档留着只会是一片白（面板里只有一类东西）。
-     系列名左对齐、计数右对齐，扫读时计数成一条竖线。 */
-  .main-nav__mega-inner--series {
-    display: block;
-    padding-block: 1.75rem 2rem;
-  }
+  /* ---- All series 面板（2026-11-14 第二版，刘工：要与另两个面板一致）----
+     结构与另两个 mega 面板**完全同构**：外层还是 .main-nav__mega-inner 的两栏
+     （12rem 左轨 + 内容区），左轨照样是「小标签 + 底部 View all 出口」，
+     内距也走同一套 2.25rem/2.5rem。改版前这里是"头部一行 + 四列文字"，
+     没有左轨、标签占整行，跟另两个面板并排看就是两种东西。
 
-  .main-nav__series-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-block-end: 0.5rem;
-  }
-
-  /* 头部左边缘与系列名对齐：.main-nav__mega-label 自带 0.625rem 内缩（三段式里
-     它要和左列分类名对齐），而这里的系列链接用 -0.5rem 外边距让 hover 底色外扩，
-     文字落回内容列左缘。不清零就会看到标题比列表左移 10px。 */
-  .main-nav__series-head .main-nav__mega-label {
-    padding-inline: 0;
-  }
-
-  /* View all 出口移到头部右侧：复用 __mega-viewall 的字号/字重/箭头，
-     只摘掉它作为"左列底部出口"那几条（自动上推、上分隔线、左右内缩）。 */
-  .main-nav__series-viewall {
-    margin-block-start: 0;
-    min-height: 44px;
-    padding-block: 0;
-    border-block-start: 0;
-    gap: 0.375rem;
-    font-size: 0.875rem;
-  }
+     唯一保留的差异在中区：这里没有二级分类，所以不写 [data-mega-tab]，
+     中区直接铺「系列清单」（名字 + 商品数），而不是商品卡组。
+     为什么不用商品卡：cards 是 1:1 大图 + 3 列，12 个集合要排 4 行、面板近 1100px 高，
+     会超出视口被切掉；页头也不该为一个悬停面板多拉 12 张图。 */
 
   .main-nav__series {
     margin: 0;
     padding: 0;
     list-style: none;
     display: grid;
-    /* 固定 4 列：这个面板没有左列，整条内容列（≥990px 时约 950–1400px）都由网格
-       自己吃下。auto-fill 在 1400px 里会算出 6 列、系列不满时右边空一片；
-       3 列又太松（单列 440px，一个集合名短得像个孤岛）。
-       12 条 = 3 行，面板高度与三段式面板相当。 */
+    /* 列数按内容列实宽算（内容列 = 视口内容宽 − 12rem 左轨 − 2.5rem 间距 − 2×2.5rem 内距：
+       1440 → 1088px；990 → 638px）。宽屏 4 列像目录；990 一带 4 列只剩 147px，
+       "Batteries & Chargers" 会被折成两行，所以窄档收到 3 列。 */
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.125rem 1.5rem;
+  }
+
+  @media (max-width: 1199px) {
+    .main-nav__series {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   .main-nav__series-link {
@@ -1626,7 +1607,7 @@
     justify-content: space-between;
     gap: 0.75rem;
     min-height: 44px;
-    /* 负 margin：hover 底色往外撑半格，文字仍与上面的标题左对齐 */
+    /* 负 margin：hover 底色往左撑半格，文字仍贴在内容列左缘 */
     margin-inline: -0.5rem;
     padding-inline: 0.5rem;
     border-radius: 6px;
@@ -1636,8 +1617,8 @@
     transition: background-color 0.15s ease;
   }
 
-  /* 与普通下拉 .main-nav__dropdown-link:hover 同款反馈（8% 前景垫底），
-     不借顶部药丸那套反色——面板里同时有十几个链接，没有滑动指示器可依。 */
+  /* 与普通下拉 .main-nav__dropdown-link:hover 同款反馈（8% 前景垫底）：
+     这一列同时有十几个链接，没有左轨那种滑动指示器可依，逐项垫底最稳。 */
   .main-nav__series-link:hover,
   .main-nav__series-link:focus-visible {
     background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
