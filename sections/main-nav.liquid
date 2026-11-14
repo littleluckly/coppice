@@ -449,6 +449,68 @@
                 {%- endif -%}
               </li>
             {%- endfor -%}
+
+            {%- if show_series -%}
+              {%- comment -%}
+                All series 入口（2026-11-14）：一级项 + 单层 mega 面板。
+                面板里刻意不放 [data-mega-tab] / [data-mega-panel] ——
+                nav-pill.js 的 tab 切换只在「有 tab 且有 panel」的作用域里接管
+                （见 _scopes 的循环过滤），这个面板两者都没有，于是走"全部内容
+                可见"的基线路径：不写一行新脚本也不会被 hide。
+                系列清单取全局 collections（字母序，平台给定），空集合与
+                frontpage（平台给每个店自动建的"主页"集合）不列 —— 与 /collections
+                列表页同一口径，两个入口不会打架。
+                当前页判定直接比 request.path 与 collection.url，不手拼路径。
+              {%- endcomment -%}
+              <li class="main-nav__item main-nav__item--group main-nav__item--series">
+                <span
+                  class="main-nav__link main-nav__link--group{% if series_is_current %} main-nav__link--current{% endif %}"
+                  aria-haspopup="true"
+                  tabindex="0"
+                >
+                  {{ series_label | escape }}
+                </span>
+                <div class="main-nav__mega main-nav__mega--series">
+                  <div class="main-nav__mega-inner main-nav__mega-inner--series">
+                    <div class="main-nav__series-head">
+                      <span class="main-nav__mega-label">{{ series_label | escape }}</span>
+                      <a
+                        class="main-nav__mega-viewall main-nav__series-viewall"
+                        href="{{ routes.collections_url }}"
+                      >
+                        {{ 'navigation.view_all_series' | t }}
+                        <span class="main-nav__mega-viewall-arrow" aria-hidden="true">→</span>
+                      </a>
+                    </div>
+                    <ul class="main-nav__series" role="list">
+                      {%- for collection in collections limit: series_limit -%}
+                        {%- if collection.handle == 'frontpage' -%}
+                          {%- continue -%}
+                        {%- endif -%}
+                        {%- if collection.all_products_count > 0 -%}
+                          {%- assign series_link_current = false -%}
+                          {%- if request.path == collection.url -%}
+                            {%- assign series_link_current = true -%}
+                          {%- endif -%}
+                          <li>
+                            <a
+                              class="main-nav__series-link{% if series_link_current %} main-nav__series-link--current{% endif %}"
+                              href="{{ collection.url }}"
+                              {% if series_link_current %}
+                                aria-current="page"
+                              {% endif %}
+                            >
+                              <span class="main-nav__series-name">{{ collection.title | escape }}</span>
+                              <span class="main-nav__series-count">{{ collection.all_products_count }}</span>
+                            </a>
+                          </li>
+                        {%- endif -%}
+                      {%- endfor -%}
+                    </ul>
+                  </div>
+                </div>
+              </li>
+            {%- endif -%}
           </ul>
         </nav-pill>
       {%- endif -%}
@@ -684,6 +746,25 @@
                 {%- endif -%}
               </li>
             {%- endfor -%}
+
+            {%- comment -%}
+              All series（移动端，2026-11-14）：抽屉里不做手风琴 —— 桌面那个面板
+              是"免跳转直接挑系列"，手机上同样一屏放不下，直接进 /collections
+              列表页（那页本身就是为窄屏做的两列网格）。与桌面共用同一组设置。
+            {%- endcomment -%}
+            {%- if show_series -%}
+              <li class="nav-drawer__item">
+                <a
+                  class="nav-drawer__link{% if series_is_current %} nav-drawer__link--current{% endif %}"
+                  href="{{ routes.collections_url }}"
+                  {% if series_is_current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  <span>{{ series_label | escape }}</span>
+                </a>
+              </li>
+            {%- endif -%}
           </ul>
 
           {%- comment -%}
