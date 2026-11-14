@@ -191,12 +191,12 @@
             <div class="blog-index__featured-footer">
               <p class="blog-index__meta">
                 {{ lead.published_at | time_tag: format: 'date' }}
-                {%- if show_author and lead.author != blank -%}
+                {% if show_author and lead.author != blank %}
                   <span>{{ lead.author | escape }}</span>
-                {%- endif -%}
-                {%- if show_reading_time and lead_chars > 200 -%}
+                {% endif %}
+                {% if show_reading_time and lead_chars > 200 %}
                   <span>{{ 'blog.list.reading_time' | t: count: lead_minutes }}</span>
-                {%- endif -%}
+                {% endif %}
               </p>
               <span class="blog-index__featured-cta">{{ 'blog.list.read_article' | t }}</span>
             </div>
@@ -254,12 +254,12 @@
               <div class="blog-index__body">
                 <p class="blog-index__meta">
                   {{ article.published_at | time_tag: format: 'date' }}
-                  {%- if show_author and article.author != blank -%}
+                  {% if show_author and article.author != blank %}
                     <span>{{ article.author | escape }}</span>
-                  {%- endif -%}
-                  {%- if show_reading_time and chars > 200 -%}
+                  {% endif %}
+                  {% if show_reading_time and chars > 200 %}
                     <span>{{ 'blog.list.reading_time' | t: count: minutes }}</span>
-                  {%- endif -%}
+                  {% endif %}
                 </p>
 
                 <h2 class="blog-index__card-title">{{ article.title | escape }}</h2>
