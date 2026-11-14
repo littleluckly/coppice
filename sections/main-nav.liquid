@@ -465,13 +465,21 @@
                 当前页判定直接比 request.path 与 collection.url，不手拼路径。
               {%- endcomment -%}
               <li class="main-nav__item main-nav__item--group main-nav__item--series">
-                <span
+                {%- comment -%}
+                  与其他 group 项唯一的不同：这一项有真实去处（/collections 列表页），
+                  所以做成 <a> 而不是 <span> —— 点一下就进页面，触屏/无 hover 设备
+                  也有可靠路径；面板仍由 li:hover / :focus-within 展开，两者不冲突。
+                {%- endcomment -%}
+                <a
                   class="main-nav__link main-nav__link--group{% if series_is_current %} main-nav__link--current{% endif %}"
+                  href="{{ routes.collections_url }}"
                   aria-haspopup="true"
-                  tabindex="0"
+                  {% if series_is_current %}
+                    aria-current="page"
+                  {% endif %}
                 >
                   {{ series_label | escape }}
-                </span>
+                </a>
                 <div class="main-nav__mega main-nav__mega--series">
                   <div class="main-nav__mega-inner main-nav__mega-inner--series">
                     <div class="main-nav__series-head">
