@@ -480,18 +480,25 @@
                 >
                   {{ series_label | escape }}
                 </a>
-                <div class="main-nav__mega main-nav__mega--series">
-                  <div class="main-nav__mega-inner main-nav__mega-inner--series">
-                    <div class="main-nav__series-head">
+                <div class="main-nav__mega">
+                  <div class="main-nav__mega-inner">
+                    {%- comment -%}
+                      左轨与另两个 mega 面板完全同构：左上小标签、底部 View all 出口
+                      （.main-nav__mega-viewall 自带 margin-block-start: auto 与上分隔线）。
+                      区别只在中区：这里没有二级分类，所以没有 [data-mega-tab]，
+                      中区直接铺"系列清单"而不是商品卡组。
+                    {%- endcomment -%}
+                    <div class="main-nav__mega-nav">
                       <span class="main-nav__mega-label">{{ series_label | escape }}</span>
                       <a
-                        class="main-nav__mega-viewall main-nav__series-viewall"
+                        class="main-nav__mega-viewall"
                         href="{{ routes.collections_url }}"
                       >
                         {{ 'navigation.view_all_series' | t }}
                         <span class="main-nav__mega-viewall-arrow" aria-hidden="true">→</span>
                       </a>
                     </div>
+                    <div class="main-nav__mega-content">
                     <ul class="main-nav__series" role="list">
                       {%- for series_item in collections limit: series_limit -%}
                         {%- if series_item.handle == 'frontpage' -%}
@@ -531,6 +538,7 @@
                         {%- endif -%}
                       {%- endfor -%}
                     </ul>
+                    </div>
                   </div>
                 </div>
               </li>
