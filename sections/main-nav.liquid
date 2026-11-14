@@ -62,7 +62,6 @@
   if series_label == blank
     assign series_label = 'navigation.all_series' | t
   endif
-  assign series_limit = section.settings.all_series_limit | default: 12
   # 插在菜单的哪个位置：first / before_last / last。
   # before_last = 排在菜单最后一项之前 —— Support / Contact 这类支持项通常放最后，
   # 这个档位让"全部系列"留在商品入口这一侧，而不是被顶到支持项后面（演示店用这一档）。
@@ -196,7 +195,7 @@
                     </div>
                     <div class="main-nav__mega-content">
                       <ul class="main-nav__mega-cards main-nav__mega-cards--series" role="list">
-                        {%- for series_item in collections limit: series_limit -%}
+                        {%- for series_item in collections -%}
                           {%- if series_item.handle == 'frontpage' -%}
                             {%- continue -%}
                           {%- endif -%}
@@ -2815,16 +2814,6 @@
       "id": "all_series_label",
       "label": "t:sections.main_nav.labels.all_series_label",
       "default": "All series"
-    },
-    {
-      "type": "range",
-      "id": "all_series_limit",
-      "min": 4,
-      "max": 24,
-      "step": 4,
-      "label": "t:sections.main_nav.labels.all_series_limit",
-      "info": "t:sections.main_nav.labels.all_series_limit_info",
-      "default": 8
     },
     {
       "type": "select",
