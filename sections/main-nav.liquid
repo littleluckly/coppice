@@ -1557,6 +1557,13 @@
     margin-block-end: 0.5rem;
   }
 
+  /* 头部左边缘与系列名对齐：.main-nav__mega-label 自带 0.625rem 内缩（三段式里
+     它要和左列分类名对齐），而这里的系列链接用 -0.5rem 外边距让 hover 底色外扩，
+     文字落回内容列左缘。不清零就会看到标题比列表左移 10px。 */
+  .main-nav__series-head .main-nav__mega-label {
+    padding-inline: 0;
+  }
+
   /* View all 出口移到头部右侧：复用 __mega-viewall 的字号/字重/箭头，
      只摘掉它作为"左列底部出口"那几条（自动上推、上分隔线、左右内缩）。 */
   .main-nav__series-viewall {
@@ -1573,10 +1580,12 @@
     padding: 0;
     list-style: none;
     display: grid;
-    /* 固定 3 列 —— 与 .main-nav__mega-cards 同一个定论：auto-fill 在中区 1088px
-       里会算出 5 列，系列数不满时右边空掉一大片。 */
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.125rem 2rem;
+    /* 固定 4 列：这个面板没有左列，整条内容列（≥990px 时约 950–1400px）都由网格
+       自己吃下。auto-fill 在 1400px 里会算出 6 列、系列不满时右边空一片；
+       3 列又太松（单列 440px，一个集合名短得像个孤岛）。
+       12 条 = 3 行，面板高度与三段式面板相当。 */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.125rem 1.5rem;
   }
 
   .main-nav__series-link {
