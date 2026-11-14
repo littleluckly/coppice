@@ -53,6 +53,20 @@
 {%- liquid
   assign menu = section.settings.menu
   assign brand_name = section.settings.brand_name | default: shop.name
+
+  # 「All series」入口（2026-11-14 刘工）：数据取自全局 collections，不依赖菜单配置 ——
+  # 商家不必为了一个"全部系列"入口手工维护一条菜单（菜单里也放不下"全部"这个语义）。
+  # 桌面 = mega 面板（系列网格 + View all 出口），移动 = 抽屉里一条直达 /collections 的链接。
+  assign show_series = section.settings.show_all_series
+  assign series_label = section.settings.all_series_label
+  if series_label == blank
+    assign series_label = 'navigation.all_series' | t
+  endif
+  assign series_limit = section.settings.all_series_limit | default: 12
+  assign series_is_current = false
+  if request.path == routes.collections_url
+    assign series_is_current = true
+  endif
 -%}
 
 {% comment -%}
@@ -112,7 +126,7 @@
         <span class="main-nav__brand">{{ brand_name }}</span>
       </a>
 
-      {%- if menu.links.size > 0 -%}
+      {%- if menu.links.size > 0 or show_series -%}
         <nav-pill class="main-nav__list-wrap">
           <ul class="main-nav__list" role="list">
             {%- for link in menu.links -%}
