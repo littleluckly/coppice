@@ -59,7 +59,7 @@
         "show_all_series_info": "Adds a last item to the menu that opens every collection in a panel. On mobile it links straight to the collections page. The list comes from your collections, not from the menu — nothing to maintain.",
         "all_series_label": "Entry label",
         "all_series_limit": "Series in the panel",
-        "all_series_limit_info": "Collections past this number only appear on the collections page.",
+        "all_series_limit_info": "Each row holds four cards. Eight keeps the panel on one screen; more rows make it scroll. Collections past this number only appear on the collections page.",
         "all_series_position": "Menu position",
         "all_series_position_info": "Where the entry sits among your menu links. \"Before last link\" keeps support or contact links at the end."
       },
