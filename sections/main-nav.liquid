@@ -1607,21 +1607,31 @@
     justify-content: space-between;
     gap: 0.75rem;
     min-height: 44px;
-    /* 负 margin：hover 底色往左撑半格，文字仍贴在内容列左缘 */
-    margin-inline: -0.5rem;
+    /* 胶囊与内容列左缘对齐，文字靠 padding 内缩 8px —— 与左轨标签的 0.625rem
+       内缩同一量级，两栏文字的视觉左缘因此是齐的 */
     padding-inline: 0.5rem;
-    border-radius: 6px;
+    /* 胶囊形与顶部导航、mega 左轨的分类项同一种形状（那两处也是药丸） */
+    border-radius: 999px;
     color: var(--color-foreground);
     font-size: 0.9375rem;
     text-decoration: none;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
-  /* 与普通下拉 .main-nav__dropdown-link:hover 同款反馈（8% 前景垫底）：
-     这一列同时有十几个链接，没有左轨那种滑动指示器可依，逐项垫底最稳。 */
+  /* hover 反色：品牌底 + 页面底色字，与左轨分类项的药丸同一种语言。
+     那两处的药丸靠 nav-pill.js 滑动，这里没有 tab 也就没有药丸实例，
+     所以用 :hover / :focus-visible 直接出底色——静态但有同一种"被点亮"的读法。 */
   .main-nav__series-link:hover,
   .main-nav__series-link:focus-visible {
-    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+
+  /* 计数在品牌底上必须跟着反色，否则灰字压在深绿上读不出 */
+  .main-nav__series-link:hover .main-nav__series-count,
+  .main-nav__series-link:focus-visible .main-nav__series-count {
+    color: inherit;
+    opacity: 0.85;
   }
 
   .main-nav__series-link--current {
