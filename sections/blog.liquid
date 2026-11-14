@@ -24,9 +24,12 @@
      阅读时长。不造"浏览量""热度"这类平台根本不提供的数据。
 
   ## 阅读时长口径
-  `article.content | strip_html | number_of_words` ÷ 200 词/分钟，向上取整。
-  200wpm 是英文技术读物的常用口径。词数为 0（只写了摘要、正文为空）时整段不渲染，
-  而不是硬凑一个 "1 min read"。
+  Shopify 的 Liquid **没有 `number_of_words`**（theme check 会报 UnknownFilter，
+  那是 Jekyll 的过滤器）。这里用正文纯文本的**字符数**折算：
+  1000 字符 ≈ 200 词/分钟 × 5 字符/词，向上取整，最少 1 分钟。
+  不手搓 `split: ' ' | size` —— `strip_html` 之后段落之间是 `\n` 而不是空格，
+  按空格切会**把跨行两个词并成一个**（少算），比字符折算错得更离谱。
+  字符数 < 200（几乎没有正文）时整段不渲染，而不是硬凑一个 "1 min read"。
 
   ## 响应式
   < 750px：单列，头条图 16:10；≥ 750px：两列网格 + 头条左右分栏；
@@ -128,8 +131,8 @@
 
     {%- if lead != blank -%}
       {%- liquid
-        assign lead_words = lead.content | strip_html | number_of_words
-        assign lead_minutes = lead_words | divided_by: 200.0 | ceil | at_least: 1
+        assign lead_chars = lead.content | strip_html | size
+        assign lead_minutes = lead_chars | divided_by: 1000.0 | ceil | at_least: 1
         assign lead_tag = lead.tags.first
       -%}
       <article class="blog-index__featured" data-reveal>
@@ -192,7 +195,7 @@
                   <span class="blog-index__meta-sep" aria-hidden="true">·</span>
                   <span>{{ lead.author | escape }}</span>
                 {%- endif -%}
-                {%- if show_reading_time and lead_words > 0 -%}
+                {%- if show_reading_time and lead_chars > 200 -%}
                   <span class="blog-index__meta-sep" aria-hidden="true">·</span>
                   <span>{{ 'blog.list.reading_time' | t: count: lead_minutes }}</span>
                 {%- endif -%}
@@ -212,8 +215,8 @@
             {%- continue -%}
           {%- endif -%}
           {%- liquid
-            assign words = article.content | strip_html | number_of_words
-            assign minutes = words | divided_by: 200.0 | ceil | at_least: 1
+            assign chars = article.content | strip_html | size
+            assign minutes = chars | divided_by: 1000.0 | ceil | at_least: 1
             # 入场延迟封顶 360ms：8 张卡按 60ms 递增会排到 480ms，越往下越像卡住
             assign reveal_delay = forloop.index0 | times: 60 | at_most: 360
           -%}
@@ -257,7 +260,7 @@
                     <span class="blog-index__meta-sep" aria-hidden="true">·</span>
                     <span>{{ article.author | escape }}</span>
                   {%- endif -%}
-                  {%- if show_reading_time and words > 0 -%}
+                  {%- if show_reading_time and chars > 200 -%}
                     <span class="blog-index__meta-sep" aria-hidden="true">·</span>
                     <span>{{ 'blog.list.reading_time' | t: count: minutes }}</span>
                   {%- endif -%}
@@ -915,7 +918,6 @@
       "type": "checkbox",
       "id": "show_author",
       "label": "t:sections.blog.labels.show_author",
-      "info": "t:sections.blog.labels.show_author_info",
       "default": true
     },
     {
