@@ -499,45 +499,45 @@
                       </a>
                     </div>
                     <div class="main-nav__mega-content">
-                    <ul class="main-nav__series" role="list">
-                      {%- for series_item in collections limit: series_limit -%}
-                        {%- if series_item.handle == 'frontpage' -%}
-                          {%- continue -%}
-                        {%- endif -%}
-                        {%- if series_item.all_products_count > 0 -%}
-                          {%- comment -%}
-                            集合页上的"当前项"：循环变量不叫 collection，
-                            就是为了不遮住全局 collection 对象（集合模板上才有）。
-                          {%- endcomment -%}
-                          {%- assign series_link_current = false -%}
-                          {%- if template.name == 'collection' and collection.handle == series_item.handle -%}
-                            {%- assign series_link_current = true -%}
+                      <ul class="main-nav__series" role="list">
+                        {%- for series_item in collections limit: series_limit -%}
+                          {%- if series_item.handle == 'frontpage' -%}
+                            {%- continue -%}
                           {%- endif -%}
-                          <li>
-                            <a
-                              class="main-nav__series-link{% if series_link_current %} main-nav__series-link--current{% endif %}"
-                              href="{{ series_item.url }}"
-                              {% if series_link_current %}
-                                aria-current="page"
-                              {% endif %}
-                            >
-                              <span class="main-nav__series-name">{{ series_item.title | escape }}</span>
-                              {%- comment -%}
-                                可见的只是一个数字；读屏需要知道它是什么，
-                                否则会念成 "Accessories 11"。所以数字本身 aria-hidden，
-                                由后面这句 visually-hidden 的完整文案承担播报。
-                              {%- endcomment -%}
-                              <span class="main-nav__series-count" aria-hidden="true">
-                                {{- series_item.all_products_count -}}
-                              </span>
-                              <span class="visually-hidden">
-                                {{- 'navigation.products_count' | t: count: series_item.all_products_count -}}
-                              </span>
-                            </a>
-                          </li>
-                        {%- endif -%}
-                      {%- endfor -%}
-                    </ul>
+                          {%- if series_item.all_products_count > 0 -%}
+                            {%- comment -%}
+                              集合页上的"当前项"：循环变量不叫 collection，
+                              就是为了不遮住全局 collection 对象（集合模板上才有）。
+                            {%- endcomment -%}
+                            {%- assign series_link_current = false -%}
+                            {%- if template.name == 'collection' and collection.handle == series_item.handle -%}
+                              {%- assign series_link_current = true -%}
+                            {%- endif -%}
+                            <li>
+                              <a
+                                class="main-nav__series-link{% if series_link_current %} main-nav__series-link--current{% endif %}"
+                                href="{{ series_item.url }}"
+                                {% if series_link_current %}
+                                  aria-current="page"
+                                {% endif %}
+                              >
+                                <span class="main-nav__series-name">{{ series_item.title | escape }}</span>
+                                {%- comment -%}
+                                  可见的只是一个数字；读屏需要知道它是什么，
+                                  否则会念成 "Accessories 11"。所以数字本身 aria-hidden，
+                                  由后面这句 visually-hidden 的完整文案承担播报。
+                                {%- endcomment -%}
+                                <span class="main-nav__series-count" aria-hidden="true">
+                                  {{- series_item.all_products_count -}}
+                                </span>
+                                <span class="visually-hidden">
+                                  {{- 'navigation.products_count' | t: count: series_item.all_products_count -}}
+                                </span>
+                              </a>
+                            </li>
+                          {%- endif -%}
+                        {%- endfor -%}
+                      </ul>
                     </div>
                   </div>
                 </div>
