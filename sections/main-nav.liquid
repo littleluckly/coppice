@@ -501,7 +501,17 @@
                               {% endif %}
                             >
                               <span class="main-nav__series-name">{{ collection.title | escape }}</span>
-                              <span class="main-nav__series-count">{{ collection.all_products_count }}</span>
+                              {%- comment -%}
+                                可见的只是一个数字；读屏需要知道它是什么，
+                                否则会念成 "Accessories 11"。所以数字本身 aria-hidden，
+                                由后面这句 visually-hidden 的完整文案承担播报。
+                              {%- endcomment -%}
+                              <span class="main-nav__series-count" aria-hidden="true">
+                                {{- collection.all_products_count -}}
+                              </span>
+                              <span class="visually-hidden">
+                                {{- 'navigation.products_count' | t: count: collection.all_products_count -}}
+                              </span>
                             </a>
                           </li>
                         {%- endif -%}
