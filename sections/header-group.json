@@ -44,6 +44,10 @@
       "settings": {
         "brand_name": "Northbark",
         "menu": "main-menu",
+        "show_all_series": true,
+        "all_series_label": "All series",
+        "all_series_limit": 12,
+        "all_series_position": "before_last",
         "customer_account_menu": "customer-account-main-menu",
         "show_follow_on_shop": false,
         "results_limit": 10
