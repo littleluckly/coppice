@@ -603,6 +603,28 @@
   2. 改动后**必跑 `shopify theme check`**：`node --check`、本地 JSON / locale 脚本都抓不到 Liquid 未定义对象。CLI 在本沙箱已可见（`/Users/mac/.nvm/versions/node/v24.22.0/bin/shopify`，见 AGENTS §11），旧记录"沙箱不可见"已作废。
   3. 页头改任何品牌/图标元素时，按 O-5 主动核对「桌面 Zone 0」与「移动抽屉 head」两处，不要等检查器报。
 
+### BUG-070 · 新写的 `<ui-tooltip>` 气泡是空黑块、关不掉、文字冲出色块
+- **日期**：2026-11-15 ｜ **状态**：Fixed（新功能开发期自测发现，未上线）
+- **现象**：
+  1. 气泡 `getBoundingClientRect()` 只有 20×13（只剩 padding + 箭头），hover 出来是一个黑块，文案不见了。
+  2. `data-open` 已置上、`getComputedStyle(bubble).visibility` 却是 `visible` 改不回来 —— 指针已经离开 300ms，气泡还赖在页面上。
+  3. 上真主题后（刘工截图）：气泡盒子被 `max-inline-size: 15rem` 正确钳到 239px，但文案**单行冲出深色块的右边缘**，压在白色页头上变成一行看不清的浅字。
+- **根因**：
+  1. `build()` 末尾调 `setText()` 写文案，而 `setText()` 的守卫是 `if (!this.bubble) return` —— `this.bubble` 正是 `build()` 的返回值，此刻还没赋值，整段文案被静默吞掉。**没有报错**，只是气泡变空。
+  2. 用了 `visibility: hidden` + `visibility 0.14s` 过渡。它是离散属性，参与过渡时显隐被推迟到过渡中途/结束（Chrome 实测：打开态 200ms 读到 `hidden`、关闭态 300ms 仍读到 `visible`），两头都不可控。
+  3. 页头行 `.main-nav__inner` 的 `white-space: nowrap`（导航项永不折行）**被气泡继承**。`max-inline-size` 只钳盒子，不钳文字：盒子 239px、文字仍按 nowrap 排成一行 250px+，直接画到盒子外面。本地桩用的是 `-apple-system`（13px 下这句恰好 239 内放得下），所以**桩里看不出问题，一上主题（字体更宽）就炸**。
+- **修复**：
+  1. `build()` 内直接写 `textContent`，不借道依赖 `this.bubble` 的方法。
+  2. 气泡改为常驻 DOM、只用 `opacity` + `pointer-events: none` 收放，`visibility` / `display` 一概不用 —— 它的文本要**一直被 `aria-describedby` 问到**，本来就不该「不存在」。
+  3. 气泡上显式 `white-space: normal` + `overflow-wrap: break-word`，把浮层的排版规则与宿主隔开。
+- **预防**：
+  1. **「自产自销」的初始化顺序**：方法 A 产出字段 X，A 内部又调依赖 X 的方法 B → 要么在 A 里直接写，要么把 B 挪到赋值之后。本项目的 CSS 变量派生、DOM 引用都踩过同一形状，往后遇到「XX 静默不生效」先查这个。
+  2. **浮层显隐不要用 `visibility` / `display` 参与过渡**。非要用 `visibility`，必须 `0s` + 显式 `delay`，且**配断言**（`getComputedStyle().visibility`）—— 截图里看不出来。
+  3. **绝对定位的浮层要「样式自成一套」**：`white-space` / `letter-spacing` / `text-transform` / `line-height` / `font-weight` 这些会继承的排版属性，浮层上一律显式写死。判据是「宿主是不是给某个方向定了规则」（页头 nowrap、按钮栏 uppercase、卡片 letter-spacing）——定了就一定会漏到浮层里。
+  4. **桩页面的字体必须与主题一致**（或至少用更宽的那款）：`-apple-system` 比主题字体窄，本地量出来「刚好放得下」的文案上主题就溢出。验浮层宽度必须拿**最长的那条真文案**跑，不是随手编一句短的。
+  5. 组件验收走 `--headless --dump-dom` 打断言集（PASS/FAIL 文本），别只看截图：`--virtual-time-budget` **只加速 `setTimeout`，不推进 CSS 过渡**，截图会停在过渡第一帧，把「正在过渡」误判成「没生效」（本次两轮误判都是这个原因）。
+  6. 判 hover 能力**不要**用 `matchMedia('(hover: hover) and (pointer: fine)')` 当绑定开关 —— 无头环境不匹配，整页提示会静默全哑；改用 `PointerEvent.pointerType === 'touch'` 过滤。已写进 `tooltip.js` 头注释。
+
 ---
 
 ## 记录模板（追加新 bug 用）

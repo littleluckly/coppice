@@ -549,35 +549,16 @@ body {
  * **为什么放在 critical.css 而不是独立 .css**：默认态就是隐藏（`visibility: hidden`）。
  * 拆成独立请求时样式晚到，按钮会在页面顶部先闪一下再消失——这种闪烁比省 1 KB 难看得多。
  *
- * **与底部对比条的避让**：两者共用右下角，靠 `:has()` 让位，不用 JS 量高度。
- * 对比条占位高度是确定的（见 assets/compare.css）：
- *   · 胶囊态（移动端恒为此态 / 桌面收起）= 1rem 底边距 + 44px 胶囊 = 60px
- *   · 桌面展开整条 = 0.6rem × 2 内边距 + 44px 主按钮 + 1px 上边线 = 67px（实测）
- * 所以按钮只要分别贴到 4.5rem / 4.75rem，两态实测间隙 12px / 9px。
- * （768 / 820 / 1024 / 1440 四档桌面宽度 × 4 个商品满载都不换行，67px 稳定。）
- * **这两个数值是唯一的耦合点**：对比条改高度时，这里必须跟着改。
- * 安全区（env）在两侧同时出现，会自动抵消——对比条自身的内边距已经把 Home 指示条
- * 计入自己的高度，按钮再加一份只影响自己的间距，不会叠出双倍空隙。
+ * 右下角归它独占（2026-11-15：底部对比条已删除，不再需要 :has() 避让）。
+ * 安全区（env）计入自身底边距，移动端不会被 Home 指示条压住。
  */
 back-to-top {
   position: fixed;
-  /* 逻辑属性：RTL 下自动翻到左边，与对比条胶囊同侧（那里是 flex-end） */
+  /* 逻辑属性：RTL 下自动翻到左边 */
   inset-inline-end: 1rem;
   inset-block-end: calc(1rem + env(safe-area-inset-bottom));
-  z-index: 39; /* 低于对比条(40)、页头(50)、toast(60)：万一压上，让它们赢 */
+  z-index: 39; /* 低于页头(50)、toast(60)：万一压上，让它们赢 */
   display: block; /* 自定义元素默认 inline，fixed 定位在 inline 盒上不可靠 */
-}
-
-/* 对比条在场（移动端胶囊 / 桌面收起）→ 让开一个胶囊 */
-html:has(compare-bar:not([hidden])) back-to-top {
-  inset-block-end: calc(4.5rem + env(safe-area-inset-bottom));
-}
-
-/* 桌面展开整条 → 再抬高一点。移动端对比条恒为胶囊，不参与这条 */
-@media (min-width: 768px) {
-  html:has(compare-bar:not([hidden]):not([data-collapsed])) back-to-top {
-    inset-block-end: calc(4.75rem + env(safe-area-inset-bottom));
-  }
 }
 
 .back-to-top__button {
@@ -637,6 +618,144 @@ back-to-top[data-visible] .back-to-top__button {
   }
   back-to-top[data-visible] .back-to-top__button {
     translate: none;
+  }
+}
+
+/**
+ * 轻提示 — <ui-tooltip>（2026-11-15 刘工：页头对比入口的 hover 说明）
+ * 行为在 assets/tooltip.js，这里只管外观与四向定位。
+ *
+ * **为什么放 critical.css**：它挂在页头上，属于全站骨架的一部分（每个页面都有），
+ * 拆成独立 .css 会多一次请求去换 1 KB；而且和 back-to-top 同一类「默认隐藏的
+ * 增强件」——样式晚到就是闪一下，比省这点体积难看。
+ *
+ * 配色：前景/背景互换，不硬编码色值。浅色骨架下是「深底浅字」的常规提示，
+ * 深色骨架（Noir）下自动成为「浅底深字」；两者对比度都等于正文那块的反向值，
+ * 天然满足 AA。**不要改成 opacity 压淡**——那会把对比度一起压低。
+ *
+ * 层级：气泡 z-index 30，高于页头内的 mega 面板（10/20）。祖先
+ * .main-nav-section 的 z-index 20 已经把它托在内容区之上，向下溢出不会被盖。
+ */
+ui-tooltip {
+  /* 自定义元素默认 inline：inline 盒上的 absolute 子元素以行盒为基准，
+     行高变化会让气泡跳。inline-flex 让锚点盒就是内容盒。 */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 30;
+  /* 纯装饰层：永不吃点击。移到气泡上时指针仍在下面的元素上，
+     气泡因此不会被自己挡住——也就不需要 mouseleave 的「进气泡延时收起」那套。 */
+  pointer-events: none;
+  inline-size: max-content;
+  max-inline-size: 15rem;
+  padding: 0.4rem 0.625rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-align: start;
+  /* ⚠️ 必须显式复位换行：页头行 `.main-nav__inner` 定了 `white-space: nowrap`
+     （导航项永不折行），这条会一路继承进气泡——`max-inline-size` 把盒子钳到
+     239px，文字却不肯断行，整句直接冲出气泡外（2026-11-15 刘工截图实测：
+     气泡 w=239、文字单行溢出）。浮层的排版规则必须自成一套，不给继承留口子。 */
+  white-space: normal;
+  /* 长单词 / 长 URL 兜底。用 break-word 不用 anywhere ——
+     后者会把 "Chainsaws" 这类词从中间拆开（搜索页行卡的同款教训）。 */
+  overflow-wrap: break-word;
+  /* 提示层要有「浮起来」的实感，但不能太抢——一层近距离落地影足够 */
+  box-shadow: 0 6px 18px color-mix(in srgb, #000 22%, transparent);
+  opacity: 0;
+  /* ⚠️ 这是**刻意的**：不用 visibility / display 参与显隐。
+     气泡在 DOM 里常驻、靠 opacity 收放——因为它的文本要通过 aria-describedby
+     一直可被屏读问到（提示是「描述」，不是只在某一刻存在的东西）；
+     而且它 pointer-events: none、绝对定位、内部无可聚焦元素，
+     opacity 0 不会留下任何幽灵焦点或占位。
+     试过 visibility + 过渡：关闭时 getComputedStyle 迟迟不翻 hidden
+     （2026-11-15 实测 300ms 后仍是 visible），气泡在页面上赖着不走。 */
+  /* --tooltip-shift 由 JS 写（贴边平移）；--tooltip-lift 是入场位移，按方向定。
+     两个都是变量，好让 translate 单独参与过渡、不跟居中用的 transform 打架。 */
+  --tooltip-shift: 0px;
+  --tooltip-lift: 4px;
+  translate: var(--tooltip-shift) var(--tooltip-lift);
+  transition:
+    opacity 0.14s ease,
+    translate 0.14s ease;
+}
+
+/* ---- 四向定位 ----
+   top / bottom：水平居中于锚点（transform 只管居中，与入场用的 translate 互不干扰）
+   start / end：垂直居中于锚点（逻辑属性，RTL 下自动换边） */
+.tooltip[data-placement='top'],
+.tooltip[data-placement='bottom'] {
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+}
+.tooltip[data-placement='top'] {
+  inset-block-end: calc(100% + 8px);
+  --tooltip-lift: 4px;
+}
+.tooltip[data-placement='bottom'] {
+  inset-block-start: calc(100% + 8px);
+  --tooltip-lift: -4px;
+}
+.tooltip[data-placement='start'],
+.tooltip[data-placement='end'] {
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+}
+.tooltip[data-placement='start'] {
+  inset-inline-end: calc(100% + 8px);
+}
+.tooltip[data-placement='end'] {
+  inset-inline-start: calc(100% + 8px);
+}
+
+/* 打开态写在定位规则之后：同特异性靠源序覆盖 --tooltip-lift */
+.tooltip[data-open] {
+  opacity: 1;
+  --tooltip-lift: 0px;
+}
+
+/* 箭头：8px 方块旋转 45°，一半压在气泡底上，看起来是从气泡上长出来的 */
+.tooltip::before {
+  content: '';
+  position: absolute;
+  inline-size: 8px;
+  block-size: 8px;
+  background-color: inherit;
+  rotate: 45deg;
+}
+/* 箭头带反向补偿：气泡为了不贴边会整体平移（--tooltip-shift），
+   箭头必须反推同样距离才仍然指着锚点，否则会出现「气泡在左、箭头指空气」
+   （2026-11-15 刘工截图：图标中心与箭头差约 22px）。
+   补偿量由 JS 写入并已按气泡半宽 clamp，不会跑到圆角外面。 */
+.tooltip[data-placement='top']::before {
+  inset-block-end: -4px;
+  inset-inline-start: calc(50% - 4px + var(--tooltip-arrow, 0px));
+}
+.tooltip[data-placement='bottom']::before {
+  inset-block-start: -4px;
+  inset-inline-start: calc(50% - 4px + var(--tooltip-arrow, 0px));
+}
+.tooltip[data-placement='start']::before {
+  inset-inline-end: -4px;
+  inset-block-start: calc(50% - 4px);
+}
+.tooltip[data-placement='end']::before {
+  inset-inline-start: -4px;
+  inset-block-start: calc(50% - 4px);
+}
+
+/* reduce：位移整段不注册，只剩即时显隐。提示是信息，不能因为减免动效就不给 */
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    transition: none;
+    translate: var(--tooltip-shift) 0;
   }
 }
 

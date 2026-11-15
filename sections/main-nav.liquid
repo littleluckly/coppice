@@ -616,8 +616,15 @@
         </button>
 
         {% render 'account-entry', menu: section.settings.customer_account_menu %}
-        {%- comment -%} 对比入口紧邻购物车左侧（SDD §6.2.8）；单文件内部做页面探测，未配置则整块不输出 {%- endcomment -%}
-        {% render 'compare-entry' %}
+        {%- comment -%}
+          对比入口紧邻购物车左侧（SDD §6.2.8）；单文件内部做页面探测，未配置则整块不输出。
+          2026-11-15：外面包一层 <ui-tooltip>——悬停或键盘聚焦时说明这个图标是干什么的。
+          空态下这是唯一能把「可以对比商品」告诉新顾客的地方（图标已改为常驻弱化）。
+          label 的初始值是空态文案，compare.js 在 sync() 里按真实状态改写它。
+        {%- endcomment -%}
+        <ui-tooltip placement="bottom" label="{{ 'compare.entry_tip' | t }}">
+          {% render 'compare-entry' %}
+        </ui-tooltip>
         {% render 'cart-entry' %}
 
         {%- comment -%}
@@ -2375,8 +2382,8 @@
 
   /* ============ 对比入口（SDD §6.2.8，2026-10-22） ============
      与购物车同规格：44×44 触摸目标、图标 1.5rem、角标绝对定位（不占流，避免 CLS）。
-     移动端页头已被 ☰/logo/搜索/账号/购物车占满，常驻会挤爆 ——
-     data-empty 由 JS 按清单是否为空切换，这里只负责移动端隐藏。 */
+     移动端不需要为它让位：入口只存在于桌面工具区（.main-nav__desktop），
+     ≤989px 整块 display: none，移动端要走 ☰ 抽屉里那行。 */
 
   compare-entry {
     display: inline-flex;
@@ -2467,9 +2474,29 @@
     inset: auto;
   }
 
-  /* 没有选择时页头图标不显示（2026-10-22）：它是「现在有几款在比」的状态指示，
-     清单为空时没有信息量。抽屉里那份不在此列——那是发现入口，要常驻。 */
-  compare-entry[data-empty]:not(.compare-entry--in-drawer) {
+  /* 没有选择时页头图标的处理（2026-11-15 刘工改，原为 display: none）。
+     2026-10-22 的判据是「清单为空时没有信息量」——那只在「图标 = 状态指示」
+     时成立。现在它同时是发现入口（悬停有 tooltip 讲怎么用），藏起来等于对新顾客
+     完全不可见，工具提示也就无从提示。
+
+     弱化用**颜色**不用 opacity：opacity 会把对比度一起乘下去——前景 #333 压白底
+     剩 0.45 时只有 ≈2.4:1，图标属非文本图形（AA 要 3:1），Lighthouse 会挂。
+     --color-foreground-muted 是 70% 前景（≈4.95:1），刚好「轻一档」且达标。
+     抽屉里那份不在此列——行式有文字标签，本来就要肉眼可辨。 */
+  compare-entry[data-empty]:not(.compare-entry--in-drawer) .compare-entry__link {
+    color: var(--color-foreground-muted);
+  }
+
+  @media (hover: hover) {
+    compare-entry[data-empty]:not(.compare-entry--in-drawer) .compare-entry__link:hover {
+      color: var(--color-foreground);
+    }
+  }
+
+  /* 对比入口整块没输出（一个分组都没配对比页 → snippet 输出 hidden）时，
+     外面的 tooltip 宿主也要退场：否则页头留下一个 0 宽的锚点，
+     悬停热区还在、却什么也点不到。 */
+  ui-tooltip:has(> .compare-entry[hidden]) {
     display: none;
   }
 

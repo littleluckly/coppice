@@ -9,6 +9,9 @@
   · 移动端页头已被 ☰/logo/搜索/账号/购物车占满 → 仅角标 > 0 时显示，
     由 `data-empty` + CSS 控制，不监听视口。
   · 页面探测每页只跑一次（4 次 `pages[handle]`，实测 2.6 μs/次），不进商品循环。
+  · `data-tip-*`（2026-11-15）：页头那份外面包了 `<ui-tooltip>`，文案两态由
+    compare.js 在 sync() 里写进 tooltip 的 label 属性。抽屉那份不需要
+    （行式已有文字标签，悬停提示是重复信息），所以属性照常输出、无人消费。
 
   @param {string} [class] - 追加到根元素的 class
   @param {boolean} [show_label] - true → 行式（抽屉里用）：图标 + 文字 + 角标
@@ -22,6 +25,8 @@
   data-pending
   data-label-empty="{{ 'compare.entry_label_empty' | t }}"
   data-label-count="{{ 'compare.entry_label' | t: count: '[count]' }}"
+  data-tip-empty="{{ 'compare.entry_tip' | t }}"
+  data-tip-count="{{ 'compare.entry_tip_count' | t: count: '[count]' }}"
 >
   <a class="compare-entry__link" href="#" aria-label="{{ 'compare.entry_label_empty' | t }}">
     {{ 'icon-compare.svg' | inline_asset_content }}

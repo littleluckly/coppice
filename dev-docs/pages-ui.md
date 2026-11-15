@@ -11,7 +11,7 @@
 
 **通用无障碍**（全部页面适用，详见 SDD §8.2）：每页一个 `h1`；焦点顺序 = DOM 顺序、无正 `tabindex`、禁用 `autofocus`；skip link 必备；所有 `img` 带 alt 与 width/height；动态区域（筛选计数、对比数量、加购结果、变体切换）一律 `aria-live="polite"`；抽屉/模态遵循 `role="dialog"` + 焦点锁定 + `Esc` 回焦；触摸目标 ≥ 44×44px；对比度正文 4.5:1。
 
-**通用性能**（SDD §8.1）：所有 script `defer`/`async`；LCP 图 `fetchpriority="high"` + eager，非首屏 lazy；隐藏组件（抽屉、对比栏）**首次打开才建 DOM**；metafield 取值移到循环外。
+**通用性能**（SDD §8.1）：所有 script `defer`/`async`；LCP 图 `fetchpriority="high"` + eager，非首屏 lazy；隐藏组件（抽屉、筛选面板）**首次打开才建 DOM**；metafield 取值移到循环外。
 
 **缺失数据通用行为**（SDD §5.4/§5.7）：参数缺值 → 该行不出现（规格表/对比表显示 `—`，**永不显示 0**）；物流 metafield 未填 → 整个物流模块不渲染；`compare_group` 为空 → 加入对比按钮 `disabled`，不兜底。
 
@@ -51,10 +51,10 @@
 | main-nav | 三级以内下拉；`Shop by Platform` 指向 battery_platform 自动化集合（§4.3/§6.5） | 菜单项 | 菜单选择、下拉样式 | `linklists.main-menu` |
 | header-search | 预测搜索输入（#16 Search + predictive） | — | 展开样式 | `/search/suggest`（Section Rendering API + `section_id`，返回渲染好的 HTML 片段） |
 | account | `<shopify-account>` 原生组件，**桌面与移动均可见**（#22） | — | 登录态样式 | 平台组件 |
-| compare-entry | **页头对比入口**：图标 + 角标（清单款数）。桌面常驻；**移动端仅在角标 > 0 时渲染**（页头宽度约束）。点击跳当前组对比页，目标页探测失败则不渲染（SDD §6.2.1/§6.2.8） | — | 无（分组来自 `page.handle`） | `localStorage` + `pages` 探测 |
+| compare-entry | **页头对比入口**：图标 + 角标（清单款数）。**桌面常驻**——2026-11-15 起空态也显示（次级文字色弱化 + 悬停 `<ui-tooltip>` 提示可以对比商品，原「空态隐藏」作废，否则新顾客永远看不到这个功能）；移动端页头不渲染，走 ☰ 抽屉的行式入口。点击跳当前组对比页，目标页探测失败则不渲染（SDD §6.2.1/§6.2.8） | — | 无（分组来自 `page.handle`） | `localStorage` + `pages` 探测 |
 | cart-entry | 购物车入口 + 计数（本期仅跳 `routes.cart_url`，**不做抽屉交互**，后续另立清单） | — | 本期无 | `cart` 对象 |
 
-**状态要点**：移动端 ☰ 抽屉用原生 `<dialog>` + `showModal()`（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`，**不手写焦点陷阱**）；搜索联想为 combobox + listbox（**非模态**：DOM 焦点始终留在输入框，靠 `aria-activedescendant` 移动；禁用 `<dialog>`）；**页头对比图标在此（compare-entry），底部对比栏是全局浮层、不属页头组**（见 §7）。
+**状态要点**：移动端 ☰ 抽屉用原生 `<dialog>` + `showModal()`（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`，**不手写焦点陷阱**）；搜索联想为 combobox + listbox（**非模态**：DOM 焦点始终留在输入框，靠 `aria-activedescendant` 移动；禁用 `<dialog>`）；**页头对比图标在此（compare-entry），它是加入对比后唯一的持久入口与可见反馈**（底部对比条已于 2026-11-15 删除）。图标外面包一层 `<ui-tooltip>`（2026-11-15，`assets/tooltip.js`）：空态文案讲「怎么用」、有料文案说「点进去看到什么」，由 `compare.js` 按清单数量改写；移动端不显示提示（触摸没有 hover）。
 
 #### 1.1.1 主导航菜单树（SDD §4.3 逐项展开）
 
@@ -317,14 +317,14 @@ NORTHBARK                                       ← wordmark 一行 + 定位语
 │ └────────────────────────────────────────┘│
 │ [G] footer                                │  │ [G] footer         │
 └─────────────────────────────────────────┘  └────────────────────┘
-  底部对比栏（**仅"刚加入一款"时出现的临时确认条**，不自动消失）：
-  [缩略图] 已加入 3/4   [查看对比] [移除] [×]
+  注：底部对比条已于 2026-11-15 整条删除，对比页只剩表格本体。
 ```
 
 | section | 职责 | 关键设置 | 数据源 |
 | --- | --- | --- | --- |
 | **compare-page**（单 section） | 标题 + 选型文案 + 服务端默认表 + 数据岛，一次集合查询同时产出两者 | 标题覆盖、选型文案 | `compare_collections` 里的集合 → `spec.*`；数据岛 `#cmp-data` |
-| compare-bar | 临时确认条（浮层，**不属本页**）：缩略图 + `已加入 n/4` + 「查看对比」/「移除」/关闭。**不设自动消失计时**；关闭后本次会话不再自动弹出（SDD §6.2.8）。**page / article / blog 三类模板整条不渲染**（2026-11-07），故本页没有 | — | `localStorage` |
+
+**浮层归属（2026-11-15 变更）**：底部对比条已删除，本页没有任何专属浮层。加入成功的可见反馈只剩页头角标（`compare-entry`）与飞入动画；冲突提示 `compare-toast` 是 layout 级全局件，不属于任何 section。
 
 **状态要点（本页最密集）**：
 

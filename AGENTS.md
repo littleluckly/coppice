@@ -91,7 +91,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - 每个 section 必须有 `{% schema %}`；schema 内 `name`、`label` 等文案用 `t:` 键（`en.default.schema.json`）。
 - 每个 section 提供可用 preset；preset 默认值必须是**可用的示例内容**，不是占位符。
 - 区块可复用样式优先 `{% stylesheet %}` / `{% javascript %}` 标签（多次声明只输出一次）；全局关键样式放 `assets/critical.css`。
-- **样式归属判据**：section 自有布局样式 → `{% stylesheet %}`（聚合加载，section 移除时自动卸载，且**必须位于 section 顶层**，不得嵌套在 if/for 内）。仅当样式为**大体积可选增强**或**跨 section 全局功能**（如对比栏、Dawn mask-blobs 类设置级变体）时，才拆独立 `.css` + 条件 `stylesheet_tag`——不为省 1–2 KB 把 section 自有样式拆成独立请求。
+- **样式归属判据**：section 自有布局样式 → `{% stylesheet %}`（聚合加载，section 移除时自动卸载，且**必须位于 section 顶层**，不得嵌套在 if/for 内）。仅当样式为**大体积可选增强**或**跨 section 全局功能**（如对比冲突提示、Dawn mask-blobs 类设置级变体）时，才拆独立 `.css` + 条件 `stylesheet_tag`——不为省 1–2 KB 把 section 自有样式拆成独立请求。
 - **箭头准则**：`→` 仅用于两类位置——View All 链接、行尾导航元素（如 platform 横条卡右端）。卡内文字链接**不加**箭头；新增箭头前先数同屏总数（≤5）。
 - **`{% javascript %}` / `{% stylesheet %}` 内不渲染 Liquid**（theme check 会报 `StaticStylesheetAndJavascriptTags`）。这两个标签的内容被聚合成单一 `scripts.js` / `styles.css` 并自动 defer 注入，**只能放静态代码**，每个文件有且仅有一个。加载 `assets/` 里的外部文件时**手写 script 标签**——`script_tag` filter 不支持 `defer`/`async`（theme check 会报 `ParserBlockingScript`）：
   ```liquid
@@ -107,7 +107,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 
 - metafield 取值与 `assign` **移到循环外**；避免嵌套循环；长列表用 `limit`。
 - 商家未填 metafield / 设置时：**该行/该模块不渲染**，不留空壳、不崩页、参数缺值显示 `—` 而**永不显示 0**。
-- JS 一律 `defer` 或 `async`；隐藏组件（抽屉、对比栏）**首次打开才构建 DOM**。
+- JS 一律 `defer` 或 `async`；隐藏组件（抽屉、筛选面板）**首次打开才构建 DOM**。
 - 图片统一 `image_tag` + `width` / `height` + srcset；尊重焦点裁剪；非首屏 lazy。
 
 **JS 组件化：优先 Web Components（Custom Elements）**

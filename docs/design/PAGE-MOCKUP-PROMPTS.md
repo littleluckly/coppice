@@ -157,7 +157,7 @@ with caption, a link and a button. Calm editorial layout.
 
 ## 7. `page.compare.json` — 对比页（主题灵魂页之二）
 
-**内容结构**：header → H1 组标题 + 选型文案 → **对比表**（首列参数名，每款一列：缩略图 + 型号；差异值高亮，相同行可折叠）→ 覆盖范围说明条（可选）→ footer + 底部悬浮对比栏。
+**内容结构**：header → H1 组标题 + 选型文案 → **对比表**（首列参数名，每款一列：缩略图 + 型号；差异值高亮，相同行可折叠）→ 覆盖范围说明条（可选）→ footer。**底部不画对比条**（2026-11-15 已删除）。
 
 ```text
 Page: the product comparison page — the second soul of this theme, where 2-4
@@ -170,7 +170,7 @@ with thumbnails and a green "Compare (n)" button. Table-first, precise, quietly
 confident.
 ```
 
-**底线**：是**表**不是卡片墙；底部悬浮对比栏出现。
+**底线**：是**表**不是卡片墙；底部不要任何悬浮条。
 
 ---
 

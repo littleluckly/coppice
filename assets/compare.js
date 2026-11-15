@@ -1,5 +1,5 @@
 /**
- * compare — 产品对比清单：状态层 + 三个自定义元素 + 飞入动画。
+ * compare — 产品对比清单：状态层 + 两个自定义元素 + 飞入动画。
  *
  * 架构（SDD §6.2）：localStorage 存清单（key `ib:compare:v1`，只存 handle /
  * 分组键 / 标题 / 缩略图 URL，不存价格库存等易变数据）；服务端不知情，
@@ -7,8 +7,8 @@
  *
  * 元素分工（§6.2.8）：
  *   <compare-toggle>  商品卡 / 产品页的加入按钮容器（内部放原生 <button>）
- *   <compare-entry>   页头图标 + 角标（持久状态）
- *   <compare-bar>     底部临时确认条（瞬时反馈，不设自动消失计时）
+ *   <compare-entry>   页头图标 + 角标（持久状态，加入成功的唯一可见反馈）
+ *   <compare-toast>   冲突提示（跨组 / 已满），只承载「需要用户决定」的事
  *
  * 纪律：
  * - 全部逻辑收在 Custom Element 内，无全局委托、无 window 上的函数挂载
@@ -477,168 +477,17 @@
       if (labelTpl) {
         this.link.setAttribute('aria-label', labelTpl.replace('[count]', String(count)));
       }
-    }
-  }
 
-  // --------------------------------------------------------------- compare-bar
-
-  class CompareBar extends HTMLElement {
-    connectedCallback() {
-      if (this.controller) return;
-      this.controller = new AbortController();
-      const { signal } = this.controller;
-
-      this.max = clampMax(this);
-      this.built = false;
-      /* 自己就在对比页时整条不显示（含胶囊）：那里不需要「去对比」的入口 */
-      this.suppressed = Boolean(document.querySelector('[data-compare-page-marker]'));
-
-      document.addEventListener('compare:added', (event) => this.announce(event), { signal });
-      document.addEventListener('compare:updated', () => this.sync(), { signal });
-
-      this.sync();
-    }
-
-    disconnectedCallback() {
-      if (this.controller) {
-        this.controller.abort();
-        this.controller = null;
+      /* 页头那份外面包着 <ui-tooltip>（2026-11-15）：提示文案跟状态走——
+         空态教「这东西怎么用」，有料说「点进去看到什么」，不复述 aria-label。
+         这里写 attribute 而不是调组件方法：ui-tooltip 可能还没升级（两个脚本
+         都是 defer，先后由页面决定），而 attribute 是纯数据，晚到的组件
+         在 connectedCallback 里读到的就是对的。 */
+      const tip = this.closest('ui-tooltip');
+      const tipTpl = count > 0 ? this.dataset.tipCount : this.dataset.tipEmpty;
+      if (tip && tipTpl) {
+        tip.setAttribute('label', tipTpl.replace('[count]', String(count)));
       }
-    }
-
-    /** 惰性构建：首次需要时才克隆 <template>，隐藏组件不提前占 DOM */
-    build() {
-      if (this.built) return;
-      const tpl = this.querySelector('template');
-      if (!tpl) return;
-      this.appendChild(tpl.content.cloneNode(true));
-      this.built = true;
-
-      this.inner = this.querySelector('[data-compare-inner]');
-      this.list = this.querySelector('[data-compare-items]');
-      this.progress = this.querySelector('[data-compare-progress]');
-      this.view = this.querySelector('[data-compare-view]');
-      this.status = this.querySelector('[data-compare-status]');
-
-      const collapseBtn = this.querySelector('[data-compare-collapse]');
-      if (collapseBtn) collapseBtn.addEventListener('click', () => this.setCollapsed(true));
-
-      this.pill = this.querySelector('[data-compare-expand]');
-      if (this.pill) {
-        this.pill.addEventListener('click', (event) => {
-          /* 移动端：胶囊本身就是进对比页的入口，不拦截 */
-          if (window.matchMedia('(max-width: 767px)').matches) return;
-          event.preventDefault();
-          this.setCollapsed(false);
-        });
-      }
-
-      /* 单项移除用事件委托：条目是动态生成的，委托在容器上而非 document */
-      if (this.list) {
-        this.list.addEventListener('click', (event) => {
-          const btn = event.target.closest('[data-compare-remove]');
-          if (!btn) return;
-          const handle = btn.dataset.compareRemove;
-          commit((list) => list.filter((item) => item.h !== handle));
-          emit('compare:removed', { handle });
-        });
-      }
-    }
-
-    /**
-     * 收起 / 展开。底部条是常驻的（有对比项就在），收起只是让开内容，
-     * 不持久化——刷新后回到展开态，避免用户「明明有对比项却找不到入口」。
-     */
-    setCollapsed(collapsed) {
-      this.toggleAttribute('data-collapsed', collapsed);
-      const target = this.querySelector(
-        collapsed ? '[data-compare-expand]' : '[data-compare-collapse]',
-      );
-      if (target) target.focus();
-    }
-
-    /** 加入后只做播报，显隐交给 sync（常驻） */
-    announce(event) {
-      const label = this.dataset.labelAdded || '';
-      if (!label || !this.status) return;
-      const count = (event.detail && event.detail.count) || readList().length;
-      this.status.textContent = label.replace('[count]', String(count));
-    }
-
-    sync() {
-      if (this.suppressed) {
-        this.hidden = true;
-        return;
-      }
-
-      const list = readList();
-      if (list.length === 0) {
-        this.hidden = true;
-        this.removeAttribute('data-collapsed');
-        return;
-      }
-
-      this.build();
-      if (!this.built) return;
-      this.hidden = false;
-
-      const pillCount = this.querySelector('[data-compare-pill-count]');
-      if (pillCount) pillCount.textContent = String(list.length);
-
-      if (this.pill) {
-        const target = this.resolveUrl(list[0].g);
-        if (target) this.pill.setAttribute('href', target);
-      }
-
-      this.list.textContent = '';
-      list.forEach((item) => {
-        const li = document.createElement('li');
-        li.className = 'compare-bar__item';
-
-        if (item.i) {
-          const img = document.createElement('img');
-          img.src = item.i;
-          img.alt = '';
-          img.width = 40;
-          img.height = 40;
-          img.loading = 'lazy';
-          li.appendChild(img);
-        }
-
-        /* 允许删到空：清空即回到「没有选择」的状态，对比页会显示默认表 */
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'compare-bar__remove';
-        remove.dataset.compareRemove = item.h;
-        remove.setAttribute('aria-label', `${this.dataset.labelRemove || 'Remove'} ${item.t}`.trim());
-        remove.textContent = '\u00d7';
-        li.appendChild(remove);
-
-        this.list.appendChild(li);
-      });
-
-      if (this.progress) {
-        const tpl = this.dataset.labelProgress || '[count]/[max]';
-        this.progress.textContent = tpl
-          .replace('[count]', String(list.length))
-          .replace('[max]', String(this.max));
-      }
-
-      const group = list[0].g;
-      const url = this.resolveUrl(group);
-      if (this.view) {
-        if (url) {
-          this.view.href = url;
-          this.view.removeAttribute('aria-disabled');
-        } else {
-          this.view.setAttribute('aria-disabled', 'true');
-        }
-      }
-    }
-
-    resolveUrl(group) {
-      if (!group) return '';
-      return this.getAttribute(`data-url-${group}`) || '';
     }
   }
 
@@ -1097,12 +946,11 @@
 
   customElements.define('compare-toggle', CompareToggle);
   customElements.define('compare-entry', CompareEntry);
-  customElements.define('compare-bar', CompareBar);
   customElements.define('compare-toast', CompareToast);
 
   /**
    * 浏览器「回退」命中 bfcache 时不会重新执行脚本，DOM 停在旧快照上 ——
-   * 表现为：对比页删了商品，退回去底部条还在、商品卡的勾选态还是旧的。
+   * 表现为：对比页删了商品，退回去页头角标还在、商品卡的勾选态还是旧的。
    * 这里在 pageshow(persisted) 时重新读盘并广播一次，全部组件按新状态 sync。
    */
   window.addEventListener('pageshow', (event) => {
