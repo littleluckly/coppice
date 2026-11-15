@@ -1,5 +1,5 @@
 /**
- * compare — 产品对比清单：状态层 + 三个自定义元素 + 飞入动画。
+ * compare — 产品对比清单：状态层 + 两个自定义元素 + 飞入动画。
  *
  * 架构（SDD §6.2）：localStorage 存清单（key `ib:compare:v1`，只存 handle /
  * 分组键 / 标题 / 缩略图 URL，不存价格库存等易变数据）；服务端不知情，
@@ -7,8 +7,8 @@
  *
  * 元素分工（§6.2.8）：
  *   <compare-toggle>  商品卡 / 产品页的加入按钮容器（内部放原生 <button>）
- *   <compare-entry>   页头图标 + 角标（持久状态）
- *   <compare-bar>     底部临时确认条（瞬时反馈，不设自动消失计时）
+ *   <compare-entry>   页头图标 + 角标（持久状态，加入成功的唯一可见反馈）
+ *   <compare-toast>   冲突提示（跨组 / 已满），只承载「需要用户决定」的事
  *
  * 纪律：
  * - 全部逻辑收在 Custom Element 内，无全局委托、无 window 上的函数挂载
@@ -935,7 +935,6 @@
 
   customElements.define('compare-toggle', CompareToggle);
   customElements.define('compare-entry', CompareEntry);
-  customElements.define('compare-bar', CompareBar);
   customElements.define('compare-toast', CompareToast);
 
   /**
