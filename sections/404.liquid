@@ -105,9 +105,9 @@
         <p class="not-found__code" aria-hidden="true">
           <span class="not-found__digit">4</span>
           <svg class="not-found__zero" viewBox="0 0 74 100" aria-hidden="true" focusable="false">
-            <ellipse cx="37" cy="50" rx="26" ry="38.5" fill="none" stroke="currentColor" stroke-width="15" />
-            <path d="M50 34c-6-.5-14 3-18 10-3 5.5-1 12 5 16 5 3.5 11 .5 12.5-6C51 47 50 40 50 34Z" fill="currentColor" />
-            <path d="M31 58c5-8 11-15 18-22" fill="none" stroke="var(--color-background)" stroke-width="2.6" stroke-linecap="round" />
+            <ellipse cx="37" cy="50" rx="28.5" ry="41" fill="none" stroke="currentColor" stroke-width="16.5" />
+            <path d="M52 33c-7-.5-16 3.5-20.5 11-3.5 6-1 13.5 5.5 17 5.5 3.5 12 .5 13.5-6.5C52 47 52 40 52 33Z" fill="currentColor" />
+            <path d="M30.5 60C36 51 43 43 51 35" fill="none" stroke="var(--color-background)" stroke-width="3" stroke-linecap="round" />
           </svg>
           <span class="not-found__digit">4</span>
         </p>
@@ -195,10 +195,12 @@
     background-image: linear-gradient(
       90deg,
       var(--color-background) 0%,
-      var(--color-background) 34%,
-      color-mix(in srgb, var(--color-background) 88%, transparent) 52%,
-      color-mix(in srgb, var(--color-background) 40%, transparent) 72%,
-      transparent 94%
+      var(--color-background) 24%,
+      color-mix(in srgb, var(--color-background) 92%, transparent) 32%,
+      color-mix(in srgb, var(--color-background) 62%, transparent) 42%,
+      color-mix(in srgb, var(--color-background) 26%, transparent) 54%,
+      color-mix(in srgb, var(--color-background) 6%, transparent) 68%,
+      transparent 82%
     );
   }
 
@@ -207,14 +209,18 @@
     grid-area: stage;
     position: relative;
     z-index: 2;
-    inline-size: var(--content-width);
+    /* inline-size: 100% 不能省：grid item 上同时出现 margin-inline: auto 时，
+       justify-self: stretch 会失效、宽度退化成 fit-content（BUG-063），
+       整块内容会缩成与文字等宽并飘到页面中间。 */
+    inline-size: 100%;
+    max-inline-size: var(--content-width, 90rem);
     margin-inline: auto;
     padding-block: clamp(3rem, 7vw, 5.5rem);
     /* 两列：左列吃文字的 30rem，右列空着让照片露出来。
        minmax(0, …) 不是装饰 —— grid item 默认 min-width: auto，
        数字块这种超宽内容会把列撑破、把右侧照片挤没。 */
     display: grid;
-    grid-template-columns: minmax(0, 30rem) 1fr;
+    grid-template-columns: minmax(0, 26rem) 1fr;
     align-items: center;
   }
 
@@ -229,13 +235,13 @@
   .not-found__code {
     display: flex;
     align-items: center;
-    gap: 0.02em;
+    gap: 0;
     margin: 0;
     font-size: clamp(4.5rem, 11vw, 9.5rem);
     font-weight: 700;
     /* 行高收到 0.9 让字标紧凑；不能更低 —— 「4」的竖笔会顶到上一行的基线 */
     line-height: 0.9;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
     color: var(--color-brand);
   }
 
@@ -249,14 +255,14 @@
   .not-found__zero {
     display: block;
     flex: none;
-    inline-size: 0.56em;
+    inline-size: 0.533em;
     block-size: 0.72em;
   }
 
   /* ── 文案 ─────────────────────────────────────────────────────────────── */
   .not-found__heading {
     margin: clamp(1rem, 2.2vw, 1.5rem) 0 0;
-    font-size: clamp(1.6rem, 3.2vw, 2.5rem);
+    font-size: clamp(1.55rem, 2.9vw, 2.25rem);
     font-weight: 700;
     line-height: 1.15;
     letter-spacing: -0.015em;
