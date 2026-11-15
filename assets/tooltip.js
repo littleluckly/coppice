@@ -176,6 +176,13 @@
       bubble.appendChild(text);
       this.appendChild(bubble);
 
+      /* 这里直接写文案，不走 setText()：此刻 this.bubble 还没赋值（本方法正是
+         它的产出者），setText 会以为气泡不存在而提前返回 —— 结果是空气泡，
+         宽高只剩 padding 和箭头（第一次实测就是这个现象）。 */
+      const initial = (this.getAttribute('label') || '').trim();
+      text.textContent = initial;
+      this.toggleAttribute('data-blank', initial === '');
+
       /* 气泡是「描述」不是「名字」→ aria-describedby（不是 labelledby）。
          触发元素自带 aria-label 时两者会连着朗读，所以文案要写增量信息
          （怎么用 / 点进去是什么），不要复述它自己的名字。 */
@@ -185,7 +192,6 @@
       if (!described.includes(bubble.id)) described.push(bubble.id);
       this.trigger.setAttribute('aria-describedby', described.join(' '));
 
-      this.setText(this.getAttribute('label'));
       return bubble;
     }
 
