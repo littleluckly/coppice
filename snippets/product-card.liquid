@@ -219,8 +219,8 @@
     {%- comment -%} 对比入口（SDD §6.2.8）：行为由 assets/compare.js 的
         <compare-toggle> 接管；文案与上限全部由 Liquid 下发，脚本不硬编码。
         分组键为空或 compare_hidden 为真 → 整个入口不渲染。
-        缩略图存 480px 派生：底部条把它缩到 40px 显示，对比页表头则要铺到 ~400px ——
-        存 120px 会在表头上被放大成糊图（2026-10-22 实测）。同一张图两处复用，不多一次请求。 {%- endcomment -%}
+        缩略图存 480px 派生：对比页表头要铺到 ~400px，存 120px 会在表头上被放大成糊图
+        （2026-10-22 实测）。飞入动画的克隆层也取这张。 {%- endcomment -%}
     {%- if product.metafields.spec.compare_group.value != blank
       and product.metafields.spec.compare_hidden.value != 'TRUE' -%}
       {%- assign compare_group = product.metafields.spec.compare_group.value -%}
