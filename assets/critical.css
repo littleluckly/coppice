@@ -670,10 +670,14 @@ ui-tooltip {
   --tooltip-shift: 0px;
   --tooltip-lift: 4px;
   translate: var(--tooltip-shift) var(--tooltip-lift);
+  /* visibility 不跟 opacity 一起吃 0.14s 的时长：它是离散值，参与过渡意味着
+     显隐被推迟到过渡中途/结束（2026-11-15 实测：data-open 已置上，200ms 后
+     getComputedStyle 仍是 hidden → 断言判「没打开」）。这里给它**独立的零时长
+     + 延迟**：打开时 delay 0 立刻可见，关闭时延 0.14s 等淡出走完再真正隐藏。 */
   transition:
     opacity 0.14s ease,
     translate 0.14s ease,
-    visibility 0.14s;
+    visibility 0s linear 0.14s;
 }
 
 /* ---- 四向定位 ----
@@ -709,6 +713,11 @@ ui-tooltip {
   opacity: 1;
   visibility: visible;
   --tooltip-lift: 0px;
+  /* visibility 的延迟在这里归零——打开必须是即时的 */
+  transition:
+    opacity 0.14s ease,
+    translate 0.14s ease,
+    visibility 0s linear 0s;
 }
 
 /* 箭头：8px 方块旋转 45°，一半压在气泡底上，看起来是从气泡上长出来的 */
