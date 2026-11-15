@@ -276,12 +276,18 @@
 
   /* ── 文案 ─────────────────────────────────────────────────────────────── */
   .not-found__heading {
-    margin: clamp(1.25rem, 2.4vw, 1.75rem) 0 0;
+    margin: 0;
     font-size: clamp(1.5rem, 2.6vw, 2rem);
     font-weight: 700;
     line-height: 1.15;
     letter-spacing: -0.015em;
     color: var(--color-brand);
+  }
+
+  /* 只有前面真的有 404 字标时才要这段间距 —— 商家关掉字标后，
+     h1 是块首元素，margin-top 会变成一块说不清来由的空白 */
+  .not-found__code + .not-found__heading {
+    margin-block-start: clamp(1.25rem, 2.4vw, 1.75rem);
   }
 
   /* 次级文字用 --color-foreground-muted（70% 前景 = 4.95:1），
@@ -407,7 +413,7 @@
     {
       "type": "textarea",
       "id": "body",
-      "label": "t:labels.text",
+      "label": "t:sections.not_found.labels.body",
       "default": "The page you're looking for might have been removed, had its name changed, or is temporarily unavailable."
     },
     {

@@ -290,6 +290,7 @@
     "not_found": {
       "labels": {
         "actions": "Buttons",
+        "body": "Message",
         "image": "Background photo",
         "image_info": "Full width behind the message. Keep the subject on the right — the text sits on the left, over a fade into the page background.",
         "primary_label": "Primary button label",
