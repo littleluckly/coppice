@@ -153,14 +153,23 @@
     overflow: hidden;
   }
 
-  /* 没有照片时不铺图案，只垫一层极淡的品牌色 —— 让空块仍然有「被设计过」的体积感，
-     而不是一片死白。渐变方向与遮罩一致（左浓右淡）。 */
+  /* 没有照片时垫一层极淡的品牌色柔光，让空块仍然有「被设计过」的体积感，
+     而不是一片死白。用径向不用线性：线性渐变会把读者的视线往一侧推，
+     而这里两侧都没有内容可看。 */
   .not-found:not(.not-found--image) {
-    background-image: linear-gradient(
-      100deg,
-      color-mix(in srgb, var(--color-brand) 7%, var(--color-background)) 0%,
-      var(--color-background) 68%
+    background-image: radial-gradient(
+      120% 100% at 28% 42%,
+      color-mix(in srgb, var(--color-brand) 9%, var(--color-background)) 0%,
+      var(--color-background) 62%
     );
+  }
+
+  /* 无图时右侧没有照片要平衡 —— 26rem 的文字列贴着左边，右边会空掉半屏。
+     改成整列居中，并把桌面那个左内缩归零（居中后它只会让文字偏心）。 */
+  .not-found:not(.not-found--image) .not-found__inner {
+    grid-template-columns: minmax(0, 26rem);
+    justify-content: center;
+    padding-inline-start: 0;
   }
 
   /* ── 照片 + 遮罩 ──────────────────────────────────────────────────────── */
