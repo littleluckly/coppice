@@ -198,6 +198,14 @@
         "spec_info": "Specs render as one horizontal row; entries with empty values are skipped automatically."
       }
     },
+    "article": {
+      "labels": {
+        "show_cover": "Show cover image",
+        "show_more_guides": "Show 'More guides' sidebar",
+        "show_more_guides_info": "Lists up to three other articles from the same blog. Shopify can't query articles by tag, so these are simply the most recent others.",
+        "show_tags": "Show tags"
+      }
+    },
     "blog_posts": {
       "name": "Blog posts",
       "defaults": {

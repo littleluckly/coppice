@@ -28,6 +28,21 @@
     "comment_form_name": "Name",
     "comment_form_submit": "Post",
     "comment_form_title": "Add a comment",
+    "reading_time": "{{ count }} min read",
+    "article": {
+      "comments_count": {
+        "one": "{{ count }} comment",
+        "other": "{{ count }} comments"
+      },
+      "comments_next": "Newer comments",
+      "comments_pagination": "Comment pagination",
+      "comments_previous": "Older comments",
+      "more": "More guides",
+      "newer": "Newer guide",
+      "older": "Older guide",
+      "pager_label": "More guides in this blog",
+      "tags_label": "Tags"
+    },
     "list": {
       "all_articles": "All articles",
       "categories": "Categories",
@@ -49,7 +64,6 @@
       "pagination_label": "Pagination",
       "pagination_next": "Next page",
       "pagination_previous": "Previous page",
-      "reading_time": "{{ count }} min read",
       "result_count": {
         "one": "{{ count }} guide",
         "other": "{{ count }} guides"
