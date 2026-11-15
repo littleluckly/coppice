@@ -34,16 +34,6 @@
           <a class="blog-posts__card" href="{{ article.url }}">
             <span class="blog-posts__media">
               {%- if article.image != blank -%}
-                {%- comment -%} sizes 对齐 CSS 图列：桌面 120px ≈ 10vw，窄屏 88px ≈ 26vw {%- endcomment -%}
-<<<<<<< HEAD
-=======
-=======
-<<<<<<< HEAD
-                {%- comment -%} sizes 对齐 CSS 图列：桌面 120px ≈ 10vw，窄屏 88px ≈ 26vw {%- endcomment -%}
-=======
->>>>>>> 7622b082ccc53f5e6353decb11e248dec51a105a
->>>>>>> 4ce33448668264c537eafd788300ee72e9f79778
->>>>>>> b4a6bd53c98c2956bc9c3bbcfce47795cef1d3e3
                 {{
                   article.image
                   | image_url: width: 600
