@@ -616,8 +616,15 @@
         </button>
 
         {% render 'account-entry', menu: section.settings.customer_account_menu %}
-        {%- comment -%} 对比入口紧邻购物车左侧（SDD §6.2.8）；单文件内部做页面探测，未配置则整块不输出 {%- endcomment -%}
-        {% render 'compare-entry' %}
+        {%- comment -%}
+          对比入口紧邻购物车左侧（SDD §6.2.8）；单文件内部做页面探测，未配置则整块不输出。
+          2026-11-15：外面包一层 <ui-tooltip>——悬停或键盘聚焦时说明这个图标是干什么的。
+          空态下这是唯一能把「可以对比商品」告诉新顾客的地方（图标已改为常驻弱化）。
+          label 的初始值是空态文案，compare.js 在 sync() 里按真实状态改写它。
+        {%- endcomment -%}
+        <ui-tooltip placement="bottom" label="{{ 'compare.entry_tip' | t }}">
+          {% render 'compare-entry' %}
+        </ui-tooltip>
         {% render 'cart-entry' %}
 
         {%- comment -%}

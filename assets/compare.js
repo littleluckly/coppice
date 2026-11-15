@@ -477,6 +477,17 @@
       if (labelTpl) {
         this.link.setAttribute('aria-label', labelTpl.replace('[count]', String(count)));
       }
+
+      /* 页头那份外面包着 <ui-tooltip>（2026-11-15）：提示文案跟状态走——
+         空态教「这东西怎么用」，有料说「点进去看到什么」，不复述 aria-label。
+         这里写 attribute 而不是调组件方法：ui-tooltip 可能还没升级（两个脚本
+         都是 defer，先后由页面决定），而 attribute 是纯数据，晚到的组件
+         在 connectedCallback 里读到的就是对的。 */
+      const tip = this.closest('ui-tooltip');
+      const tipTpl = count > 0 ? this.dataset.tipCount : this.dataset.tipEmpty;
+      if (tip && tipTpl) {
+        tip.setAttribute('label', tipTpl.replace('[count]', String(count)));
+      }
     }
   }
 
