@@ -80,7 +80,7 @@
   {%- if has_image -%}
     {%- comment -%}
       背景照片：页面唯一的大图，eager + fetchpriority high（它就是 LCP）。
-      alt 留空 —— 纯装饰背景，页面语义由右侧 h1 承担（同 blog.bblog index 的 hero）。
+      alt 留空 —— 纯装饰背景，页面语义由右侧 h1 承担（同 blog 列表页的 hero）。
       焦点取自图库里的 presentation.focal_point，商家点一下图即可决定留哪块。
     {%- endcomment -%}
     <span class="not-found__media" style="--focal: {{ s.image.presentation.focal_point | default: '50% 50%' }}">
@@ -123,7 +123,7 @@
           {{- 'icon-arrow-left.svg' | inline_asset_content -}}
           <span>{{ primary_label | escape }}</span>
         </a>
-        {%- if secondary_link != blank -%}
+        {%- if s.show_secondary -%}
           <a class="btn-solid btn-solid--quiet not-found__cta" href="{{ secondary_link }}">
             <span>{{ secondary_label | escape }}</span>
           </a>
@@ -403,6 +403,12 @@
       "id": "primary_link",
       "label": "t:sections.not_found.labels.primary_link",
       "info": "t:sections.not_found.labels.primary_link_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_secondary",
+      "label": "t:sections.not_found.labels.show_secondary",
+      "default": true
     },
     {
       "type": "text",

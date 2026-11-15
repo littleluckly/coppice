@@ -287,6 +287,22 @@
     "compare_lookup": {
       "name": "Compare lookup"
     },
+    "not_found": {
+      "labels": {
+        "actions": "Buttons",
+        "image": "Background photo",
+        "image_info": "Full width behind the message. Keep the subject on the right — the text sits on the left, over a fade into the page background.",
+        "primary_label": "Primary button label",
+        "primary_link": "Primary button link",
+        "primary_link_info": "Leave empty to send customers to the home page.",
+        "secondary_label": "Secondary button label",
+        "secondary_link": "Secondary button link",
+        "secondary_link_info": "Leave empty to send customers to the all-products page.",
+        "show_code": "Show the oversized 404",
+        "show_code_info": "Decorative — hidden from screen readers, so only the heading below is announced.",
+        "show_secondary": "Show the second button"
+      }
+    },
     "main_product": {
       "name": "Product information",
       "labels": {
