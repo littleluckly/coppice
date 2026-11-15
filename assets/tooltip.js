@@ -239,10 +239,11 @@
       if (this.hasAttribute('disabled') || this.hasAttribute('data-blank')) return;
       this.clearTimers();
       if (this.open) return;
+      /* 先归位再打开：此时气泡还是 visibility: hidden，量得到布局盒但看不见，
+         用户看到的第一帧就已经在正确位置，不会有「先探出去再缩回来」的跳动。 */
+      this.adjust();
       this.open = true;
       this.bubble.toggleAttribute('data-open', true);
-      /* 先开再量：visibility: hidden 的元素量不到布局盒，必须已经可见 */
-      this.adjust();
     }
 
     hideNow() {
@@ -255,16 +256,28 @@
 
     /**
      * 贴边修正：气泡默认水平居中于锚点，页头工具区靠右时右侧会出界。
-     * 先清掉上一次的偏移再量——量偏移过的盒子算出来是错的，两次会叠着跑。
      *
-     * 只对 top / bottom 生效：start / end 的气泡在锚点侧边、被垂直居中，
+     * 必须量「基准位置」——临时摘掉 translate 与过渡再量。直接量会把 CSS 过渡
+     * 中途的插值当成结果，算出来的修正量偏小（2026-11-15 实测：右边缘仍溢出
+     * 34px，因为量的那一帧位移只走了一半）。
+     *
+     * 只对 top / bottom 生效：start / end 的气泡在锚点侧边、垂直居中，
      * 水平方向本来就贴着内容走，把水平偏移量套上去只会把它推离锚点。
      */
     adjust() {
-      this.bubble.style.removeProperty('--tooltip-shift');
       if (this.placement === 'start' || this.placement === 'end') return;
 
-      const rect = this.bubble.getBoundingClientRect();
+      const bubble = this.bubble;
+      const prevTranslate = bubble.style.translate;
+      const prevTransition = bubble.style.transition;
+      bubble.style.transition = 'none';
+      bubble.style.translate = 'none';
+      bubble.style.removeProperty('--tooltip-shift');
+
+      const rect = bubble.getBoundingClientRect();
+
+      bubble.style.transition = prevTransition;
+      bubble.style.translate = prevTranslate;
       if (!rect.width) return;
 
       const viewport = document.documentElement.clientWidth;
