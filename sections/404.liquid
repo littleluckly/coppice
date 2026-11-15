@@ -167,7 +167,7 @@
   /* 无图时右侧没有照片要平衡 —— 26rem 的文字列贴着左边，右边会空掉半屏。
      改成整列居中，并把桌面那个左内缩归零（居中后它只会让文字偏心）。 */
   .not-found:not(.not-found--image) .not-found__inner {
-    grid-template-columns: minmax(0, 26rem);
+    grid-template-columns: minmax(0, 22rem);
     justify-content: center;
     padding-inline-start: 0;
   }
@@ -192,9 +192,11 @@
   }
 
   /* 从左侧把画面渐隐成背景色，给文字垫出一块干净底。
-     前 34% 完全不透明是刻意的：文字列宽 30rem，在 1440 视口下正好落在
-     0–34% 这一段（content-width 1400 + 左右各 20 边距）。改文字列宽就要同步改这里，
-     否则段落会压到半透明的照片上，对比度掉出 AA。 */
+     **前 32% 必须完全不透明**，这是对比度硬线，不是审美选择：
+     文字列 22rem + 左内缩 72px = 424px，在 1440 视口下正好落在 0–32%。
+     段落用的是 --color-foreground-muted（对纯背景色 4.95:1），
+     一旦压到半透明区，背景被照片提亮、对比度直接掉到 3.3 左右，AA 不过。
+     改文字列宽 / 左内缩 / 断点时，这一段要跟着重算。 */
   .not-found__scrim {
     grid-area: stage;
     position: absolute;
@@ -204,12 +206,11 @@
     background-image: linear-gradient(
       90deg,
       var(--color-background) 0%,
-      var(--color-background) 22%,
-      color-mix(in srgb, var(--color-background) 90%, transparent) 30%,
-      color-mix(in srgb, var(--color-background) 56%, transparent) 40%,
-      color-mix(in srgb, var(--color-background) 20%, transparent) 52%,
-      color-mix(in srgb, var(--color-background) 4%, transparent) 64%,
-      transparent 76%
+      var(--color-background) 32%,
+      color-mix(in srgb, var(--color-background) 80%, transparent) 40%,
+      color-mix(in srgb, var(--color-background) 44%, transparent) 49%,
+      color-mix(in srgb, var(--color-background) 14%, transparent) 58%,
+      transparent 68%
     );
   }
 
@@ -231,7 +232,7 @@
        minmax(0, …) 不是装饰 —— grid item 默认 min-width: auto，
        数字块这种超宽内容会把列撑破、把右侧照片挤没。 */
     display: grid;
-    grid-template-columns: minmax(0, 26rem) 1fr;
+    grid-template-columns: minmax(0, 22rem) 1fr;
     align-items: center;
   }
 
@@ -273,7 +274,7 @@
   /* ── 文案 ─────────────────────────────────────────────────────────────── */
   .not-found__heading {
     margin: clamp(1rem, 2.2vw, 1.5rem) 0 0;
-    font-size: clamp(1.55rem, 2.9vw, 2.25rem);
+    font-size: clamp(1.5rem, 2.6vw, 2rem);
     font-weight: 700;
     line-height: 1.15;
     letter-spacing: -0.015em;
@@ -284,7 +285,6 @@
      不用自己调 opacity —— 60% 只有 3.69:1，AA 不过。 */
   .not-found__body {
     margin: clamp(0.75rem, 1.4vw, 1rem) 0 0;
-    max-inline-size: 26rem;
     font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
     line-height: 1.6;
     color: var(--color-foreground-muted);
@@ -357,9 +357,6 @@
       font-size: clamp(4rem, 26vw, 6.5rem);
     }
 
-    .not-found__body {
-      max-inline-size: none;
-    }
   }
 
   /* 窄屏下两个按钮各自占满一行：并排会挤成两个圆球 */
