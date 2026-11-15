@@ -730,13 +730,17 @@ ui-tooltip {
   background-color: inherit;
   rotate: 45deg;
 }
+/* 箭头带反向补偿：气泡为了不贴边会整体平移（--tooltip-shift），
+   箭头必须反推同样距离才仍然指着锚点，否则会出现「气泡在左、箭头指空气」
+   （2026-11-15 刘工截图：图标中心与箭头差约 22px）。
+   补偿量由 JS 写入并已按气泡半宽 clamp，不会跑到圆角外面。 */
 .tooltip[data-placement='top']::before {
   inset-block-end: -4px;
-  inset-inline-start: calc(50% - 4px);
+  inset-inline-start: calc(50% - 4px + var(--tooltip-arrow, 0px));
 }
 .tooltip[data-placement='bottom']::before {
   inset-block-start: -4px;
-  inset-inline-start: calc(50% - 4px);
+  inset-inline-start: calc(50% - 4px + var(--tooltip-arrow, 0px));
 }
 .tooltip[data-placement='start']::before {
   inset-inline-end: -4px;

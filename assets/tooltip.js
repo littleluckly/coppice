@@ -148,6 +148,7 @@
       if (this.bubble) {
         this.bubble.removeAttribute('data-open');
         this.bubble.style.removeProperty('--tooltip-shift');
+        this.bubble.style.removeProperty('--tooltip-arrow');
       }
     }
 
@@ -247,6 +248,7 @@
       this.open = false;
       this.bubble.removeAttribute('data-open');
       this.bubble.style.removeProperty('--tooltip-shift');
+      this.bubble.style.removeProperty('--tooltip-arrow');
     }
 
     /**
@@ -268,6 +270,7 @@
       bubble.style.transition = 'none';
       bubble.style.translate = 'none';
       bubble.style.removeProperty('--tooltip-shift');
+      bubble.style.removeProperty('--tooltip-arrow');
 
       const rect = bubble.getBoundingClientRect();
 
@@ -281,8 +284,17 @@
 
       /* 顺序不能反：shift 必须在 transition 仍为 none 时写下，再和 transition 一起
          恢复。反过来的话设置 shift 的那一刻过渡已经回来了，气泡会从基准位滑到
-         修正位——用户看到的是「先探出去再缩回来」（比不过渡难看）。 */
-      if (shift) bubble.style.setProperty('--tooltip-shift', `${Math.round(shift)}px`);
+         修正位——用户看到的是「先探出去再缩回来」（比不过渡难看）。
+
+         箭头要反向补偿：气泡整体左移了多少，箭头就右移多少，否则「气泡在左、
+         箭头指空气」。补偿量按半宽 clamp，保证箭头不会跑到圆角之外。 */
+      if (shift) {
+        const rounded = Math.round(shift);
+        const limit = Math.max(0, rect.width / 2 - 12);
+        const arrow = Math.max(-limit, Math.min(limit, -rounded));
+        bubble.style.setProperty('--tooltip-shift', `${rounded}px`);
+        bubble.style.setProperty('--tooltip-arrow', `${Math.round(arrow)}px`);
+      }
       bubble.style.translate = prevTranslate;
       bubble.style.transition = prevTransition;
     }
