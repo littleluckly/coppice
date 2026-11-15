@@ -519,6 +519,11 @@
     line-height: 1.55;
     color: var(--color-foreground-muted);
   }
+  /* 有照片时副标题改用接近实色的前景：遮罩到文字右端已衰减到 ~88%，
+     70% 的 muted 压在那里只有 ~4.5:1，贴线。88% 实色有 7:1 的余量。 */
+  .blog-index__hero--image .blog-index__subheading {
+    color: color-mix(in srgb, var(--color-foreground) 88%, transparent);
+  }
 
   /* ---------- 内容列 / 两栏 ---------- */
 
