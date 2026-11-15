@@ -24,9 +24,9 @@
      对比度 100% 可控。
 
   ## 无图时的降级
-  主题包里带不了演示照片，`image` 留空是常态。此时不铺任何图案，
-  整块退成纯 `--color-background` 加一段淡品牌色渐变 —— 版式、字标、按钮
-  全部照常，不塌成一行「Page not found.」。
+  主题包里带不了演示照片，`image` 留空是常态。此时右侧没有照片可平衡，
+  所以整块换一套版式：文字列居中、背景一层居中偏左的品牌色柔光。
+  字标 / 标题 / 按钮全部照常，不塌成一行「Page not found.」。
 
   ## 与 pages-ui.md §12 的差异
   工单原方案是「文案 + 搜索框 + 用途入口卡」。本轮按效果图实现，未含搜索框与
@@ -84,17 +84,21 @@
       alt 留空 —— 纯装饰背景，页面语义由右侧 h1 承担（同 blog 列表页的 hero）。
       焦点取自图库里的 presentation.focal_point，商家点一下图即可决定留哪块。
     {%- endcomment -%}
+    {%- comment -%}
+      image_tag 收到空 alt 时会把 alt 属性整条吞掉（不是输出 alt=""），
+      Lighthouse 判定为「缺 alt」。所以先不带 alt 生成，再补一个进去。
+    {%- endcomment -%}
+    {%- assign hero_img = s.image
+      | image_url: width: 2400
+      | image_tag:
+        widths: '750, 1100, 1500, 2000, 2400',
+        sizes: '100vw',
+        loading: 'eager',
+        fetchpriority: 'high'
+    -%}
+    {%- assign hero_img = hero_img | replace: '<img ', '<img alt="" ' -%}
     <span class="not-found__media" style="--focal: {{ s.image.presentation.focal_point | default: '50% 50%' }}">
-      {{
-        s.image
-        | image_url: width: 2400
-        | image_tag:
-          widths: '750, 1100, 1500, 2000, 2400',
-          sizes: '100vw',
-          loading: 'eager',
-          fetchpriority: 'high',
-          alt: ''
-      }}
+      {{ hero_img }}
     </span>
     <span class="not-found__scrim" aria-hidden="true"></span>
   {%- endif -%}
@@ -106,7 +110,7 @@
           <span class="not-found__digit">4</span>
           <svg class="not-found__zero" viewBox="0 0 74 100" aria-hidden="true" focusable="false">
             <ellipse cx="37" cy="50" rx="28.5" ry="41" fill="none" stroke="currentColor" stroke-width="19" />
-            <path d="M53 31C53 55 26 78 26 60 32 34 50 34 53 31Z" fill="currentColor" />
+            <path d="M51 32C52 55 26 78 26 60 32 34 49 34 51 32Z" fill="currentColor" />
             <path d="M27 59Q40 45 52 32" fill="none" stroke="var(--color-background)" stroke-width="3" stroke-linecap="round" />
           </svg>
           <span class="not-found__digit">4</span>
@@ -164,7 +168,7 @@
     );
   }
 
-  /* 无图时右侧没有照片要平衡 —— 26rem 的文字列贴着左边，右边会空掉半屏。
+  /* 无图时右侧没有照片要平衡 —— 22rem 的文字列贴着左边，右边会空掉半屏。
      改成整列居中，并把桌面那个左内缩归零（居中后它只会让文字偏心）。 */
   .not-found:not(.not-found--image) .not-found__inner {
     grid-template-columns: minmax(0, 22rem);
@@ -228,7 +232,7 @@
     padding-block: clamp(3rem, 7vw, 5.5rem);
     /* 文字再退一段：贴到 page-margin 上会显得「顶格」，参考图这里留了约 5% 视口宽 */
     padding-inline-start: clamp(0px, 5vw, 4.5rem);
-    /* 两列：左列吃文字的 30rem，右列空着让照片露出来。
+    /* 两列：左列吃文字的 22rem，右列空着让照片露出来。
        minmax(0, …) 不是装饰 —— grid item 默认 min-width: auto，
        数字块这种超宽内容会把列撑破、把右侧照片挤没。 */
     display: grid;
@@ -247,7 +251,6 @@
   .not-found__code {
     display: flex;
     align-items: center;
-    gap: 0;
     margin: 0;
     font-size: clamp(4.5rem, 12.5vw, 11rem);
     font-weight: 700;
@@ -262,8 +265,8 @@
   }
 
   /* 0 的字位：宽高都按 em 走，随字号缩放。
-     0.52em × 0.72em 是 Work Sans 里数字 0 的实际占位（宽 0.62em 减环外留白，
-     高 = cap height），换字体时会有几个像素的偏差，远小于用字体字形叠叶脉的漂移。 */
+     0.533em × 0.72em = viewBox 74:100 按「高 = cap-height」折算出来的占位，
+     换字体时会有几个像素的偏差，远小于「拿字体字形叠叶脉」的漂移。 */
   .not-found__zero {
     display: block;
     flex: none;
@@ -358,7 +361,6 @@
     .not-found__code {
       font-size: clamp(4rem, 26vw, 6.5rem);
     }
-
   }
 
   /* 窄屏下两个按钮各自占满一行：并排会挤成两个圆球 */
