@@ -1027,7 +1027,9 @@
        横向渐变在 375px 上只剩最左侧几个百分点，等于没遮。 */
     .blog-index__hero--image .blog-index__hero-inner {
       justify-content: flex-end;
-      min-block-size: 16rem;
+      /* 20rem：文字块约占 170px，剩下的高度才够照片露脸。
+         16rem 时照片只剩顶端一条，看起来像加载失败。 */
+      min-block-size: 20rem;
     }
     .blog-index__hero--image .blog-index__hero-scrim {
       background-image: linear-gradient(
@@ -1101,6 +1103,11 @@
     }
     .blog-index__cat.is-active .blog-index__cat-count {
       color: var(--color-background);
+    }
+    /* 药丸里不显示计数：6 个带数字的药丸要横滑三屏才到头，
+       而"共几篇"在工具栏已经有一份（result_count）。桌面竖排列表里才保留。 */
+    .blog-index__cat-count {
+      display: none;
     }
   }
 
