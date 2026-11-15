@@ -327,7 +327,7 @@
     border-end-end-radius: 28px;
   }
   .article__hero-inner {
-    max-inline-size: 64rem;
+    max-inline-size: 61.5rem;
     margin-inline: auto;
     padding-block: clamp(1.75rem, 3.6vw, 2.75rem) clamp(1.5rem, 3vw, 2.25rem);
   }
@@ -395,7 +395,7 @@
     padding-block: clamp(1.5rem, 3vw, 2.25rem) clamp(3rem, 6vw, 5rem);
   }
   .article__layout {
-    max-inline-size: 64rem;
+    max-inline-size: 61.5rem;
     margin-inline: auto;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -411,9 +411,11 @@
   }
   .article__body {
     min-inline-size: 0;
-    /* 44.5rem ≈ 712px：64rem 减去侧栏 16.5rem 与间距 3rem 正好是这个数，
-       有无侧栏时阅读宽度一致，切开关不会让正文换宽。 */
-    max-inline-size: 44.5rem;
+    /* 42rem ≈ 672px：61.5rem 减去侧栏 16.5rem 与间距 3rem 正好是这个数，
+       有无侧栏时阅读宽度一致，切开关不会让正文换宽。
+       为什么不是更宽的 712px：17.6px 字号下 672px 约合 76 字符/行，
+       再宽就超出"长文可跟行"的经验区间（65–75）。 */
+    max-inline-size: 42rem;
     inline-size: 100%;
   }
   /* 没有侧栏时正文居中。inline-size: 100% 不能省 —— grid item 上同时有
@@ -441,8 +443,9 @@
 
   /* 正文：段间距与标题层级归 .rte，这里只调阅读字号 */
   .article__content {
-    font-size: 1.0625rem;
-    line-height: 1.75;
+    /* 17.6px / 1.7 —— 比 .rte 的兜底（16px/1.7）大一档，长文正文需要更松的行距 */
+    font-size: 1.1rem;
+    line-height: 1.7;
   }
 
   /* ---------- 标签 ---------- */
@@ -496,13 +499,6 @@
     .article__pager {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    /* 右侧那篇靠右对齐：两篇并排时箭头朝外，读起来才知道往哪走 */
-    .article__pager-link--next {
-      text-align: end;
-    }
-    .article__pager-link--next .article__pager-label {
-      justify-content: flex-end;
-    }
   }
   .article__pager-link {
     display: flex;
@@ -516,10 +512,9 @@
     text-decoration: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, translate 0.2s ease;
   }
-  /* 只有一篇时占满整行、不靠右 —— 单卡靠右会被误读成按钮 */
+  /* 只有一篇时占满整行 —— 半宽单卡夹在中间会被读成"另一个按钮" */
   .article__pager-link:only-child {
     grid-column: 1 / -1;
-    text-align: start;
   }
   @media (hover: hover) and (pointer: fine) {
     .article__pager-link:hover {

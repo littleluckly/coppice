@@ -895,6 +895,15 @@ bottom-sheet > dialog.is-close-anim {
 .rte :is(img, video, iframe) {
   margin-block: 1.25rem;
 }
+/* 图片说明（figure > figcaption）：浏览器默认给的是斜体 1em，
+   在正文里比正文还重。压成小一号的次级文字，按全站口径取 muted。 */
+.rte figcaption {
+  margin-block-start: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  font-style: normal;
+  color: var(--color-foreground-muted);
+}
 .rte img {
   border-radius: var(--style-border-radius-inputs);
 }
