@@ -105,9 +105,9 @@
         <p class="not-found__code" aria-hidden="true">
           <span class="not-found__digit">4</span>
           <svg class="not-found__zero" viewBox="0 0 74 100" aria-hidden="true" focusable="false">
-            <ellipse cx="37" cy="50" rx="28.5" ry="41" fill="none" stroke="currentColor" stroke-width="16.5" />
-            <path d="M52 32C51 52 29 73 27 61 32 39 49 35 52 32Z" fill="currentColor" />
-            <path d="M28 60Q39 47 51 33" fill="none" stroke="var(--color-background)" stroke-width="3" stroke-linecap="round" />
+            <ellipse cx="37" cy="50" rx="28.5" ry="41" fill="none" stroke="currentColor" stroke-width="19" />
+            <path d="M53 31C53 53 28 75 26 60 31 37 50 34 53 31Z" fill="currentColor" />
+            <path d="M27 59Q40 45 52 32" fill="none" stroke="var(--color-background)" stroke-width="3" stroke-linecap="round" />
           </svg>
           <span class="not-found__digit">4</span>
         </p>
@@ -147,8 +147,8 @@
     /* 视口高度三级回落：老浏览器读 32rem，支持 vh 读第二个，支持 svh 读第三个。
        不用 100vh：移动端地址栏收放会让它溢出。 */
     min-block-size: 32rem;
-    min-block-size: max(32rem, 72vh);
-    min-block-size: max(32rem, 72svh);
+    min-block-size: max(32rem, 82vh);
+    min-block-size: max(32rem, 82svh);
     background-color: var(--color-background);
     overflow: hidden;
   }
@@ -239,7 +239,7 @@
     align-items: center;
     gap: 0;
     margin: 0;
-    font-size: clamp(4.5rem, 11vw, 9.5rem);
+    font-size: clamp(4.5rem, 12.5vw, 11rem);
     font-weight: 700;
     /* 行高收到 0.9 让字标紧凑；不能更低 —— 「4」的竖笔会顶到上一行的基线 */
     line-height: 0.9;
