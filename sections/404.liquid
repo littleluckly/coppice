@@ -106,8 +106,8 @@
           <span class="not-found__digit">4</span>
           <svg class="not-found__zero" viewBox="0 0 74 100" aria-hidden="true" focusable="false">
             <ellipse cx="37" cy="50" rx="28.5" ry="41" fill="none" stroke="currentColor" stroke-width="16.5" />
-            <path d="M52 33c-7-.5-16 3.5-20.5 11-3.5 6-1 13.5 5.5 17 5.5 3.5 12 .5 13.5-6.5C52 47 52 40 52 33Z" fill="currentColor" />
-            <path d="M30.5 60C36 51 43 43 51 35" fill="none" stroke="var(--color-background)" stroke-width="3" stroke-linecap="round" />
+            <path d="M52 32C51 52 29 73 27 61 32 39 49 35 52 32Z" fill="currentColor" />
+            <path d="M28 60Q39 47 51 33" fill="none" stroke="var(--color-background)" stroke-width="3" stroke-linecap="round" />
           </svg>
           <span class="not-found__digit">4</span>
         </p>
@@ -216,6 +216,8 @@
     max-inline-size: var(--content-width, 90rem);
     margin-inline: auto;
     padding-block: clamp(3rem, 7vw, 5.5rem);
+    /* 文字再退一段：贴到 page-margin 上会显得「顶格」，参考图这里留了约 5% 视口宽 */
+    padding-inline-start: clamp(0px, 5vw, 4.5rem);
     /* 两列：左列吃文字的 30rem，右列空着让照片露出来。
        minmax(0, …) 不是装饰 —— grid item 默认 min-width: auto，
        数字块这种超宽内容会把列撑破、把右侧照片挤没。 */
