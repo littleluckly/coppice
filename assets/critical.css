@@ -659,6 +659,14 @@ ui-tooltip {
   font-size: 0.8125rem;
   line-height: 1.45;
   text-align: start;
+  /* ⚠️ 必须显式复位换行：页头行 `.main-nav__inner` 定了 `white-space: nowrap`
+     （导航项永不折行），这条会一路继承进气泡——`max-inline-size` 把盒子钳到
+     239px，文字却不肯断行，整句直接冲出气泡外（2026-11-15 刘工截图实测：
+     气泡 w=239、文字单行溢出）。浮层的排版规则必须自成一套，不给继承留口子。 */
+  white-space: normal;
+  /* 长单词 / 长 URL 兜底。用 break-word 不用 anywhere ——
+     后者会把 "Chainsaws" 这类词从中间拆开（搜索页行卡的同款教训）。 */
+  overflow-wrap: break-word;
   /* 提示层要有「浮起来」的实感，但不能太抢——一层近距离落地影足够 */
   box-shadow: 0 6px 18px color-mix(in srgb, #000 22%, transparent);
   opacity: 0;
