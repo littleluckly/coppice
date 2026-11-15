@@ -210,15 +210,16 @@
       "labels": {
         "articles_per_page": "Articles per page",
         "articles_per_page_info": "Additional articles move to the next page.",
-        "show_author": "Show author",
-        "show_card_tags": "Show tags on cards",
+        "categories_limit": "Categories to list",
+        "categories_limit_info": "Blogs have no categories of their own, so this lists the blog's tags in alphabetical order.",
+        "heading_info": "Leave empty to use the blog's own title.",
+        "image": "Header image",
+        "image_info": "Shown behind the heading, fading into the page on one side.",
+        "show_card_tags": "Show the first tag on each card",
         "show_excerpt": "Show excerpts",
-        "show_featured": "Feature the newest article",
-        "show_featured_info": "Shows the newest post as a wide lead story on the first page.",
+        "show_newsletter": "Show the newsletter card",
         "show_reading_time": "Show reading time",
-        "show_reading_time_info": "Estimated from the article body at 200 words per minute.",
-        "show_topic_nav": "Show tag navigation",
-        "show_topic_nav_info": "Lists the blog's tags under the heading so customers can browse by topic. Blogs have no categories — tags are the only grouping."
+        "show_reading_time_info": "Estimated from the article body at 200 words per minute."
       }
     },
     "collections_list": {
