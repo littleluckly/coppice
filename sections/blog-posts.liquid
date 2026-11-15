@@ -34,7 +34,6 @@
           <a class="blog-posts__card" href="{{ article.url }}">
             <span class="blog-posts__media">
               {%- if article.image != blank -%}
-                {%- comment -%} sizes 对齐 CSS 图列：桌面 120px ≈ 10vw，窄屏 88px ≈ 26vw {%- endcomment -%}
                 {{
                   article.image
                   | image_url: width: 600

@@ -1,0 +1,951 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Article page harness</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --font-primary--family:"Work Sans",-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --page-width:90rem; --page-margin:20px;
+    --color-background:#ffffff; --color-foreground:#333333;
+    --color-brand:#1e4b3c; --color-brand-accent:#2e6b4e;
+    --color-foreground-muted:color-mix(in srgb,var(--color-foreground) 70%,transparent);
+    --color-sale:#c62828; --color-sale-surface:#ffebeb;
+    --color-brand-light:#74c4a7; --card-hover-lift:-2px;
+    --card-hover-shadow:0 6px 20px color-mix(in srgb,var(--color-brand-light) 30%,transparent);
+    --style-border-radius-inputs:4px;
+  }
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;display:flex;flex-direction:column;background:var(--color-background);
+    color:var(--color-foreground);font-family:var(--font-primary--family);font-size:16px;line-height:1.5}
+  h1,h2,h3,p,ol,ul{margin:0}
+  img{display:block;max-width:100%}
+  a{color:inherit}
+  .visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .shopify-section{
+    --content-width:min(calc(var(--page-width) - var(--page-margin)*2),calc(100% - var(--page-margin)*2));
+    --content-margin:minmax(var(--page-margin),1fr);
+    --content-grid:var(--content-margin) var(--content-width) var(--content-margin);
+    position:relative;display:grid;grid-template-columns:var(--content-grid);width:100%}
+  .shopify-section>*{grid-column:2}
+  .shopify-section>.full-width{grid-column:1/-1}
+  /* .btn-solid 的最小可运行副本（真实定义在 critical.css，这里只取评论按钮需要的部分） */
+  .btn-solid{position:relative;overflow:hidden;min-height:44px;border:1px solid var(--color-brand);
+    border-radius:999px;background-color:var(--color-brand);color:var(--color-background);cursor:pointer;
+    box-shadow:0 4px 15px color-mix(in srgb,var(--color-brand) 20%,transparent)}
+  .preview-label{max-width:1440px;margin:0 auto;padding:2.5rem 20px .5rem;
+    font:600 12px/1.4 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;
+    color:#8a8a8a;border-top:1px dashed #d8d8d8}
+:where(.rte) {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+/* 首尾元素贴边：避免容器上下多出一段无用的空白（特异性高于下面的 margin 规则） */
+.rte > :first-child {
+  margin-block-start: 0;
+}
+.rte > :last-child {
+  margin-block-end: 0;
+}
+
+.rte :is(h2, h3, h4, h5, h6) {
+  color: var(--color-foreground);
+  /* 700，不是 500（2026-11-07 刘工指出后修正）。
+     两个理由叠在一起，任一条都足以定 700：
+     ① 本主题只 font_face 了两档字重（snippets/css-variables.liquid：原字重 + bold），
+        500 没有对应字体面，按 CSS 字重匹配规则退到最近的 400 ⇒ 标题渲染成常规字重，
+        等于"没加粗"。任何介于 400 和 700 之间的值在这个主题里都是无效值。
+     ② 富文本编辑器和浏览器 UA 默认给 h1–h6 的就是 bold，商家在后台看到的是加粗，
+        前台的默认预期也应一致；调成 500 属于"主题偷偷改了商家的排版意图"。 */
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.rte h2 {
+  font-size: 1.375rem;
+  line-height: 1.3;
+  margin-block: 2rem 0.625rem;
+}
+.rte h3 {
+  font-size: 1.125rem;
+  line-height: 1.35;
+  margin-block: 1.5rem 0.5rem;
+}
+.rte h4 {
+  font-size: 1rem;
+  line-height: 1.4;
+  margin-block: 1.25rem 0.375rem;
+}
+.rte :is(h5, h6) {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  margin-block: 1.25rem 0.375rem;
+}
+
+.rte :is(p, ul, ol, blockquote, table, figure, pre) {
+  margin-block: 0.875rem;
+}
+
+.rte :is(ul, ol) {
+  padding-inline-start: 1.25rem;
+}
+.rte li + li {
+  margin-block-start: 0.375rem;
+}
+/* 嵌套列表：上下的 0.875rem 在紧凑的 li 里太大 */
+.rte li > :is(ul, ol) {
+  margin-block: 0.375rem;
+}
+
+.rte a {
+  color: var(--color-brand);
+  text-underline-offset: 0.2em;
+}
+.rte a:hover {
+  /* 悬停压深一档，不用第二个硬编码色值（配色纪律：一律 color-mix 派生） */
+  color: color-mix(in srgb, var(--color-brand) 78%, var(--color-foreground));
+}
+
+.rte strong,
+.rte b {
+  font-weight: 700;
+}
+
+.rte blockquote {
+  padding-inline-start: 1rem;
+  border-inline-start: 3px solid color-mix(in srgb, var(--color-brand) 45%, transparent);
+  color: var(--color-foreground-muted);
+}
+
+.rte hr {
+  margin-block: 2rem;
+  border: 0;
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+}
+
+.rte :is(img, video, iframe) {
+  margin-block: 1.25rem;
+}
+/* 图片说明（figure > figcaption）：浏览器默认给的是斜体 1em，
+   在正文里比正文还重。压成小一号的次级文字，按全站口径取 muted。 */
+.rte figcaption {
+  margin-block-start: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  font-style: normal;
+  color: var(--color-foreground-muted);
+}
+.rte img {
+  border-radius: var(--style-border-radius-inputs);
+}
+
+/* 富文本表格：商家粘贴进来的规格表常是裸 <table>，不给样式会变成一根根线 */
+.rte table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.rte :is(th, td) {
+  padding: 0.5rem 0.75rem;
+  border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  text-align: start;
+  vertical-align: top;
+}
+.rte th {
+  /* 同上面的理由：本主题没有 500，写 500 = 写 400 */
+  font-weight: 700;
+  color: var(--color-foreground);
+}
+
+
+  /* ============================================================
+     文章详情页 /blogs/<handle>/<article>
+
+     与博客列表页同一套语言：淡品牌色页头带、14px 圆角、hover 上浮
+     --card-hover-lift / --card-hover-shadow、配色全部从 --color-* 派生，
+     Noir preset 自动翻转。区别：这里是阅读页 —— 正文列固定 44.5rem
+     （≈712px），1400 的内容列不再铺满，长行读起来才不飘。
+
+     对齐：页头带内层与 .article__layout 同为 64rem 居中块，
+     h1 与正文左边缘严格对齐。
+     ============================================================ */
+
+  /* ---------- 页头带 ---------- */
+
+  .article__hero {
+    background-color: color-mix(in srgb, var(--color-background) 94%, var(--color-brand) 6%);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    border-end-start-radius: 28px;
+    border-end-end-radius: 28px;
+  }
+  .article__hero-inner {
+    max-inline-size: 61.5rem;
+    margin-inline: auto;
+    padding-block: clamp(1.75rem, 3.6vw, 2.75rem) clamp(1.5rem, 3vw, 2.25rem);
+  }
+  /* 关掉侧栏时正文列居中，页头带也要一起收到 42rem，
+     否则标题贴左、正文居中，两块的左边缘差出一百多像素。 */
+  .article--narrow .article__hero-inner {
+    max-inline-size: 42rem;
+  }
+  .article__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    margin-block-end: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-brand-accent);
+    text-decoration: none;
+  }
+  .article__eyebrow:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .article__eyebrow:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  .article__title {
+    margin: 0;
+    max-inline-size: 30ch;
+    font-size: clamp(1.9rem, 3.8vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+  }
+  .article__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0.85rem 0 0;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground-muted);
+  }
+  /* 分隔线画在「后一段」的左侧：只有它存在时才出现，不用空元素；
+     伪元素不产生文本节点，因此不受颜色对比度审计 */
+  .article__meta > * + *::before {
+    content: '';
+    display: inline-block;
+    inline-size: 1px;
+    block-size: 0.95em;
+    margin-inline: 0.65rem;
+    background-color: color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    vertical-align: -0.1em;
+  }
+  .article__meta-read {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  /* ---------- 内容列 ---------- */
+
+  .article__page {
+    padding-block: clamp(1.5rem, 3vw, 2.25rem) clamp(3rem, 6vw, 5rem);
+  }
+  .article__layout {
+    max-inline-size: 61.5rem;
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+  @media (min-width: 990px) {
+    .article__layout--aside {
+      grid-template-columns: minmax(0, 1fr) 16.5rem;
+      gap: 3rem;
+      /* sticky 需要 item 不被 stretch 拉高，否则没有行程 */
+      align-items: start;
+    }
+  }
+  .article__body {
+    min-inline-size: 0;
+    /* 42rem ≈ 672px：61.5rem 减去侧栏 16.5rem 与间距 3rem 正好是这个数，
+       有无侧栏时阅读宽度一致，切开关不会让正文换宽。
+       为什么不是更宽的 712px：17.6px 字号下 672px 约合 76 字符/行，
+       再宽就超出"长文可跟行"的经验区间（65–75）。 */
+    max-inline-size: 42rem;
+    inline-size: 100%;
+  }
+  /* 没有侧栏时正文居中。inline-size: 100% 不能省 —— grid item 上同时有
+     margin-inline: auto 会让 justify-self: stretch 失效、宽度退化成
+     fit-content（BUG-063 的同一条通路）。 */
+  .article__layout:not(.article__layout--aside) .article__body {
+    margin-inline: auto;
+  }
+
+  /* 封面：16:9 + 圆角。img 显式 aspect-ratio，压掉 image_tag 输出的
+     presentational height（否则比例被素材原生比例带跑）。 */
+  .article__cover {
+    margin-block-end: clamp(1.25rem, 2.5vw, 1.75rem);
+    border-radius: 14px;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  }
+  .article__cover img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  /* 正文：段间距与标题层级归 .rte，这里只调阅读字号 */
+  .article__content {
+    /* 17.6px / 1.7 —— 比 .rte 的兜底（16px/1.7）大一档，长文正文需要更松的行距 */
+    font-size: 1.1rem;
+    line-height: 1.7;
+  }
+
+  /* ---------- 标签 ---------- */
+
+  .article__tags {
+    margin-block-start: 2.25rem;
+    padding-block-start: 1.5rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+  .article__tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .article__tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding-inline: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    color: color-mix(in srgb, var(--color-foreground) 82%, transparent);
+    font-size: 0.82rem;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .article__tag:hover {
+      border-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+      color: var(--color-brand-accent);
+    }
+  }
+  .article__tag:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* ---------- 上下篇 ---------- */
+
+  .article__pager {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    margin-block-start: 1.75rem;
+  }
+  @media (min-width: 560px) {
+    .article__pager {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .article__pager-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-inline-size: 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 14px;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, translate 0.2s ease;
+  }
+  /* 只有一篇时占满整行 —— 半宽单卡夹在中间会被读成"另一个按钮" */
+  .article__pager-link:only-child {
+    grid-column: 1 / -1;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .article__pager-link:hover {
+      border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+      box-shadow: var(--card-hover-shadow);
+      translate: 0 var(--card-hover-lift);
+    }
+  }
+  .article__pager-link:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  .article__pager-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-brand-accent);
+  }
+  .article__pager-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  /* ---------- 评论 ---------- */
+
+  .article__comments {
+    margin-block-start: 3rem;
+    padding-block-start: 2rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+  .article__comments-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 0 0 1.25rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .article__comments-count {
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--color-foreground-muted);
+  }
+
+  .article__comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem;
+  }
+  .article__comment {
+    padding: 0.9rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 14px;
+    background-color: color-mix(in srgb, var(--color-background) 96%, var(--color-brand) 4%);
+  }
+  .article__comment-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0 0 0.4rem;
+    font-size: 0.76rem;
+    line-height: 1.4;
+    color: var(--color-foreground-muted);
+  }
+  .article__comment-author {
+    font-weight: 600;
+    color: var(--color-foreground);
+  }
+  .article__comment-author::after {
+    content: '';
+    display: inline-block;
+    inline-size: 1px;
+    block-size: 0.9em;
+    margin-inline: 0.55rem;
+    background-color: color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    vertical-align: -0.1em;
+  }
+  .article__comment-body {
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+  .article__comments-pagination {
+    display: flex;
+    gap: 0.75rem;
+    margin-block-end: 2rem;
+  }
+  .article__comments-page {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 0.85rem;
+    color: var(--color-brand-accent);
+    text-underline-offset: 4px;
+  }
+
+  .article__comment-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .article__form-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .article__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .article__field label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-foreground-muted);
+  }
+  .article__field :is(input, textarea) {
+    inline-size: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-background);
+    color: inherit;
+    font: inherit;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .article__field textarea {
+    resize: vertical;
+    min-block-size: 7rem;
+  }
+  /* 焦点环画在控件自身（带边框），不做外层套壳 —— 输入框是矩形不是胶囊 */
+  .article__field :is(input, textarea):focus-visible {
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 18%, transparent);
+  }
+  .article__field :is(input, textarea)[aria-invalid='true'] {
+    border-color: var(--color-sale);
+  }
+  .article__form-errors {
+    padding: 0.7rem 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--color-sale) 45%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-sale-surface);
+    color: var(--color-sale);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .article__form-errors ul {
+    margin: 0;
+    padding-inline-start: 1.1rem;
+  }
+  /* 提交按钮复用 .btn-solid（全站唯一实心按钮形状），这里只定尺寸：
+     靠自身宽度、不铺满整行 —— 表单只有三个字段，铺满会读成"下一步"。 */
+  .article__form-submit {
+    align-self: flex-start;
+    padding-inline: 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  /* ---------- 侧栏 More guides ---------- */
+
+  @media (min-width: 990px) {
+    .article__aside {
+      position: sticky;
+      /* 与集合页筛选栏 --facets-sticky-top 同一口径（76px） */
+      top: 4.75rem;
+    }
+  }
+  .article__panel {
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 14px;
+    background-color: var(--color-background);
+  }
+  .article__panel-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-foreground-muted);
+  }
+  .article__more-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .article__more-link {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr);
+    gap: 0.6rem;
+    align-items: start;
+    color: inherit;
+    text-decoration: none;
+  }
+  .article__more-media {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  }
+  /* 图脱离流：否则固有宽高比会参与行高，标题长短不同的条目会被拉得参差 */
+  .article__more-media img,
+  .article__more-placeholder {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .article__more-media img {
+    object-fit: cover;
+  }
+  .article__more-placeholder {
+    display: grid;
+    place-items: center;
+    color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+  }
+  .article__more-placeholder svg {
+    width: 22px;
+    height: 22px;
+  }
+  .article__more-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-inline-size: 0;
+  }
+  .article__more-title {
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .article__more-date {
+    font-size: 0.72rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground-muted);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .article__more-link:hover .article__more-title {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+      text-decoration-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+    }
+  }
+  .article__more-link:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .article__pager-link,
+    .article__tag,
+    .article__field :is(input, textarea) {
+      transition: none;
+    }
+    .article__pager-link:hover {
+      translate: none;
+    }
+  }
+</style></head><body><p class="preview-label">01 · 默认（≥990 显示 More guides 侧栏）</p>
+<div class="shopify-section article-section">
+  <article class="article">
+    <div class="article__hero full-width">
+      <div class="article__hero-inner">
+        <a class="article__eyebrow" href="#">Guides</a>
+        <h1 class="article__title">How to pick a mower for a lawn you actually have</h1>
+        <p class="article__meta">
+          <span class="article__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg> 4 min read</span>
+          <time datetime="2026-11-12">November 12, 2026</time>
+          <span class="article__meta-author">Dana Whitfield</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="article__page">
+      <div class="article__layout article__layout--aside">
+        <div class="article__body">
+          <div class="article__cover">
+            <img src="../local-assets/banner/mower-large-lawn-push-pc-16x9.jpg" alt="" loading="eager"
+                 style="display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover">
+          </div>
+          <div class="rte article__content">
+<p>Deck width, terrain and run time decide more than horsepower does. Before you compare spec
+sheets side by side, it helps to know which three numbers actually change what the machine
+feels like on your lawn.</p>
+
+<h2>Start with the deck, not the engine</h2>
+<p>A wider deck cuts more grass per pass, but it also has to fit between the shed door and the
+flower bed. On a lawn with two mature trees and a narrow side gate, a 21-inch deck will finish
+faster than a 30-inch one that can’t get through.</p>
+<ul>
+  <li><strong>Under 2,000 sq ft</strong> — 18 to 20 inches is plenty, and lighter to push.</li>
+  <li><strong>2,000 to 6,000 sq ft</strong> — 21 to 24 inches is the sweet spot.</li>
+  <li><strong>Over an acre</strong> — consider a ride-on before you consider a bigger deck.</li>
+</ul>
+
+<h2>What terrain changes</h2>
+<p>Slope is the one spec that isn’t on the box. A walk-behind with rear-wheel drive holds a
+15-degree incline comfortably; front-wheel drive starts to slip well before that, especially
+on damp morning grass.</p>
+
+<blockquote>
+  <p>If you have to lean into the handle to keep traction, the machine is telling you something
+  the brochure won’t.</p>
+</blockquote>
+
+<h3>Run time and the second battery</h3>
+<p>A 4.0 Ah pack on a 21-inch deck realistically covers about a third of an acre before the
+last quarter of the charge starts to feel slow. Two packs, charged in rotation, are usually
+cheaper than one bigger machine.</p>
+
+<figure>
+  <img src="../local-assets/usecase/use-case-large-lawns-2_webp.webp" alt="" loading="lazy">
+  <figcaption>Rear-wheel drive and a 21-inch deck: the combination most yards actually need.</figcaption>
+</figure>
+
+<h2>The short version</h2>
+<p>Match the deck to your gates, match the drive to your slope, and buy a second battery before
+you buy a bigger motor. Everything else is preference.</p>
+</div>
+
+          <div class="article__tags">
+            <h2 class="visually-hidden">Tags</h2>
+            <ul class="article__tag-list" role="list">
+              <li><a class="article__tag" href="#">Mowing</a></li>
+              <li><a class="article__tag" href="#">Battery</a></li>
+              <li><a class="article__tag" href="#">Buying guides</a></li>
+            </ul>
+          </div>
+
+          <nav class="article__pager" aria-label="More guides in this blog">
+            <a class="article__pager-link article__pager-link--prev" href="#">
+              <span class="article__pager-label"><span aria-hidden="true">←</span> Newer guide</span>
+              <span class="article__pager-title">Battery or petrol: the honest trade-off</span>
+            </a>
+            <a class="article__pager-link article__pager-link--next" href="#">
+              <span class="article__pager-label">Older guide <span aria-hidden="true">→</span></span>
+              <span class="article__pager-title">Reading a bar and chain spec sheet</span>
+            </a>
+          </nav>
+
+          <section class="article__comments" id="comments"><h2 class="article__comments-title">Comments <span class="article__comments-count">2 comments</span></h2>
+<ol class="article__comment-list" role="list">
+  <li class="article__comment">
+    <p class="article__comment-meta">
+      <span class="article__comment-author">Ruth Alvarez</span>
+      <time datetime="2026-11-13">November 13, 2026</time>
+    </p>
+    <div class="rte article__comment-body">
+      <p>The deck-width advice matches what happened to us — we bought a 30-inch and then
+      discovered it wouldn’t fit through the side gate. Ended up with a 21-inch and a lot of
+      walking.</p>
+    </div>
+  </li>
+  <li class="article__comment">
+    <p class="article__comment-meta">
+      <span class="article__comment-author">Peter N.</span>
+      <time datetime="2026-11-14">November 14, 2026</time>
+    </p>
+    <div class="rte article__comment-body">
+      <p>Would be useful to add a note about battery storage over winter.</p>
+    </div>
+  </li>
+</ol>
+
+<form class="article__comment-form">
+  <h3 class="article__form-title">Add a comment</h3>
+  <div class="article__field">
+    <label for="CommentAuthor">Name</label>
+    <input id="CommentAuthor" type="text" autocomplete="name" required>
+  </div>
+  <div class="article__field">
+    <label for="CommentEmail">Email</label>
+    <input id="CommentEmail" type="email" autocomplete="email" required>
+  </div>
+  <div class="article__field">
+    <label for="CommentBody">Comment</label>
+    <textarea id="CommentBody" rows="6" required></textarea>
+  </div>
+  <button class="btn-solid article__form-submit" type="submit">Post</button>
+</form>
+</section>
+        </div>
+
+        <aside class="article__aside"><div class="article__panel"><h2 class="article__panel-title">More guides</h2><ul class="article__more-list" role="list"><li class="article__more-item">
+          <a class="article__more-link" href="#">
+            <span class="article__more-media"><img src="../local-assets/banner/mower-large-lawn-ride-on-pc-16x9.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></span>
+            <span class="article__more-body">
+              <span class="article__more-title">Battery or petrol: the honest trade-off</span>
+              <span class="article__more-date">Nov 4, 2026</span>
+            </span>
+          </a>
+        </li>
+<li class="article__more-item">
+          <a class="article__more-link" href="#">
+            <span class="article__more-media"><img src="../local-assets/usecase/use-case-small-yard-2_webp.webp" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></span>
+            <span class="article__more-body">
+              <span class="article__more-title">Winter storage that prevents a spring repair</span>
+              <span class="article__more-date">Oct 28, 2026</span>
+            </span>
+          </a>
+        </li>
+<li class="article__more-item">
+          <a class="article__more-link" href="#">
+            <span class="article__more-media"><span class="article__more-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" width="22" height="22"><path d="M12 20c0-6 4-10 9-10-1 6-4 10-9 10Z"/><path d="M12 20C12 13 8 9 3 9c1 6 4 11 9 11Z"/></svg></span></span>
+            <span class="article__more-body">
+              <span class="article__more-title">Reading a bar and chain spec sheet</span>
+              <span class="article__more-date">Oct 19, 2026</span>
+            </span>
+          </a>
+        </li></ul></div></aside>
+      </div>
+    </div>
+  </article>
+</div>
+<p class="preview-label">02 · 关掉侧栏 —— 页头与正文一起收到 42rem 居中</p>
+<div class="shopify-section article-section">
+  <article class="article article--narrow">
+    <div class="article__hero full-width">
+      <div class="article__hero-inner">
+        <a class="article__eyebrow" href="#">Guides</a>
+        <h1 class="article__title">How to pick a mower for a lawn you actually have</h1>
+        <p class="article__meta">
+          <span class="article__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg> 4 min read</span>
+          <time datetime="2026-11-12">November 12, 2026</time>
+          <span class="article__meta-author">Dana Whitfield</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="article__page">
+      <div class="article__layout">
+        <div class="article__body">
+          <div class="article__cover">
+            <img src="../local-assets/banner/mower-large-lawn-push-pc-16x9.jpg" alt="" loading="eager"
+                 style="display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover">
+          </div>
+          <div class="rte article__content">
+<p>Deck width, terrain and run time decide more than horsepower does. Before you compare spec
+sheets side by side, it helps to know which three numbers actually change what the machine
+feels like on your lawn.</p>
+
+<h2>Start with the deck, not the engine</h2>
+<p>A wider deck cuts more grass per pass, but it also has to fit between the shed door and the
+flower bed. On a lawn with two mature trees and a narrow side gate, a 21-inch deck will finish
+faster than a 30-inch one that can’t get through.</p>
+<ul>
+  <li><strong>Under 2,000 sq ft</strong> — 18 to 20 inches is plenty, and lighter to push.</li>
+  <li><strong>2,000 to 6,000 sq ft</strong> — 21 to 24 inches is the sweet spot.</li>
+  <li><strong>Over an acre</strong> — consider a ride-on before you consider a bigger deck.</li>
+</ul>
+
+<h2>What terrain changes</h2>
+<p>Slope is the one spec that isn’t on the box. A walk-behind with rear-wheel drive holds a
+15-degree incline comfortably; front-wheel drive starts to slip well before that, especially
+on damp morning grass.</p>
+
+<blockquote>
+  <p>If you have to lean into the handle to keep traction, the machine is telling you something
+  the brochure won’t.</p>
+</blockquote>
+
+<h3>Run time and the second battery</h3>
+<p>A 4.0 Ah pack on a 21-inch deck realistically covers about a third of an acre before the
+last quarter of the charge starts to feel slow. Two packs, charged in rotation, are usually
+cheaper than one bigger machine.</p>
+
+<figure>
+  <img src="../local-assets/usecase/use-case-large-lawns-2_webp.webp" alt="" loading="lazy">
+  <figcaption>Rear-wheel drive and a 21-inch deck: the combination most yards actually need.</figcaption>
+</figure>
+
+<h2>The short version</h2>
+<p>Match the deck to your gates, match the drive to your slope, and buy a second battery before
+you buy a bigger motor. Everything else is preference.</p>
+</div>
+
+          <div class="article__tags">
+            <h2 class="visually-hidden">Tags</h2>
+            <ul class="article__tag-list" role="list">
+              <li><a class="article__tag" href="#">Mowing</a></li>
+              <li><a class="article__tag" href="#">Battery</a></li>
+              <li><a class="article__tag" href="#">Buying guides</a></li>
+            </ul>
+          </div>
+
+          <nav class="article__pager" aria-label="More guides in this blog">
+            <a class="article__pager-link article__pager-link--prev" href="#">
+              <span class="article__pager-label"><span aria-hidden="true">←</span> Newer guide</span>
+              <span class="article__pager-title">Battery or petrol: the honest trade-off</span>
+            </a>
+            <a class="article__pager-link article__pager-link--next" href="#">
+              <span class="article__pager-label">Older guide <span aria-hidden="true">→</span></span>
+              <span class="article__pager-title">Reading a bar and chain spec sheet</span>
+            </a>
+          </nav>
+
+          <section class="article__comments" id="comments"><h2 class="article__comments-title">Comments <span class="article__comments-count">2 comments</span></h2>
+<ol class="article__comment-list" role="list">
+  <li class="article__comment">
+    <p class="article__comment-meta">
+      <span class="article__comment-author">Ruth Alvarez</span>
+      <time datetime="2026-11-13">November 13, 2026</time>
+    </p>
+    <div class="rte article__comment-body">
+      <p>The deck-width advice matches what happened to us — we bought a 30-inch and then
+      discovered it wouldn’t fit through the side gate. Ended up with a 21-inch and a lot of
+      walking.</p>
+    </div>
+  </li>
+  <li class="article__comment">
+    <p class="article__comment-meta">
+      <span class="article__comment-author">Peter N.</span>
+      <time datetime="2026-11-14">November 14, 2026</time>
+    </p>
+    <div class="rte article__comment-body">
+      <p>Would be useful to add a note about battery storage over winter.</p>
+    </div>
+  </li>
+</ol>
+
+<form class="article__comment-form">
+  <h3 class="article__form-title">Add a comment</h3>
+  <div class="article__field">
+    <label for="CommentAuthor">Name</label>
+    <input id="CommentAuthor" type="text" autocomplete="name" required>
+  </div>
+  <div class="article__field">
+    <label for="CommentEmail">Email</label>
+    <input id="CommentEmail" type="email" autocomplete="email" required>
+  </div>
+  <div class="article__field">
+    <label for="CommentBody">Comment</label>
+    <textarea id="CommentBody" rows="6" required></textarea>
+  </div>
+  <button class="btn-solid article__form-submit" type="submit">Post</button>
+</form>
+</section>
+        </div>
+
+        
+      </div>
+    </div>
+  </article>
+</div>
+</body></html>
