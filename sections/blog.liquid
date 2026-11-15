@@ -78,7 +78,14 @@
       LCP 图：eager + fetchpriority: high。alt 留空 —— 它是纯背景，
       页面语义由旁边的 h1 承担（同 hero-slideshow 的背景图处理）。
     {%- endcomment -%}
-    <span class="blog-index__hero-media">
+    <span
+      class="blog-index__hero-media"
+      {%- comment -%}
+        object-position 取图库里的「焦点」（presentation.focal_point），商家在后台
+        点一下图就能决定哪块留在画面里。没有焦点时回落 50% 50%。
+      {%- endcomment -%}
+      style="--focal: {{ section.settings.image.presentation.focal_point | default: '50% 50%' }}"
+    >
       {{
         section.settings.image
         | image_url: width: 2400
@@ -450,6 +457,9 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    /* 焦点来自图库（见标记里的 --focal）。默认居中是照片的安全值，
+       但横构图的机器常常正好压在标题上，靠商家点一下焦点就能挪开。 */
+    object-position: var(--focal, 50% 50%);
   }
   /* 遮罩：用 --color-background 而不是恒黑 —— 文字同时也取 --color-foreground，
      两者一起翻转，浅色 preset 得"白雾 + 深字"、Noir 得"黑雾 + 浅字"，对比度始终成立。
@@ -462,9 +472,10 @@
     background-image: linear-gradient(
       90deg,
       var(--color-background) 0%,
-      color-mix(in srgb, var(--color-background) 96%, transparent) 32%,
-      color-mix(in srgb, var(--color-background) 62%, transparent) 58%,
-      transparent 84%
+      var(--color-background) 28%,
+      color-mix(in srgb, var(--color-background) 88%, transparent) 46%,
+      color-mix(in srgb, var(--color-background) 44%, transparent) 66%,
+      transparent 88%
     );
   }
 
@@ -1010,6 +1021,27 @@
   }
 
   /* ---------- 移动端：左栏拆成「顶部药丸行 + 底部订阅卡」 ---------- */
+
+  @media (max-width: 749px) {
+    /* 窄屏没有"左半边"可用：文字压到图的下沿，遮罩改成自下而上。
+       横向渐变在 375px 上只剩最左侧几个百分点，等于没遮。 */
+    .blog-index__hero--image .blog-index__hero-inner {
+      justify-content: flex-end;
+      min-block-size: 16rem;
+    }
+    .blog-index__hero--image .blog-index__hero-scrim {
+      background-image: linear-gradient(
+        0deg,
+        var(--color-background) 0%,
+        color-mix(in srgb, var(--color-background) 92%, transparent) 42%,
+        color-mix(in srgb, var(--color-background) 52%, transparent) 70%,
+        transparent 96%
+      );
+    }
+    .blog-index__title {
+      font-size: clamp(1.85rem, 8vw, 2.4rem);
+    }
+  }
 
   @media (max-width: 989px) {
     /* display: contents 让 aside 的两个面板成为 layout 的直接 grid item，
