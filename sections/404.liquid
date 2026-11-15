@@ -273,7 +273,7 @@
 
   /* ── 文案 ─────────────────────────────────────────────────────────────── */
   .not-found__heading {
-    margin: clamp(1rem, 2.2vw, 1.5rem) 0 0;
+    margin: clamp(1.25rem, 2.4vw, 1.75rem) 0 0;
     font-size: clamp(1.5rem, 2.6vw, 2rem);
     font-weight: 700;
     line-height: 1.15;
@@ -296,7 +296,9 @@
   .not-found__actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    /* 10px 而不是 12px：22rem 文字列里两个按钮并排只剩这点余量，
+       再大就会折成上下两行（参考图是并排的） */
+    gap: 0.625rem;
     margin-block-start: clamp(1.5rem, 3vw, 2.125rem);
   }
 
@@ -305,7 +307,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.8125rem 1.5rem;
+    padding: 0.8125rem 1.375rem;
     font-size: 0.9375rem;
     font-weight: 600;
     line-height: 1;
