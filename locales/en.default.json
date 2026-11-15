@@ -27,7 +27,34 @@
     "comment_form_email": "Email",
     "comment_form_name": "Name",
     "comment_form_submit": "Post",
-    "comment_form_title": "Add a comment"
+    "comment_form_title": "Add a comment",
+    "list": {
+      "all_articles": "All articles",
+      "categories": "Categories",
+      "empty": {
+        "body": "New articles show up here as soon as they're published. Until then, everything we carry is one click away.",
+        "link": "Browse all products",
+        "tagged_title": "Nothing tagged yet",
+        "title": "No guides yet"
+      },
+      "newsletter": {
+        "body": "Get the latest guides and seasonal tips, straight to your inbox.",
+        "error": "Something went wrong. Please try again.",
+        "label": "Your email address",
+        "submit": "Subscribe",
+        "success": "Thanks — you're on the list.",
+        "title": "Stay in the know"
+      },
+      "page_number": "Page {{ number }}",
+      "pagination_label": "Pagination",
+      "pagination_next": "Next page",
+      "pagination_previous": "Previous page",
+      "reading_time": "{{ count }} min read",
+      "result_count": {
+        "one": "{{ count }} guide",
+        "other": "{{ count }} guides"
+      }
+    }
   },
   "cart": {
     "cart_empty": "Cart, empty",

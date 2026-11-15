@@ -58,8 +58,6 @@
         "show_all_series": "Show \"All series\" entry",
         "show_all_series_info": "Adds a last item to the menu that opens every collection in a panel. On mobile it links straight to the collections page. The list comes from your collections, not from the menu — nothing to maintain.",
         "all_series_label": "Entry label",
-        "all_series_limit": "Series in the panel",
-        "all_series_limit_info": "Collections past this number only appear on the collections page.",
         "all_series_position": "Menu position",
         "all_series_position_info": "Where the entry sits among your menu links. \"Before last link\" keeps support or contact links at the end."
       },
@@ -207,6 +205,22 @@
         "subheading": "Straightforward guides to choosing the right machine and keeping it running."
       },
       "read_more": "Read guide"
+    },
+    "blog": {
+      "labels": {
+        "articles_per_page": "Articles per page",
+        "articles_per_page_info": "Additional articles move to the next page.",
+        "categories_limit": "Categories to list",
+        "categories_limit_info": "Blogs have no categories of their own, so this lists the blog's tags in alphabetical order.",
+        "heading_info": "Leave empty to use the blog's own title.",
+        "image": "Header image",
+        "image_info": "Shown behind the heading, fading into the page on one side.",
+        "show_card_tags": "Show the first tag on each card",
+        "show_excerpt": "Show excerpts",
+        "show_newsletter": "Show the newsletter card",
+        "show_reading_time": "Show reading time",
+        "show_reading_time_info": "Estimated from the article body at 200 words per minute."
+      }
     },
     "collections_list": {
       "name": "Collections list",

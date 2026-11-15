@@ -1,0 +1,1075 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Blog index harness</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --font-primary--family:"Work Sans",-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --page-width:90rem; --page-margin:20px;
+    --color-background:#ffffff; --color-foreground:#333333;
+    --color-brand:#1e4b3c; --color-brand-accent:#2e6b4e;
+    --color-foreground-muted:color-mix(in srgb,var(--color-foreground) 70%,transparent);
+    --color-sale:#c62828;
+    --color-brand-light:#74c4a7; --card-hover-lift:-2px;
+    --card-hover-shadow:0 6px 20px color-mix(in srgb,var(--color-brand-light) 30%,transparent);
+  }
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;display:flex;flex-direction:column;background:var(--color-background);
+    color:var(--color-foreground);font-family:var(--font-primary--family);font-size:16px;line-height:1.5}
+  h1,h2,h3,p,ol,ul{margin:0;padding:0}
+  img{display:block;max-width:100%}
+  a{color:inherit}
+  .visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .shopify-section{
+    --content-width:min(calc(var(--page-width) - var(--page-margin)*2),calc(100% - var(--page-margin)*2));
+    --content-margin:minmax(var(--page-margin),1fr);
+    --content-grid:var(--content-margin) var(--content-width) var(--content-margin);
+    position:relative;display:grid;grid-template-columns:var(--content-grid);width:100%}
+  .shopify-section>*{grid-column:2}
+  .shopify-section>.full-width{grid-column:1/-1}
+  .preview-label{max-width:1440px;margin:0 auto;padding:2.5rem 20px .5rem;
+    font:600 12px/1.4 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;
+    color:#8a8a8a;border-top:1px dashed #d8d8d8}
+
+  /* ============================================================
+     博客文章列表页 /blogs/<handle>（2026-11-15 改版：照片 hero + 左栏分类）
+
+     版式与全站同源：卡片 = 白底 + 1px 细边 + 14px 圆角，hover 走上浮
+     --card-hover-lift + --card-hover-shadow 全站签名；所有色值从 --color-* 派生，
+     Noir preset 自动翻转。
+
+     布局分工：
+       .blog-index__hero   → full-width 通栏（照片/色带铺满视口，底部两角内收）
+       .blog-index__page   → .shopify-section 网格的第 2 列（内容列）
+       .blog-index__layout → 内容列内部的两栏：左栏 16.5rem + 右栏自适应
+     hero 内层 max-inline-size: var(--content-width)，与下方内容列严格左对齐。
+     ============================================================ */
+
+  /* ---------- 页头带 ---------- */
+
+  .blog-index__hero {
+    position: relative;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-background) 94%, var(--color-brand) 6%);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    /* 参考图的口径：图/色带的下边缘内收，不顶着下面的内容直切 */
+    border-end-start-radius: 28px;
+    border-end-end-radius: 28px;
+  }
+  /* 有照片时，色带退成兜底（图加载前 / 图被移除时不留白） */
+  .blog-index__hero--image {
+    background-color: color-mix(in srgb, var(--color-foreground) 88%, var(--color-background));
+  }
+  .blog-index__hero-media {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+  .blog-index__hero-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* 焦点来自图库（见标记里的 --focal）。默认居中是照片的安全值，
+       但横构图的机器常常正好压在标题上，靠商家点一下焦点就能挪开。 */
+    object-position: var(--focal, 50% 50%);
+  }
+  /* 遮罩：用 --color-background 而不是恒黑 —— 文字同时也取 --color-foreground，
+     两者一起翻转，浅色 preset 得"白雾 + 深字"、Noir 得"黑雾 + 浅字"，对比度始终成立。
+     （这与"压照片的恒白文字不能借 --color-background"不冲突：那条针对的是
+     文字恒白、底色却会翻转的情况。） */
+  .blog-index__hero-scrim {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background-image: linear-gradient(
+      90deg,
+      var(--color-background) 0%,
+      var(--color-background) 28%,
+      color-mix(in srgb, var(--color-background) 88%, transparent) 46%,
+      color-mix(in srgb, var(--color-background) 44%, transparent) 66%,
+      transparent 88%
+    );
+  }
+
+  .blog-index__hero-inner {
+    position: relative;
+    z-index: 1;
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
+    padding-block: clamp(1.75rem, 4vw, 3.25rem);
+    padding-block-end: clamp(1.75rem, 4vw, 3rem);
+  }
+  .blog-index__hero--image .blog-index__hero-inner {
+    min-block-size: clamp(15rem, 30vw, 21rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .blog-index__eyebrow {
+    margin: 0 0 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-brand-accent);
+  }
+  .blog-index__title {
+    margin: 0;
+    max-inline-size: 22ch;
+    font-size: clamp(2rem, 4.4vw, 3.4rem);
+    font-weight: 700;
+    line-height: 1.06;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  .blog-index__subheading {
+    margin: 0.85rem 0 0;
+    max-inline-size: 46ch;
+    font-size: clamp(0.9rem, 1.1vw, 1rem);
+    line-height: 1.55;
+    color: var(--color-foreground-muted);
+  }
+  /* 有照片时副标题改用接近实色的前景：遮罩到文字右端已衰减到 ~88%，
+     70% 的 muted 压在那里只有 ~4.5:1，贴线。88% 实色有 7:1 的余量。 */
+  .blog-index__hero--image .blog-index__subheading {
+    color: color-mix(in srgb, var(--color-foreground) 88%, transparent);
+  }
+
+  /* ---------- 内容列 / 两栏 ---------- */
+
+  .blog-index__page {
+    padding-block: clamp(1.5rem, 3vw, 2.25rem) clamp(3rem, 6vw, 5rem);
+  }
+  .blog-index__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+  @media (min-width: 990px) {
+    /* 只有真渲染出左栏时才切两栏：空 aside 不占轨道 */
+    .blog-index__layout:has(> .blog-index__sidebar) {
+      grid-template-columns: 16.5rem minmax(0, 1fr);
+      gap: 2rem;
+      /* sticky 需要 item 不被 stretch 拉高，否则没有行程 */
+      align-items: start;
+    }
+  }
+
+  /* ---------- 左栏 ---------- */
+
+  .blog-index__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-inline-size: 0;
+  }
+  @media (min-width: 990px) {
+    .blog-index__sidebar {
+      /* 吸顶避让导航行：4.75rem = 76px，与集合页筛选栏 --facets-sticky-top 同一口径。
+         左栏总高（≤7 行分类 + 订阅卡）在常规视口内放得下，所以不做卡内滚动。 */
+      position: sticky;
+      top: 4.75rem;
+    }
+  }
+
+  .blog-index__panel {
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 14px;
+    background-color: var(--color-background);
+  }
+  .blog-index__panel-title {
+    margin: 0 0 0.7rem;
+    font-size: 1.02rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .blog-index__cats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .blog-index__cat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-block-size: 40px;
+    padding: 0.3rem 0.55rem;
+    border-radius: 10px;
+    /* 激活竖条始终占位（透明），切换时文字不横向跳动 */
+    border-inline-start: 3px solid transparent;
+    color: color-mix(in srgb, var(--color-foreground) 88%, transparent);
+    font-size: 0.9rem;
+    line-height: 1.35;
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .blog-index__cat-label {
+    flex: 1;
+    min-inline-size: 0;
+    /* break-word：窄栏里 "Maintenance Tips" 不能被拆断 */
+    overflow-wrap: break-word;
+  }
+  .blog-index__cat-count {
+    flex: 0 0 auto;
+    font-size: 0.78rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground-muted);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .blog-index__cat:hover {
+      background-color: color-mix(in srgb, var(--color-foreground) 5%, transparent);
+    }
+  }
+  .blog-index__cat:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  .blog-index__cat.is-active {
+    background-color: color-mix(in srgb, var(--color-brand) 9%, transparent);
+    border-inline-start-color: var(--color-brand);
+    color: var(--color-brand-accent);
+    font-weight: 600;
+  }
+  .blog-index__cat.is-active .blog-index__cat-count {
+    color: var(--color-brand-accent);
+  }
+
+  /* ---------- 订阅卡 ---------- */
+
+  .blog-index__newsletter {
+    position: relative;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-background) 93%, var(--color-brand) 7%);
+    border-color: color-mix(in srgb, var(--color-brand) 16%, transparent);
+  }
+  .blog-index__newsletter-text {
+    margin: 0 0 0.8rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+  .blog-index__newsletter-field {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.22rem 0.22rem 0.22rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+  }
+  /* 焦点环画在外壳上：输入框本身无边框，单独给它 outline 会切进圆角里 */
+  .blog-index__newsletter-field:focus-within {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 18%, transparent);
+  }
+  .blog-index__newsletter-input {
+    flex: 1;
+    min-inline-size: 0;
+    padding-block: 0.45rem;
+    border: 0;
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.85rem;
+  }
+  .blog-index__newsletter-input:focus {
+    outline: none;
+  }
+  .blog-index__newsletter-input::placeholder {
+    color: var(--color-foreground-muted);
+  }
+  .blog-index__newsletter-submit {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    inline-size: 34px;
+    block-size: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    cursor: pointer;
+  }
+  .blog-index__newsletter-submit:hover {
+    background-color: var(--color-brand-accent);
+  }
+  .blog-index__newsletter-submit:focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 2px;
+  }
+  .blog-index__newsletter-message {
+    margin: 0.55rem 0 0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--color-brand-accent);
+  }
+  .blog-index__newsletter-message--error {
+    color: var(--color-sale);
+  }
+  /* 叶子水印：纯装饰，压在卡片右下角外侧裁掉一半 */
+  .blog-index__newsletter-leaf {
+    position: absolute;
+    inset-block-end: -1.4rem;
+    inset-inline-end: -1.2rem;
+    display: block;
+    inline-size: 6.5rem;
+    block-size: 6.5rem;
+    color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+    pointer-events: none;
+  }
+  .blog-index__newsletter-leaf svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ---------- 工具栏 ---------- */
+
+  .blog-index__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-block-end: 0.9rem;
+  }
+  .blog-index__result {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground-muted);
+  }
+  .blog-index__result-tag {
+    font-weight: 600;
+    color: var(--color-brand-accent);
+  }
+  .blog-index__result-tag::after {
+    content: '·';
+    margin-inline: 0.4rem;
+    font-weight: 400;
+    color: var(--color-foreground-muted);
+  }
+
+  /* ---------- 网格 ---------- */
+
+  .blog-index__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  @media (min-width: 560px) {
+    .blog-index__grid {
+      /* minmax(0, 1fr)：长标题的 min-content 不能把轨道撑出视口 */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1080px) {
+    .blog-index__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .blog-index__item {
+    display: flex;
+    min-inline-size: 0;
+  }
+
+  /* ---------- 卡片（整卡一个链接） ---------- */
+
+  .blog-index__card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 14px;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+    /* 用 translate 而非 transform：滚动入场的 animation 也用 transform
+       （critical.css 的 reveal-in），两套机制互不抢占。 */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, translate 0.2s ease;
+  }
+  .blog-index__card:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* 媒体盒：16:10 定比 + 图绝对定位铺满。图若留在流里，固有宽高比会参与
+     grid 行高计算（use-case-grid 7:3→5:5 的教训），同排卡片会被拉得忽高忽矮。
+     16:10 比 4:3 更贴参考图：三列时卡宽 356，图高 222，文字区还剩足够高度。 */
+  .blog-index__media {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  }
+  .blog-index__media img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .blog-index__placeholder {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+  }
+  .blog-index__placeholder svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* 图上标签：实底 + 细投影。投影恒黑是有意的（压在照片上，不随 preset 翻转）。 */
+  .blog-index__badge {
+    position: absolute;
+    inset-block-start: 0.6rem;
+    inset-inline-start: 0.6rem;
+    max-inline-size: calc(100% - 1.2rem);
+    padding: 0.16rem 0.6rem;
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: var(--color-brand-accent);
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+  }
+
+  .blog-index__body {
+    display: flex;
+    /* flex: 1 必须有：卡片被 grid 拉到等高后，多出来的高度默认留在 body 之外，
+       底部行（margin-block-start: auto）就钉不到卡底。 */
+    flex: 1;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-inline-size: 0;
+    padding: 0.85rem 0.95rem 1rem;
+  }
+  .blog-index__card-title {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 600;
+    line-height: 1.32;
+    letter-spacing: -0.005em;
+    overflow-wrap: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .blog-index__excerpt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+
+  .blog-index__card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-block-start: auto;
+    padding-block-start: 0.55rem;
+  }
+  .blog-index__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0;
+    font-size: 0.74rem;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground-muted);
+  }
+  .blog-index__meta-read {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    padding-inline-end: 0.6rem;
+    margin-inline-end: 0.6rem;
+    /* 分隔线画在阅读时长右侧：只有它存在时才出现，不靠额外的空元素 */
+    border-inline-end: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+  }
+
+  /* 圆形箭头：卡右端的行尾导航元素（AGENTS §6 允许的第二类箭头位置）。
+     它是 span 不是链接 —— 整张卡已经是一个 <a>。 */
+  .blog-index__card-arrow {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    inline-size: 32px;
+    block-size: 32px;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    color: var(--color-brand-accent);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+  .blog-index__card-arrow svg {
+    transition: translate 0.2s ease;
+  }
+
+  /* ---------- 悬停（只在真有指针的设备上：触屏 :hover 会粘住） ---------- */
+
+  @media (hover: hover) and (pointer: fine) {
+    .blog-index__card:hover {
+      border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+      box-shadow: var(--card-hover-shadow);
+      translate: 0 var(--card-hover-lift);
+    }
+    .blog-index__card:hover .blog-index__media img {
+      transform: scale(1.04);
+    }
+    .blog-index__card:hover .blog-index__card-title {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+      text-decoration-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+    }
+    .blog-index__card:hover .blog-index__card-arrow {
+      background-color: var(--color-brand);
+      border-color: transparent;
+      color: var(--color-background);
+    }
+    .blog-index__card:hover .blog-index__card-arrow svg {
+      translate: 2px 0;
+    }
+  }
+
+  /* ---------- 空态 ---------- */
+
+  .blog-index__empty {
+    display: grid;
+    justify-items: center;
+    gap: 0.4rem;
+    padding: 3rem 1rem;
+    text-align: center;
+    border: 1px dashed color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: 14px;
+  }
+  .blog-index__empty-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .blog-index__empty-body {
+    margin: 0;
+    max-inline-size: 42ch;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+  .blog-index__empty-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-block-start: 0.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-brand-accent);
+    text-underline-offset: 4px;
+  }
+
+  /* ---------- 分页（与集合页 / 集合列表页同一套视觉） ---------- */
+
+  .blog-index__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-block-start: 2rem;
+  }
+  .blog-index__pagination-nav,
+  .blog-index__pagination-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: inherit;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .blog-index__pagination a:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+  .blog-index__pagination [aria-disabled='true'] {
+    opacity: 0.35;
+  }
+  .blog-index__pagination [aria-current='page'] {
+    border-color: transparent;
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+  .blog-index__pagination-gap {
+    min-width: 24px;
+    text-align: center;
+    /* 45% 前景只有 2.5:1；省略号虽是纯视觉的，但它仍是文本节点 */
+    color: var(--color-foreground-muted);
+  }
+
+  /* ---------- 移动端：左栏拆成「顶部药丸行 + 底部订阅卡」 ---------- */
+
+  @media (max-width: 749px) {
+    /* 窄屏没有"左半边"可用：文字压到图的下沿，遮罩改成自下而上。
+       横向渐变在 375px 上只剩最左侧几个百分点，等于没遮。 */
+    .blog-index__hero--image .blog-index__hero-inner {
+      justify-content: flex-end;
+      /* 20rem：文字块约占 170px，剩下的高度才够照片露脸。
+         16rem 时照片只剩顶端一条，看起来像加载失败。 */
+      min-block-size: 20rem;
+    }
+    .blog-index__hero--image .blog-index__hero-scrim {
+      background-image: linear-gradient(
+        0deg,
+        var(--color-background) 0%,
+        color-mix(in srgb, var(--color-background) 92%, transparent) 42%,
+        color-mix(in srgb, var(--color-background) 52%, transparent) 70%,
+        transparent 96%
+      );
+    }
+    .blog-index__title {
+      font-size: clamp(1.85rem, 8vw, 2.4rem);
+    }
+  }
+
+  @media (max-width: 989px) {
+    /* display: contents 让 aside 的两个面板成为 layout 的直接 grid item，
+       于是可以用 order 把订阅卡挪到网格之后，而不是复制一份表单 */
+    .blog-index__sidebar {
+      display: contents;
+    }
+    .blog-index__panel--cats {
+      order: 1;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background-color: transparent;
+    }
+    .blog-index__main {
+      order: 2;
+    }
+    .blog-index__newsletter {
+      order: 3;
+    }
+    .blog-index__panel--cats .blog-index__panel-title {
+      margin-block-end: 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--color-foreground-muted);
+    }
+    .blog-index__cats {
+      flex-direction: row;
+      /* 横向滑动：标签数量由商家决定，窄屏折行会把首屏内容顶下去 */
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      gap: 0.4rem;
+      padding-block-end: 0.15rem;
+      scrollbar-width: none;
+    }
+    .blog-index__cats::-webkit-scrollbar {
+      display: none;
+    }
+    .blog-index__cats > li {
+      flex: 0 0 auto;
+    }
+    .blog-index__cat {
+      min-block-size: 38px;
+      padding-inline: 0.8rem;
+      border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+      border-radius: 999px;
+      font-size: 0.84rem;
+      background-color: var(--color-background);
+      white-space: nowrap;
+    }
+    .blog-index__cat.is-active {
+      border-color: transparent;
+      background-color: var(--color-brand);
+      color: var(--color-background);
+    }
+    .blog-index__cat.is-active .blog-index__cat-count {
+      color: var(--color-background);
+    }
+    /* 药丸里不显示计数：6 个带数字的药丸要横滑三屏才到头，
+       而"共几篇"在工具栏已经有一份（result_count）。桌面竖排列表里才保留。 */
+    .blog-index__cat-count {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blog-index__card,
+    .blog-index__media img,
+    .blog-index__card-arrow,
+    .blog-index__card-arrow svg,
+    .blog-index__cat {
+      transition: none;
+    }
+    .blog-index__card:hover {
+      translate: none;
+    }
+    .blog-index__card:hover .blog-index__media img {
+      transform: none;
+    }
+    .blog-index__card:hover .blog-index__card-arrow svg {
+      translate: none;
+    }
+  }
+</style></head><body><p class="preview-label">01 · 列表第 1 页 —— 照片 hero / 分类侧栏 / 三列卡片 / 分页</p><div class="shopify-section blog-index-section">
+<div class="blog-index__hero blog-index__hero--image full-width">
+  <span class="blog-index__hero-media" style="--focal: 72% 45%"><img src="../local-assets/banner/mower-large-lawn-ride-on-pc-16x9.jpg" alt="" loading="eager" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:72% 45%;"></span><span class="blog-index__hero-scrim" aria-hidden="true"></span>
+  <div class="blog-index__hero-inner">
+    <p class="blog-index__eyebrow">Our blog</p>
+    <h1 class="blog-index__title">Lawn care tips &amp; outdoor living ideas</h1>
+    <p class="blog-index__subheading">Expert advice, seasonal guides and maintenance notes to help you keep a greener, healthier outdoor space.</p>
+  </div>
+</div>
+<div class="blog-index__page"><div class="blog-index__layout">
+    <aside class="blog-index__sidebar">
+      <nav class="blog-index__panel blog-index__panel--cats" aria-labelledby="blog-categories-title">
+        <h2 class="blog-index__panel-title" id="blog-categories-title">Categories</h2>
+        <ul class="blog-index__cats" role="list"><li><a class="blog-index__cat is-active" href="#" aria-current="page"><span class="blog-index__cat-label">All articles</span><span class="blog-index__cat-count">24</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Chainsaws</span><span class="blog-index__cat-count">5</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Maintenance Tips</span><span class="blog-index__cat-count">7</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Mowing</span><span class="blog-index__cat-count">6</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Battery</span><span class="blog-index__cat-count">4</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Trimming</span><span class="blog-index__cat-count">2</span></a></li></ul>
+      </nav>
+      <div class="blog-index__panel blog-index__newsletter">
+        <h2 class="blog-index__panel-title">Stay in the know</h2>
+        <p class="blog-index__newsletter-text">Get the latest guides and seasonal tips, straight to your inbox.</p>
+        <form class="blog-index__newsletter-form">
+          <label class="visually-hidden" for="BlogNewsletterEmail">Your email address</label>
+          <div class="blog-index__newsletter-field">
+            <input class="blog-index__newsletter-input" id="BlogNewsletterEmail" type="email"
+                   placeholder="Your email address" required>
+            <button class="blog-index__newsletter-submit" type="submit">
+              <span class="visually-hidden">Subscribe</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </form>
+        <span class="blog-index__newsletter-leaf" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" width="34" height="34"><path d="M12 20c0-6 4-10 9-10-1 6-4 10-9 10Z"/><path d="M12 20C12 13 8 9 3 9c1 6 4 11 9 11Z"/></svg></span>
+      </div>
+    </aside><div class="blog-index__main"><div class="blog-index__toolbar"><p class="blog-index__result">24 guides</p></div><ul class="blog-index__grid" role="list">
+      <li class="blog-index__item" data-reveal style="--reveal-delay:0ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/banner/mower-large-lawn-push-pc-16x9.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Mowing</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">How to pick a mower for a lawn you actually have</h2>
+            <p class="blog-index__excerpt">Deck width, terrain and run time decide more than horsepower does. A short walk through the three measurements that matter.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  4 min read
+                </span>
+                <time datetime="2026-11-12">Nov 12, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:60ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/usecase/use-case-small-yard-2_webp.webp" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Battery</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Battery or petrol: the honest trade-off</h2>
+            <p class="blog-index__excerpt">Run time, noise, maintenance and the cost of a second pack. What changes in year three, and what stays the same.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  6 min read
+                </span>
+                <time datetime="2026-11-12">Nov 4, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:120ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/banner/mower-large-lawn-ride-on-pc-16x9.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Maintenance</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Winter storage that prevents a spring repair</h2>
+            <p class="blog-index__excerpt">Fuel left in a carburettor over the cold months is the single most common cause of a no-start in April.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  3 min read
+                </span>
+                <time datetime="2026-11-12">Oct 28, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:180ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/usecase/use-case-large-lawns-2_webp.webp" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Chainsaws</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Reading a bar and chain spec sheet</h2>
+            <p class="blog-index__excerpt">Pitch, gauge and drive links in plain language, plus how to tell when a chain is worn past saving.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  5 min read
+                </span>
+                <time datetime="2026-11-12">Oct 19, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:240ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/banner/mower-small-yard-push-pc-16x9.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Trimming</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Trimmer line: when diameter changes the job</h2>
+            <p class="blog-index__excerpt">Thicker line cuts heavier growth but loads the motor harder. Matching line to head and task.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  3 min read
+                </span>
+                <time datetime="2026-11-12">Oct 6, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:300ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/banner/mower-large-lawn-push-pc-16x9.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Maintenance</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">The first twenty minutes with a new machine</h2>
+            <p class="blog-index__excerpt">Assembly, oil, blade torque and a short break-in run. A checklist worth keeping.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  2 min read
+                </span>
+                <time datetime="2026-11-12">Sep 30, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:360ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/usecase/use-case-small-yard-2_webp.webp" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Mowing</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Slope safety without overbuying</h2>
+            <p class="blog-index__excerpt">Which gradients a walk-behind handles, when to switch to a ride-on, and why tyre tread matters more than power.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  7 min read
+                </span>
+                <time datetime="2026-11-12">Sep 21, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:360ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/banner/mower-large-lawn-ride-on-pc-16x9.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Maintenance</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Sharpening a blade by hand</h2>
+            <p class="blog-index__excerpt">A file, a vice and ten minutes. How to keep the cutting edge without taking it to a shop.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  4 min read
+                </span>
+                <time datetime="2026-11-12">Sep 8, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:360ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/usecase/use-case-large-lawns-2_webp.webp" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Chainsaws</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Chainsaw chain tension, in practice</h2>
+            <p class="blog-index__excerpt">How tight is tight enough, and what a slack chain does to the bar over a season.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  4 min read
+                </span>
+                <time datetime="2026-11-12">Aug 30, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li></ul><nav class="blog-index__pagination" aria-label="Pagination"><span class="blog-index__pagination-nav" aria-disabled="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="blog-index__pagination-page" aria-current="page">1</span><a class="blog-index__pagination-page" href="#" aria-label="Page 2">2</a><a class="blog-index__pagination-page" href="#" aria-label="Page 3">3</a><a class="blog-index__pagination-nav" href="#" aria-label="Next page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></nav></div></div></div></div>
+<p class="preview-label">02 · 标签页 —— 分类激活、计数隐藏、无封面卡走图标占位</p><div class="shopify-section blog-index-section">
+<div class="blog-index__hero blog-index__hero--image full-width">
+  <span class="blog-index__hero-media" style="--focal: 72% 45%"><img src="../local-assets/banner/mower-large-lawn-ride-on-pc-16x9.jpg" alt="" loading="eager" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:72% 45%;"></span><span class="blog-index__hero-scrim" aria-hidden="true"></span>
+  <div class="blog-index__hero-inner">
+    <p class="blog-index__eyebrow">Our blog</p>
+    <h1 class="blog-index__title">Lawn care tips &amp; outdoor living ideas</h1>
+    <p class="blog-index__subheading">Expert advice, seasonal guides and maintenance notes to help you keep a greener, healthier outdoor space.</p>
+  </div>
+</div>
+<div class="blog-index__page"><div class="blog-index__layout">
+    <aside class="blog-index__sidebar">
+      <nav class="blog-index__panel blog-index__panel--cats" aria-labelledby="blog-categories-title">
+        <h2 class="blog-index__panel-title" id="blog-categories-title">Categories</h2>
+        <ul class="blog-index__cats" role="list"><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">All articles</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Chainsaws</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Maintenance Tips</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Mowing</span></a></li><li><a class="blog-index__cat is-active" href="#" aria-current="page"><span class="blog-index__cat-label">Battery</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Trimming</span></a></li></ul>
+      </nav>
+      <div class="blog-index__panel blog-index__newsletter">
+        <h2 class="blog-index__panel-title">Stay in the know</h2>
+        <p class="blog-index__newsletter-text">Get the latest guides and seasonal tips, straight to your inbox.</p>
+        <form class="blog-index__newsletter-form">
+          <label class="visually-hidden" for="BlogNewsletterEmail">Your email address</label>
+          <div class="blog-index__newsletter-field">
+            <input class="blog-index__newsletter-input" id="BlogNewsletterEmail" type="email"
+                   placeholder="Your email address" required>
+            <button class="blog-index__newsletter-submit" type="submit">
+              <span class="visually-hidden">Subscribe</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </form>
+        <span class="blog-index__newsletter-leaf" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" width="34" height="34"><path d="M12 20c0-6 4-10 9-10-1 6-4 10-9 10Z"/><path d="M12 20C12 13 8 9 3 9c1 6 4 11 9 11Z"/></svg></span>
+      </div>
+    </aside><div class="blog-index__main"><div class="blog-index__toolbar"><p class="blog-index__result"><span class="blog-index__result-tag">Battery</span>4 guides</p></div><ul class="blog-index__grid" role="list">
+      <li class="blog-index__item" data-reveal style="--reveal-delay:0ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/banner/mower-large-lawn-push-pc-16x9.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Mowing</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">How to pick a mower for a lawn you actually have</h2>
+            <p class="blog-index__excerpt">Deck width, terrain and run time decide more than horsepower does. A short walk through the three measurements that matter.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  4 min read
+                </span>
+                <time datetime="2026-11-12">Nov 12, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:60ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><span class="blog-index__placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" width="34" height="34"><path d="M12 20c0-6 4-10 9-10-1 6-4 10-9 10Z"/><path d="M12 20C12 13 8 9 3 9c1 6 4 11 9 11Z"/></svg></span><span class="blog-index__badge">Battery</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Battery or petrol: the honest trade-off</h2>
+            <p class="blog-index__excerpt">Run time, noise, maintenance and the cost of a second pack. What changes in year three, and what stays the same.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  6 min read
+                </span>
+                <time datetime="2026-11-12">Nov 4, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:120ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><img src="../local-assets/banner/mower-large-lawn-ride-on-pc-16x9.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"><span class="blog-index__badge">Maintenance</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Winter storage that prevents a spring repair</h2>
+            <p class="blog-index__excerpt">Fuel left in a carburettor over the cold months is the single most common cause of a no-start in April.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  3 min read
+                </span>
+                <time datetime="2026-11-12">Oct 28, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="blog-index__item" data-reveal style="--reveal-delay:180ms">
+        <a class="blog-index__card" href="#">
+          <span class="blog-index__media"><span class="blog-index__placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" width="34" height="34"><path d="M12 20c0-6 4-10 9-10-1 6-4 10-9 10Z"/><path d="M12 20C12 13 8 9 3 9c1 6 4 11 9 11Z"/></svg></span><span class="blog-index__badge">Chainsaws</span></span>
+          <div class="blog-index__body">
+            <h2 class="blog-index__card-title">Reading a bar and chain spec sheet</h2>
+            <p class="blog-index__excerpt">Pitch, gauge and drive links in plain language, plus how to tell when a chain is worn past saving.</p>
+            <div class="blog-index__card-footer">
+              <p class="blog-index__meta">
+                <span class="blog-index__meta-read"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg>
+                  5 min read
+                </span>
+                <time datetime="2026-11-12">Oct 19, 2026</time>
+              </p>
+              <span class="blog-index__card-arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+        </a>
+      </li></ul><nav class="blog-index__pagination" aria-label="Pagination"><span class="blog-index__pagination-nav" aria-disabled="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="blog-index__pagination-page" aria-current="page">1</span><span class="blog-index__pagination-nav" aria-disabled="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></nav></div></div></div></div>
+<p class="preview-label">03 · 空态 —— 博客还没有文章</p><div class="shopify-section blog-index-section">
+<div class="blog-index__hero blog-index__hero--image full-width">
+  <span class="blog-index__hero-media" style="--focal: 72% 45%"><img src="../local-assets/banner/mower-large-lawn-ride-on-pc-16x9.jpg" alt="" loading="eager" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:72% 45%;"></span><span class="blog-index__hero-scrim" aria-hidden="true"></span>
+  <div class="blog-index__hero-inner">
+    <p class="blog-index__eyebrow">Our blog</p>
+    <h1 class="blog-index__title">Lawn care tips &amp; outdoor living ideas</h1>
+    <p class="blog-index__subheading">Expert advice, seasonal guides and maintenance notes to help you keep a greener, healthier outdoor space.</p>
+  </div>
+</div>
+<div class="blog-index__page"><div class="blog-index__layout">
+    <aside class="blog-index__sidebar">
+      <nav class="blog-index__panel blog-index__panel--cats" aria-labelledby="blog-categories-title">
+        <h2 class="blog-index__panel-title" id="blog-categories-title">Categories</h2>
+        <ul class="blog-index__cats" role="list"><li><a class="blog-index__cat is-active" href="#" aria-current="page"><span class="blog-index__cat-label">All articles</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Chainsaws</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Maintenance Tips</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Mowing</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Battery</span></a></li><li><a class="blog-index__cat" href="#"><span class="blog-index__cat-label">Trimming</span></a></li></ul>
+      </nav>
+      <div class="blog-index__panel blog-index__newsletter">
+        <h2 class="blog-index__panel-title">Stay in the know</h2>
+        <p class="blog-index__newsletter-text">Get the latest guides and seasonal tips, straight to your inbox.</p>
+        <form class="blog-index__newsletter-form">
+          <label class="visually-hidden" for="BlogNewsletterEmail">Your email address</label>
+          <div class="blog-index__newsletter-field">
+            <input class="blog-index__newsletter-input" id="BlogNewsletterEmail" type="email"
+                   placeholder="Your email address" required>
+            <button class="blog-index__newsletter-submit" type="submit">
+              <span class="visually-hidden">Subscribe</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </form>
+        <span class="blog-index__newsletter-leaf" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" width="34" height="34"><path d="M12 20c0-6 4-10 9-10-1 6-4 10-9 10Z"/><path d="M12 20C12 13 8 9 3 9c1 6 4 11 9 11Z"/></svg></span>
+      </div>
+    </aside><div class="blog-index__main"><div class="blog-index__toolbar"><p class="blog-index__result">0 guides</p></div><div class="blog-index__empty"><p class="blog-index__empty-title">No guides yet</p><p class="blog-index__empty-body">New articles show up here as soon as they're published. Until then, everything we carry is one click away.</p><a class="blog-index__empty-link" href="#">Browse all products</a></div></div></div></div></div>
+</body></html>
