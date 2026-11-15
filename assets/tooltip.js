@@ -142,7 +142,13 @@
         this.controller.abort();
         this.controller = null;
       }
+      /* 把开合态一起收回：重连时 build() 复用同一个气泡，残留的 data-open
+         会让它一挂上就是「已经打开」的样子。 */
       this.open = false;
+      if (this.bubble) {
+        this.bubble.removeAttribute('data-open');
+        this.bubble.style.removeProperty('--tooltip-shift');
+      }
     }
 
     /**
@@ -228,7 +234,7 @@
       if (this.hasAttribute('disabled') || this.hasAttribute('data-blank')) return;
       this.clearTimers();
       if (this.open) return;
-      /* 先归位再打开：此时气泡还是 visibility: hidden，量得到布局盒但看不见，
+      /* 先归位再打开：气泡此刻还是 opacity: 0（但仍参与布局，量得到盒子），
          用户看到的第一帧就已经在正确位置，不会有「先探出去再缩回来」的跳动。 */
       this.adjust();
       this.open = true;
