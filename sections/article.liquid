@@ -48,7 +48,7 @@
   endif
 -%}
 
-<article class="article">
+<article class="article{% unless has_aside %} article--narrow{% endunless %}">
   <div class="article__hero full-width">
     <div class="article__hero-inner">
       <a class="article__eyebrow" href="{{ blog.url }}">{{ blog.title | escape }}</a>
@@ -330,6 +330,11 @@
     max-inline-size: 61.5rem;
     margin-inline: auto;
     padding-block: clamp(1.75rem, 3.6vw, 2.75rem) clamp(1.5rem, 3vw, 2.25rem);
+  }
+  /* 关掉侧栏时正文列居中，页头带也要一起收到 42rem，
+     否则标题贴左、正文居中，两块的左边缘差出一百多像素。 */
+  .article--narrow .article__hero-inner {
+    max-inline-size: 42rem;
   }
   .article__eyebrow {
     display: inline-flex;
