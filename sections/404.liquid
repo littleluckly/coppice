@@ -339,6 +339,9 @@
       grid-area: stage;
       grid-template-columns: minmax(0, 1fr);
       padding-block: clamp(2.25rem, 8vw, 3rem) clamp(2.5rem, 9vw, 3.5rem);
+      /* 桌面那个左内缩是为「文字压在照片一侧」留的呼吸；手机上照片已经让到上方、
+         文字独占一行，再缩进去只会白吃掉本就很窄的宽度 */
+      padding-inline-start: 0;
     }
 
     .not-found__code {
