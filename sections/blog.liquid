@@ -78,14 +78,13 @@
       LCP 图：eager + fetchpriority: high。alt 留空 —— 它是纯背景，
       页面语义由旁边的 h1 承担（同 hero-slideshow 的背景图处理）。
     {%- endcomment -%}
-    <span
-      class="blog-index__hero-media"
-      {%- comment -%}
-        object-position 取图库里的「焦点」（presentation.focal_point），商家在后台
-        点一下图就能决定哪块留在画面里。没有焦点时回落 50% 50%。
-      {%- endcomment -%}
-      style="--focal: {{ section.settings.image.presentation.focal_point | default: '50% 50%' }}"
-    >
+    {%- comment -%}
+      object-position 取图库里的「焦点」（presentation.focal_point），商家在后台
+      点一下图就能决定哪块留在画面里，没有焦点时回落 50% 50%。
+      注：注释必须放在标签外 —— 写在属性之间时 `{%- -%}` 会把两侧空白一起吃掉，
+      渲染成 `class="…"style="…"` 两个属性粘在一起。
+    {%- endcomment -%}
+    <span class="blog-index__hero-media" style="--focal: {{ section.settings.image.presentation.focal_point | default: '50% 50%' }}">
       {{
         section.settings.image
         | image_url: width: 2400
