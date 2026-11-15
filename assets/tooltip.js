@@ -89,31 +89,20 @@
       this.open = false;
       this.bubble = this.build();
 
-      /* hover 能力实时跟随：可拆键盘的平板接上鼠标后不必刷新页面 */
-      const hoverable = window.matchMedia('(hover: hover) and (pointer: fine)');
-      this.canHover = hoverable.matches;
-      hoverable.addEventListener(
-        'change',
+      /* **不按 media query 判断有没有鼠标**（原来写的是 (hover: hover) and
+         (pointer: fine) 才绑事件）——无头浏览器与部分环境的匹配值不可信，
+         一次误判就等于整页 tooltip 全哑。改为一律绑 pointerenter，靠
+         event.pointerType 过滤：'touch' 跳过（手指按下去不是悬停），
+         'mouse' / 'pen' 一律认。键盘用户走下面的 focusin，与指针能力无关。 */
+      this.trigger.addEventListener(
+        'pointerenter',
         (event) => {
-          this.canHover = event.matches;
-          if (!this.canHover) this.hideNow();
+          if (event.pointerType === 'touch') return;
+          this.schedule(true);
         },
         { signal },
       );
-
-      if (this.canHover) {
-        /* 触屏笔记本（主指针 fine、但有触摸屏）在触摸时同样发 pointerenter：
-           那种「手指按下去」不是悬停，按不了提示的意图，直接跳过。 */
-        this.trigger.addEventListener(
-          'pointerenter',
-          (event) => {
-            if (event.pointerType === 'touch') return;
-            this.schedule(true);
-          },
-          { signal },
-        );
-        this.trigger.addEventListener('pointerleave', () => this.schedule(false), { signal });
-      }
+      this.trigger.addEventListener('pointerleave', () => this.schedule(false), { signal });
 
       this.addEventListener(
         'focusin',
