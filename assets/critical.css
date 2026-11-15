@@ -662,22 +662,21 @@ ui-tooltip {
   /* 提示层要有「浮起来」的实感，但不能太抢——一层近距离落地影足够 */
   box-shadow: 0 6px 18px color-mix(in srgb, #000 22%, transparent);
   opacity: 0;
-  /* visibility 而非 display：display 会让过渡失效，且不可见时不该留在布局里；
-     它是离散属性，能撑到过渡结束后才翻转（淡出才看得见）。 */
-  visibility: hidden;
+  /* ⚠️ 这是**刻意的**：不用 visibility / display 参与显隐。
+     气泡在 DOM 里常驻、靠 opacity 收放——因为它的文本要通过 aria-describedby
+     一直可被屏读问到（提示是「描述」，不是只在某一刻存在的东西）；
+     而且它 pointer-events: none、绝对定位、内部无可聚焦元素，
+     opacity 0 不会留下任何幽灵焦点或占位。
+     试过 visibility + 过渡：关闭时 getComputedStyle 迟迟不翻 hidden
+     （2026-11-15 实测 300ms 后仍是 visible），气泡在页面上赖着不走。 */
   /* --tooltip-shift 由 JS 写（贴边平移）；--tooltip-lift 是入场位移，按方向定。
-     两者都是变量而非 transform，好让 translate 单独参与过渡。 */
+     两个都是变量，好让 translate 单独参与过渡、不跟居中用的 transform 打架。 */
   --tooltip-shift: 0px;
   --tooltip-lift: 4px;
   translate: var(--tooltip-shift) var(--tooltip-lift);
-  /* visibility 不跟 opacity 一起吃 0.14s 的时长：它是离散值，参与过渡意味着
-     显隐被推迟到过渡中途/结束（2026-11-15 实测：data-open 已置上，200ms 后
-     getComputedStyle 仍是 hidden → 断言判「没打开」）。这里给它**独立的零时长
-     + 延迟**：打开时 delay 0 立刻可见，关闭时延 0.14s 等淡出走完再真正隐藏。 */
   transition:
     opacity 0.14s ease,
-    translate 0.14s ease,
-    visibility 0s linear 0.14s;
+    translate 0.14s ease;
 }
 
 /* ---- 四向定位 ----
@@ -711,13 +710,7 @@ ui-tooltip {
 /* 打开态写在定位规则之后：同特异性靠源序覆盖 --tooltip-lift */
 .tooltip[data-open] {
   opacity: 1;
-  visibility: visible;
   --tooltip-lift: 0px;
-  /* visibility 的延迟在这里归零——打开必须是即时的 */
-  transition:
-    opacity 0.14s ease,
-    translate 0.14s ease,
-    visibility 0s linear 0s;
 }
 
 /* 箭头：8px 方块旋转 45°，一半压在气泡底上，看起来是从气泡上长出来的 */
