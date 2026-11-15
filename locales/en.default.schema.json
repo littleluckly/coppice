@@ -14,6 +14,7 @@
     "article": "Article",
     "block": "Block",
     "blog": "Blog",
+    "brand": "Brand",
     "cart": "Cart",
     "collection": "Collection",
     "collection_card": "Collection card",
@@ -27,7 +28,7 @@
     "footer": "Footer",
     "group": "Group",
     "header": "Header",
-    "header_skeleton": "Header & footer colors",
+    "header_skeleton": "Header and footer colors",
     "layout": "Layout",
     "main": "Main",
     "main_nav": "Main menu",
@@ -52,6 +53,40 @@
     "cart_drawer": "Cart drawer"
   },
   "sections": {
+    "main_nav": {
+      "labels": {
+        "show_all_series": "Show \"All series\" entry",
+        "show_all_series_info": "Adds a last item to the menu that opens every collection in a panel. On mobile it links straight to the collections page. The list comes from your collections, not from the menu — nothing to maintain.",
+        "all_series_label": "Entry label",
+        "all_series_limit": "Series in the panel",
+        "all_series_limit_info": "Collections past this number only appear on the collections page.",
+        "all_series_position": "Menu position",
+        "all_series_position_info": "Where the entry sits among your menu links. \"Before last link\" keeps support or contact links at the end."
+      },
+      "options": {
+        "all_series_position": {
+          "first": "First",
+          "before_last": "Before last link",
+          "last": "Last"
+        }
+      }
+    },
+    "search": {
+      "name": "Search results",
+      "settings": {
+        "hero_image": "Hero image",
+        "hero_image_info": "Landscape photo for the search banner. Leave empty to use the theme's default lawn photo.",
+        "suggested_searches": "Suggested searches",
+        "suggested_searches_info": "Comma-separated words shown below the search field. These are suggestions you choose, not automatically generated popular searches.",
+        "show_categories": "Show category sidebar",
+        "show_categories_info": "Lists up to six collections. Counts show total products in each collection, not matches for the current search.",
+        "results_per_page": "Results per page",
+        "results_per_page_info": "Shopify allows up to 50 results per page. Lower values keep the page lighter.",
+        "show_quick_add": "Show quick add on product cards",
+        "show_specs": "Show specification chips",
+        "show_specs_info": "Adds power source and cutting width to product cards. Leave off for a tighter results grid."
+      }
+    },
     "hero_slideshow": {
       "name": "Hero slideshow",
       "aria_label": "Highlights",
@@ -172,6 +207,16 @@
         "subheading": "Straightforward guides to choosing the right machine and keeping it running."
       },
       "read_more": "Read guide"
+    },
+    "collections_list": {
+      "name": "Collections list",
+      "labels": {
+        "columns": "Columns on desktop",
+        "columns_info": "Tablet tops out at three columns, mobile always shows two.",
+        "collections_per_page": "Series per page",
+        "collections_per_page_info": "Extra series move to a second page.",
+        "show_description": "Show collection descriptions"
+      }
     },
     "collection": {
       "name": "Collection page",
@@ -458,7 +503,11 @@
     "layout_direction": "Layout direction",
     "link": "Link",
     "logo": "Logo",
-    "logo_info": "Falls back to the bundled theme logo when empty",
+    "logo_info": "Used in the header, gift card, and password page. Leave empty to show the store name.",
+    "logo_dark": "Logo for dark backgrounds",
+    "logo_dark_info": "Used when the header and footer have a dark background. Leave empty to reuse the main logo.",
+    "favicon": "Favicon",
+    "favicon_info": "Use a square image. Shown in the browser tab and on mobile home screens.",
     "menu": "Menu",
     "padding": "Padding",
     "page_margin": "Page margin",

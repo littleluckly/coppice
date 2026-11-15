@@ -4,7 +4,8 @@
 > **权威关系**：功能口径以 `dev-docs/sdd.md` §7.1 为准；本清单只做"官方要求 ↔ 主题现状"的映射，不新增产品决策。修复方案涉及设计取舍时，回填对应页面清单（`task-product.md` / `task-collection.md` / `task-footer.md` 等）。
 > **范围**：主题级必填项——section/block 能力、全局设置、模板页面完整性、强制功能落点。
 > **不在范围**：各页面清单已覆盖的项（页脚 newsletter / 社交 / 国家语言 → `task-footer.md`；页头菜单与搜索 → `task-header.md`；购物车 → `task-cart.md`；集合页 → `task-collection.md`；产品页主体 → `task-product.md`）。**本清单只在它们漏掉的接缝处补位。**
-> **版本**：v1.0 ｜ 2026-11-07 ｜ **不含工期**
+> **版本**：v1.1 ｜ 2026-11-12 ｜ **不含工期**
+> **v1.1 变更**：G-03 / G-11 / G-13 已实现（全局 Brand 设置、favicon、品牌 logo）；§5.2 顾客端配色开关经刘工拍板**不做**。**剩余 11 条缺口，其中 S1 6 条。**
 
 ---
 
@@ -38,7 +39,7 @@
 | --- | --- | --- | --- |
 | G-01 | 没有 Custom Liquid **section** | *"Themes must include a Custom Liquid section."* | **S1** |
 | G-02 | 产品主 section 无 `@app` block | *"Themes must support app blocks (blocks of type `@app`) in the main product section and featured product section."* | **S1** |
-| G-03 | 没有 favicon 设置 | *"Must have a favicon setting."* | **S1** |
+| ✅ G-03 | 没有 favicon 设置 | *"Must have a favicon setting."* | ~~S1~~ **已销 2026-11-12** |
 | G-04 | 礼品卡页没有二维码 | *"Must show a QR code. The minimum size required is 120px x 120px."* | **S1** |
 | G-05 | 图片焦点（focal point）未实现 | *"Make sure that your theme supports the focal point of an image."* | **S1** |
 | G-06 | `theme_info` 作者与链接仍是 Skeleton 默认 | §Theme info（*"Must have a `theme_info` section"* 已满足，但内容错） | **S1** |
@@ -47,15 +48,30 @@
 | G-08 | 集合页商品卡不显示单位价 | *"Unit pricing must be supported on: Collection page / Product page / Cart page."* | **S2** |
 | G-09 | 礼品卡商品没有"寄给收件人"字段 | *"Gift card products must have the option to send the card to a recipient."* + `form.email` / `form.name` / `form.message` / `gift_card.send_on` | **S2** |
 | G-10 | 没有 Custom Liquid **block** | *"Introduce Custom Liquid blocks into certain sections."* | **S2** |
-| G-11 | 密码页没有 logo / `shop.name` | Password page requirements: *"the logo or `shop.name`"* | **S2** |
+| ✅ G-11 | 密码页没有 logo / `shop.name` | Password page requirements: *"the logo or `shop.name`"* | ~~S2~~ **已销 2026-11-12** |
 | G-12 | 产品页无法选择订阅计划 | §Selling plans 只要求购物车**显示**；但选不了 ⇒ 显示逻辑永远是死代码 | **S2** |
-| G-13 | 礼品卡模板引用不存在的 `settings.logo` | 非条款问题 | **S3** |
+| ✅ G-13 | 礼品卡模板引用不存在的 `settings.logo` | 非条款问题 | ~~S3~~ **已销 2026-11-12** |
+
+> **进度（2026-11-12）**：14 条缺口中 G-03 / G-11 / G-13 已实现，**剩余 11 条，其中 S1 6 条**。下表保留全部原始行以便追溯，已销项以 ✅ 标记，落地记录见 §2.0。
 
 > **G-10 与页脚清单重叠**：`task-footer.md` T-1.10 已规划在页脚加一个 `liquid` block，**能满足 G-10**。两边不重复做，谁先落地谁把这条勾掉。
 
 ---
 
 ## 2. 逐条详情
+
+### 2.0 已实现项落地记录（2026-11-12）
+
+| 编号 | 做法 | 主要文件 |
+| --- | --- | --- |
+| G-03 | `config/settings_schema.json` 新增 `favicon` (`image_picker`)；`layout/theme.liquid` 与 `gift_card.liquid` 的 `<head>` 输出 32×32 `rel="icon"` 与 180×180 `apple-touch-icon`（`image_url` 同时给 width/height 才能 `crop: center`） | `settings_schema.json`、`theme.liquid:49`、`gift_card.liquid:16` |
+| G-13 | 全局 `logo` 设置真实存在后，`gift_card.liquid` 的死分支接上 `snippets/brand-logo.liquid`，无 logo 时仍回落 Shopify 内置卡图 | `gift_card.liquid:56` |
+| G-11 | `password.liquid` 标题上方补全局 logo，无 logo 时显示 `shop.name`；**不新增第二个 `h1`** | `password.liquid:7` |
+
+三项共用新建的 `snippets/brand-logo.liquid`（选图 + 输出单个 `<img>`）。页头桌面行与移动抽屉头部也一并改用它，并删除 section 级 `image_picker`。完整取舍与实现清单见 §5.1。
+
+**验证**：`shopify theme check` → **78 files / 0 offenses**；`tools/check-locale-keys.py` 两套命名空间全命中；所有 JSON 与 `{% schema %}` 可解析；两个 preset 键集合仍完全相同（各 13 个）且不含图片设置。`check-tag-balance.py` 报的 8 处全是既有 `compare-*` snippet 的属性 `>` 误报，**本次改动的 5 个文件均不在列表内**。
+
 
 ### G-01 没有 Custom Liquid section
 
@@ -102,7 +118,7 @@
 
 ---
 
-### G-03 没有 favicon 设置
+### ✅ G-03 没有 favicon 设置（2026-11-12 已实现，见 §2.0）
 
 **官方原文**
 
@@ -244,7 +260,7 @@
 
 ---
 
-### G-11 密码页没有 logo / `shop.name`
+### ✅ G-11 密码页没有 logo / `shop.name`（2026-11-12 已实现，见 §2.0）
 
 **官方原文**
 
@@ -275,7 +291,7 @@
 
 ---
 
-### G-13 礼品卡模板引用不存在的 `settings.logo`
+### ✅ G-13 礼品卡模板引用不存在的 `settings.logo`（2026-11-12 已实现，见 §2.0）
 
 **现状证据**
 
@@ -319,7 +335,7 @@
 
 - [ ] **T-1.1** `sections/custom-liquid.liquid`（G-01）· 依赖：无
 - [ ] **T-1.2** `main-product.liquid` 补 `@app` block（G-02）· 依赖：无
-- [ ] **T-1.3** 全局品牌设置：`favicon` + `logo` / `logo_dark` + 亮度自动选图（G-03 / G-13 / §5.1）· 依赖：无
+- [x] **T-1.3** 全局品牌设置：`favicon` + `logo` / `logo_dark` + 亮度自动选图（G-03 / G-13 / §5.1）· 依赖：无
 - [ ] **T-1.4** 礼品卡二维码（G-04）· 依赖：无
 - [ ] **T-1.5** 图片焦点：先收敛输出点，再按"会裁剪处"逐个接（G-05）· 依赖：无 · **改动面最大**
 - [ ] **T-1.6** `theme_info` 更正（G-06）· 依赖：真实作者名与文档地址
@@ -330,12 +346,12 @@
 - [ ] **T-2.1** 搜索页重写：筛选 + 商品卡复用 + 排序（G-07）· 依赖：与 `task-collection.md` 的筛选实现协调
 - [ ] **T-2.2** 商品卡单位价（G-08）· 依赖：无
 - [ ] **T-2.3** 礼品卡收件人字段（G-09）· 依赖：`main-product` 表单区块结构
-- [ ] **T-2.4** 密码页补 `shop.name` / logo（G-11）· 依赖：无
+- [x] **T-2.4** 密码页补 `shop.name` / logo（G-11）· 依赖：无
 - [ ] **T-2.5** 产品页订阅计划选择器（G-12）· 依赖：T-2.3 同区（都在表单内）
 
 ### P3 S3 缺陷与收尾
 
-- [ ] **T-3.1** `gift_card.liquid` 改用全局 logo（G-13，T-1.3 落地后一并接）· 依赖：T-1.3
+- [x] **T-3.1** `gift_card.liquid` 改用全局 logo（G-13，T-1.3 落地后一并接）· 依赖：T-1.3
 - [ ] **T-3.2** 复跑本清单的对账脚本（见 §4.2），确认新增缺口为 0
 
 ---
@@ -360,15 +376,18 @@
 | 产品页单位价 | `main-product.liquid:420` |
 | 购物车单位价 + 订阅计划显示 | `cart-line.liquid:218 / 132` |
 | 所有设置都有 `label` | 脚本全量扫描 `sections/` + `blocks/`：**0 缺** |
-| 文案无 `&` 符号 | `locales/*.json` 无 `&amp;` |
+| 文案无 `&` 符号 | 两个 locale 全文无裸 `&`；2026-11-12 修掉 `general.header_skeleton` 的 `Header & footer colors`（旧核查只查 `&amp;`，漏了裸 `&`） |
 | 无 `.scss` / 无压缩产物（启发式：<5 行且 >2KB 的文件 0 个） | `find` + 行数/字节比 |
 | 无外部 http 资源 | 仅注释里的文档 URL 与 `fonts.shopifycdn.com` preconnect |
 | 提交包不含 `robots.txt.liquid` / `config/markets.json` | `ls config/` 仅两个 JSON |
 | 未改动 `content_for_header` | `theme.liquid:48` 原样输出 |
 | preset 名含主题名 | `hero-slideshow.liquid:1031` `"name": "Coppice"` |
-| logo 支持不同宽高比 | `main-nav.liquid:98` 按比例缩放，非固定 40×40 |
+| logo 支持不同宽高比 | `snippets/brand-logo.liquid` 用 `image_tag` 输出固有比例，CSS 只固定 `block-size` |
 | 礼品卡：Apple Wallet / 卡号 / `shop.name` | `gift_card.liquid` |
 | 字体用 `font_picker` | `settings_schema.json:18` |
+| favicon 设置与两档输出（G-03） | `settings_schema.json` 的 `favicon` + `theme.liquid` / `gift_card.liquid` 的 `<head>` |
+| 全局 logo 单一入口（G-13） | `t:general.brand` 分组；页头 / 抽屉 / 礼品卡 / 密码页统一 `render 'brand-logo'` |
+| 密码页有 logo 或店名（G-11） | `password.liquid` 标题上方；不产生第二个 `h1` |
 
 ### 4.2 建议固化成脚本
 
@@ -395,38 +414,82 @@ tools/check-compliance.py
 | **preset 数量上限（≤5）** | 需数全站 presets | 脚本可数，见 T-3.2 |
 | **资源型设置默认值指向的资源是否存在** | 依赖演示店真实数据 | 后台逐项点开 |
 | **RTL 实测** | 需渲染 | 临时 `dir="rtl"` 看三个主页面 |
+| **切换 preset 后已上传的 logo 是否保留** | 依赖编辑器行为，静态推不出来 | 在 Brand 分组传图后切一次 `Coppice` ↔ `Coppice Noir`，确认图没丢（见 §5.1） |
 
 > ~~featured product section 是否必须存在~~ → **2026-11-07 已核实：不强制**（见 G-02）。
-> ~~是否要全局 `logo` 设置~~ → **2026-11-07 刘工拍板：要**，落点见 §5.1。
+> ~~是否要全局 `logo` 设置~~ → **2026-11-07 刘工拍板：要；2026-11-12 已实现**，落点见 §5.1。
 
-### 5.1 全局 logo 与双配色（2026-11-07）
+### 5.1 全局 logo 与双配色（2026-11-07 拍板，2026-11-12 实现）
 
-**已定**：加全局 `logo`，统一给页头、礼品卡、密码页消费（G-13 走"补设置"这一支，不删分支）。
+**状态：已实现。** 全局 `logo` / `logo_dark` / `favicon` 三个 `image_picker` 落在 `config/settings_schema.json` 新增的 `t:general.brand` 分组；页头桌面行、移动抽屉头部、礼品卡、密码页统一消费。
 
 **要解决的真问题**：主题有两个 preset（Coppice 浅底 `#FFF` / Coppice Noir 深底 `#0F1012`），同一张深色 logo 在白底上清楚、在 Noir 上就是一块黑。**但 CSS 选不了图**——
 
 - preset 切换改的是颜色值，不是媒体查询，`@media (prefers-color-scheme)` 与它无关；
 - 浏览器端没有"当前用哪张 logo"的钩子，靠 JS 切图会有首屏闪烁。
 
-**可选做法**
+**当时的取舍**（保留供回溯）
 
 | | 做法 | 代价 |
 | --- | --- | --- |
-| A | **两套设置**：`logo` + `logo_dark`，Liquid 按骨架背景亮度自动选 | 商家多传一张图；需要亮度判断 |
+| **A ✅ 采用** | **两套设置**：`logo` + `logo_dark`，Liquid 按骨架背景亮度自动选 | 商家多传一张图；需要亮度判断 |
 | B | 一套设置 + "反白"开关（`filter: brightness(0) invert(1)`） | 对单色 logo 完美，**彩色 logo 会被压成纯白剪影** |
 | C | 一套设置，要求商家自己保证深浅底都可读 | 等于把问题推给商家，preset 切换时必有一半场景难看 |
 
-**亮度怎么判断**：`color_brightness` filter 仍可用（2026-11-07 核官方文档：返回 0–255 数值，无废弃提示）。骨架背景取自 `settings.skeleton_background_color | default: settings.background_color`，亮度低于阈值即视为深色骨架。**阈值待实测确定，不写死猜测值。**
+**亮度判据（阈值问题已收口）**：`color_brightness` 返回 0–255（2026-11-07 核官方文档，无废弃提示）。骨架背景取自 `settings.skeleton_background_color | default: settings.background_color`，算出亮度后与 **128（0–255 明暗中线）** 比较，取不到色值时 `| default: 255` 按浅色处理。
 
-**配套回落链**（必须定，否则商家忘传就露空）：`logo_dark` 空 → 用 `logo` → 再空 → `shop.name` 文字 wordmark（文字自动跟随 `--color-foreground`，两个 preset 天然都对）。
+**128 不是拍脑袋定的**：`snippets/css-variables.liquid` 的 `header_luma` 早已用同一个值决定页头底色与两套阴影，本次直接对齐——两处阈值若漂移，深色页头会配上浅底 logo。两个 preset 的实际亮度分别是 `#FFFFFF → 255` 与 `#0F1012 → ≈16`（`(15×299 + 16×587 + 18×114)/1000`），离 128 极远，阈值在大区间内不敏感，**无需再实测校正**。该约束已写进 `snippets/brand-logo.liquid` 的 LiquidDoc。
 
-**与现有页头设置的关系**：`sections/main-nav.liquid:56` 现在读 `section.settings.logo`（section 级）。**2026-11-07 刘工拍板：删掉 section 级 logo 设置，只留全局**——两个入口会让商家困惑"改了没生效"。代价：已保存的演示数据要重新传图，`settings_data.json` 里的旧值被静默忽略（不报错）。
+**回落链**：深色骨架且 `logo_dark` 有值 → 用 `logo_dark`；否则 → `logo`；两者都空 → 不输出 `<img>`，由各调用方显示文字或兜底图（页头 = `brand_name`、密码页 = `shop.name`、礼品卡 = Shopify 内置卡图）。文字跟随 `--color-foreground`，两个 preset 天然都对。
 
-**⚠️ 前置条件**：此处"按亮度自动选图"依赖**服务端已知当前配色**。若将来做成"顾客在页头自己切换明暗"（运行时切换，见 §5.2），服务端就不知道顾客选了什么，**本节的 Liquid 判断会失效**，logo 要改成"两套图都输出 + 按根属性 `[data-theme]` 显隐"。
+**一处刻意保留的例外**：`sections/footer.liquid` 的 `brand` block 仍有自己的 `image_picker`（`block.settings.logo`）。它是页脚专属的大尺寸 wordmark（220px / 160px），与页头 40px 图标不是同一个设计元素，商家可能想放不同的图；留空时回落 `shop.name` 文字，不会露空。全局 Brand 分组的 `info` 已写明只覆盖页头 / 礼品卡 / 密码页，避免"改了全局页脚没变"的误解。
 
-### 5.2 顾客端配色切换：可行性评估（2026-11-07 提出，未拍板）
+**顾客端配色开关已否决（2026-11-12 刘工）** ⇒ 服务端始终知道当前配色，"按亮度只输出一张图"成立，不需要双图 + `[data-theme]` 显隐，也没有首屏闪烁问题。详见 §5.2。
 
-**问题**：把两套主题色做成开关放页头，由访问用户切换。
+#### 编辑器里的落点
+
+`config/settings_schema.json` 渲染成编辑器左侧栏的 **Theme settings（⚙ 齿轮）**，与当前在编辑哪个页面无关；`sections/*.liquid` 的 schema 才渲染成"点开某个分区后的设置"。两者的数据作用域不同：
+
+- 全局 `settings.<id>`：所有 section / snippet / 模板都能读。
+- `section.settings.<id>`：**只在定义它的那个 section 文件里可读**——礼品卡模板、密码页都读不到页头分区的设置。`gift_card.liquid` 原来那句 `{% if settings.logo %}` 恒假就是这个原因：它写的是全局，而全局从未定义过。
+
+**已删**：`sections/main-nav.liquid` 的 section 级 `image_picker` 及其 `assign`；`sections/header-group.json` 里遗留的 `"logo": "shopify://shop_images/logo_webp.webp"` 一并清掉（schema 没了，键已孤立，且是演示店资源引用）。**代价**：演示店页头现在只剩 "Northbark" 文字，需在 Theme settings → Brand 重新传图。
+
+**已加**：`t:general.brand` 分组 + `en.default.schema.json` 的 `general.brand` 与 6 个 `labels.*` 键。分组名与 label 禁含 `&`（官方禁主题文案含 `&`、美式英语、sentence case）；顺带修掉既有 `general.header_skeleton = 'Header & footer colors'` → `Header and footer colors`（此前 §4.1 只查了 `&amp;`，漏了裸 `&`），以及过时的 `labels.logo_info`（原文案承诺"回落内置主题 logo"，代码从未实现）。
+
+| 设置 | 类型 | 用途 |
+| --- | --- | --- |
+| `logo` | `image_picker` | 主 Logo，浅色骨架；页头 / 礼品卡 / 密码页 |
+| `logo_dark` | `image_picker` | 深色骨架用；留空回落 `logo` |
+| `favicon` | `image_picker` | G-03，浏览器标签栏与移动主屏，与页面配色无关，**不需要两套** |
+
+商家**不需要**指定"哪个 preset 用哪张"——选图由 Liquid 完成。两个 logo 的 `info` 已写明用途与回落行为。
+
+**preset 处理口径**：两个 preset（`Coppice` / `Coppice Noir`）在 `settings_data.json` 里是**平铺的 settings 字典**（不是 `{"settings":{…}}`），键集合目前完全相同（各 13 个），本次未改。**`logo` / `logo_dark` / `favicon` 一律不写进任何 preset**——主题包带不了图片资产，预置只会变成别人的图或空引用。按"preset 切换不删缺席键"的规则，商家上传的图在切换两个配色时应保留；**此点需切一次 preset 实测确认**，别只靠推断。
+
+#### 实现清单
+
+| 文件 | 改动 |
+| --- | --- |
+| `config/settings_schema.json` | 新增 `t:general.brand` 分组（3 个 `image_picker`），排在 `theme_info` 之后 |
+| `locales/en.default.schema.json` | 补 `general.brand` 与 6 个 `labels.*`；修 `header_skeleton` 的 `&`；修 `labels.logo_info` |
+| `snippets/brand-logo.liquid` | **新建**。统一选图 + 输出单个 `<img>`，LiquidDoc 标注 128 阈值必须与 `css-variables.liquid` 同步 |
+| `sections/main-nav.liquid` | 删 section 级 `image_picker` 与 `assign`；桌面 Zone 0 与移动抽屉头部都改 `render 'brand-logo'` |
+| `layout/theme.liquid` | `<head>` 输出 favicon 32×32（`rel=icon`）+ 180×180（`apple-touch-icon`） |
+| `templates/gift_card.liquid` | G-13 死分支接上全局 logo；`{% layout none %}` 的独立 head 也补 favicon |
+| `sections/password.liquid` | G-11：补全局 logo 或 `shop.name`，不新增第二个 `h1` |
+| `sections/header-group.json` | 清掉孤立的演示店 `logo` 值 |
+
+**⚠️ 改动时的教训**：删掉 `assign logo_image` 后，`main-nav.liquid` 里**第二处**消费点（移动抽屉头部，约 540 行）变成未定义变量——静态 grep 只搜 `section.settings.logo` 是找不到的。**是 `shopify theme check` 的 `UndefinedObject` 报出 7 条 warning 才抓到。** 结论：删变量前搜的是「变量名的所有引用」，不是「赋值语句里的那个表达式」。
+
+### 5.2 顾客端配色开关：**不做**（2026-11-07 评估，2026-11-12 刘工否决）
+
+> **2026-11-12 拍板：不做。** 以下是当时的可行性评估，保留作为决策依据，**不要再当待办推进**。
+> 连带结论：服务端始终知道当前配色 ⇒ §5.1 的"Liquid 按亮度只输出一张图"成立，logo 不需要改成
+> 双图 + `[data-theme]` 显隐，也不需要 `<head>` 内联主题脚本。评估里那 6~9 处硬编码黑白
+> **不为开关而改**（其中 `main-nav.liquid` 两条黑边框在 Noir 骨架下本就不可见，属既有缺陷，单独按 bug 处理）。
+
+**当时的问题**：把两套主题色做成开关放页头，由访问用户切换。
 
 **结论：技术上能做，但它不是"切换 preset"**——preset 是编辑器里的安装时配置，写进 `settings_data.json` 的 presentational settings，**运行时不可切**。要做顾客可切，得换一套机制：
 
@@ -472,6 +535,7 @@ tools/check-compliance.py
 - 不做性能优化专题（LCP 图、字体子集等）——属 SDD §8.1，另有验收
 - 不为通过检查而"造"功能空壳：G-12 若决定不做，就明确写"不做"并接受购物车那段显示逻辑是死代码，**不要留一个假选项**
 - **featured product section 先不做**（2026-11-07 刘工）。官方没有"必须包含"的要求（G-02 已核实），首页有 `featured-collection` 承接商品陈列。将来若要在落地页主推单个旗舰机型，再单独立项——**不要为了条款里出现过这个词就补一个 section**
+- **顾客端配色开关不做**（2026-11-12 刘工）：理由与三笔成本见 §5.2。连带：不引入 `data-theme` / `localStorage` / 首屏内联脚本，深色内容区那 6~9 处硬编码黑白也不为开关而改
 
 ---
 

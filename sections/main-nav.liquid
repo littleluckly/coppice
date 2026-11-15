@@ -53,7 +53,35 @@
 {%- liquid
   assign menu = section.settings.menu
   assign brand_name = section.settings.brand_name | default: shop.name
-  assign logo_image = section.settings.logo
+
+  # 「All series」入口（2026-11-14 刘工）：数据取自全局 collections，不依赖菜单配置 ——
+  # 商家不必为了一个"全部系列"入口手工维护一条菜单（菜单里也放不下"全部"这个语义）。
+  # 桌面 = mega 面板（系列网格 + View all 出口），移动 = 抽屉里一条直达 /collections 的链接。
+  assign show_series = section.settings.show_all_series
+  assign series_label = section.settings.all_series_label
+  if series_label == blank
+    assign series_label = 'navigation.all_series' | t
+  endif
+  assign series_limit = section.settings.all_series_limit | default: 12
+  # 插在菜单的哪个位置：first / before_last / last。
+  # before_last = 排在菜单最后一项之前 —— Support / Contact 这类支持项通常放最后，
+  # 这个档位让"全部系列"留在商品入口这一侧，而不是被顶到支持项后面（演示店用这一档）。
+  assign series_position = section.settings.all_series_position | default: 'last'
+  # 兜底：菜单只有 0–1 项时 before_last 没有"倒数第二"可插（循环里的插入点不触发），
+  # 这时退回菜单末尾，否则入口会整个消失。
+  assign series_at_end = false
+  if series_position == 'last'
+    assign series_at_end = true
+  endif
+  if series_position == 'before_last' and menu.links.size <= 1
+    assign series_at_end = true
+  endif
+  # 当前页判定走 template.name，不比字符串路径：市场用语言子目录时
+  # request.path 会带 /en 前缀，和 routes.collections_url 比会永远不等。
+  assign series_is_current = false
+  if template.name == 'list-collections'
+    assign series_is_current = true
+  endif
 -%}
 
 {% comment -%}
@@ -88,39 +116,129 @@
         Zone 0: logo + brand name. Links home. The image is decorative
         (alt="") because the visible brand text already names the link.
 
-        2026-10-21 两处修正：
-        1. 没有 logo 时**不渲染 img**，只留品牌名。旧注释说"回落到内置的
-           logo_webp.webp"，但那段代码从来没写过——`logo_src` 只在 if 里 assign，
-           商家清空 logo 后会输出 `<img src="">`（一个 40×40 的破图框）。
-           不回落内置资源是刻意的：assets/logo_webp.webp 是 156 KB 原图，
-           `image_url` 对 assets 无效、无法缩放，为一个 40px 图标拉 156 KB 不值。
-        2. width/height 用图片**真实固有尺寸**，不再写死 40×40。尺寸由 CSS 收
-           （block-size 固定、inline-size 按比例），所以任何比例的 logo 都不会被压扁；
-           写死 40×40 会让非方形 logo 变形，并被 Lighthouse image-aspect-ratio 判失败。
+        2026-11-12: the logo now comes from the GLOBAL Brand settings
+        (settings.logo / settings.logo_dark), not from this section. The
+        section-level image_picker was removed so merchants have one place
+        to change it. `snippets/brand-logo.liquid` picks the dark-background
+        variant from the skeleton color and outputs nothing when no logo is
+        configured — this <a> then falls back to the plain brand name.
+
+        No bundled theme logo fallback, on purpose: assets/logo_webp.webp is
+        a 156 KB original, image_url cannot resize assets, and pulling 156 KB
+        for a 40px icon is wasteful. Dimensions stay intrinsic (image_tag)
+        and CSS pins block-size only, so a wide wordmark is never squashed
+        into a square (Lighthouse image-aspect-ratio).
       {%- endcomment -%}
       <a class="main-nav__logo" href="{{ routes.root_url }}">
-        {%- if logo_image != blank -%}
-          <img
-            class="main-nav__logo-img"
-            src="{{ logo_image | image_url: width: 160 }}"
-            srcset="
-              {{- logo_image | image_url: width: 80 }} 80w,
-              {{- logo_image | image_url: width: 120 }} 120w,
-              {{- logo_image | image_url: width: 160 }} 160w,
-              {{- logo_image | image_url: width: 240 }} 240w
-            "
-            sizes="40px"
-            alt=""
-            width="{{ logo_image.width }}"
-            height="{{ logo_image.height }}"
-            loading="eager"
-          >
-        {%- endif -%}
+        {% render 'brand-logo',
+          logo_class: 'main-nav__logo-img',
+          logo_width: 160,
+          logo_widths: '80, 120, 160, 240',
+          logo_sizes: '40px',
+          logo_alt: '',
+          logo_loading: 'eager'
+        %}
         <span class="main-nav__brand">{{ brand_name }}</span>
       </a>
 
-      {%- if menu.links.size > 0 -%}
+      {%- if menu.links.size > 0 or show_series -%}
         <nav-pill class="main-nav__list-wrap">
+          {%- comment -%}
+            All series 的 <li> 只写一遍，插到哪由下面循环里的插入点决定
+            （first / before_last / last 三档，见 all_series_position 设置）。
+          {%- endcomment -%}
+          {%- capture series_nav_markup -%}
+              {%- comment -%}
+                All series 入口（2026-11-14）：一级项 + 单层 mega 面板。
+                面板里刻意不放 [data-mega-tab] / [data-mega-panel] ——
+                nav-pill.js 的 tab 切换只在「有 tab 且有 panel」的作用域里接管
+                （见 _scopes 的循环过滤），这个面板两者都没有，于是走"全部内容
+                可见"的基线路径：不写一行新脚本也不会被 hide。
+                系列清单取全局 collections（字母序，平台给定），空集合与
+                frontpage（平台给每个店自动建的"主页"集合）不列 —— 与 /collections
+                列表页同一口径，两个入口不会打架。
+                当前页判定走 template.name（市场用语言子目录时 request.path 带 /en 前缀，
+                与 routes.collections_url 永远不等）。
+              {%- endcomment -%}
+              <li class="main-nav__item main-nav__item--group main-nav__item--series">
+                {%- comment -%}
+                  与其他 group 项唯一的不同：这一项有真实去处（/collections 列表页），
+                  所以做成 <a> 而不是 <span> —— 点一下就进页面，触屏/无 hover 设备
+                  也有可靠路径；面板仍由 li:hover / :focus-within 展开，两者不冲突。
+                {%- endcomment -%}
+                <a
+                  class="main-nav__link main-nav__link--group{% if series_is_current %} main-nav__link--current{% endif %}"
+                  href="{{ routes.collections_url }}"
+                  aria-haspopup="true"
+                  {% if series_is_current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  {{ series_label | escape }}
+                </a>
+                <div class="main-nav__mega">
+                  <div class="main-nav__mega-inner">
+                    {%- comment -%}
+                      左轨与另两个 mega 面板完全同构：左上小标签、底部 View all 出口
+                      （.main-nav__mega-viewall 自带 margin-block-start: auto 与上分隔线）。
+                      区别只在中区：这里没有二级分类，所以没有 [data-mega-tab]，
+                      中区直接铺"系列清单"而不是商品卡组。
+                    {%- endcomment -%}
+                    <div class="main-nav__mega-nav">
+                      <span class="main-nav__mega-label">{{ series_label | escape }}</span>
+                      <a
+                        class="main-nav__mega-viewall"
+                        href="{{ routes.collections_url }}"
+                      >
+                        {{ 'navigation.view_all_series' | t }}
+                        <span class="main-nav__mega-viewall-arrow" aria-hidden="true">→</span>
+                      </a>
+                    </div>
+                    <div class="main-nav__mega-content">
+                      <ul class="main-nav__series" role="list">
+                        {%- for series_item in collections limit: series_limit -%}
+                          {%- if series_item.handle == 'frontpage' -%}
+                            {%- continue -%}
+                          {%- endif -%}
+                          {%- if series_item.all_products_count > 0 -%}
+                            {%- comment -%}
+                              集合页上的"当前项"：循环变量不叫 collection，
+                              就是为了不遮住全局 collection 对象（集合模板上才有）。
+                            {%- endcomment -%}
+                            {%- assign series_link_current = false -%}
+                            {%- if template.name == 'collection' and collection.handle == series_item.handle -%}
+                              {%- assign series_link_current = true -%}
+                            {%- endif -%}
+                            <li>
+                              <a
+                                class="main-nav__series-link{% if series_link_current %} main-nav__series-link--current{% endif %}"
+                                href="{{ series_item.url }}"
+                                {% if series_link_current %}
+                                  aria-current="page"
+                                {% endif %}
+                              >
+                                <span class="main-nav__series-name">{{ series_item.title | escape }}</span>
+                                {%- comment -%}
+                                  可见的只是一个数字；读屏需要知道它是什么，
+                                  否则会念成 "Accessories 11"。所以数字本身 aria-hidden，
+                                  由后面这句 visually-hidden 的完整文案承担播报。
+                                {%- endcomment -%}
+                                <span class="main-nav__series-count" aria-hidden="true">
+                                  {{- series_item.all_products_count -}}
+                                </span>
+                                <span class="visually-hidden">
+                                  {{- 'navigation.products_count' | t: count: series_item.all_products_count -}}
+                                </span>
+                              </a>
+                            </li>
+                          {%- endif -%}
+                        {%- endfor -%}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </li>
+          {%- endcapture -%}
           <ul class="main-nav__list" role="list">
             {%- for link in menu.links -%}
               {%- liquid
@@ -158,6 +276,12 @@
                 endif
               -%}
 
+              {%- if show_series and series_position == 'first' and forloop.first -%}
+                {{- series_nav_markup -}}
+              {%- endif -%}
+              {%- if show_series and series_position == 'before_last' and forloop.last and menu.links.size > 1 -%}
+                {{- series_nav_markup -}}
+              {%- endif -%}
               <li
                 class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}{% if has_children %}{% if has_mega_content %} main-nav__item--group{% else %} main-nav__item--dropdown{% endif %}{% endif %}"
               >
@@ -442,6 +566,10 @@
                 {%- endif -%}
               </li>
             {%- endfor -%}
+            {%- if show_series and series_at_end -%}
+              {{- series_nav_markup -}}
+            {%- endif -%}
+
           </ul>
         </nav-pill>
       {%- endif -%}
@@ -549,25 +677,18 @@
             {%- endcomment -%}
             <a class="nav-drawer__brand" href="{{ routes.root_url }}">
               {%- comment -%}
-                与桌面 Zone 0 同一约定：装饰图 alt=""，无 logo 时不渲染 img，
-                width/height 用真实固有尺寸由 CSS 收（见 Zone 0 注释）。
+                与桌面 Zone 0 同一约定：装饰图 alt=""、无 logo 时只留品牌名文字。
+                选图统一交给 snippets/brand-logo.liquid（全局 Brand 设置），
+                移动抽屉与桌面页头因此永远不会显示不同的 logo。
               {%- endcomment -%}
-              {%- if logo_image != blank -%}
-                <img
-                  class="nav-drawer__brand-img"
-                  src="{{ logo_image | image_url: width: 96 }}"
-                  srcset="
-                    {{- logo_image | image_url: width: 64 }} 64w,
-                    {{- logo_image | image_url: width: 96 }} 96w,
-                    {{- logo_image | image_url: width: 144 }} 144w
-                  "
-                  sizes="32px"
-                  alt=""
-                  width="{{ logo_image.width }}"
-                  height="{{ logo_image.height }}"
-                  loading="lazy"
-                >
-              {%- endif -%}
+              {% render 'brand-logo',
+                logo_class: 'nav-drawer__brand-img',
+                logo_width: 96,
+                logo_widths: '64, 96, 144',
+                logo_sizes: '32px',
+                logo_alt: '',
+                logo_loading: 'lazy'
+              %}
               <span class="nav-drawer__brand-name">{{ brand_name }}</span>
             </a>
             <h2 class="nav-drawer__title visually-hidden" id="nav-drawer-title">
@@ -595,8 +716,32 @@
             </button>
           </div>
 
+          {%- comment -%}
+            All series（移动端）：抽屉里不做手风琴 —— 桌面那个面板是"免跳转直接
+            挑系列"，手机一屏放不下，直接进 /collections（那页本身就是为窄屏做的
+            两列网格）。位置与桌面共用同一个设置。
+          {%- endcomment -%}
+          {%- capture series_drawer_markup -%}
+              <li class="nav-drawer__item">
+                <a
+                  class="nav-drawer__link{% if series_is_current %} nav-drawer__link--current{% endif %}"
+                  href="{{ routes.collections_url }}"
+                  {% if series_is_current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  <span>{{ series_label | escape }}</span>
+                </a>
+              </li>
+          {%- endcapture -%}
           <ul class="nav-drawer__list" role="list">
             {%- for link in menu.links -%}
+              {%- if show_series and series_position == 'first' and forloop.first -%}
+                {{- series_drawer_markup -}}
+              {%- endif -%}
+              {%- if show_series and series_position == 'before_last' and forloop.last and menu.links.size > 1 -%}
+                {{- series_drawer_markup -}}
+              {%- endif -%}
               <li class="nav-drawer__item">
                 {%- if link.links.size > 0 -%}
                   {%- assign sub_id = section.id | append: '-nav-sub-' | append: forloop.index -%}
@@ -684,6 +829,15 @@
                 {%- endif -%}
               </li>
             {%- endfor -%}
+            {%- if show_series and series_at_end -%}
+              {{- series_drawer_markup -}}
+            {%- endif -%}
+
+            {%- comment -%}
+              All series（移动端，2026-11-14）：抽屉里不做手风琴 —— 桌面那个面板
+              是"免跳转直接挑系列"，手机上同样一屏放不下，直接进 /collections
+              列表页（那页本身就是为窄屏做的两列网格）。与桌面共用同一组设置。
+            {%- endcomment -%}
           </ul>
 
           {%- comment -%}
@@ -1457,6 +1611,85 @@
 
   .main-nav__mega-viewall:hover .main-nav__mega-viewall-arrow {
     translate: 0.25rem 0;
+  }
+
+  /* ---- All series 面板（2026-11-14 第二版，刘工：要与另两个面板一致）----
+     结构与另两个 mega 面板**完全同构**：外层还是 .main-nav__mega-inner 的两栏
+     （12rem 左轨 + 内容区），左轨照样是「小标签 + 底部 View all 出口」，
+     内距也走同一套 2.25rem/2.5rem。改版前这里是"头部一行 + 四列文字"，
+     没有左轨、标签占整行，跟另两个面板并排看就是两种东西。
+
+     唯一保留的差异在中区：这里没有二级分类，所以不写 [data-mega-tab]，
+     中区直接铺「系列清单」（名字 + 商品数），而不是商品卡组。
+     为什么不用商品卡：cards 是 1:1 大图 + 3 列，12 个集合要排 4 行、面板近 1100px 高，
+     会超出视口被切掉；页头也不该为一个悬停面板多拉 12 张图。 */
+
+  .main-nav__series {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    /* 列数按内容列实宽算（内容列 = 视口内容宽 − 12rem 左轨 − 2.5rem 间距 − 2×2.5rem 内距：
+       1440 → 1088px；990 → 638px）。宽屏 4 列像目录；990 一带 4 列只剩 147px，
+       "Batteries & Chargers" 会被折成两行，所以窄档收到 3 列。 */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.125rem 1.5rem;
+  }
+
+  @media (max-width: 1199px) {
+    .main-nav__series {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .main-nav__series-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 44px;
+    /* 胶囊与内容列左缘对齐，文字靠 padding 内缩 8px —— 与左轨标签的 0.625rem
+       内缩同一量级，两栏文字的视觉左缘因此是齐的 */
+    padding-inline: 0.5rem;
+    /* 胶囊形与顶部导航、mega 左轨的分类项同一种形状（那两处也是药丸） */
+    border-radius: 999px;
+    color: var(--color-foreground);
+    font-size: 0.9375rem;
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  /* hover 反色：品牌底 + 页面底色字，与左轨分类项的药丸同一种语言。
+     那两处的药丸靠 nav-pill.js 滑动，这里没有 tab 也就没有药丸实例，
+     所以用 :hover / :focus-visible 直接出底色——静态但有同一种"被点亮"的读法。 */
+  .main-nav__series-link:hover,
+  .main-nav__series-link:focus-visible {
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+
+  /* 计数在品牌底上必须跟着反色，否则灰字压在深绿上读不出 */
+  .main-nav__series-link:hover .main-nav__series-count,
+  .main-nav__series-link:focus-visible .main-nav__series-count {
+    color: inherit;
+    opacity: 0.85;
+  }
+
+  .main-nav__series-link--current {
+    color: var(--color-brand);
+    font-weight: 600;
+  }
+
+  .main-nav__series-name {
+    /* 窄列里 "Batteries & Chargers" 这类名字要能换行，不能把轨道撑出去 */
+    overflow-wrap: break-word;
+  }
+
+  .main-nav__series-count {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-foreground-muted);
   }
 
   /* 组头：分类名（左）+ All 集合出口（右，View All 型链接，箭头合规） */
@@ -2588,12 +2821,6 @@
   "class": "main-nav-section",
   "settings": [
     {
-      "type": "image_picker",
-      "id": "logo",
-      "label": "t:labels.logo",
-      "info": "t:labels.logo_info"
-    },
-    {
       "type": "text",
       "id": "brand_name",
       "label": "t:labels.brand_name",
@@ -2604,6 +2831,50 @@
       "id": "menu",
       "label": "t:labels.menu",
       "default": "main-menu"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_all_series",
+      "label": "t:sections.main_nav.labels.show_all_series",
+      "info": "t:sections.main_nav.labels.show_all_series_info",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "all_series_label",
+      "label": "t:sections.main_nav.labels.all_series_label",
+      "default": "All series"
+    },
+    {
+      "type": "range",
+      "id": "all_series_limit",
+      "min": 6,
+      "max": 30,
+      "step": 6,
+      "label": "t:sections.main_nav.labels.all_series_limit",
+      "info": "t:sections.main_nav.labels.all_series_limit_info",
+      "default": 12
+    },
+    {
+      "type": "select",
+      "id": "all_series_position",
+      "label": "t:sections.main_nav.labels.all_series_position",
+      "info": "t:sections.main_nav.labels.all_series_position_info",
+      "options": [
+        {
+          "value": "first",
+          "label": "t:sections.main_nav.options.all_series_position.first"
+        },
+        {
+          "value": "before_last",
+          "label": "t:sections.main_nav.options.all_series_position.before_last"
+        },
+        {
+          "value": "last",
+          "label": "t:sections.main_nav.options.all_series_position.last"
+        }
+      ],
+      "default": "last"
     },
     {
       "type": "link_list",

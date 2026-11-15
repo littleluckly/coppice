@@ -59,20 +59,24 @@
         {%- endif -%}
       </a>
 
-      {%- if product.metafields.spec.compare_group.value != blank
-        and product.metafields.spec.compare_hidden.value != 'TRUE' -%}
-        <button
-          type="button"
-          class="product-card__wishlist"
-          aria-pressed="false"
-          data-wishlist-handle="{{ product.handle }}"
-          aria-label="{{ 'products.product_card.add_to_wishlist' | t }}"
-        >
-          <svg class="product-card__heart" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-            <path d="M12 21s-7.5-4.9-10-9.3C.4 8.6 2 4.5 5.7 4.1c2.1-.2 4.1.9 5.3 2.7h2c1.2-1.8 3.2-2.9 5.3-2.7 3.7.4 5.3 4.5 3.7 7.6C19.5 16.1 12 21 12 21Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
-          </svg>
-        </button>
-      {%- endif -%}
+      {%- comment -%}
+        收藏与「能否对比」是两件事（2026-11-12 搜索页改版时发现）：
+        这里原先被 compare_group / compare_hidden 的判空包住，导致 11 件配件
+        （没有对比分组）整块没有收藏入口。收藏只依赖 data-wishlist-handle，
+        wishlist-toggle.js 也不读任何 metafield，所以无条件渲染。
+        下方对比入口保留自己的判空，两者互不影响。
+      {%- endcomment -%}
+      <button
+        type="button"
+        class="product-card__wishlist"
+        aria-pressed="false"
+        data-wishlist-handle="{{ product.handle }}"
+        aria-label="{{ 'products.product_card.add_to_wishlist' | t }}"
+      >
+        <svg class="product-card__heart" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+          <path d="M12 21s-7.5-4.9-10-9.3C.4 8.6 2 4.5 5.7 4.1c2.1-.2 4.1.9 5.3 2.7h2c1.2-1.8 3.2-2.9 5.3-2.7 3.7.4 5.3 4.5 3.7 7.6C19.5 16.1 12 21 12 21Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </button>
     </div>
 
     <h3 class="product-card__title">

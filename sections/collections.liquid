@@ -1,83 +1,625 @@
 {% comment %}
-  This section is used in the list-collections template to render a list of
-  collections.
+  Collections list — 集合列表页主体（list-collections 模板，路由 /collections）。
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/collection
+  路由：Shopify 内置的集合列表页，Liquid 侧对应 `routes.collections_url`。
+  ⚠️ 它与 `routes.all_products_collection_url`（= /collections/all，平台自动生成的
+  「全部商品」伪集合）是两个不同的页面，别把入口指错。
+
+  数据源：全局 `collections` 对象 —— 官方 list-collections 模板的规范数据源，
+  顺序由平台给定（按标题）。**本 section 不提供排序设置**，原因见下。
+
+  为什么必须 paginate、且不能自己排序：
+  1) `for` 循环硬上限 50 次，集合多于 50 个时会被静默截断 —— 只有 paginate 能翻页；
+  2) 官方 paginate 文档列出的可分页对象是固定那几个（collections 属于其中之一），
+     **用 sort / reverse 过滤器生成的新数组不是可分页对象**。写成
+     `{% assign sorted = collections | sort: 'x' %}{% paginate sorted by N %}` 时，
+     分页在非默认值下会失效（页数/切片都不是预期结果），且不报错。
+     宁可没有"按商品数排序"这个设置，也不要一个只在首页正确的假功能。
+
+  空集合不渲染卡：0 个商品的集合对顾客是死路（pages-ui §5，与首页 platform-cards 同规则）。
+  判定用 `collection.all_products_count`（集合内商品总数，含被视图过滤掉的部分）。
+  另：`frontpage` 是 Shopify 给每个店铺自动建的「主页」集合，出现在列表里毫无意义，
+  按 handle 排除。
+
+  卡片结构（2026-11-13 定稿，与首页 blog-posts 同构）：
+  整张卡 = 一个 `<a>`，图与文案都在链接内 —— 全卡可点、每卡只有一个 tab 停靠点，
+  不出现"图片链接 aria-hidden + 标题链接"那种双链接结构。
+  媒体盒 1:1 定比、图片绝对定位铺满（脱离流，避免固有比例参与行高把同排卡片拉得忽高忽矮）。
+  为什么不是 4:3：`featured_image` 会回落到集合首个商品的图，方图在 4:3 下会被切头切脚。
+  工具数钉在卡底（不是压在图上）—— 手机两列时胶囊会占掉近一半卡宽，比标题还抢眼。
+
+  配色纪律：所有色值从 --color-* 派生（color-mix）；卡片 hover 走全站签名
+  --card-hover-lift / --card-hover-shadow（snippets/css-variables.liquid）。
 {% endcomment %}
 
-<h1>{{ 'collections.title' | t }}</h1>
+{%- liquid
+  assign per_page = section.settings.collections_per_page | default: 24
+  assign columns = section.settings.columns | default: 3
+  assign tablet_columns = columns
+  if columns > 3
+    assign tablet_columns = 3
+  endif
+  # sizes 提示按实际列数算：固定值在 2 列 / 4 列时会多取近一倍图
+  assign desktop_vw = 100 | divided_by: columns
+  assign tablet_vw = 100 | divided_by: tablet_columns
+  assign sizes_str = '(min-width: 990px) '
+  assign sizes_str = sizes_str | append: desktop_vw
+  assign sizes_str = sizes_str | append: 'vw, (min-width: 750px) '
+  assign sizes_str = sizes_str | append: tablet_vw
+  assign sizes_str = sizes_str | append: 'vw, 46vw'
+  # H1 兜底：商家清空标题设置时仍要有一个有文字的 h1（每页恰好一个 h1）
+  assign heading_text = section.settings.heading
+  if heading_text == blank
+    assign heading_text = 'collections.list.title' | t
+  endif
+-%}
 
-<div
-  class="collections {{ section.settings.grid_item_width }}"
-  style="--grid-gap: {{ section.settings.grid_gap }}px"
->
-  {% for collection in collections %}
-    <a class="collection-card" href="{{ collection.url }}">
-      {% if collection.featured_image %}
-        {% render 'image',
-          class: 'collection-card__image',
-          image: collection.featured_image,
-          width: 600,
-          height: 600,
-          crop: 'center'
-        %}
-      {% endif %}
+<div class="collections-list__hero full-width">
+  <div class="collections-list__hero-inner">
+    <nav class="collections-list__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
+      <ol class="collections-list__breadcrumb-list" role="list">
+        <li class="collections-list__breadcrumb-item">
+          <a href="{{ routes.root_url }}">{{ 'collections.breadcrumb_home' | t }}</a>
+        </li>
+        <li class="collections-list__breadcrumb-item" aria-current="page">
+          {{ heading_text | escape }}
+        </li>
+      </ol>
+    </nav>
 
-      <div class="collection-card__content">
-        <p>{{ collection.title }}</p>
+    <h1 class="collections-list__title">{{ heading_text | escape }}</h1>
 
-        {% if collection.description %}
-          <p>{{ collection.description | strip_html | truncatewords: 15 }}</p>
-        {% endif %}
+    {%- if section.settings.subheading != blank -%}
+      <p class="collections-list__subheading">{{ section.settings.subheading | escape }}</p>
+    {%- endif -%}
+  </div>
+</div>
+
+<div class="collections-list__page">
+  {%- paginate collections by per_page -%}
+    {%- comment -%}
+      卡片列表先 capture 再判空：空集合被过滤后可能一张卡都不剩（店铺全是空集合，
+      或这一页切片恰好全是空集合）。判空用 capture 出来的字符串，不依赖循环内
+      计数器能否带出循环 —— 那是 Liquid 作用域里最容易被绕进去的地方。
+    {%- endcomment -%}
+    {%- capture cards_markup -%}
+      {%- for collection in collections -%}
+        {%- if collection.handle == 'frontpage' -%}
+          {%- continue -%}
+        {%- endif -%}
+        {%- if collection.all_products_count > 0 -%}
+          {%- liquid
+            assign card_loading = 'lazy'
+            assign card_priority = 'auto'
+            if forloop.index <= 3
+              assign card_loading = 'eager'
+            endif
+            if forloop.index == 1
+              assign card_priority = 'high'
+            endif
+            # 入场延迟封顶 360ms：24 张卡按 80ms 递增会排到 1.9s，越往下越像卡住
+            assign reveal_delay = forloop.index0 | times: 60 | at_most: 360
+          -%}
+          <li
+            class="collections-list__item"
+            data-reveal
+            style="--reveal-delay: {{ reveal_delay }}ms"
+          >
+            <a class="collections-list__card" href="{{ collection.url }}">
+              {%- comment -%}
+                alt 留空（装饰性）：同一链接内已有集合名文字，重复一遍会让
+                读屏念成 "Chainsaws Chainsaws"。
+                image_tag 在 alt 为空时会把 alt 属性整条吞掉（不是输出 alt=""），
+                Lighthouse 判缺 alt —— 所以捕获后补一次（与集合页 banner 同套手法）。
+              {%- endcomment -%}
+              <span class="collections-list__media">
+                {%- if collection.featured_image -%}
+                  {%- capture card_image -%}
+                    {{
+                      collection.featured_image
+                      | image_url: width: 800
+                      | image_tag:
+                        widths: '320, 480, 640, 800',
+                        sizes: sizes_str,
+                        width: collection.featured_image.width,
+                        height: collection.featured_image.height,
+                        loading: card_loading,
+                        fetchpriority: card_priority,
+                        alt: ''
+                    }}
+                  {%- endcapture -%}
+                  {%- unless card_image contains ' alt=' -%}
+                    {%- assign card_image = card_image | replace: '<img ', '<img alt="" ' -%}
+                  {%- endunless -%}
+                  {{ card_image }}
+                {%- else -%}
+                  <span class="collections-list__media-placeholder" aria-hidden="true">
+                    {{- 'icon-leaf.svg' | inline_asset_content -}}
+                  </span>
+                {%- endif -%}
+              </span>
+
+              {%- comment -%}
+                body 用 div 而不是 span：h2 / p 是流内容，塞进 span 是非法嵌套。
+                <a> 的内容模型是 transparent，装 div + h2 合法（Dawn 的集合卡同结构），
+                且标题保留 h2 语义 —— 读屏可以按标题快跳各系列。
+              {%- endcomment -%}
+              <div class="collections-list__body">
+                <h2 class="collections-list__card-title">{{ collection.title | escape }}</h2>
+
+                {%- if section.settings.show_description and collection.description != blank -%}
+                  <p class="collections-list__card-desc">
+                    {{- collection.description | strip_html | truncatewords: 20 -}}
+                  </p>
+                {%- endif -%}
+
+                {%- comment -%}
+                  工具数压在卡底（margin-block-start: auto），不是压在图上：
+                  手机两列时卡宽 145px，一枚"11 products"胶囊要占掉近一半，
+                  比标题还抢眼；钉在卡底后同排卡片计数对齐，任何断点都成立，
+                  也不必为压在照片上的文字另做对比度兜底。
+                {%- endcomment -%}
+                <p class="collections-list__count">
+                  {{- 'navigation.products_count' | t: count: collection.all_products_count -}}
+                </p>
+              </div>
+            </a>
+          </li>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endcapture -%}
+
+    {%- assign cards_trimmed = cards_markup | strip -%}
+    {%- if cards_trimmed != blank -%}
+      <ul
+        class="collections-list__grid"
+        role="list"
+        style="--cols-desktop: {{ columns }}; --cols-tablet: {{ tablet_columns }};"
+      >
+        {{ cards_markup }}
+      </ul>
+    {%- else -%}
+      {%- comment -%}
+        空态：店铺还没有集合，或所有集合都是空的（都被过滤规则排除）。
+        页面照常渲染，不留空白 —— 装完主题的空店也是合法状态，不能白屏。
+        店里有商品但没建集合时，给一条通往 /collections/all 的出路。
+      {%- endcomment -%}
+      <div class="collections-list__empty">
+        <p class="collections-list__empty-title">{{ 'collections.list.empty.title' | t }}</p>
+        <p class="collections-list__empty-body">{{ 'collections.list.empty.body' | t }}</p>
+        {%- if shop.products_count > 0 -%}
+          <a class="collections-list__empty-link" href="{{ routes.all_products_collection_url }}">
+            {{- 'collections.empty.link' | t -}}
+          </a>
+        {%- endif -%}
       </div>
-    </a>
-  {% endfor %}
+    {%- endif -%}
+
+    {%- if paginate.pages > 1 -%}
+      {%- comment -%}
+        分页：圆形按钮（与集合页同一套视觉）。箭头恒在 —— 不可用方向渲染禁用占位，
+        行宽不跳；页码用 paginate.parts，截断部分渲染为 … 间隔。
+      {%- endcomment -%}
+      <nav class="collections-list__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
+        {%- if paginate.previous -%}
+          <a
+            class="collections-list__pagination-nav"
+            href="{{ paginate.previous.url }}"
+            aria-label="{{ 'collections.pagination_previous' | t }}"
+          >
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          </a>
+        {%- else -%}
+          <span class="collections-list__pagination-nav" aria-disabled="true">
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          </span>
+        {%- endif -%}
+
+        {%- for part in paginate.parts -%}
+          {%- if part.is_link -%}
+            <a
+              class="collections-list__pagination-page"
+              href="{{ part.url }}"
+              aria-label="{{ 'collections.page_number' | t: number: part.title }}"
+            >{{ part.title }}</a>
+          {%- elsif part.title == paginate.current_page -%}
+            <span class="collections-list__pagination-page" aria-current="page">{{ part.title }}</span>
+          {%- else -%}
+            <span class="collections-list__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+          {%- endif -%}
+        {%- endfor -%}
+
+        {%- if paginate.next -%}
+          <a
+            class="collections-list__pagination-nav"
+            href="{{ paginate.next.url }}"
+            aria-label="{{ 'collections.pagination_next' | t }}"
+          >
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+          </a>
+        {%- else -%}
+          <span class="collections-list__pagination-nav" aria-disabled="true">
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+          </span>
+        {%- endif -%}
+      </nav>
+    {%- endif -%}
+  {%- endpaginate -%}
 </div>
 
 {% stylesheet %}
-  .collections {
+  /* ============================================================
+     集合列表页 /collections（list-collections 模板主体）
+
+     版式与本主题其余页面同源：卡片 = 白底 + 1px 细边 + 12px 圆角；
+     区别只有一处 —— 媒体图**通栏**（分类卡的图就是内容，不内缩留画框），
+     圆角由卡片的 overflow: hidden 裁。
+     hover 走全站签名（上浮 --card-hover-lift + --card-hover-shadow）。
+     配色一律从 --color-* 派生（color-mix），Noir 预设自动翻转。
+
+     布局分工（与 search.liquid 同一套做法）：
+       .collections-list__hero → full-width 通栏（淡品牌色带）
+       .collections-list__page → .shopify-section 网格的内容列（第 2 列）
+     hero 内层 max-inline-size: var(--content-width) 收回内容列，
+     两块左边缘因此严格对齐。
+     ============================================================ */
+
+  .collections-list__hero {
+    background-color: color-mix(in srgb, var(--color-background) 94%, var(--color-brand) 6%);
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  .collections-list__hero-inner {
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
+    padding-block: clamp(1.5rem, 3.5vw, 2.75rem);
+  }
+
+  /* 面包屑：与集合页同一口径（当前项纯文本；链接给 44px 触控高度，
+     所以用 align-items: center 让两行文字居中对齐，而不是把基线拉歪）。 */
+  .collections-list__breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+  }
+  .collections-list__breadcrumb-item + .collections-list__breadcrumb-item::before {
+    content: '/';
+    margin-inline-end: 0.35rem;
+  }
+  .collections-list__breadcrumb-item a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .collections-list__breadcrumb-item a:hover {
+    text-decoration: underline;
+  }
+
+  .collections-list__title {
+    margin: 0;
+    font-size: clamp(1.9rem, 3.6vw, 2.75rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .collections-list__subheading {
+    margin: 0.55rem 0 0;
+    max-inline-size: 58ch;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--color-foreground-muted);
+  }
+
+  .collections-list__page {
+    padding-block: clamp(1.5rem, 3vw, 2.25rem) clamp(3rem, 6vw, 5rem);
+  }
+
+  /* ---------- 网格 ---------- */
+
+  .collections-list__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(var(--collection-card-size), 100%), 1fr));
-    gap: var(--grid-gap);
+    /* minmax(0, 1fr)：长集合名的 min-content 不能把轨道撑出视口 */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
   }
-  .collections--compact {
-    --collection-card-size: 160px;
+  @media (min-width: 750px) {
+    .collections-list__grid {
+      grid-template-columns: repeat(var(--cols-tablet, 3), minmax(0, 1fr));
+      gap: 1rem;
+    }
   }
-  .collections--full {
-    --collection-card-size: 280px;
+  @media (min-width: 990px) {
+    .collections-list__grid {
+      grid-template-columns: repeat(var(--cols-desktop, 3), minmax(0, 1fr));
+    }
   }
-  .collection-card {
+
+  .collections-list__item {
+    display: flex;
+    min-inline-size: 0;
+  }
+
+  /* ---------- 卡片（整卡一个链接） ---------- */
+
+  .collections-list__card {
     display: flex;
     flex-direction: column;
+    gap: 0;
     width: 100%;
+    /* 图通栏（不内缩）：3 列时单卡宽 450px 上下，0.75rem 的内缩只剩 2.6%，
+       看起来像"图的边缘没对齐"而不是"画框"；要么收 1.5rem、要么通栏。
+       这里选通栏 —— 分类卡的图就是内容，画框留给下面的文字区。
+       圆角与外框落在 .card（overflow: hidden），图只负责贴边。 */
+    padding: 0;
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 12px;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+    /* 用 translate 而非 transform：滚动入场的 animation 也用 transform
+       （critical.css 的 reveal-in），两套机制互不抢占。 */
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      translate 0.2s ease;
+  }
+  .collections-list__card:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  /* hover 只在真有指针的设备上生效：触屏上 :hover 会粘住，卡片抬起来就不落回去 */
+  @media (hover: hover) and (pointer: fine) {
+    .collections-list__card:hover {
+      border-color: color-mix(in srgb, var(--color-brand) 40%, transparent);
+      box-shadow: var(--card-hover-shadow);
+      translate: 0 var(--card-hover-lift);
+    }
+    .collections-list__card:hover .collections-list__media img {
+      transform: scale(1.04);
+    }
+  }
+
+  /* 媒体盒：1:1 定比 + 图片绝对定位铺满。图片若留在流里，固有宽高比会参与
+     行高计算（use-case-grid 7:3→5:5 的教训），同排卡片会被拉得忽高忽矮。
+     为什么是 1:1 而不是 4:3：`collection.featured_image` 在没有集合图时回落到
+     **该集合第一个商品的图**，而商品图（尤其抠底图）几乎都是方的 ——
+     4:3 的 cover 会把方形抠底图上下裁掉一截，产品被切头切脚；
+     1:1 对方图零裁切，横幅实景图只是裁两侧，观感无损。
+     与 product-card 的媒体盒同比例，两套卡在同一屏里也不会打架。 */
+  .collections-list__media {
+    position: relative;
+    display: block;
+    aspect-ratio: 1;
+    /* 圆角由 .card 的 overflow: hidden 裁，这里不再自己写 radius：
+       两层圆角叠在一起时，内层 8px 会在图上留一圈毛边。 */
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  }
+  .collections-list__media img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .collections-list__media-placeholder {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+  }
+  .collections-list__media-placeholder svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* 工具数：钉在卡底（margin-block-start: auto），同排卡片计数落在同一条基线上。
+     与描述的区别靠字号 + 不换行，而不是靠颜色分层（两者都是次级信息）。 */
+  .collections-list__count {
+    margin-block-start: auto;
+    padding-block-start: 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    /* 次级文字一律走 --color-foreground-muted（70% 前景，AA 达标）。
+       不要在这里写 60%：那是 3.69:1，低于 AA 对小字的要求。 */
+    color: var(--color-foreground-muted);
+  }
+
+  .collections-list__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-inline-size: 0;
+    /* flex: 1 必须有：卡片被 grid 拉到等高后，多出来的高度默认留在 body 之外，
+       计数（margin-block-start: auto）就钉不到卡底，同排计数会参差。 */
+    padding: 0.7rem 0.85rem 0.85rem;
+  }
+  .collections-list__card-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.35;
+    /* break-word：窄栏里 "Walk-behind mowers" 这类词不能被拆断 */
+    overflow-wrap: break-word;
+  }
+  .collections-list__card-desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--color-foreground-muted);
+  }
+  /* 手机两列时卡内容宽约 145px，两行描述只能塞下 20 来个字符，
+     断在半句上的省略号比没有更碍眼 —— 窄断点整段不显示，
+     信息靠标题 + 计数胶囊（集合描述在集合页本身还有一席之地）。 */
+  @media (max-width: 749px) {
+    .collections-list__card-desc {
+      display: none;
+    }
+  }
+
+  /* ---------- 空态 ---------- */
+
+  .collections-list__empty {
+    display: grid;
+    justify-items: center;
+    gap: 0.4rem;
+    padding: 3rem 1rem;
+    text-align: center;
+    border: 1px dashed color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: 12px;
+  }
+  .collections-list__empty-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .collections-list__empty-body {
+    margin: 0;
+    max-inline-size: 42ch;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+  .collections-list__empty-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-block-start: 0.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-brand-accent);
+    text-underline-offset: 4px;
+  }
+
+  /* ---------- 分页（与集合页同一套视觉） ---------- */
+
+  .collections-list__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-block-start: 2rem;
+  }
+  .collections-list__pagination-nav,
+  .collections-list__pagination-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: inherit;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .collections-list__pagination a:hover {
+    border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+  .collections-list__pagination [aria-disabled='true'] {
+    opacity: 0.35;
+  }
+  .collections-list__pagination [aria-current='page'] {
+    border-color: transparent;
+    background-color: var(--color-brand);
+    color: var(--color-background);
+  }
+  .collections-list__pagination-gap {
+    min-width: 24px;
+    text-align: center;
+    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .collections-list__card,
+    .collections-list__media img {
+      transition: none;
+    }
+    .collections-list__card:hover {
+      translate: none;
+    }
+    .collections-list__card:hover .collections-list__media img {
+      transform: none;
+    }
   }
 {% endstylesheet %}
 
 {% schema %}
 {
-  "name": "t:general.collections_grid",
+  "name": "t:sections.collections_list.name",
+  "tag": "section",
+  "class": "collections-list-section",
   "settings": [
     {
-      "type": "select",
-      "id": "grid_item_width",
-      "label": "t:labels.grid_item_width",
-      "options": [
-        { "value": "collections--compact", "label": "t:options.size.small" },
-        { "value": "collections--full", "label": "t:options.size.large" }
-      ],
-      "default": "collections--full"
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "All series"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "t:labels.subheading",
+      "default": "Every series we carry — battery platforms and gas-powered machines alike."
     },
     {
       "type": "range",
-      "id": "grid_gap",
-      "label": "t:labels.grid_gap",
-      "min": 0,
-      "max": 50,
-      "step": 5,
-      "unit": "px",
-      "default": 10
+      "id": "columns",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "label": "t:sections.collections_list.labels.columns",
+      "info": "t:sections.collections_list.labels.columns_info",
+      "default": 3
+    },
+    {
+      "type": "range",
+      "id": "collections_per_page",
+      "min": 8,
+      "max": 48,
+      "step": 4,
+      "label": "t:sections.collections_list.labels.collections_per_page",
+      "info": "t:sections.collections_list.labels.collections_per_page_info",
+      "default": 24
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "t:sections.collections_list.labels.show_description",
+      "default": true
     }
   ],
-  "presets": [{ "name": "t:general.collections_grid" }]
+  "presets": [
+    {
+      "name": "t:sections.collections_list.name"
+    }
+  ]
 }
 {% endschema %}

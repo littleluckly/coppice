@@ -163,10 +163,12 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 
 - SDD 引用的 `tools/check-theme-name.sh`、`tools/build-import-csv.py`、`snippets/spec-value.liquid`、`docs/TASKS.md` **尚未创建**；涉及时先确认是否已立项，不要假设存在。（`tools/check-locale-keys.py` 已于 2026-10-09 落地，用于校验 `t:` 键。）
 - Spike A1/A2 已完成（结论已写进 SDD §3.7）；A3（对比数据岛满载体积）待实测，验收基线以实测为准。
-- **⚠️ `shopify` CLI 在 Agent 沙箱内不可见（`command not found`），但刘工本机正常**（2026-10-09 实测确认，`shopify theme check` 46 文件 0 offenses）。Agent 侧跑不了 theme check 时**请刘工代跑并回贴结果**，不要误判成"CLI 未装"或"验收跑不了"。
+- **`shopify` CLI 状态已更新（2026-11-12 实测）**：Agent 沙箱内**可见且可直接跑**，路径 `/Users/mac/.nvm/versions/node/v24.22.0/bin/shopify`，本次 `theme check` 得到 **78 files / 0 offenses**。旧记录（2026-10-09「沙箱不可见」）已作废——改动后**必须自己跑一次 theme check**，只有真的出现 `command not found` 时才请刘工代跑并回贴结果。
 - 主题 v1.0 范围不含发电机（演示店仅含 Hardware 分支配件分类 2 条）。
 - `assets/wishlist-toggle.js` 与 §4 红线「不实现愿望清单」冲突，**提交前必须移除**（其交互可迁至商品卡的对比/加购按钮）。`assets/compare-toggle.js` 待按 §6 新规重构为 Custom Element。
 - 页头任务清单见 `dev-docs/task-header.md`；O-1 ~ O-5 已于 2026-10-09 拍板（结论写在该文件 §1）。
-- **提交前合规对账见 `dev-docs/task-compliance.md`（2026-11-07）**：14 条缺口，其中 7 条 S1 拒审级——缺 Custom Liquid **section**、产品主 section 无 `@app` block、无 favicon 设置、礼品卡页无二维码、图片焦点未实现、`theme_info` 作者仍写着 Shopify、**缺 `page.contact.json` 联系表单模板**。**新增 section / 模板 / 全局设置后重跑该文件 §4.2 的检查。**
+- **提交前合规对账见 `dev-docs/task-compliance.md`（v1.1，2026-11-12）**：G-03 / G-11 / G-13 已实现（全局 Brand 设置、favicon、品牌 logo），**剩余 11 条缺口，其中 6 条 S1 拒审级**——缺 Custom Liquid **section**、产品主 section 无 `@app` block、礼品卡页无二维码、图片焦点未实现、`theme_info` 作者仍写着 Shopify、**缺 `page.contact.json` 联系表单模板**。**新增 section / 模板 / 全局设置后重跑该文件 §4.2 的检查。**
+- **全局品牌资产单一入口（2026-11-12 落地）**：`config/settings_schema.json` 的 `t:general.brand` 分组提供 `logo` / `logo_dark` / `favicon`；所有消费点统一 `{% render 'brand-logo' %}`，该 snippet 按骨架背景亮度（`color_brightness` vs **128**，与 `snippets/css-variables.liquid` 的 `header_luma` 必须同步）选图。**不要再新增 section 级 logo 设置**。`sections/footer.liquid` 的 `brand` block 自带 `image_picker` 是刻意保留的例外（页脚大尺寸 wordmark，不是页头 logo 的副本）。
+- **顾客端配色开关不做**（2026-11-12 刘工）：preset 是安装时配置、运行时不可切；不引入 `data-theme` / `localStorage` / 首屏内联脚本。成本与理由见 `task-compliance.md` §5.2，别再当待办推进。
 - **cart 交互本期不做**（抽屉本体、`<cart-toggle>`、计数 AJAX 同步、`cart_action` 配置项），后续单独开任务清单；页头 T-1.6 仅做静态入口 + 服务端计数，开工前先确认该清单是否已立项。
 

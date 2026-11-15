@@ -134,6 +134,15 @@ class NavPill extends HTMLElement {
              清掉其它组的 is-open，避免从 A 划到 B 时 A 残留展开 */
           if (item.classList.contains('main-nav__item--group')) {
             this._openGroup(item);
+          } else {
+            /* BUG-068（2026-11-12）：hover 到非 group 的一级项（普通下拉 / 叶子链接）
+               必须立即撤掉所有 group 的 is-open。is-open 是不依赖 :hover 的持久展开态，
+               原先只有两条清理路径——_openGroup() 的互斥清理（仅 group→group）和
+               _scheduleClose()（仅 mouseleave 整个 list 时排期）。
+               group A → Support 下拉全程都在 list 内：既不触发 mouseleave，
+               也不进 _openGroup，而 handler 开头的 _cancelClose() 还会取消上一轮
+               挂起的关闭 ⇒ A 的 mega 恒开，Support 的下拉叠在它上面。 */
+            this._closeGroups();
           }
         }
       },
@@ -155,7 +164,14 @@ class NavPill extends HTMLElement {
           this._moveMega(tab, true);
         }
         const item = event.target.closest('.main-nav__item');
-        if (item && this.contains(item)) this._move(item);
+        if (item && this.contains(item)) {
+          this._move(item);
+          /* 键盘路径同 BUG-068：焦点落到非 group 的一级项时，清掉鼠标路径
+             残留在 group 上的 is-open（group 的 :focus-within 已随焦点移走，
+             但 is-open 不会自己消失）。焦点在 group 内（含其 mega 面板后代）时
+             closest() 仍返回该 group li，不会误关。 */
+          if (!item.classList.contains('main-nav__item--group')) this._closeGroups();
+        }
       },
       { signal }
     );
@@ -383,14 +399,21 @@ class NavPill extends HTMLElement {
     }, this._MEGA_CLOSE_DELAY);
   }
 
-  /* 真正关闭：撤除所有 group 的 is-open 拖尾（:hover 维持的项不受影响），
-     顶部药丸隐藏、取消待切换、左列药丸回激活项常驻高亮。 */
-  _close() {
+  /* 撤除所有 group 的 is-open 拖尾 + 取消待切换（不碰顶部药丸）。
+     :hover / :focus-within 维持的展开态由 CSS 自己管，这里不干预。
+     BUG-068：单独成方法，让「hover 到非 group 项」与「真正关闭列表」共用同一出口。 */
+  _closeGroups() {
     for (const g of this._groups) g.classList.remove('is-open');
     if (this._megaSwitchTimer) {
       clearTimeout(this._megaSwitchTimer);
       this._megaSwitchTimer = null;
     }
+  }
+
+  /* 真正关闭：撤除所有 group 的 is-open 拖尾（:hover 维持的项不受影响），
+     顶部药丸隐藏、取消待切换、左列药丸回激活项常驻高亮。 */
+  _close() {
+    this._closeGroups();
     this._hide();
     /* 各面板左列药丸回到各自激活项常驻高亮（从未切过的面板保持原位不动） */
     for (const scope of this._scopes) {

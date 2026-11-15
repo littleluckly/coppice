@@ -553,6 +553,58 @@
   3. 新增 `content: '\2192'` 或 `&rarr;` 前，按 AGENTS §6 数同屏箭头总数并核对允许位置
      （仅 View All 链接、行尾导航元素）；改完 `grep -n "2192\|rarr\|::after"` 复核产物。
 
+### BUG-068 · mega 面板打开时鼠标移到 Support，两个面板堆叠
+- **日期**：2026-11-12 ｜ **状态**：Fixed
+- **现象**：桌面导航 hover Shop 展开通栏 mega 面板后，把鼠标移到 Support（普通下拉项），
+  mega 面板不消失，Support 的小下拉压在 mega 面板上，两块面板同屏显示。
+- **根因**：`assets/nav-pill.js` 用 `.is-open` 维持 mega 的「飞越间隙」拖尾展开，
+  而 `.is-open` 是**不依赖 `:hover` 的持久状态**（CSS 里
+  `.main-nav__item--group.is-open > .main-nav__mega { display:block }` 与 hover 条件是**或**关系）。
+  清理路径原先只有两条：① `_openGroup()` 的互斥清理（仅 group→group 会走）；
+  ② `_scheduleClose()`（仅 `mouseleave` 整个 `.main-nav__list` 时排期）。
+  Shop → Support 全程都在 list 内，两条都不触发；`mouseover` handler 开头的
+  `_cancelClose()` 反而把上一轮挂起的 200ms 关闭取消了。
+  结果 Shop 的 `is-open` 永久残留，同时 Support 的 `:hover` 让下拉显示 ⇒ 堆叠。
+  **本质是状态机漏了一个出口**：非 group 的一级项（普通下拉 / 叶子链接）从没被列为
+  「应关闭其它面板」的输入。2026-10-28 新增 `--dropdown` 面板形态时只写了它的 CSS
+  开合条件，没有回到状态机补出口，隔 15 天由刘工验收发现。
+- **修复**：抽出 `_closeGroups()`（撤所有 group 的 `is-open` + 取消待切换，**不碰顶部药丸**），
+  `mouseover` 里 hover 命中非 group 项时立即调用；`focusin` 同路径补一处
+  （焦点在 group 内、含其 mega 后代时 `closest()` 仍返回该 group li，不会误关）；
+  `_close()` 改为复用它，保证「立即关」与「延迟关」只有一个出口。
+  刻意**不加** CSS 兜底（如 `:has(.dropdown:hover) .mega { display:none }`）——
+  那会让面板显隐出现两套真值来源，且 `:has()` 不支持的浏览器上形成假双保险。
+  代价：group → 非 group 项这条路径不再享受 200ms 宽容窗口，mega 立即开始 0.25s 收起；
+  但该路径的终点本就是另一个面板，宽容窗口原本就不该给（它被误用了）。
+- **验收**：无头 Chrome + CDP **真鼠标移动**（非合成 `MouseEvent`）、读真实 `getComputedStyle`：
+  11/11 PASS（含 group→group 互斥、飞越面板内部保持展开、叶子链接、
+  `mouseleave` 延迟关闭与药丸隐藏、focusin 清理、Support 下拉正常显示）。
+  并用 `git show HEAD:assets/nav-pill.js`（修复前）跑同一路径做**对照**：
+  旧版 `移入 Support → {aOpen:true, megaA:"block", dd:"block"}` 确凿复现堆叠，
+  证明断言不是恒 PASS 的空壳；修复后 `{aOpen:false, megaA:"none", dd:"block"}`。
+  `node --check` 通过；`shopify theme check` 77 文件 0 offenses。
+- **预防**：
+  1. **凡「不依赖 `:hover` 的持久状态类」（`is-open` / `is-active` 等），必须列全所有清除出口**。
+     新增一类一级项 / 面板形态时，逐个核对「鼠标或焦点落到它上面时，其它面板的持久态由谁清」，
+     把这条写进该形态的验收清单，而不是只验自己能不能打开。
+  2. 交互状态机改动一律配**可跑验收 + 修复前对照**：用真实 `:hover`（CDP
+     `Input.dispatchMouseEvent`）而非合成事件，再用 `git show HEAD:<file>` 的旧版
+     跑同一断言并确认它能 FAIL。全 PASS 但抓不到 bug 的脚本等于没有。
+  3. 只改 JS 状态、不改 CSS 显示条件时，不要在 CSS 再加一层兜底规则；
+     两套真值来源会让后续排查失去单一入口。
+
+### BUG-069 · 删掉 logo 的 assign 后，移动抽屉头部的 logo 变成未定义变量
+- **日期**：2026-11-12 ｜ **状态**：Fixed（当日引入当日修）
+- **现象**：全局 logo 改造删掉 `sections/main-nav.liquid` 顶部的 `assign logo_image = section.settings.logo` 后，`shopify theme check` 报 7 条 `UndefinedObject: Unknown object 'logo_image' used.`，全部落在约 548–560 行（移动抽屉头部品牌图）。浏览器侧**不报错**：Liquid 未定义变量返回 nil，传了 logo 时只是静默退化成空图。
+- **根因**：`logo_image` 在 `main-nav.liquid` 里有**两个**消费点——桌面 Zone 0 与移动抽屉头部。改造时按 `grep 'section.settings.logo'` 定位，命中的只是赋值语句；删掉赋值后第二个消费点仍在引用该变量。页头桌面树 / 移动树是两份独立 DOM（task-header O-5 的既定结构），改一处不会自动同步另一处。
+- **修复**：第二个消费点也改成 `{% render 'brand-logo', ... %}`（沿用 `nav-drawer__brand-img` 的 96 / 64 / 144 尺寸），两处统一走新建的 `snippets/brand-logo.liquid`。重跑 theme check → **78 files / 0 offenses**。
+- **预防**：
+  1. 删除任何 `assign` 前，先 `grep -rnF '<变量名>' --include=*.liquid .` 数**所有引用**并逐个改掉，不要只搜赋值语句里的那个表达式。**不要用 `\b` 词边界**——本机 BSD grep 的 ERE 不支持，会静默漏匹配。
+  2. 改动后**必跑 `shopify theme check`**：`node --check`、本地 JSON / locale 脚本都抓不到 Liquid 未定义对象。CLI 在本沙箱已可见（`/Users/mac/.nvm/versions/node/v24.22.0/bin/shopify`，见 AGENTS §11），旧记录"沙箱不可见"已作废。
+  3. 页头改任何品牌/图标元素时，按 O-5 主动核对「桌面 Zone 0」与「移动抽屉 head」两处，不要等检查器报。
+
+---
+
 ## 记录模板（追加新 bug 用）
 
 ```
