@@ -621,6 +621,130 @@ back-to-top[data-visible] .back-to-top__button {
   }
 }
 
+/**
+ * 轻提示 — <ui-tooltip>（2026-11-15 刘工：页头对比入口的 hover 说明）
+ * 行为在 assets/tooltip.js，这里只管外观与四向定位。
+ *
+ * **为什么放 critical.css**：它挂在页头上，属于全站骨架的一部分（每个页面都有），
+ * 拆成独立 .css 会多一次请求去换 1 KB；而且和 back-to-top 同一类「默认隐藏的
+ * 增强件」——样式晚到就是闪一下，比省这点体积难看。
+ *
+ * 配色：前景/背景互换，不硬编码色值。浅色骨架下是「深底浅字」的常规提示，
+ * 深色骨架（Noir）下自动成为「浅底深字」；两者对比度都等于正文那块的反向值，
+ * 天然满足 AA。**不要改成 opacity 压淡**——那会把对比度一起压低。
+ *
+ * 层级：气泡 z-index 30，高于页头内的 mega 面板（10/20）。祖先
+ * .main-nav-section 的 z-index 20 已经把它托在内容区之上，向下溢出不会被盖。
+ */
+ui-tooltip {
+  /* 自定义元素默认 inline：inline 盒上的 absolute 子元素以行盒为基准，
+     行高变化会让气泡跳。inline-flex 让锚点盒就是内容盒。 */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 30;
+  /* 纯装饰层：永不吃点击。移到气泡上时指针仍在下面的元素上，
+     气泡因此不会被自己挡住——也就不需要 mouseleave 的「进气泡延时收起」那套。 */
+  pointer-events: none;
+  inline-size: max-content;
+  max-inline-size: 15rem;
+  padding: 0.4rem 0.625rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-align: start;
+  /* 提示层要有「浮起来」的实感，但不能太抢——一层近距离落地影足够 */
+  box-shadow: 0 6px 18px color-mix(in srgb, #000 22%, transparent);
+  opacity: 0;
+  /* visibility 而非 display：display 会让过渡失效，且不可见时不该留在布局里；
+     它是离散属性，能撑到过渡结束后才翻转（淡出才看得见）。 */
+  visibility: hidden;
+  /* --tooltip-shift 由 JS 写（贴边平移）；--tooltip-lift 是入场位移，按方向定。
+     两者都是变量而非 transform，好让 translate 单独参与过渡。 */
+  --tooltip-shift: 0px;
+  --tooltip-lift: 4px;
+  translate: var(--tooltip-shift) var(--tooltip-lift);
+  transition:
+    opacity 0.14s ease,
+    translate 0.14s ease,
+    visibility 0.14s;
+}
+
+/* ---- 四向定位 ----
+   top / bottom：水平居中于锚点（transform 只管居中，与入场用的 translate 互不干扰）
+   start / end：垂直居中于锚点（逻辑属性，RTL 下自动换边） */
+.tooltip[data-placement='top'],
+.tooltip[data-placement='bottom'] {
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+}
+.tooltip[data-placement='top'] {
+  inset-block-end: calc(100% + 8px);
+  --tooltip-lift: 4px;
+}
+.tooltip[data-placement='bottom'] {
+  inset-block-start: calc(100% + 8px);
+  --tooltip-lift: -4px;
+}
+.tooltip[data-placement='start'],
+.tooltip[data-placement='end'] {
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+}
+.tooltip[data-placement='start'] {
+  inset-inline-end: calc(100% + 8px);
+}
+.tooltip[data-placement='end'] {
+  inset-inline-start: calc(100% + 8px);
+}
+
+/* 打开态写在定位规则之后：同特异性靠源序覆盖 --tooltip-lift */
+.tooltip[data-open] {
+  opacity: 1;
+  visibility: visible;
+  --tooltip-lift: 0px;
+}
+
+/* 箭头：8px 方块旋转 45°，一半压在气泡底上，看起来是从气泡上长出来的 */
+.tooltip::before {
+  content: '';
+  position: absolute;
+  inline-size: 8px;
+  block-size: 8px;
+  background-color: inherit;
+  rotate: 45deg;
+}
+.tooltip[data-placement='top']::before {
+  inset-block-end: -4px;
+  inset-inline-start: calc(50% - 4px);
+}
+.tooltip[data-placement='bottom']::before {
+  inset-block-start: -4px;
+  inset-inline-start: calc(50% - 4px);
+}
+.tooltip[data-placement='start']::before {
+  inset-inline-end: -4px;
+  inset-block-start: calc(50% - 4px);
+}
+.tooltip[data-placement='end']::before {
+  inset-inline-start: -4px;
+  inset-block-start: calc(50% - 4px);
+}
+
+/* reduce：位移整段不注册，只剩即时显隐。提示是信息，不能因为减免动效就不给 */
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    transition: none;
+    translate: var(--tooltip-shift) 0;
+  }
+}
+
 /* ==========================================================================
  * 购物车页两栏（2026-11-02 · task-cart §0.3）
  *

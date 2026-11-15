@@ -103,6 +103,13 @@
     <script src="{{ 'back-to-top.js' | asset_url }}" defer></script>
 
     {% comment %}
+      轻提示组件 <ui-tooltip>（2026-11-15）：通用件，样式在 critical.css。
+      当前唯一消费方是页头对比入口，但页头是全站元素、且后续筛选/规格行也会用，
+      故按 layout 引一次，不挂单个 section。
+    {% endcomment %}
+    <script src="{{ 'tooltip.js' | asset_url }}" defer></script>
+
+    {% comment %}
       Main landmark — the skip link target. The id here and the href in
       snippets/skip-link.liquid must stay in sync.
 

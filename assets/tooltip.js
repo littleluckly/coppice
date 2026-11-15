@@ -250,9 +250,14 @@
     /**
      * 贴边修正：气泡默认水平居中于锚点，页头工具区靠右时右侧会出界。
      * 先清掉上一次的偏移再量——量偏移过的盒子算出来是错的，两次会叠着跑。
+     *
+     * 只对 top / bottom 生效：start / end 的气泡在锚点侧边、被垂直居中，
+     * 水平方向本来就贴着内容走，把水平偏移量套上去只会把它推离锚点。
      */
     adjust() {
       this.bubble.style.removeProperty('--tooltip-shift');
+      if (this.placement === 'start' || this.placement === 'end') return;
+
       const rect = this.bubble.getBoundingClientRect();
       if (!rect.width) return;
 
