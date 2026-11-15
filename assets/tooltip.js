@@ -276,16 +276,20 @@
 
       const rect = bubble.getBoundingClientRect();
 
-      bubble.style.transition = prevTransition;
-      bubble.style.translate = prevTranslate;
-      if (!rect.width) return;
-
       const viewport = document.documentElement.clientWidth;
-      const gap = 8; /* 与页面最小边距同量级，贴边不留缝也不会切掉圆角 */
+      const gap = 8; /* 与页面最小边距同量级：贴边不留缝，也不会切掉圆角 */
       let shift = 0;
-      if (rect.left < gap) shift = gap - rect.left;
-      else if (rect.right > viewport - gap) shift = viewport - gap - rect.right;
-      if (shift) this.bubble.style.setProperty('--tooltip-shift', `${Math.round(shift)}px`);
+      if (rect.width) {
+        if (rect.left < gap) shift = gap - rect.left;
+        else if (rect.right > viewport - gap) shift = viewport - gap - rect.right;
+      }
+
+      /* 顺序不能反：shift 必须在 transition 仍为 none 时写下，再和 transition 一起
+         恢复。反过来的话设置 shift 的那一刻过渡已经回来了，气泡会从基准位滑到
+         修正位——用户看到的是「先探出去再缩回来」（比不过渡难看）。 */
+      if (shift) bubble.style.setProperty('--tooltip-shift', `${Math.round(shift)}px`);
+      bubble.style.translate = prevTranslate;
+      bubble.style.transition = prevTransition;
     }
   }
 
