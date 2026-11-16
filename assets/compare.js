@@ -115,8 +115,8 @@
    *
    * 原来提示就地在商品卡内展开：卡窄、文字挤、还把卡片撑高推动下面的卡。
    * 现在改成从屏幕上缘滑入的全局条 —— 卡片高度不变，提示也更醒目。
-   * 只承载需要用户决定的事（跨组冲突 / 已达上限），不承担成功反馈
-   * （那是底部确认条的职责）。
+   * 只承载需要用户决定的事（跨组冲突 / 已达上限）；成功的加入反馈由页头角标
+   * 的视觉变化 + `snippets/compare-announcer.liquid` 的播报承担。
    */
   class CompareToast extends HTMLElement {
     connectedCallback() {
@@ -976,6 +976,31 @@
   customElements.define('compare-toggle', CompareToggle);
   customElements.define('compare-entry', CompareEntry);
   customElements.define('compare-toast', CompareToast);
+
+  // ------------------------------------------------------- 加入成功的播报
+
+  /**
+   * 加入对比成功后念一句（SDD §6.2.8，2026-11-16 补）。
+   *
+   * 底部对比条删除后，原本由它承担的这句播报没了：视觉上有飞入动画与角标数字变化，
+   * 屏读用户却什么都听不到。挂在这里而不是组件内部，是因为两个候选位置都不成立：
+   *   · `<compare-entry>` 未配置对比页时整块不渲染、移动端还要等角标 > 0，
+   *     第一次加入时正好不在；
+   *   · `<compare-toast>` 默认 `display: none`，live region 藏在里面不会被播报。
+   * 所以目标是一个 layout 级常驻的 `visually-hidden` 空节点（compare-announcer）。
+   *
+   * 只播报「加入」；跨组 / 已满由 toast 自己的 `role="status"` 承担，避免念两句。
+   */
+  function announceAdded(event) {
+    const node = document.querySelector('[data-compare-announcer]');
+    if (!node) return;
+    const tpl = node.dataset.labelAdded || '';
+    if (!tpl) return;
+    const count = (event.detail && event.detail.count) || readList().length;
+    node.textContent = tpl.replace('[count]', String(count));
+  }
+
+  document.addEventListener('compare:added', announceAdded);
 
   /**
    * 浏览器「回退」命中 bfcache 时不会重新执行脚本，DOM 停在旧快照上 ——
