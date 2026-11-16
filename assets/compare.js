@@ -86,6 +86,21 @@
     return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MAX;
   }
 
+  /**
+   * 取某分组对比页的地址。
+   *
+   * URL 映射由 `compare-page-urls` 一次性输出在 `<compare-entry>` 上（每页只跑 4 次
+   * `pages[handle]` 探测），这里直接读属性 —— **不在每张商品卡上重跑一遍探测**，
+   * 集合页 24 张卡就是 96 次。
+   * 未配置对比页 / 该组没有对比页 → 返回空串，调用方据此降级（不给入口）。
+   */
+  function comparePageUrl(group) {
+    if (!group) return '';
+    const entry = document.querySelector('compare-entry');
+    if (!entry) return '';
+    return entry.getAttribute(`data-url-${group}`) || '';
+  }
+
 // --------------------------------------------------------- 全局冲突提示
 
   /** 取页面里唯一的 <compare-toast>，把内容推给它 */
@@ -373,11 +388,25 @@
       });
     }
 
-    /** 已满：不给一键替换 —— 牺牲哪一款是用户的判断，替用户猜是越权 */
+    /**
+     * 已满：不给一键替换 —— 牺牲哪一款是用户的判断，替用户猜是越权。
+     *
+     * 但「请先移除一款」得给得出移除的去处（2026-11-16 补）：底部对比条删除后，
+     * 就地移除只剩「回商品卡取消勾选」和「进对比页」，比原来多绕一步。
+     * 清单本来就摆在对比页上，主按钮直接送过去。
+     * 没有对比页时**不给按钮** —— 指向一个不存在的页面比不给按钮更糟。
+     */
     showFullConflict() {
+      const url = comparePageUrl(this.group);
       showToast({
         message: this.t('conflict_full'),
+        primaryLabel: url ? this.t('conflict_manage') : '',
         returnFocus: this.button,
+        onPrimary: url
+          ? () => {
+              window.location.href = url;
+            }
+          : null,
       });
     }
 
