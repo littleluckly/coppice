@@ -129,6 +129,11 @@
       它只承载「需要用户决定」的事（跨组 / 已满），成功的加入反馈由页头角标承担。
     {% endcomment %}
     {% render 'compare-toast' %}
+    {% comment %}
+      加入成功的播报区（2026-11-16）：底部对比条删除后它接手 a11y 播报。
+      必须是 layout 级常驻的 visually-hidden 空节点，不能塞进 toast（那个是 display:none）。
+    {% endcomment %}
+    {% render 'compare-announcer' %}
 
     {% comment %}
       回到顶部按钮（2026-10-30）：全站浮层，同上——不能跟着某个 section 走。

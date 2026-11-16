@@ -403,6 +403,7 @@
       "cross_group_detail": "Your list currently has {{ count }} product(s) from another group.",
       "clear_and_add": "Clear list and add this product",
       "full": "You can compare up to {{ max }} products. Remove one first.",
+      "manage": "Manage comparison",
       "cancel": "Cancel"
     },
     "announce": {
