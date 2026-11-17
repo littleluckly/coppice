@@ -1,0 +1,644 @@
+{% comment %}
+  联系页 —— 左侧表单、右侧联系信息卡，用于 templates/page.contact.json。
+
+  ## 为什么单独一个 section，而不是塞进 page.liquid
+  联系页的主内容是**交互**（原生 `{% form 'contact' %}`），通用 page 模板只渲染
+  `page.content` 富文本，塞不进去。Shopify 的页面模板靠 handle 后缀选择
+  （`page.contact.json`），所以这个 section 只挂在 contact 模板上；
+  商家在后台建页面时把模板选成 "contact" 即可。
+
+  ## 三条不可改的约定
+
+  1. **`{% form 'contact' %}` 与字段名都是平台的，不能改。**
+     `contact[name]` / `contact[email]` / `contact[phone]` / `contact[body]`
+     一个字母都不能错 —— 错了不报错、页面照常跳转，只是收不到邮件。
+     `body` 是留言正文的固定键（不是 `message`），这是 Shopify 的约定。
+
+  2. **成功/失败状态由 `form.posted_successfully?` 与 `form.errors` 给，
+     不做 AJAX。** 联系表单是「提交后整页重载」的同步表单，无 JS 也能用 ——
+     这是官方对主题的要求，也是唯一不需要商家装 App 的实现。
+     后台若开了 Google reCAPTCHA，平台会自己往表单里注入 token 脚本，主题不管。
+
+  3. **提交结果用 `role="status"` / `role="alert"`**，且在表单**之上**。
+     重载后页面停在顶部，读屏用户先听到结果再听到表单，顺序与视觉一致。
+
+  ## 降级
+  · 信息卡的四项（电话/邮箱/地址/营业时间）全部留空时整块不渲染，
+    表单自动独占一行 —— 不出现「Contact details」下面一片空白。
+  · `page.content` 为空是常态（商家往往只填了标题），此时只输出标题区。
+  · 标题默认取 `page.title`；商家在 section 里填了 heading 就以它为准。
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+
+  # 标题三级回落：section 设置 → 页面标题 → 翻译兜底。
+  # 分步 assign 是必需的：`default` 与 `t` 串在一条管道里会把结果再翻一次，
+  # 屏幕上会出现原始键名（同 404.liquid 的注释）。
+  assign heading_text = s.heading
+  if heading_text == blank
+    assign heading_text = page.title
+  endif
+  if heading_text == blank
+    assign heading_text = 'contact.title' | t
+  endif
+
+  assign info_heading = s.info_heading
+  if info_heading == blank
+    assign info_heading = 'contact.info.heading' | t
+  endif
+
+  assign has_info = false
+  if s.info_phone != blank or s.info_email != blank or s.info_address != blank or s.info_hours != blank
+    assign has_info = true
+  endif
+
+  # tel: 里不能有空格和括号（RFC 3966）；可见文本保持商家输入的排版。
+  # 归一化只做字符剥离，不做 +1 → 00 之类的猜测性改写（同 footer.liquid）。
+  assign tel_href = s.info_phone
+  if tel_href != blank
+    assign tel_href = tel_href | remove: ' ' | remove: '(' | remove: ')' | remove: '-' | remove: '.'
+  endif
+
+  assign error_id = 'ContactFormErrors-' | append: section.id
+  assign info_heading_id = 'ContactInfoHeading-' | append: section.id
+-%}
+
+<div class="contact">
+  <div class="contact__inner">
+    <div class="contact__intro">
+      {%- if s.eyebrow != blank -%}
+        <p class="contact__eyebrow">{{ s.eyebrow | escape }}</p>
+      {%- endif -%}
+
+      <h1 class="contact__heading">{{ heading_text | escape }}</h1>
+
+      {%- if s.lead != blank -%}
+        <p class="contact__lead">{{ s.lead | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%}
+      商家在页面正文里写的内容（如「响应时间」「保修说明」）照常渲染，
+      与表单同宽，避免它被挤到两栏之外变成孤立的一段。
+    {%- endcomment -%}
+    {%- if page.content != blank -%}
+      <div class="rte contact__body">{{ page.content }}</div>
+    {%- endif -%}
+
+    <div class="contact__grid">
+      <div class="contact__form-col">
+        {%- form 'contact', class: 'contact__form', id: 'ContactForm' -%}
+          {%- if form.posted_successfully? -%}
+            <p class="contact__alert contact__alert--success" role="status">
+              {{- 'contact.form.success' | t -}}
+            </p>
+          {%- endif -%}
+
+          {%- if form.errors -%}
+            <div class="contact__alert contact__alert--error" id="{{ error_id }}" role="alert">
+              <p class="contact__alert-title">{{ 'contact.form.error' | t }}</p>
+              <ul class="contact__alert-list" role="list">
+                {%- for field in form.errors -%}
+                  <li>
+                    {{- form.errors.translated_fields[field] | capitalize }}
+                    {{- ' ' -}}
+                    {{- form.errors.messages[field] -}}
+                  </li>
+                {%- endfor -%}
+              </ul>
+            </div>
+          {%- endif -%}
+
+          <p class="contact__hint">{{ 'contact.form.required_note' | t }}</p>
+
+          <div class="contact__row">
+            <div class="contact__field">
+              <label class="contact__label" for="ContactName-{{ section.id }}">
+                {{- 'contact.form.name' | t -}}
+                <span class="contact__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                class="contact__input"
+                id="ContactName-{{ section.id }}"
+                type="text"
+                name="contact[name]"
+                autocomplete="name"
+                value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}"
+                required
+                {% if form.errors contains 'name' %}
+                  aria-invalid="true" aria-describedby="{{ error_id }}"
+                {% endif %}
+              >
+            </div>
+
+            <div class="contact__field">
+              <label class="contact__label" for="ContactEmail-{{ section.id }}">
+                {{- 'contact.form.email' | t -}}
+                <span class="contact__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                class="contact__input"
+                id="ContactEmail-{{ section.id }}"
+                type="email"
+                name="contact[email]"
+                autocomplete="email"
+                spellcheck="false"
+                autocapitalize="off"
+                value="{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}"
+                required
+                {% if form.errors contains 'email' %}
+                  aria-invalid="true" aria-describedby="{{ error_id }}"
+                {% endif %}
+              >
+            </div>
+          </div>
+
+          {%- if s.show_phone -%}
+            <div class="contact__field">
+              <label class="contact__label" for="ContactPhone-{{ section.id }}">
+                {{- 'contact.form.phone' | t -}}
+                <span class="contact__optional">{{ 'contact.form.optional' | t }}</span>
+              </label>
+              <input
+                class="contact__input"
+                id="ContactPhone-{{ section.id }}"
+                type="tel"
+                name="contact[phone]"
+                autocomplete="tel"
+                value="{{ form.phone }}"
+                {% if form.errors contains 'phone' %}
+                  aria-invalid="true" aria-describedby="{{ error_id }}"
+                {% endif %}
+              >
+            </div>
+          {%- endif -%}
+
+          <div class="contact__field">
+            <label class="contact__label" for="ContactMessage-{{ section.id }}">
+              {{- 'contact.form.message' | t -}}
+              <span class="contact__required" aria-hidden="true">*</span>
+            </label>
+            <textarea
+              class="contact__input contact__textarea"
+              id="ContactMessage-{{ section.id }}"
+              name="contact[body]"
+              rows="7"
+              required
+              {% if form.errors contains 'body' %}
+                aria-invalid="true" aria-describedby="{{ error_id }}"
+              {% endif %}
+            >{{ form.body }}</textarea>
+          </div>
+
+          <div class="contact__actions">
+            {%- comment -%}
+              按钮里不放箭头：AGENTS §6 的箭头准则只允许 View All 链接与行尾导航元素，
+              表单按钮不属于这两类。
+            {%- endcomment -%}
+            <button class="btn-solid contact__submit" type="submit">
+              {{- 'contact.form.submit' | t -}}
+            </button>
+
+            {%- if s.consent != blank -%}
+              <p class="contact__consent">{{ s.consent | escape }}</p>
+            {%- endif -%}
+          </div>
+        {%- endform -%}
+      </div>
+
+      {%- if has_info -%}
+        <aside class="contact__info" aria-labelledby="{{ info_heading_id }}">
+          <h2 class="contact__info-heading" id="{{ info_heading_id }}">{{ info_heading | escape }}</h2>
+
+          <dl class="contact__details">
+            {%- if s.info_phone != blank -%}
+              <div class="contact__detail">
+                <dt>{{ 'contact.info.phone' | t }}</dt>
+                <dd><a href="tel:{{ tel_href | escape }}">{{ s.info_phone | escape }}</a></dd>
+              </div>
+            {%- endif -%}
+
+            {%- if s.info_email != blank -%}
+              <div class="contact__detail">
+                <dt>{{ 'contact.info.email' | t }}</dt>
+                <dd><a href="mailto:{{ s.info_email | escape }}">{{ s.info_email | escape }}</a></dd>
+              </div>
+            {%- endif -%}
+
+            {%- if s.info_address != blank -%}
+              <div class="contact__detail">
+                <dt>{{ 'contact.info.address' | t }}</dt>
+                {%- comment -%}
+                  textarea 的换行是商家有意给的排版（门牌/城市/邮编各一行），
+                  escape 后再 newline_to_br —— 顺序不能反，否则 <br> 会被转义成字面量。
+                {%- endcomment -%}
+                <dd>{{ s.info_address | escape | newline_to_br }}</dd>
+              </div>
+            {%- endif -%}
+
+            {%- if s.info_hours != blank -%}
+              <div class="contact__detail">
+                <dt>{{ 'contact.info.hours' | t }}</dt>
+                <dd>{{ s.info_hours | escape | newline_to_br }}</dd>
+              </div>
+            {%- endif -%}
+          </dl>
+
+          {%- if s.info_note != blank -%}
+            <p class="contact__info-note">{{ s.info_note | escape }}</p>
+          {%- endif -%}
+        </aside>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  /* ── 容器 ────────────────────────────────────────────────────────────────
+     与 product-highlights 同一套：page-width 居中 + page-margin 内缩。
+     根 div 显式 inline-size: 100% —— Shopify 的 section 包裹层是 grid，
+     grid item 的 automatic minimum size 会让它按内容宽度顶出去（MEMORY 第五节）。
+     contact__inner 带 margin-inline: auto，此时 min-inline-size: 0 不管用，
+     只能给根元素定死宽度（BUG-063）。 */
+  .contact {
+    inline-size: 100%;
+    padding-block: 2.5rem 3.5rem;
+    background-color: var(--color-background);
+  }
+
+  .contact__inner {
+    max-inline-size: var(--page-width);
+    margin-inline: auto;
+    padding-inline: var(--page-margin);
+  }
+
+  /* ── 标题区 ──────────────────────────────────────────────────────────── */
+  .contact__intro {
+    max-inline-size: 42rem;
+  }
+
+  .contact__eyebrow {
+    margin: 0 0 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    /* 品牌色小字：Coppice #1E4B3C 压白 ≈ 8.6:1、Noir #A3E635 压 #0F1012 ≈ 11:1，
+       两套 preset 都远超 AA，所以这里可以直接用品牌色而不是次级前景色。 */
+    color: var(--color-brand);
+  }
+
+  .contact__heading {
+    margin: 0;
+    font-size: clamp(1.875rem, 1.2rem + 2.2vw, 2.75rem);
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .contact__lead {
+    max-inline-size: 38rem;
+    margin-block-start: 0.875rem;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-foreground-muted);
+  }
+
+  .contact__body {
+    max-inline-size: 42rem;
+    margin-block-start: 1.25rem;
+  }
+
+  /* ── 两栏 ────────────────────────────────────────────────────────────────
+     只在 ≥990 分栏。窄屏时信息卡落到表单之后 —— 先让顾客填表，
+     联系信息是"还有别的路子"的备选，不该抢在表单前面占满首屏。 */
+  .contact__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    margin-block-start: 2.5rem;
+  }
+
+  .contact__form-col,
+  .contact__info {
+    min-inline-size: 0;
+  }
+
+  @media (min-width: 990px) {
+    .contact__grid {
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+      gap: 3rem;
+      align-items: start;
+      margin-block-start: 3rem;
+    }
+  }
+
+  .contact__form {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .contact__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 600px) {
+    .contact__row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+  }
+
+  .contact__field {
+    display: grid;
+    gap: 0.375rem;
+    min-inline-size: 0;
+  }
+
+  .contact__label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  /* 必填星号只对视觉说话（aria-hidden），语义由 input 的 required 承担；
+     这行小字是给"看不见星号"的场景补的说明。 */
+  .contact__required {
+    margin-inline-start: 0.125rem;
+  }
+
+  .contact__optional {
+    margin-inline-start: 0.375rem;
+    font-weight: 400;
+    font-size: 0.8125rem;
+    color: var(--color-foreground-muted);
+  }
+
+  .contact__hint {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+
+  /* ── 输入框 ────────────────────────────────────────────────────────────── */
+  .contact__input {
+    inline-size: 100%;
+    min-block-size: 3rem;
+    padding: 0.75rem 0.875rem;
+    font: inherit;
+    line-height: 1.5;
+    color: var(--color-foreground);
+    background-color: var(--color-background);
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 22%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    appearance: none;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .contact__input::placeholder {
+    color: var(--color-foreground-muted);
+  }
+
+  /* 焦点必须自带描边：只改 border-color 在浅色底上肉眼几乎看不出来，
+     键盘用户会丢失焦点位置。品牌色描边在浅/深两套 preset 下都 ≥3:1。 */
+  .contact__input:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 1px;
+    border-color: var(--color-brand);
+  }
+
+  .contact__input[aria-invalid='true'] {
+    border-color: var(--color-sale);
+  }
+
+  .contact__textarea {
+    min-block-size: 10rem;
+    resize: vertical;
+    line-height: 1.6;
+  }
+
+  /* ── 提交 ────────────────────────────────────────────────────────────── */
+  .contact__actions {
+    display: grid;
+    gap: 0.875rem;
+    justify-items: start;
+  }
+
+  .contact__submit {
+    display: inline-flex;
+    align-items: center;
+    padding-inline: 1.75rem;
+    font-weight: 600;
+  }
+
+  .contact__consent {
+    margin: 0;
+    max-inline-size: 34rem;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--color-foreground-muted);
+  }
+
+  /* ── 结果提示 ────────────────────────────────────────────────────────────
+     成功卡的文字用前景色、只让边框和背景带品牌色：Noir 下品牌色是亮 lime，
+     lime 字压在淡 lime 底上只有 1.6:1 左右，直接违反 AA。
+     失败卡沿用全站固定的 --color-sale / --color-sale-surface（深红压浅粉 4.91:1，
+     见 css-variables 里的注释），深色 preset 下也保持同一组值。 */
+  .contact__alert {
+    display: grid;
+    gap: 0.375rem;
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    border-radius: 12px;
+  }
+
+  .contact__alert p,
+  .contact__alert ul {
+    margin: 0;
+  }
+
+  .contact__alert--success {
+    color: var(--color-foreground);
+    background-color: color-mix(in srgb, var(--color-brand) 8%, var(--color-background));
+    border: 1px solid color-mix(in srgb, var(--color-brand) 32%, transparent);
+  }
+
+  .contact__alert--error {
+    color: var(--color-sale);
+    background-color: var(--color-sale-surface);
+    border: 1px solid color-mix(in srgb, var(--color-sale) 35%, transparent);
+  }
+
+  .contact__alert-title {
+    font-weight: 700;
+  }
+
+  .contact__alert-list {
+    display: grid;
+    gap: 0.25rem;
+    padding-inline-start: 1.125rem;
+    list-style: disc;
+  }
+
+  /* ── 联系信息卡 ──────────────────────────────────────────────────────── */
+  .contact__info {
+    padding: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--color-brand) 14%, transparent);
+    border-radius: 20px;
+    background-color: color-mix(in srgb, var(--color-brand) 7%, var(--color-background));
+  }
+
+  @media (min-width: 990px) {
+    .contact__info {
+      padding: 1.75rem;
+    }
+  }
+
+  .contact__info-heading {
+    margin: 0 0 1rem;
+    font-size: 1.0625rem;
+    line-height: 1.35;
+    font-weight: 700;
+  }
+
+  .contact__details {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+  }
+
+  .contact__detail {
+    display: grid;
+    gap: 0.25rem;
+    min-inline-size: 0;
+  }
+
+  .contact__detail dt {
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-foreground-muted);
+  }
+
+  /* break-word 而不是 anywhere：邮箱/地址里的长串要能折行，但不许词内随意断开
+     （同搜索页行卡的教训）。 */
+  .contact__detail dd {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+  }
+
+  .contact__detail a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  .contact__detail a:hover {
+    color: var(--color-brand);
+  }
+
+  .contact__info-note {
+    margin-block-start: 1.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--color-foreground-muted);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.contact_form",
+  "tag": "div",
+  "class": "contact-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:sections.contact_form.labels.eyebrow",
+      "default": "t:contact.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:sections.contact_form.labels.heading_info"
+    },
+    {
+      "type": "textarea",
+      "id": "lead",
+      "label": "t:sections.contact_form.labels.lead",
+      "default": "t:contact.default_lead"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.contact_form.labels.form_header"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_phone",
+      "label": "t:sections.contact_form.labels.show_phone",
+      "info": "t:sections.contact_form.labels.show_phone_info",
+      "default": true
+    },
+    {
+      "type": "textarea",
+      "id": "consent",
+      "label": "t:sections.contact_form.labels.consent",
+      "info": "t:sections.contact_form.labels.consent_info"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.contact_form.labels.details_header"
+    },
+    {
+      "type": "text",
+      "id": "info_heading",
+      "label": "t:labels.heading",
+      "default": "t:contact.info.heading"
+    },
+    {
+      "type": "text",
+      "id": "info_phone",
+      "label": "t:sections.contact_form.labels.phone"
+    },
+    {
+      "type": "text",
+      "id": "info_email",
+      "label": "t:sections.contact_form.labels.email"
+    },
+    {
+      "type": "textarea",
+      "id": "info_address",
+      "label": "t:sections.contact_form.labels.address"
+    },
+    {
+      "type": "textarea",
+      "id": "info_hours",
+      "label": "t:sections.contact_form.labels.hours",
+      "info": "t:sections.contact_form.labels.hours_info"
+    },
+    {
+      "type": "textarea",
+      "id": "info_note",
+      "label": "t:sections.contact_form.labels.note"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.contact_form"
+    }
+  ]
+}
+{% endschema %}
