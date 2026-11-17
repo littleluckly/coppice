@@ -50,7 +50,8 @@
     "compare": "Compare",
     "compare_groups_header": "Comparison groups",
     "compare_page_header": "Comparison page",
-    "cart_drawer": "Cart drawer"
+    "cart_drawer": "Cart drawer",
+    "contact_form": "Contact form"
   },
   "sections": {
     "main_nav": {
@@ -508,6 +509,25 @@
           "tiktok": "TikTok",
           "pinterest": "Pinterest"
         }
+      }
+    },
+    "contact_form": {
+      "labels": {
+        "eyebrow": "Eyebrow",
+        "heading_info": "Leave empty to use the page title.",
+        "lead": "Intro text",
+        "form_header": "Form",
+        "show_phone": "Show phone field",
+        "show_phone_info": "Adds an optional phone number field, so you can call back instead of writing.",
+        "consent": "Note under the button",
+        "consent_info": "Short line under the submit button, such as a privacy notice. Leave empty to hide.",
+        "details_header": "Contact details",
+        "phone": "Phone number",
+        "email": "Email address",
+        "address": "Address",
+        "hours": "Opening hours",
+        "hours_info": "One entry per line. Leave the whole card empty to hide it.",
+        "note": "Additional note"
       }
     }
   },
