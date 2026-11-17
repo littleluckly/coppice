@@ -66,6 +66,9 @@
 <script src="{{ 'product-gallery.js' | asset_url }}" defer></script>
 <script src="{{ 'product-form.js' | asset_url }}" defer></script>
 <script src="{{ 'pickup-availability.js' | asset_url }}" defer></script>
+{%- if product.gift_card? and section.settings.show_gift_card_recipient -%}
+  <script src="{{ 'gift-card-recipient.js' | asset_url }}" defer></script>
+{%- endif -%}
 {%- if has_model -%}
   <link
     rel="stylesheet"
@@ -487,6 +490,15 @@
       <product-form class="product-form" data-section-id="{{ section.id }}">
         {%- form 'product', product, id: form_id, class: 'product-form__form', novalidate: 'novalidate' -%}
           <input type="hidden" name="id" value="{{ current_variant.id }}" data-variant-input>
+
+          {%- comment -%}
+            礼品卡商品的「寄给收件人」字段（合规项 G-09，2026-11-17）。
+            只有 `product.gift_card?` 为真才渲染——普通商品的表单一个字节都不多。
+            位置在数量/加购之上：先决定寄给谁，再决定买几张。
+          {%- endcomment -%}
+          {%- if product.gift_card? and section.settings.show_gift_card_recipient -%}
+            {%- render 'gift-card-recipient', product: product, form: form, section: section -%}
+          {%- endif -%}
 
           <div class="product-form__row">
             <quantity-input class="quantity">

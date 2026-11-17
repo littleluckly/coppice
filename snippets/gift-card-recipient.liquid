@@ -28,6 +28,7 @@
     class="gift-recipient__checkbox visually-hidden"
     id="Recipient-checkbox-{{ section.id }}"
     name="properties[__shopify_send_gift_card_to_recipient]"
+    data-recipient-checkbox
     {% if form.email != blank %}
       checked
     {% endif %}
@@ -48,7 +49,7 @@
         type="email"
         id="Recipient-email-{{ section.id }}"
         name="properties[Recipient email]"
-        value="{{ form.email }}"
+        value="{{ form.email | escape }}"
         autocomplete="email"
         placeholder="{{ 'gift_card_recipient.email_placeholder' | t }}"
         required
@@ -64,7 +65,7 @@
         type="text"
         id="Recipient-name-{{ section.id }}"
         name="properties[Recipient name]"
-        value="{{ form.name }}"
+        value="{{ form.name | escape }}"
         autocomplete="name"
         placeholder="{{ 'gift_card_recipient.name_placeholder' | t }}"
       >
@@ -81,7 +82,7 @@
         rows="3"
         maxlength="200"
         placeholder="{{ 'gift_card_recipient.message_placeholder' | t }}"
-      >{{ form.message }}</textarea>
+      >{{ form.message | escape }}</textarea>
       <p class="gift-recipient__hint">{{ 'gift_card_recipient.message_hint' | t: count: 200 }}</p>
     </div>
 
@@ -94,7 +95,7 @@
         type="date"
         id="Recipient-send-on-{{ section.id }}"
         name="properties[Send on]"
-        value="{{ form.send_on }}"
+        value="{{ form.send_on | escape }}"
         min="{{ 'now' | date: '%Y-%m-%d' }}"
       >
       <p class="gift-recipient__hint">{{ 'gift_card_recipient.send_on_hint' | t }}</p>
