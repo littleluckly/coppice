@@ -86,7 +86,11 @@
       <div class="rte contact__body">{{ page.content }}</div>
     {%- endif -%}
 
-    <div class="contact__grid">
+    {%- comment -%}
+      没有联系方式时用单列：否则空着的第二列仍占 0.65fr，
+      表单被压到 65% 宽度、右边一片空白（实测截图确认过）。
+    {%- endcomment -%}
+    <div class="contact__grid{% unless has_info %} contact__grid--single{% endunless %}">
       <div class="contact__form-col">
         {%- form 'contact', class: 'contact__form', id: 'ContactForm' -%}
           {%- if form.posted_successfully? -%}
@@ -331,6 +335,18 @@
       gap: 3rem;
       align-items: start;
       margin-block-start: 3rem;
+    }
+  }
+
+  /* 单列（没有联系方式卡）时不能留半屏空白；同时把表单钳到可读宽度 ——
+     1400px 宽的行输入框会让眼睛在两端来回跳，40rem 约 60 字符/行。 */
+  .contact__grid--single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (min-width: 990px) {
+    .contact__grid--single .contact__form-col {
+      max-inline-size: 40rem;
     }
   }
 

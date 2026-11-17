@@ -1353,6 +1353,113 @@
     background-color: color-mix(in srgb, var(--color-brand) 7%, transparent);
   }
 
+  /* ===== 礼品卡收件人字段（G-09，2026-11-17） =====
+     宿主 <gift-card-recipient> 勾选才展开。收起规则挂在 `:defined` 上：
+     脚本没跑（无 JS / 资源失败）时 :defined 为假 → 字段保持可见可填，
+     配合隐藏域的 if_present 兜底；脚本接管后 :defined 为真 → 未勾选即收起。
+     这样「无 JS 也能寄」与「有 JS 默认收起」不用各写一份 DOM。 */
+  .gift-recipient {
+    margin-block-start: 1rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
+  }
+  .gift-recipient__toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-block-size: 32px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .gift-recipient__checkbox:focus-visible + .gift-recipient__toggle {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  .gift-recipient__tick {
+    position: relative;
+    flex: 0 0 auto;
+    inline-size: 20px;
+    block-size: 20px;
+    border: 1.5px solid color-mix(in srgb, var(--color-foreground) 35%, transparent);
+    border-radius: 5px;
+    background-color: var(--color-background);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  /* 勾号用两条边拼。颜色取 --color-background：浅色预设有白勾压深绿，
+     Noir 有深勾压亮绿——两边都够对比度，且不硬编码色值。 */
+  .gift-recipient__tick::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 46%;
+    inset-inline-start: 50%;
+    inline-size: 9px;
+    block-size: 4px;
+    border-inline-start: 2px solid var(--color-background);
+    border-block-end: 2px solid var(--color-background);
+    opacity: 0;
+    translate: -50% -50%;
+    rotate: -45deg;
+  }
+  .gift-recipient__checkbox:checked + .gift-recipient__toggle .gift-recipient__tick {
+    border-color: var(--color-brand);
+    background-color: var(--color-brand);
+  }
+  .gift-recipient__checkbox:checked + .gift-recipient__toggle .gift-recipient__tick::after {
+    opacity: 1;
+  }
+
+  .gift-recipient__fields {
+    display: grid;
+    gap: 0.75rem;
+    margin-block-start: 0.75rem;
+    padding-block-start: 0.75rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+  .gift-recipient:defined:not([open]) .gift-recipient__fields {
+    display: none;
+  }
+
+  .gift-recipient__field {
+    display: grid;
+    gap: 0.3rem;
+  }
+  .gift-recipient__label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--color-foreground-muted);
+  }
+  .gift-recipient__input {
+    inline-size: 100%;
+    min-block-size: 44px;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font: inherit;
+    font-size: 0.9rem;
+  }
+  .gift-recipient__input::placeholder {
+    color: var(--color-foreground-muted);
+    opacity: 1;
+  }
+  .gift-recipient__input:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 1px;
+  }
+  .gift-recipient__textarea {
+    min-block-size: 4.5rem;
+    resize: vertical;
+  }
+  .gift-recipient__hint {
+    font-size: 0.75rem;
+    color: var(--color-foreground-muted);
+  }
+
   /* 信任行 / 自提 / 对比 */
   .main-product__block {
     margin-block-start: 0.75rem;
