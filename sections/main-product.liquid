@@ -98,7 +98,10 @@
   {%- endif -%}
 
   <div class="main-product__layout">
-    <product-gallery class="product-gallery" data-media-count="{{ media_count }}">
+    <product-gallery
+      class="product-gallery{% if media_count > 1 %} product-gallery--thumbnails{% endif %}"
+      data-media-count="{{ media_count }}"
+    >
       <div class="product-gallery__stage">
         <ul class="product-gallery__slides" role="list" style="--gallery-ratio: {{ gallery_ratio }}">
           {%- for media in product.media -%}
@@ -1010,7 +1013,11 @@
   }
 
   @media (min-width: 1100px) {
-    .product-gallery {
+    /* 两列 = 「76px 缩略图列 + 舞台」。**只有真的有缩略图时才开两列**（BUG-072）：
+       原来不管媒体数量都写死两列，单图商品（礼品卡、只传了一张图的产品）
+       没有 .product-gallery__thumbs，舞台就被塞进 76px 那一列 —— 大图缩成
+       76×101 的小方块，右边整片空白，而 CSS 本身没有任何异常。 */
+    .product-gallery--thumbnails {
       display: grid;
       grid-template-columns: 76px minmax(0, 1fr);
       gap: 0.75rem;
