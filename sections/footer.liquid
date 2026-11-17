@@ -400,7 +400,8 @@
                 {%- endif -%}
 
               {%- when 'contact' -%}
-                <!--DBG page={{ block.settings.page.id }}|{{ block.settings.page.title }}|handle={{ block.settings.page.handle }}|static={{ pages['contact'].id }}|{{ pages['contact'].title }}|allpages={{ pages.size }}-->
+                <!--DBG contact={{ block.settings.page.id }}|warranty={{ sections.dbg }}|static={{ pages['contact'].id }} {{ pages['contact'].handle }} {{ pages['contact'].url }}-->
+                <!--HANDLES {% for p in pages %} {{ p.handle }}:{{ p.id }} {% endfor %}-->
                 {%- assign contact_phone = block.settings.phone -%}
                 {%- assign contact_email = block.settings.email -%}
                 {%- assign contact_page = block.settings.page -%}
