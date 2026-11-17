@@ -1359,6 +1359,9 @@
      配合隐藏域的 if_present 兜底；脚本接管后 :defined 为真 → 未勾选即收起。
      这样「无 JS 也能寄」与「有 JS 默认收起」不用各写一份 DOM。 */
   .gift-recipient {
+    /* 自定义元素默认 display: inline —— 不写死 block 的话，边框与内边距会按
+       行内盒模型碎成一列（实测：容器只剩 1px 宽、字段全部溢出到框外）。 */
+    display: block;
     margin-block-start: 1rem;
     padding: 0.75rem 0.875rem;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
@@ -1749,6 +1752,17 @@
       "type": "checkbox",
       "id": "show_payment_terms",
       "label": "t:sections.main_product.labels.show_payment_terms",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main_product.headers.gift_card"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_gift_card_recipient",
+      "label": "t:sections.main_product.labels.show_gift_card_recipient",
+      "info": "t:sections.main_product.labels.gift_card_recipient_info",
       "default": true
     }
   ],
