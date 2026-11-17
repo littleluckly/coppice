@@ -54,6 +54,18 @@
     "contact_form": "Contact form"
   },
   "sections": {
+    "password": {
+      "labels": {
+        "image": "Background photo",
+        "image_info": "Fills the screen behind the card. The card sits in the middle, so keep the subject near an edge. Leave empty to use a soft brand-colour glow instead.",
+        "show_brand": "Show brand",
+        "show_brand_info": "Your logo, or the store name when no logo is uploaded.",
+        "body": "Message",
+        "body_info": "Shown only when you haven't written a message under Online Store > Preferences > Password protection.",
+        "footnote": "Small print",
+        "footnote_info": "One line under the form - an opening date, a contact address, or leave it empty."
+      }
+    },
     "main_nav": {
       "labels": {
         "show_all_series": "Show \"All series\" entry",
