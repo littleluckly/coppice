@@ -325,10 +325,13 @@
         "description_words": "Description length (words)",
         "show_accelerated_checkout": "Show accelerated checkout",
         "accelerated_info": "Requires an accelerated checkout method such as Shop Pay. The button styling is controlled by the payment provider and must not be restyled.",
-        "show_payment_terms": "Show payment terms (Shop Pay Installments)"
+        "show_payment_terms": "Show payment terms (Shop Pay Installments)",
+        "show_gift_card_recipient": "Show recipient information form for gift card products",
+        "gift_card_recipient_info": "Only applies when the product is a gift card. Buyers can email the card to someone else, with a message and an optional send date."
       },
       "headers": {
-        "checkout": "Checkout"
+        "checkout": "Checkout",
+        "gift_card": "Gift card"
       },
       "blocks": {
         "spec_bullets": {
