@@ -7,21 +7,11 @@
  * made to this file may be overwritten.
  * ------------------------------------------------------------
  */
-{
+ {
   "sections": {
     "main": {
       "type": "404",
-      "settings": {
-        "image": "shopify://shop_images/404-bg_webp.webp",
-        "show_code": true,
-        "heading": "Oops! Page Not Found",
-        "body": "The page you're looking for might have been removed, had its name changed, or is temporarily unavailable.",
-        "primary_label": "Back to Home",
-        "primary_link": "",
-        "show_secondary": true,
-        "secondary_label": "Browse Products",
-        "secondary_link": ""
-      }
+      "settings": {}
     }
   },
   "order": [
