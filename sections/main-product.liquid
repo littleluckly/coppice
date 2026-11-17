@@ -1053,7 +1053,8 @@
     overflow: hidden;
   }
   /* UA 对未打开的 dialog 已给 display:none，这里显式写一遍：
-     <product-gallery> 在桌面是 grid 容器，绝不能让这个 dialog 占一个格子 */
+     <product-gallery> 在多图时是两列 grid 容器（单图时是普通块），
+     这个 dialog 是它的子节点 —— 一旦被当格子，舞台会被挤走一格 */
   .product-lightbox:not([open]) {
     display: none;
   }
