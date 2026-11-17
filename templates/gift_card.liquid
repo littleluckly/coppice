@@ -19,8 +19,8 @@
     {%- endif -%}
 
     {% style %}
-      /* 礼品卡页是 {% layout none %} 的独立文档：只用 css-variables 输出的令牌，
-         不依赖任何 section 的 stylesheet（那份样式不在这条渲染链上）。 */
+      /* 礼品卡页是 layout-none 的独立文档：只用 css-variables 输出的令牌，
+         不依赖任何 section 的样式块（那份样式不在这条渲染链上）。 */
       .gift-card {
         display: grid;
         place-items: center;
