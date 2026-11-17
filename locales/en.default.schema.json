@@ -512,6 +512,11 @@
       }
     },
     "contact_form": {
+      "defaults": {
+        "eyebrow": "Support",
+        "lead": "Questions about a machine, an order or a spare part? Send us a note and we will get back to you within one business day.",
+        "info_heading": "Contact details"
+      },
       "labels": {
         "eyebrow": "Eyebrow",
         "heading_info": "Leave empty to use the page title.",

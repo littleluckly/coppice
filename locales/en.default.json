@@ -116,8 +116,6 @@
   },
   "contact": {
     "title": "Contact us",
-    "eyebrow": "Support",
-    "default_lead": "Questions about a machine, an order or a spare part? Send us a note and we will get back to you within one business day.",
     "form": {
       "name": "Name",
       "email": "Email",
