@@ -41,7 +41,7 @@
             "heading": "Contact TEST",
             "phone": "(555) 010-0182",
             "email": "support@northbark.example",
-            "page": "shopify://pages/warranty"
+            "page": "contact"
           }
         },
         "social_facebook": {
