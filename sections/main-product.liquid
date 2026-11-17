@@ -792,6 +792,9 @@
        整块高度跟着变，页面上下跳一截。框定死之后，谁也不许改高度。 */
     aspect-ratio: var(--gallery-ratio, 1);
     max-block-size: 78vh;
+    /* 竖图被 78vh 上限“按高定宽”后，盒子会窄于所在列（单图商品常见）：
+       靠 auto 外边距把它居中，别贴左留一大条空白。宽度撑满时 auto 无效。 */
+    margin-inline: auto;
   }
   /* 绝对定位铺满媒体框。用 inset 而不是 height: 100%——框高由 aspect-ratio 派生，
      百分比高度在这条链上会被当不确定值（BUG-052 的同类坑，别再赌）。 */
