@@ -36,8 +36,26 @@ class GiftCardRecipient extends HTMLElement {
     if (this._control) this._control.disabled = true;
     if (this._offset) this._offset.value = String(new Date().getTimezoneOffset());
 
+    this._setLocalMinDate();
+
     // 首次同步不清空字段：服务端回填过的值（出错重提交）要留着
     this._sync(this._checkbox.checked, false);
+  }
+
+  /**
+   * 寄送日期的下限用**本地日期**，覆盖 Liquid 写进去的服务器日期。
+   *
+   * Liquid 侧的 `{{ 'now' | date: '%Y-%m-%d' }}` 取的是店铺所在服务器时区，
+   * 与收件人本地日期最多差一天：西半球店铺的下午（UTC 已跨天）会把 min 写成"明天"，
+   * 顾客当天就选不了。平台真正用来解释日期的是 properties[__shopify_offset]，
+   * 所以下限也应当按同一把尺子（本地时区）来定。无 JS 时仍保留 Liquid 的 min 兜底。
+   */
+  _setLocalMinDate() {
+    const sendOn = this._fields.querySelector('input[type="date"]');
+    if (!sendOn) return;
+    const today = new Date();
+    const pad = (value) => String(value).padStart(2, '0');
+    sendOn.min = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
   }
 
   disconnectedCallback() {
