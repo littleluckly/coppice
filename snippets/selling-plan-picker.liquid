@@ -107,6 +107,10 @@
           {%- comment -%}
             折扣徽标只认「单条 percentage 调整」的计划：多层定价（前 N 月 20%、之后 15%）
             写成一个百分比会误导，宁可不出。按官方 UX 指南，选项里不写精确金额。
+
+            计划名本身已经写了百分比时（app 生成的常见形态，如
+            "Deliver every 30 days, 10% off"）不再补徽标 —— 2026-11-18 演示店实测发现
+            会读成 "10% off  Save 10%" 的重复。商家自定义名不带百分比时徽标才补位。
           {%- endcomment -%}
           {%- assign plan_save = 0 -%}
           {%- if plan.price_adjustments.size == 1 -%}
@@ -114,6 +118,9 @@
             {%- if first_adjustment.value_type == 'percentage' -%}
               {%- assign plan_save = first_adjustment.value -%}
             {%- endif -%}
+          {%- endif -%}
+          {%- if plan.name contains '%' -%}
+            {%- assign plan_save = 0 -%}
           {%- endif -%}
 
           <label class="product-plans__option" data-plan-option>
