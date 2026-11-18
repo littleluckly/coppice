@@ -659,6 +659,21 @@
             </nav>
           {%- endif -%}
         {%- endpaginate -%}
+      {%- elsif has_active_filters -%}
+        {%- comment -%}
+          筛选后 0 结果：必须与「搜不到东西」分开。此时搜索词是好的，
+          是用户自己叠的筛选组合太窄——文案要指向筛选，给的是「清除筛选」
+          而不是「换个词再搜」（否则用户会以为关键词写错了）。
+          复用集合页的两条键：口径完全一致，没必要为搜索页再造一遍。
+        {%- endcomment -%}
+        <div class="search-page__empty">
+          <span class="search-page__empty-icon" aria-hidden="true">{{ 'icon-search.svg' | inline_asset_content }}</span>
+          <h2 class="search-page__empty-title">{{ 'collections.no_matches' | t }}</h2>
+          <p class="search-page__empty-body">{{ 'search.empty_body' | t }}</p>
+          <a class="search-page__empty-cta btn-solid" href="{{ clear_filters_url }}">
+            {{ 'collections.clear_filters' | t }}
+          </a>
+        </div>
       {%- else -%}
         {%- if search.performed -%}
           {%- comment -%} ── 无结果 ── {%- endcomment -%}
@@ -690,8 +705,27 @@
           </section>
         {%- endif -%}
       {%- endif -%}
+      </div>
     </div>
-  </div>
+  </collection-facets>
+
+  {%- if filterable -%}
+    {%- comment -%}
+      移动端筛选抽屉（<990px）：<bottom-sheet> 管开合动效与 Esc 收口，
+      dialog 只当容器。faceted-filters.js 打开时把**整个 form** 移进来
+      ——同一份 DOM、无副本，抽屉内勾选与 Apply 的控件归属不会分裂（BUG-041）。
+      放在 <collection-facets> 外面是刻意的：局部更新只替换它的子节点，
+      抽屉一旦在里面就会被 replaceChildren 拆掉，开着的抽屉会凭空消失。
+    {%- endcomment -%}
+    <bottom-sheet media="(max-width: 989.98px)">
+      <dialog
+        id="FacetsDialog-{{ section.id }}"
+        class="facets__dialog"
+        scroll-lock
+        aria-label="{{ 'collections.filters.label' | t }}"
+      ></dialog>
+    </bottom-sheet>
+  {%- endif -%}
 </div>
 
 {% stylesheet %}
