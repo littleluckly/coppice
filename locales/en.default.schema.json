@@ -94,6 +94,8 @@
         "show_categories_info": "Lists up to six collections. Counts show total products in each collection, not matches for the current search.",
         "results_per_page": "Results per page",
         "results_per_page_info": "Shopify allows up to 50 results per page. Lower values keep the page lighter.",
+        "show_sort": "Show sort options",
+        "show_sort_info": "Adds a sort menu to the filters card. Sorting is only shown for product results — article and page results have no sort order.",
         "show_quick_add": "Show quick add on product cards",
         "show_specs": "Show specification chips",
         "show_specs_info": "Adds power source and cutting width to product cards. Leave off for a tighter results grid."
