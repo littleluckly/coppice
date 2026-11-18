@@ -149,7 +149,8 @@ class FacetSort extends HTMLElement {
     sheet.setAttribute('scroll-lock', '');
 
     /* 抓手横线（2026-11-03 刘工：与筛选面板保持一致）。类名复用 .facets__grabber，
-       视觉定义在 collection.liquid 的样式块里一处维护。
+       视觉定义在 assets/facets.css 一处维护（2026-11-18 从 collection.liquid 抽出，
+       集合页与搜索页共用）。
        有了抓手就必须能拖——只画不拖是假承诺，所以下面挂了拖拽收起。 */
     const grabber = document.createElement('div');
     grabber.className = 'facets__grabber';
