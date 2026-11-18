@@ -586,13 +586,10 @@
        跟着核对（待实测校正： shopify theme dev 里量一下实际行高）。 */
     --facets-sticky-top: 4.75rem;
 
-    /* 工具条控件（Filters 按钮 / 排序控件）的共用外观——2026-11-03 刘工：
-       两者并排却长得不一样，根因是一个读 --style-border-radius-inputs（商家
-       输入框圆角设置，默认 6px）、另一个写死 12px。这里收成一个出口：
-       仍尊重商家设置（设得更大就跟），但用 max() 兜住下限 14px——
-       6px 在 44px 高的按钮上几乎看不出圆角，两个控件会显得像两个时代的产物。 */
-    --facet-control-radius: max(var(--style-border-radius-inputs), 14px);
-    --facet-control-border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
+    /* 工具条控件的共用外观（--facet-control-radius / -border）已随筛选组件
+       样式整体移到 assets/facets.css 的 :root（2026-11-18）——它属于组件，
+       不属于集合页布局。这里不要再定义第二份：同值重复定义会让「改了不生效」
+       变成最难查的那类问题。 */
 
     /* 首列 = 页面边距（与其余 section 的内容起点对齐），第二列承载整个两栏。
        列宽只在 .collection__layout 里定义一次（--collection-left），避免
