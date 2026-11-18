@@ -114,8 +114,14 @@ class BackToTop extends HTMLElement {
 
     const style = getComputedStyle(this);
     /* 与 CSS 的 --back-to-top-inset 同源，不各写一份 1rem。
-       安全区没计入：iOS 上探针盒因此低 30px 左右，被 GAP 与徽标自身的边距吃掉 */
-    const pad = parseFloat(style.getPropertyValue('--back-to-top-inset')) || 16;
+       ⚠️ 自定义属性读回来是声明时的原始 token（"1rem"），不是解析后的 px：
+       直接 parseFloat 会得到 1，探针盒整体偏 15px，避让量就少算 15px。
+       必须按单位换算（与 hero-slideshow 里 .55s 被 parseFloat 小 1000 倍同族）。 */
+    const rawInset = style.getPropertyValue('--back-to-top-inset').trim();
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const pad = /rem$/.test(rawInset) ? parseFloat(rawInset) * rootFontSize : parseFloat(rawInset) || 16;
+    /* 安全区（env）没计入：JS 读不到它。iOS 上探针盒底边比真实按钮低 30px 左右
+       （更靠近屏幕底边 ⇒ 徽标还没压到按钮就先抬一点），方向安全，不会漏判 */
 
     const own = this.getBoundingClientRect();
     if (!own.width) return; /* 还没上树 */
