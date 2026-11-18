@@ -156,10 +156,11 @@ class BackToTop extends HTMLElement {
 
   /** 自身或任一祖先为 position: fixed。深度有限（十几层），且只对被选中的少数元素调用 */
   isPinned(el) {
-    const style = getComputedStyle(el);
+    let style = getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden') return false;
     for (let node = el; node && node !== document.documentElement; node = node.parentElement) {
-      if (getComputedStyle(node).position === 'fixed') return true;
+      if (node !== el) style = getComputedStyle(node);
+      if (style.position === 'fixed') return true;
     }
     return false;
   }
