@@ -342,6 +342,7 @@
       "add_error": "Sorry, something went wrong. Try again.",
       "sold_out": "Sold out",
       "rating_label": "Rated {{ rating }} out of 5",
+      "unit_price": "{{ price }} / {{ unit }}",
       "spec_cutting_width": "Cutting width",
       "spec_power_source": "Power source",
       "spec_weight": "Weight"
