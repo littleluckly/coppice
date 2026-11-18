@@ -51,7 +51,8 @@
     "compare_groups_header": "Comparison groups",
     "compare_page_header": "Comparison page",
     "cart_drawer": "Cart drawer",
-    "contact_form": "Contact form"
+    "contact_form": "Contact form",
+    "trust_bar": "Trust bar"
   },
   "sections": {
     "password": {
@@ -548,6 +549,34 @@
         "hours": "Opening hours",
         "hours_info": "One entry per line. Leave the whole card empty to hide it.",
         "note": "Additional note"
+      }
+    },
+    "trust_bar": {
+      "name": "Trust bar",
+      "labels": {
+        "show_dividers": "Show dividers",
+        "show_dividers_info": "Thin vertical lines between items. Hidden on the stacked mobile layout, where there is nothing to separate.",
+        "icon": "Icon",
+        "text": "Text",
+        "link": "Link",
+        "link_info": "Optional. Makes the whole item clickable - useful for a shipping or warranty page."
+      },
+      "options": {
+        "icon": {
+          "truck": "Truck (shipping)",
+          "warranty": "Shield (warranty)",
+          "parts": "Gear (parts and service)",
+          "support": "Headset (customer support)",
+          "return": "Return arrow",
+          "leaf": "Leaf",
+          "battery": "Battery",
+          "lock": "Lock (secure checkout)"
+        }
+      },
+      "blocks": {
+        "item": {
+          "name": "Trust item"
+        }
       }
     }
   },
