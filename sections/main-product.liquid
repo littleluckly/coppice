@@ -80,6 +80,9 @@
 {%- if product.gift_card? and section.settings.show_gift_card_recipient -%}
   <script src="{{ 'gift-card-recipient.js' | asset_url }}" defer></script>
 {%- endif -%}
+{%- if product.selling_plan_groups.size > 0 and section.settings.show_selling_plans -%}
+  <script src="{{ 'selling-plan-picker.js' | asset_url }}" defer></script>
+{%- endif -%}
 {%- if has_model -%}
   <link
     rel="stylesheet"
@@ -512,6 +515,14 @@
           {%- endcomment -%}
           {%- if product.gift_card? and section.settings.show_gift_card_recipient -%}
             {%- render 'gift-card-recipient', product: product, form: form, section: section -%}
+          {%- endif -%}
+
+          {%- comment -%}
+            购买选项（强制项 #17 / G-12）：商品挂 selling plan 才渲染，普通商品零成本。
+            位置在数量与加购之上——先定"怎么买"，再定"买几件"。
+          {%- endcomment -%}
+          {%- if product.selling_plan_groups.size > 0 and section.settings.show_selling_plans -%}
+            {%- render 'selling-plan-picker', product: product, section: section, variant: current_variant -%}
           {%- endif -%}
 
           <div class="product-form__row">
@@ -1294,6 +1305,87 @@
   .product-variant__radio:focus-visible + .product-variant__pill {
     outline: 2px solid var(--color-brand-accent);
     outline-offset: 2px;
+  }
+
+  /* 购买选项（selling plan，G-12）：整行卡片式 radio。
+     不用胶囊（胶囊在窄栏遇到长计划名会折行成球，BUG 台账里踩过）。 */
+  .product-plans {
+    display: block;
+    margin-block-end: 1rem;
+  }
+  .product-plans__set {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .product-plans__heading {
+    padding: 0;
+    margin-block-end: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-foreground);
+  }
+  .product-plans__group + .product-plans__group {
+    margin-block-start: 0.75rem;
+  }
+  .product-plans__group-name {
+    margin: 0 0 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--color-foreground-muted);
+  }
+  .product-plans__option {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    cursor: pointer;
+  }
+  /* display: flex 会盖掉 hidden 的 display: none，必须显式兜一刀 */
+  .product-plans__option[hidden] {
+    display: none;
+  }
+  .product-plans__option + .product-plans__option {
+    margin-block-start: 0.5rem;
+  }
+  .product-plans__option:has(.product-plans__radio:checked) {
+    border-color: var(--color-brand);
+    box-shadow: inset 0 0 0 1px var(--color-brand);
+  }
+  .product-plans__option:has(.product-plans__radio:focus-visible) {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 2px;
+  }
+  .product-plans__option:has(.product-plans__radio:disabled) {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .product-plans__radio {
+    flex: none;
+    margin-block-start: 0.25rem;
+    accent-color: var(--color-brand);
+  }
+  .product-plans__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    min-inline-size: 0;
+  }
+  .product-plans__name {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  .product-plans__save {
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+    color: var(--color-brand);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   /* 表单 */
