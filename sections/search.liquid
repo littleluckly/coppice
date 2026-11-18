@@ -1193,9 +1193,21 @@
     color: var(--color-foreground-muted);
   }
   @media (max-width: 989px) {
+    /* 左栏容器退回 contents：分类卡与筛选卡直接成为单列 body 的子项，
+       顺序跟 DOM 一致（分类 → 筛选 → 结果），不额外多一层包裹盒。
+       有 JS 时筛选 form 被 facets.css 藏掉并搬进抽屉，这一层自然消失。 */
+    .search-page__aside-col {
+      display: contents;
+    }
     .search-page__categories {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+  }
+
+  /* 结果区由 JS 在局部更新后接管焦点（tabindex="-1"）：它是容器不是控件，
+     接管焦点时不该冒出一圈焦点环 */
+  .search-page__results:focus {
+    outline: none;
   }
 
   /* 分组头 */
