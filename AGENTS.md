@@ -28,6 +28,7 @@ python3 tools/check-locale-keys.py    # 校验 t: 翻译键在两个 locale 文�
 python3 tools/check-tag-balance.py   # 校验 HTML 标签配对（theme check 的本地补充）
 python3 tools/split-facets-css.py    # 重抽筛选组件样式（改了 collection 里的 .facets__* 之后必跑）
 python3 tools/probe-facets-css.py    # 生成离线计算样式探针 + 无头 Chrome --dump-dom 读 getComputedStyle
+ruby tools/preview-selling-plans.rb  # 用真实 snippet/CSS 渲染「购买选项」预览页（演示店无 selling plan，只能这样看；依赖 `gem install liquid -v 5.3.0 --user-install`）
 ```
 
 - 提交审核前：`shopify theme check` 不得出现任何 Error（Warning 尽量清零）。
