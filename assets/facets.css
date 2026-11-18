@@ -566,10 +566,33 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-
   .collection__skeleton-card > * {
     animation: none;
   }
+}
+/* 列表视图（html[data-collection-view='list']）：结果网格变单列，骨架必须跟着
+   变横排——否则「切到列表 → 勾筛选」会先闪一片方格、再跳成横条，观感像错版。
+   形态对齐 product-card 的列表版式（见 collection.liquid 的
+   html[data-collection-view='list'] .collection__grid .product-card）：
+   左图 clamp(104–168px)、右侧三条信息线。图列宽与那边同值，换一处要两处一起换。 */
+html[data-collection-view='list'] .collection__skeleton {
+  grid-template-columns: 1fr;
+}
+html[data-collection-view='list'] .collection__skeleton-card {
+  grid-template-columns: clamp(104px, 30%, 168px) minmax(0, 1fr);
+  column-gap: 1rem;
+  row-gap: 0.35rem;
+}
+html[data-collection-view='list'] .collection__skeleton-card > * {
+  grid-column: 2;
+}
+html[data-collection-view='list'] .collection__skeleton-card .sk-img {
+  grid-column: 1;
+  /* span 3 = 三条信息线各占一行；线条数若改，最坏只是图矮一点，不会错位 */
+  grid-row: 1 / span 3;
+  /* 必须显式 start：grid item 默认 stretch 会压掉 aspect-ratio 的高度，
+     图被拉成整卡高、比例失真 */
+  align-self: start;
 }
 
 /* 移动抽屉（dialog 承载同一份筛选 DOM，JS 把 aside 移入）。
