@@ -10,6 +10,18 @@
       → 工具条（类型标签 + 网格/列表视图切换）
       → 左侧分类导航 + 右侧结果区（商品网格 / 内容行卡 / 分页 / 空态）
 
+  2026-11-18 补齐分面筛选（G-07，official requirement §4）：
+    条款原文「You need to support faceted search filtering on collection pages
+    and search pages.」——集合页与搜索页是**并列**关系，不是二选一。
+    本轮把集合页那套组件搬进来，同一个 snippet、同一个 JS、同一份 CSS：
+    - snippets/faceted-filters.liquid（筛选组）+ active-facets.liquid（已选标签）
+    - assets/faceted-filters.js（<collection-facets> 拦截 GET → Section Rendering
+      局部更新 + replaceState）
+    - assets/facets.css（2026-11-18 从 collection.liquid 抽出的组件样式，
+      两页各自 stylesheet_tag 加载）
+    版式仍是 pages-ui §11 定的那套：桌面左栏「分类 + 筛选卡」（筛选卡同集合页
+    形态，移动端进底部抽屉），工具条 [Filters] [排序] [视图切换] [已选标签]。
+
   复用与依据：
   - 商品卡走 product-card snippet + assets/product-card.css；2/3/4 列断点、
     圆形分页、color-mix 配色、hover 签名全部对齐 collection.liquid。
@@ -22,11 +34,21 @@
     见 https://shopify.dev/docs/storefronts/themes/navigation-search/search
   - 结果类型判别按官方示例：object_type 明确是 article / page 的进内容组，其余按商品。
 
+  平台事实（官方文档已核，改这块前先读）：
+  - `search.filters` 只返回**与本次结果相关**的筛选器，计数按前 1000 条结果算。
+  - **一旦带筛选参数，平台会把所有非商品结果过滤掉**（"If you apply filters on
+    the search results page, then all non-product results are filtered out."）。
+    ⇒ 筛选后 results 里只剩商品，文章/页面分组自然消失；不需要也不该自己过滤。
+  - `search.sort_options` 由平台给，没有 "Most Popular"，自研排序违反
+    「数据来自服务端」红线。
+
   明确的取舍（不要误当成遗漏）：
-  - **不做 `search.filters` 筛选，也不做排序下拉**。前者依赖 Search & Discovery 后台
-    配置 + faceted-filters.js 的 Section Rendering 改造（pages-ui §6.1 独立工单）；
-    后者官方只有 relevance / price-ascending / price-descending 三个值，没有
-    "Most Popular"，自研排序违反「数据来自服务端」红线。
+  - **类型标签的链接只带 q（+ type），刻意清掉筛选参数**。产品筛选对文章没有
+    意义，而带筛选参数时非商品结果又会被平台过滤——"Articles" 标签点上却只剩
+    空结果，比清掉筛选更糟。代价：筛选态下点 All/Articles 会丢掉已选条件，
+    界面上「已选标签 + Clear all」常驻，用户看得见自己在放弃什么。
+  - **筛选只在结果里有商品时渲染**（filterable 判定）。type=article/page 下
+    search.filters 本来就是空数组，这里只是把"空"变成"不渲染空卡"。
   - **类型标签不带各类型计数**：search.results_count 是当前 type 过滤后的总数，
     一次渲染只给一个数；切到 type=product 后结果里根本没有 article/page。
   - **推荐搜索词是商家配置的静态词，不是热门搜索统计**：Liquid 没有搜索词统计对象，
@@ -114,9 +136,11 @@
   # 排序：search.sort_options 由平台给（relevance / price-ascending /
   # price-descending 之类）。文章/页面搜索下平台通常返回空数组，此时
   # 自然不渲染——不靠类型白名单硬挡。
+  # 绑在 filterable 上而不是 search.performed：排序卡渲染在筛选表单**内部**
+  # （桌面临到筛选卡顶部、移动端被 JS 搬进工具条），没有表单就没有它的位置。
   assign sort_by = search.sort_by | default: search.default_sort_by
   assign show_sort = false
-  if search.performed and section.settings.show_sort and search.sort_options.size > 0
+  if filterable and section.settings.show_sort and search.sort_options.size > 0
     assign show_sort = true
   endif
 
@@ -738,6 +762,13 @@
   .search-page {
     padding-block: 1.5rem clamp(3rem, 6vw, 5rem);
   }
+  /* 容器型 Custom Element 必须显式 block（BUG-071 的同一课）：
+     未升级时 UA 给 inline，子元素会散在行盒里、margin 失效，
+     而且它正是局部更新的替换边界，不该是一个行内盒子。 */
+  .search-page__facets {
+    display: block;
+    min-inline-size: 0;
+  }
 
   /* ═══════════════════════════════════════════════════════════════════
      通栏 Hero：照片 + 页面色渐隐遮罩（集合页 2026-11-03 同款口径）。
@@ -1208,6 +1239,14 @@
      接管焦点时不该冒出一圈焦点环 */
   .search-page__results:focus {
     outline: none;
+  }
+  /* 移动端 + JS 就绪：表单已经搬进抽屉，这个槽只剩一个空壳。
+     不藏掉的话它会占一个 grid 行，body 的 gap 会在分类卡与结果区之间
+     多插 1.5rem 空气（form 是 display:none，槽本身没空）。 */
+  @media (max-width: 989px) {
+    collection-facets[data-facets-ready] .search-page__filters {
+      display: none;
+    }
   }
 
   /* 分组头 */
@@ -1706,6 +1745,13 @@
       "default": 12,
       "label": "t:sections.search.settings.results_per_page",
       "info": "t:sections.search.settings.results_per_page_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sort",
+      "default": true,
+      "label": "t:sections.search.settings.show_sort",
+      "info": "t:sections.search.settings.show_sort_info"
     },
     {
       "type": "checkbox",
