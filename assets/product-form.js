@@ -123,6 +123,9 @@ class VariantPicker extends HTMLElement {
           variantId: variant.id,
           mediaId: variant.mediaId,
           available: variant.available,
+          /* 带上所属 section：同页可能存在第二个产品块（编辑器里加了两个 main-product、
+             或快速查看预览），监听方据此丢弃别人的变体事件。2026-11-18 桩测发现。 */
+          sectionId: this._section ? this._section.dataset.sectionId : null,
         },
       })
     );

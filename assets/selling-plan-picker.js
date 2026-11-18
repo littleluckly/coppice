@@ -67,9 +67,20 @@ class SellingPlanPicker extends HTMLElement {
   };
 
   _onVariantChange = (event) => {
-    const variantId = event.detail && event.detail.variantId;
-    if (variantId === undefined || variantId === null) return;
-    this._sync(String(variantId), true);
+    const detail = event.detail || {};
+    if (detail.variantId === undefined || detail.variantId === null) return;
+
+    /* 同页可能有第二个产品块（编辑器里加了两个 main-product / 快速查看预览）：
+       事件是 document 级的，先用 sectionId 过滤，再退回"这个变体是否在我的数据里"。
+       不加这层，别人的变体切换会把本块价格与可用性一起改掉。 */
+    const mySection = this._section ? this._section.dataset.sectionId : null;
+    if (detail.sectionId) {
+      if (!mySection || detail.sectionId !== mySection) return;
+    } else if (!this._data[String(detail.variantId)]) {
+      return;
+    }
+
+    this._sync(String(detail.variantId), true);
   };
 
   /** 当前变体以表单里的隐藏 id 为准（variant-picker 会回写它），数据岛 id 作兜底 */
