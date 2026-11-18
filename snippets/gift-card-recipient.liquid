@@ -1,0 +1,116 @@
+{%- comment -%}
+  gift-card-recipient — 礼品卡商品的「寄给收件人」字段（合规项 G-09）。
+
+  平台契约（**字段名一个字都不能改，拼错就是静默不生效**）：
+    properties[__shopify_send_gift_card_to_recipient]  开关。隐藏域 value="if_present"
+                                                       是无 JS 时的口径；有 JS 时该隐藏域被禁用，
+                                                       由复选框自己提交
+    properties[__shopify_offset]                       收件人时区偏移（分钟），脚本填
+    properties[Recipient email]                        收件人邮箱
+    properties[Recipient name]                         收件人姓名
+    properties[Message]                                留言（≤200 字符）
+    properties[Send on]                                寄送日期（YYYY-MM-DD）
+
+  下方 `form.*` 一律是出错重提交时的回填值（服务端回传），不是主题自己算的。
+  注意寄送日期的回填走 `form.send_on`（平台在商品表单里给的键），
+  `gift_card.send_on` 是礼品卡对象上的同名属性、只在 gift_card 页与通知模板里可用。
+
+  参数：product / form / section
+{%- endcomment -%}
+
+<gift-card-recipient class="gift-recipient" data-section-id="{{ section.id }}">
+  {%- comment -%}
+    复选框出厂 disabled：无 JS 时不提交，由隐藏域 if_present 兜底；脚本一上来把它打开。
+    用 visually-hidden 而非 display:none —— 保留键盘可达与读屏可读，焦点环画在 label 上。
+  {%- endcomment -%}
+  <input
+    type="checkbox"
+    class="gift-recipient__checkbox visually-hidden"
+    id="Recipient-checkbox-{{ section.id }}"
+    name="properties[__shopify_send_gift_card_to_recipient]"
+    data-recipient-checkbox
+    {% if form.email != blank %}
+      checked
+    {% endif %}
+    disabled
+  >
+  <label class="gift-recipient__toggle" for="Recipient-checkbox-{{ section.id }}">
+    <span class="gift-recipient__tick" aria-hidden="true"></span>
+    <span class="gift-recipient__toggle-text">{{ 'gift_card_recipient.toggle' | t }}</span>
+  </label>
+
+  <div class="gift-recipient__fields" data-recipient-fields>
+    <div class="gift-recipient__field">
+      <label class="gift-recipient__label" for="Recipient-email-{{ section.id }}">
+        {{- 'gift_card_recipient.email_label' | t -}}
+      </label>
+      <input
+        class="gift-recipient__input"
+        type="email"
+        id="Recipient-email-{{ section.id }}"
+        name="properties[Recipient email]"
+        value="{{ form.email | escape }}"
+        autocomplete="email"
+        placeholder="{{ 'gift_card_recipient.email_placeholder' | t }}"
+        required
+      >
+    </div>
+
+    <div class="gift-recipient__field">
+      <label class="gift-recipient__label" for="Recipient-name-{{ section.id }}">
+        {{- 'gift_card_recipient.name_label' | t -}}
+      </label>
+      <input
+        class="gift-recipient__input"
+        type="text"
+        id="Recipient-name-{{ section.id }}"
+        name="properties[Recipient name]"
+        value="{{ form.name | escape }}"
+        autocomplete="name"
+        placeholder="{{ 'gift_card_recipient.name_placeholder' | t }}"
+      >
+    </div>
+
+    <div class="gift-recipient__field">
+      <label class="gift-recipient__label" for="Recipient-message-{{ section.id }}">
+        {{- 'gift_card_recipient.message_label' | t -}}
+      </label>
+      <textarea
+        class="gift-recipient__input gift-recipient__textarea"
+        id="Recipient-message-{{ section.id }}"
+        name="properties[Message]"
+        rows="3"
+        maxlength="200"
+        placeholder="{{ 'gift_card_recipient.message_placeholder' | t }}"
+      >{{ form.message | escape }}</textarea>
+      <p class="gift-recipient__hint">{{ 'gift_card_recipient.message_hint' | t: count: 200 }}</p>
+    </div>
+
+    <div class="gift-recipient__field">
+      <label class="gift-recipient__label" for="Recipient-send-on-{{ section.id }}">
+        {{- 'gift_card_recipient.send_on_label' | t -}}
+      </label>
+      <input
+        class="gift-recipient__input"
+        type="date"
+        id="Recipient-send-on-{{ section.id }}"
+        name="properties[Send on]"
+        value="{{ form.send_on | escape }}"
+        min="{{ 'now' | date: '%Y-%m-%d' }}"
+      >
+      <p class="gift-recipient__hint">{{ 'gift_card_recipient.send_on_hint' | t }}</p>
+    </div>
+  </div>
+
+  {%- comment -%}
+    隐藏域放在字段之后：无 JS 时它随表单一并提交（if_present = "有收件人信息才寄给收件人"）。
+    有 JS 时脚本会把它禁用，改由复选框的 checked 决定，避免出现两个同名值。
+  {%- endcomment -%}
+  <input
+    type="hidden"
+    name="properties[__shopify_send_gift_card_to_recipient]"
+    value="if_present"
+    data-recipient-control
+  >
+  <input type="hidden" name="properties[__shopify_offset]" value="" data-recipient-offset disabled>
+</gift-card-recipient>

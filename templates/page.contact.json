@@ -1,0 +1,26 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "contact-form",
+      "settings": {
+        "info_phone": "(555) 010-0182",
+        "info_email": "support@northbark.example",
+        "info_address": "1204 Mill Road\nAsheville, NC 28801",
+        "info_hours": "Mon–Fri, 8am–6pm ET\nSat, 9am–4pm ET",
+        "info_note": "Parts orders placed before 2pm ET ship the same day."
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}

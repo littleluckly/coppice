@@ -50,9 +50,23 @@
     "compare": "Compare",
     "compare_groups_header": "Comparison groups",
     "compare_page_header": "Comparison page",
-    "cart_drawer": "Cart drawer"
+    "cart_drawer": "Cart drawer",
+    "contact_form": "Contact form",
+    "trust_bar": "Trust bar"
   },
   "sections": {
+    "password": {
+      "labels": {
+        "image": "Background photo",
+        "image_info": "Fills the screen behind the card. The card sits in the middle, so keep the subject near an edge. Leave empty to use a soft brand-colour glow instead.",
+        "show_brand": "Show brand",
+        "show_brand_info": "Your logo, or the store name when no logo is uploaded.",
+        "body": "Message",
+        "body_info": "Shown only when you haven't written a message under Online Store > Preferences > Password protection.",
+        "footnote": "Small print",
+        "footnote_info": "One line under the form - an opening date, a contact address, or leave it empty."
+      }
+    },
     "main_nav": {
       "labels": {
         "show_all_series": "Show \"All series\" entry",
@@ -287,6 +301,23 @@
     "compare_lookup": {
       "name": "Compare lookup"
     },
+    "not_found": {
+      "labels": {
+        "actions": "Buttons",
+        "body": "Message",
+        "image": "Background photo",
+        "image_info": "Full width behind the message. Keep the subject on the right — the text sits on the left, over a fade into the page background.",
+        "primary_label": "Primary button label",
+        "primary_link": "Primary button link",
+        "primary_link_info": "Leave empty to send customers to the home page.",
+        "secondary_label": "Secondary button label",
+        "secondary_link": "Secondary button link",
+        "secondary_link_info": "Leave empty to send customers to the all-products page.",
+        "show_code": "Show the oversized 404",
+        "show_code_info": "Decorative — hidden from screen readers, so only the heading below is announced.",
+        "show_secondary": "Show the second button"
+      }
+    },
     "main_product": {
       "name": "Product information",
       "labels": {
@@ -295,10 +326,13 @@
         "description_words": "Description length (words)",
         "show_accelerated_checkout": "Show accelerated checkout",
         "accelerated_info": "Requires an accelerated checkout method such as Shop Pay. The button styling is controlled by the payment provider and must not be restyled.",
-        "show_payment_terms": "Show payment terms (Shop Pay Installments)"
+        "show_payment_terms": "Show payment terms (Shop Pay Installments)",
+        "show_gift_card_recipient": "Show recipient information form for gift card products",
+        "gift_card_recipient_info": "Only applies when the product is a gift card. Buyers can email the card to someone else, with a message and an optional send date."
       },
       "headers": {
-        "checkout": "Checkout"
+        "checkout": "Checkout",
+        "gift_card": "Gift card"
       },
       "blocks": {
         "spec_bullets": {
@@ -490,6 +524,61 @@
           "youtube": "YouTube",
           "tiktok": "TikTok",
           "pinterest": "Pinterest"
+        }
+      }
+    },
+    "contact_form": {
+      "defaults": {
+        "eyebrow": "Support",
+        "lead": "Questions about a machine, an order or a spare part? Send us a note and we will get back to you within one business day.",
+        "info_heading": "Contact details"
+      },
+      "labels": {
+        "eyebrow": "Eyebrow",
+        "heading_info": "Leave empty to use the page title.",
+        "lead": "Intro text",
+        "form_header": "Form",
+        "show_phone": "Show phone field",
+        "show_phone_info": "Adds an optional phone number field, so you can call back instead of writing.",
+        "consent": "Note under the button",
+        "consent_info": "Short line under the submit button, such as a privacy notice. Leave empty to hide.",
+        "details_header": "Contact details",
+        "phone": "Phone number",
+        "email": "Email address",
+        "address": "Address",
+        "hours": "Opening hours",
+        "hours_info": "One entry per line. Leave the whole card empty to hide it.",
+        "note": "Additional note"
+      }
+    },
+    "trust_bar": {
+      "name": "Trust bar",
+      "defaults": {
+        "item_text": "Free shipping over $99"
+      },
+      "labels": {
+        "show_dividers": "Show dividers",
+        "show_dividers_info": "Thin vertical lines between items. Hidden on the stacked mobile layout, where there is nothing to separate.",
+        "icon": "Icon",
+        "text": "Text",
+        "link": "Link",
+        "link_info": "Optional. Makes the whole item clickable - useful for a shipping or warranty page."
+      },
+      "options": {
+        "icon": {
+          "truck": "Truck (shipping)",
+          "warranty": "Shield (warranty)",
+          "parts": "Gear (parts and service)",
+          "support": "Headset (customer support)",
+          "return": "Return arrow",
+          "leaf": "Leaf",
+          "battery": "Battery",
+          "lock": "Lock (secure checkout)"
+        }
+      },
+      "blocks": {
+        "item": {
+          "name": "Trust item"
         }
       }
     }

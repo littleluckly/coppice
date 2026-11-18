@@ -40,19 +40,19 @@
 | G-01 | 没有 Custom Liquid **section** | *"Themes must include a Custom Liquid section."* | **S1** |
 | G-02 | 产品主 section 无 `@app` block | *"Themes must support app blocks (blocks of type `@app`) in the main product section and featured product section."* | **S1** |
 | ✅ G-03 | 没有 favicon 设置 | *"Must have a favicon setting."* | ~~S1~~ **已销 2026-11-12** |
-| G-04 | 礼品卡页没有二维码 | *"Must show a QR code. The minimum size required is 120px x 120px."* | **S1** |
+| ✅ G-04 | 礼品卡页没有二维码 | *"Must show a QR code. The minimum size required is 120px x 120px."* | ~~S1~~ **已销 2026-11-17** |
 | G-05 | 图片焦点（focal point）未实现 | *"Make sure that your theme supports the focal point of an image."* | **S1** |
 | G-06 | `theme_info` 作者与链接仍是 Skeleton 默认 | §Theme info（*"Must have a `theme_info` section"* 已满足，但内容错） | **S1** |
 | G-14 | **缺 `page.contact.json` 联系表单模板**（且全站没有联系表单） | *"Themes must support the following templates … `page.contact.json`"* + Page requirements: *"Must include an alternate template for a contact form."* | **S1** |
 | G-07 | 搜索页没有分面筛选 | *"You need to support faceted search filtering on collection pages and search pages."* | **S2** |
 | G-08 | 集合页商品卡不显示单位价 | *"Unit pricing must be supported on: Collection page / Product page / Cart page."* | **S2** |
-| G-09 | 礼品卡商品没有"寄给收件人"字段 | *"Gift card products must have the option to send the card to a recipient."* + `form.email` / `form.name` / `form.message` / `gift_card.send_on` | **S2** |
+| ✅ G-09 | 礼品卡商品没有"寄给收件人"字段 | *"Gift card products must have the option to send the card to a recipient."* + `form.email` / `form.name` / `form.message` / `form.send_on` | ~~S2~~ **已销 2026-11-17** |
 | G-10 | 没有 Custom Liquid **block** | *"Introduce Custom Liquid blocks into certain sections."* | **S2** |
 | ✅ G-11 | 密码页没有 logo / `shop.name` | Password page requirements: *"the logo or `shop.name`"* | ~~S2~~ **已销 2026-11-12** |
 | G-12 | 产品页无法选择订阅计划 | §Selling plans 只要求购物车**显示**；但选不了 ⇒ 显示逻辑永远是死代码 | **S2** |
 | ✅ G-13 | 礼品卡模板引用不存在的 `settings.logo` | 非条款问题 | ~~S3~~ **已销 2026-11-12** |
 
-> **进度（2026-11-12）**：14 条缺口中 G-03 / G-11 / G-13 已实现，**剩余 11 条，其中 S1 6 条**。下表保留全部原始行以便追溯，已销项以 ✅ 标记，落地记录见 §2.0。
+> **进度（2026-11-17）**：14 条缺口中 G-03 / G-04 / G-09 / G-11 / G-13 已实现，**剩余 9 条，其中 S1 5 条**（G-01 / G-02 / G-05 / G-06 / G-14）。下表保留全部原始行以便追溯，已销项以 ✅ 标记，落地记录见 §2.0 与 §2.0b。
 
 > **G-10 与页脚清单重叠**：`task-footer.md` T-1.10 已规划在页脚加一个 `liquid` block，**能满足 G-10**。两边不重复做，谁先落地谁把这条勾掉。
 
@@ -71,6 +71,43 @@
 三项共用新建的 `snippets/brand-logo.liquid`（选图 + 输出单个 `<img>`）。页头桌面行与移动抽屉头部也一并改用它，并删除 section 级 `image_picker`。完整取舍与实现清单见 §5.1。
 
 **验证**：`shopify theme check` → **78 files / 0 offenses**；`tools/check-locale-keys.py` 两套命名空间全命中；所有 JSON 与 `{% schema %}` 可解析；两个 preset 键集合仍完全相同（各 13 个）且不含图片设置。`check-tag-balance.py` 报的 8 处全是既有 `compare-*` snippet 的属性 `>` 误报，**本次改动的 5 个文件均不在列表内**。
+
+### 2.0b 已实现项落地记录（2026-11-17）
+
+| 编号 | 做法 | 主要文件 |
+| --- | --- | --- |
+| G-04 | 礼品卡页补二维码（内容 `gift_card.qr_identifier`，渲染 160×160），同时补打印样式与 `Print` 按钮；整页改为居中卡片布局 | `templates/gift_card.liquid` |
+| G-09 | 礼品卡商品的收件人字段块（Custom Element + `properties[...]` 平台字段），商品主 section 增加开关设置 | `snippets/gift-card-recipient.liquid`、`assets/gift-card-recipient.js`、`sections/main-product.liquid` |
+
+**G-04 细节**
+
+- 码内容取 `gift_card.qr_identifier`（经 `| json` 落进 JS 字面量），**不是 `shop.url`**：收银台扫的是这张卡的身份串。
+- 渲染库是 `{{ 'vendor/qrcode.js' | shopify_asset_url }}` —— Shopify 自托管的官方资产，不是外部 CDN；官方 `gift_card.liquid` 文档给的就是这条路径。`script_tag` filter 不支持 `defer`，直接用它会被 theme check 判 `ParserBlockingScript`，所以手写 `<script src=… defer>`，初始化放 `DOMContentLoaded`（defer 脚本一定先于它执行）。
+- **尺寸下限的落点**：`.gift-card__qr` 固定 `160px × 160px`，库的 `width/height` 参数同为 160 —— 实际渲染尺寸 160，高于 120 的硬下限。
+- 白底板 + 黑码写死（`colorDark` / `colorLight` + 白色托板）：Noir 预设下页面底色是深色，跟随配色的码扫不出来。
+- 打印：`@media print` 强制白底黑字、去阴影、隐藏动作按钮 —— 固定色值是有意例外（输出介质固定，不能跟随预设）。
+- 无 JS：二维码不渲染（与官方示例同构），余额与卡号仍在，收银台可手输卡号。
+
+**G-09 细节（平台字段名照 Dawn 官方实现核对，比条款文字更精确）**
+
+| 提交键 | 作用 |
+| --- | --- |
+| `properties[Recipient email]` | 收件人邮箱 |
+| `properties[Recipient name]` | 收件人姓名 |
+| `properties[Message]` | 留言（`maxlength=200`） |
+| `properties[Send on]` | 寄送日期 |
+| `properties[__shopify_send_gift_card_to_recipient]` | 开关。隐藏域 `value="if_present"` 是无 JS 口径；有 JS 时隐藏域被禁用，改由复选框提交 |
+| `properties[__shopify_offset]` | 收件人时区偏移（`getTimezoneOffset()`，分钟）—— 排期差一天就是它没填对 |
+
+- 条款写的 `gift_card.send_on` 是 `gift_card` 对象上的属性，**只在 gift_card 页与通知模板可用**，商品表单里拿不到；表单内的回填一律 `form.send_on`（`form.email` / `form.name` / `form.message` 同理）。
+- 透明度策略：`product.gift_card?` 为假时既不渲染字段也不加载脚本，普通商品零增量。
+- 无 JS：复选框出厂 `disabled`（不提交）、隐藏域提交 `if_present`、四个字段常显可填；有 JS 时反过来（复选框可提交、字段默认收起）。收起用 `:defined:not([open])` 判定，**不靠 JS 切 class**，也不用两套 DOM。
+- 主题编辑器里对应开关是 `main-product` 的 `Show recipient information form for gift card products`（默认开），与官方帮助中心的同名能力对齐。
+- **寄送日期框显示的语言不受主题控制**：`<input type="date">` 的空值占位（`mm/dd/yyyy` / `年/月/日`）由**浏览器 UI 语言（或系统区域）**决定，页面 `lang` 与 `request.locale` 都改不了 —— 已实测：同一页里 `lang="en"` 与 `lang="zh-CN"` 两个 date 输入显示完全一致。主题侧可控的只有值格式（`value` / `min` 一律 ISO `YYYY-MM-DD`，我们已如此）。演示截图里出现中文是操作系统的语言，不是缺陷；审核员用英文浏览器看到的即为英文格式。
+- `min` 由脚本按**本地日期**覆盖 Liquid 的服务器日期（`_setLocalMinDate()`）：`{{ 'now' | date }}` 取店铺服务器时区，跨时区最多差一天，会让西半球店铺下午选不了"今天"；日期真正的解释权在 `properties[__shopify_offset]`，下限应当同源。无 JS 时保留 Liquid 的 `min` 兜底。
+- ⚠️ **演示店验证限制**：演示店没有礼品卡商品、也没有可用支付网关，走不通「买卡 → 收件人收信 → 打开卡片页」。验收口径与支付图标一致 —— 按「模板/字段符合官方写法」判；实卡验证靠后台 `Products > Gift cards > Create gift card` 手动建卡（不收款）拿 `gift_card.url`。
+
+**验证（2026-11-17）**：`shopify theme check` → **81 files / 1 warning**（唯一一条是既有的 `snippets/image.liquid` `OrphanedSnippet` 误报）、0 error；`tools/check-locale-keys.py` 两套命名空间全命中。交互与视觉用本地桩验收（标记与 CSS 从源文件抽取，教训见 `dev-docs/bugs.md` BUG-071）：字段展开/收起/清空/禁用、时区偏移、无 JS 兜底、二维码 160×160 容器，全部通过 `--dump-dom` 断言。
 
 
 ### G-01 没有 Custom Liquid section
@@ -135,17 +172,15 @@
 
 ---
 
-### G-04 礼品卡页没有二维码
+### ✅ G-04 礼品卡页没有二维码（2026-11-17 已实现）
 
 **官方原文**
 
 > "Gift Card page requirements: Must support Apple Wallet. Must show a gift card code. Must show a QR code. The minimum size required is 120px x 120px. Must include the logo or `shop.name`."
 
-**现状证据**：`templates/gift_card.liquid` 全文 73 行——余额、有效期、Apple Wallet、卡号、`shop.name` 都有，**唯独没有二维码**。
+**原状**（2026-11-12 核查）：`templates/gift_card.liquid` 全文 73 行——余额、有效期、Apple Wallet、卡号、`shop.name` 都有，**唯独没有二维码**。没有二维码，这张卡在收银台核销不了。
 
-**影响**：礼品卡是要在收银台扫码核销的，没有二维码等于这张卡在演示店用不了。`must` + 明确尺寸。
-
-**做法**：加二维码，渲染尺寸 ≥ 120×120 CSS px（**别只写 width 属性**，要保证实际渲染尺寸达标）。Apple Wallet 与卡号已符合，不要动。
+**实现**：重写为居中卡片（logo → 店名 → 余额 `h1` → 过期/停用提示 → **二维码** → 卡号 → Print / Apple Wallet），二维码渲染 160×160（> 120 下限），细节见 §2.0b。
 
 ---
 
@@ -234,17 +269,15 @@
 
 ---
 
-### G-09 礼品卡商品没有"寄给收件人"字段
+### ✅ G-09 礼品卡商品没有"寄给收件人"字段（2026-11-17 已实现）
 
 **官方原文**
 
 > "Gift card products must have the option to send the card to a recipient. The following attributes of the `form` object must be used: `form.email` / `form.name` / `form.message`. The following attribute of the `gift_card` object must be used: `send_on`."
 
-**现状证据**：`grep -rnE "form\.(email|name|message)|send_on" sections/ snippets/` 只命中 `sections/article.liquid` 的评论表单（无关）。
+**原状**（2026-11-12 核查）：`grep -rnE "form\.(email|name|message)|send_on" sections/ snippets/` 只命中 `sections/article.liquid` 的评论表单（无关）。礼品卡商品加购时无法填收件人，核心场景断掉。
 
-**影响**：礼品卡商品加购时无法填收件人，礼品卡的核心场景断掉。
-
-**做法**：产品表单在 `product.gift_card?` 为真时渲染收件人字段块（收件人姓名 / 邮箱 / 留言 / 送达日期）。字段名必须逐字对齐 `form.email` 等，**拼错就是静默不生效**。
+**实现**：`snippets/gift-card-recipient.liquid` + `assets/gift-card-recipient.js` + `main-product` 开关设置。提交键是 `properties[Recipient email]` / `[Recipient name]` / `[Message]` / `[Send on]` 与两个平台隐藏域，`form.*` 只做错误回填。字段名逐字对齐官方实现，细节见 §2.0b。
 
 ---
 
@@ -336,7 +369,7 @@
 - [ ] **T-1.1** `sections/custom-liquid.liquid`（G-01）· 依赖：无
 - [ ] **T-1.2** `main-product.liquid` 补 `@app` block（G-02）· 依赖：无
 - [x] **T-1.3** 全局品牌设置：`favicon` + `logo` / `logo_dark` + 亮度自动选图（G-03 / G-13 / §5.1）· 依赖：无
-- [ ] **T-1.4** 礼品卡二维码（G-04）· 依赖：无
+- [x] **T-1.4** 礼品卡二维码（G-04）· 依赖：无
 - [ ] **T-1.5** 图片焦点：先收敛输出点，再按"会裁剪处"逐个接（G-05）· 依赖：无 · **改动面最大**
 - [ ] **T-1.6** `theme_info` 更正（G-06）· 依赖：真实作者名与文档地址
 - [ ] **T-1.7** 联系表单 section + `page.contact.json` 模板（G-14）· 依赖：无
@@ -345,7 +378,7 @@
 
 - [ ] **T-2.1** 搜索页重写：筛选 + 商品卡复用 + 排序（G-07）· 依赖：与 `task-collection.md` 的筛选实现协调
 - [ ] **T-2.2** 商品卡单位价（G-08）· 依赖：无
-- [ ] **T-2.3** 礼品卡收件人字段（G-09）· 依赖：`main-product` 表单区块结构
+- [x] **T-2.3** 礼品卡收件人字段（G-09）· 依赖：`main-product` 表单区块结构
 - [x] **T-2.4** 密码页补 `shop.name` / logo（G-11）· 依赖：无
 - [ ] **T-2.5** 产品页订阅计划选择器（G-12）· 依赖：T-2.3 同区（都在表单内）
 

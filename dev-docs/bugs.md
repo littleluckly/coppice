@@ -625,6 +625,89 @@
   5. 组件验收走 `--headless --dump-dom` 打断言集（PASS/FAIL 文本），别只看截图：`--virtual-time-budget` **只加速 `setTimeout`，不推进 CSS 过渡**，截图会停在过渡第一帧，把「正在过渡」误判成「没生效」（本次两轮误判都是这个原因）。
   6. 判 hover 能力**不要**用 `matchMedia('(hover: hover) and (pointer: fine)')` 当绑定开关 —— 无头环境不匹配，整页提示会静默全哑；改用 `PointerEvent.pointerType === 'touch'` 过滤。已写进 `tooltip.js` 头注释。
 
+### BUG-071 · 礼品卡收件人字段的容器只剩 1px 宽：自定义元素宿主默认 `display: inline`
+
+- **日期**：2026-11-17 ｜ **状态**：Fixed（新功能开发期自测发现，未上线）
+- **现象**：`.gift-recipient` 明明写了 `border` / `padding` / `margin-block` / `background-color`，渲染出来却是一根 1px 宽的竖线，四个字段与复选行全部溢出到框外；DOM 与 computed 值都正常，没有报错。
+- **根因**：`<gift-card-recipient>` 是自定义元素，**未定义 `display` 时按 UA 样式是 `display: inline`**。行内盒模型下，块级子元素（`.gift-recipient__fields` 的 grid、字段的 grid）会把行内盒切成碎片，边框只能画出碎片那一条。同一节里的 `<product-form>` 也是 inline，但它的子节点是 `<form>`（块级）且没有「容器型」外观，所以这个形态一直没暴露。
+- **修复**：`.gift-recipient { display: block; }`（注释写在规则上方，说明为什么不能省）。
+- **预防**：
+  1. **凡是自带边框 / 内边距 / 背景的 Custom Element（容器型组件），样式里第一条就写 `display: block`**，不要指望「子元素都是块级所以会撑开」。判据：这个标签一旦被当成盒子看（有 border / padding / background / grid 布局），就必须显式声明 display。`assets/critical.css:561` 已有同类先例（`.back-to-top` 的注释写着同样的话）。
+  2. 自测时**必须量宿主的 `getBoundingClientRect().width`**，不能只看子元素是否正常——本例子里元素全都在，只有盒子塌了；纯截图在窄屏下还会被误判成「内容就是这么窄」。
+  3. 顺手记一条桩侧的复犯：验证桩的外层容器用 `margin-inline: auto`（居中）时，flex 列里的 item 宽度会退化成 fit-content（BUG-063 同一机制），本轮因此先误判了一次「容器被压窄」。桩容器要显式 `inline-size: 100%`。
+  4. BUG-070 预防 #5 再命中一次：`--virtual-time-budget` 不推进 CSS 过渡，`transition: background-color .15s` 的勾选态在 headless 里永远读到起始色（白）。桩里判颜色前先注入 `* { transition: none !important }`，否则会把「没生效」当成 bug 修第二遍。
+  5. 桩里剥 Liquid 会留下**裸露的属性词与未加引号的字符串**（`{% if %}checked{% endif %}` 剥完剩一个 `checked`；`{{ x | json }}` 剥完没引号 ⇒ JS 直接 ReferenceError，二维码不出来）。生成桩后先 `--dump-dom` 看一眼关键节点，再开始断言。
+
+### BUG-072 · 单图商品的画廊只剩 76px 宽：桌面两列 grid 写死，没有缩略图时舞台被塞进缩略图列
+
+- **日期**：2026-11-17 ｜ **状态**：Fixed
+- **现象**（刘工截图，礼品卡商品页）：左侧只有一张约 76px 的小图，右边整片空白，大图/画廊不见了。设备像素下看起来就是"只有一个产品图，没有大图"。
+- **证据**（本地 `theme dev` 抓真实 HTML + 源文件 stylesheet 复现，`--dump-dom` 断言）：
+  - `data-media-count="1"`，`--gallery-ratio: 0.75`，只有一个 slide，`product-gallery__thumbs` 根本没渲染。
+  - 修复前实测：`gallery=742x101 ｜ stage=76x101 ｜ slides=76x101`。舞台（`.product-gallery__stage`）宽度只有 76px，`ul` 按 `aspect-ratio: 0.75` 反推出 101 高。
+- **根因**：`@media (min-width: 1100px)` 里把两列布局无条件挂在 `.product-gallery` 上：
+
+  ```css
+  .product-gallery { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: start }
+  ```
+
+  这套网格假设「第一列永远是 76px 缩略图列、舞台在第二列」。多图时靠 `order: -1` 把 thumbs 排到第一列；**单图时 thumbs 不存在**，舞台作为唯一子项被自动放进第一列 = 76px，第二列空着。CSS 完全合法，theme check 0 offense，纯布局语义错配。
+- **修复**：
+  1. Liquid 侧按媒体数量给宿主加修饰类：`class="product-gallery{% if media_count > 1 %} product-gallery--thumbnails{% endif %}"`。
+  2. 桌面两列规则改挂到 `.product-gallery--thumbnails`；`.product-gallery` 恢复默认 `display: block`。
+  3. 附带 `.product-gallery__slides { margin-inline: auto }`：竖图被 `max-block-size: 78vh` 按高定宽后，盒子会窄于所在列（实测 476 < 742），auto 外边距把它居中；宽度撑满时 auto 无效。
+- **修复后实测**：单图 `gallery=742x634 ｜ stage=742 ｜ slides=476x634`；模拟多图（补上修饰类 + 一个 thumb）`stage=654 ｜ thumbs=76`，两列照旧。
+- **预防**：
+  1. **`grid-template-columns` 写死像素轨道前，先问「这个轨道的内容是不是一定存在」**。凡是「可选子元素」占一个轨道，要么用 `repeat(auto-fit, …)`，要么由 Liquid 输出能力类把整条网格开关掉 —— 别指望空轨道自动消失（它会保留，并把唯一的子元素挤进去）。
+  2. 验收产品页不要只验"图多的那个商品"。**单媒体是最容易漏的分支**：演示店商品几乎都有多图，礼品卡/新建商品往往只有一张。以后画廊/媒体类改动，至少各验一个单图和一个多图商品。
+  3. 复现手段记一份：`theme dev` 起着的时候，`curl http://127.0.0.1:9292/products/<handle>` 拿**真实渲染的 HTML**，再用 `sections/*.liquid` 里的 `{% stylesheet %}` 原文拼成本地桩（`/private/tmp/gc-stub/build_gallery_stub.py`），`--dump-dom` 打 `getBoundingClientRect` 断言。比在浏览器里肉眼量准，也比 `--screenshot` 直接打 dev server 稳（本机 Chrome 直接截 dev server 会 SIGTERM，热更新长连接拖住加载）。
+  4. 正则找标签别写 `<product-gallery.*?>` —— 样式表里的注释也含这个字符串，会先命中注释拿到假标签。要么先剥 `<style>` 再匹配，要么定位到含 `data-media-count` 的那一处。
+
+### BUG-073 · 单图商品点「全屏查看」是一片空白：画布被自动放进 `auto` 列，宽度锁死在 0
+
+- **日期**：2026-11-17 ｜ **状态**：Fixed
+- **现象**（刘工截图）：单图商品（礼品卡）点舞台大图 → 灯箱打开，左上 `1 / 1`、右上关闭按钮都在，中间**全白**，没有任何图。
+- **证据**（DevTools）：`<img class="product-lightbox__img" src="…footer-bg.png?width=1600" sizes="100vw">` 已在 DOM 里，自然尺寸 **1088×1448**、文件已加载（160 kB），但 **Rendered size 0 × 0**；Computed 面板里 `max-width` 显示自定义值却被划掉（生效的是 `max-inline-size: 100cqw`）。
+- **本地复现**（真实 section HTML + 源 stylesheet + 真 `product-gallery.js`，`--dump-dom` 断言）：
+  - 修复前：`canvas=0x712 ｜ img=0x0 ｜ canvasCol=auto ｜ arrowsHidden=true,true`
+  - 修复后：`canvas=1333x712 ｜ img=534x712 ｜ canvasCol=2`
+- **根因**：`.product-lightbox__stage` 是 `grid-template-columns: auto minmax(0,1fr) auto`，三列分别是「上一张箭头 / 画布 / 下一张箭头」。单图时 `_renderLightbox()` 把两个箭头 `hidden`（`total < 2`），**画布成为唯一 grid item → 隐式自动放置进第 1 列 `auto`**，宽度退化成内容宽。而画布是 `container-type: size`，`img` 的尺寸又只能从画布的 `100cqw/100cqh` 反推 —— 画布宽度来自内容、内容来自画布 → 环，最终 0。于是 `max-inline-size: 100cqw` 解析为 0，图片被压成 0×0。全链路**没有任何报错**，DOM、srcset、加载状态都正常。
+- **修复**：`.product-lightbox__canvas { grid-column: 2 }` —— 显式钉在第 2 列（1fr），箭头在与不在都不影响画布。
+- **预防**：
+  1. **这是 BUG-072 的同族第二次**（24 小时内）：只要 grid 某条轨道是给「可能不存在的元素」预留的，固定元素就必须显式写 `grid-column` / `grid-row`，**不许依赖隐式自动放置**。判据一句话：*模板里有 `{% if %}` 或 JS 会 `hidden` 的兄弟节点，就要检查自动放置*。
+  2. **`container-type: size` + cq 单位**的容器，宽度绝不能来自内容（`auto` 列、`inline-block`、`fit-content`）：会形成 cq 环、锁死为 0。诊断指纹：元素都在、加载完成、DevTools 里 `Rendered size 0 × 0` 而 `max-width` 被 cq 值覆盖。
+  3. **单图 / 单元素分支必须单独实测**。多图商品的箭头一直在场，正好掩盖了 073；多图商品的多张图又掩盖了 072。以后画廊、灯箱、幻灯类改动，固定验三态：0 个可选元素、1 个、多个。
+  4. 桩要**加载真实 JS**（`product-gallery.js` 从 file:// 引），并把 CDN 图换成 data URI —— 否则「图没插入」和「图加载失败」分不开。注意 `theme dev` 会把资源 URL 重写成 `/cdn/s/files/…/assets/x.js?v=…`，替换正则要按这个形状写，别只匹配 `/assets/x.js`。
+
+---
+
+### BUG-074 · 「回到顶部」按钮被 hCaptcha 徽标压住：主题浮层抢了第三方 widget 的默认角
+
+- **日期**：2026-11-18 ｜ **状态**：Fixed
+- **现象**（刘工截图，联系页）：右下角「Protected by hCaptcha / Privacy · Terms」胶囊整个压在按钮之上，按钮只露出左下小半圈，点不到。
+- **根因**：`back-to-top` 用 `inset-inline-end: 1rem` 钉在右下角。Shopify 联系页的 hCaptcha 徽标是**平台注入的 fixed 浮层**，钉在**物理**右下（≈ right/bottom 14px），首屏之后异步插入，主题既不能改它的样式，也无法在 CSS 里预判它何时出现。两块浮层抢同一个角，且徽标后注入 + 更高层级 ⇒ 主题必输。这不是「避让写漏」，是**共处方案选错了**：右下是全球第三方浮层的默认位（hCaptcha、Shopify Inbox、客服脚本、cookie 横幅），位置不能指望独占，得会避让。
+- **修复（v3，现行）**：位置留在右下，**底距默认 90px** + 运行时避让兜底。
+  1. `assets/critical.css`：`back-to-top` 三个自定义属性 —— `--back-to-top-gap: 1rem`（横向）、`--back-to-top-offset: 90px`（底边基准，JS 读它推探针盒）、`--back-to-top-lift: 0px`（JS 写入的额外抬升）；`inset-block-end: calc(max(offset, 1rem + env(safe-area-inset-bottom)) + lift)`，宿主加 `transition: inset-block-end .2s`（`prefers-reduced-motion` 下关闭）。位置仍是逻辑属性 `inset-inline-end`：RTL 下翻到物理左边，与钉物理右侧的徽标天然不撞。
+  2. **90px 是主手段**：徽标占底边 14 + 高 46 = 60px（收起态 56×56 = 70px），按钮占 90–134px ⇒ 留 20–30px 余量，**平时完全不需要 JS**。取 90px 而不是按徽标算 76px，是给「徽标展开/改版」留缓冲。
+  3. `assets/back-to-top.js`：`measureAvoidance()` 只兜住**比 90px 还高**的挂件。探针盒由**视口**推导（`vh - offset` 起算）；候选集只有 `body` 直接子节点 + 全页 `iframe` 中「自身或祖先 `position: fixed`」且非 `pointer-events: none` 的；压住按钮那一格就写 `lift = 底边 - (box.top - 8px)`；`lift > vh*0.4` 则放弃（那是整屏浮层不是徽标）。触发点：`MutationObserver(body, childList)`、捕获阶段 `load`（iframe 晚加载，load 不冒泡）、`resize`、首次冒头，200ms 合并。
+  4. v1（当日废弃）：把按钮挪到左下（`inset-inline-start`）。**刘工否掉——「回到顶部」在左下反直觉**。v2（当日废弃）：底距沿用 1rem + 纯运行时避让；刘工改为直接给 90px 静态底距。
+  5. 同步描述位置的旧注释：`snippets/back-to-top.liquid` 的 doc 段、`sections/footer.liquid` 里「贴在右下角 16px 处」那句。
+- **验证**（桩：正则抽真标记 + 绝对 `file://` 引真 `critical.css` + 真 `back-to-top.js`；`--dump-dom` 打断言；1280×673 与 500×773 两个视口）：
+  1. 无遮挡 → `lift=0px`，`host y=539`（= 距底 90px）
+  2. 注入 hCaptcha 同尺寸徽标（250×46 @ bottom 14）→ **`lift=0px` 且不重叠**（按钮 539–583 / 徽标 613–659，间距 30px）；连续采样 6 次全等
+  3. 移除徽标 → `lift=0px`
+  4. 左下浮层 200×60 → `lift=0px`（横向不相交不抬）
+  5. 高挂件 250×160 → `lift=92px`（90px 挡不住时才抬，抬完间距 8px）
+  6. 整宽 320px 底部面板 → `lift=0px`（超过 `vh*0.4` 主动放弃）
+  7. 500×773 窄视口全部同上
+  - `shopify theme check` 0 error（1 warning = 已知 `image.liquid` 的 `OrphanedSnippet` 误报）。
+- **预防**：
+  1. **与第三方浮层共处 = 位置留在常规角 + 给足静态余量 + 高个子才运行时避让**。换角会牺牲可预期性（本轮实测被否）；纯静态又会被「比预期更高的挂件」打穿。判据：*这个角上有没有一块不由我控制、会在首屏之后出现的盒子？有 ⇒ 先按它的常见尺寸给足余量，再留一条量它的兜底。*
+  2. **避让量必须由视口推导，不能拿被避让元素自己的 rect 当探针**：抬升会改 rect ⇒ 抬高→测不到→降回→又测到，0.2s 过渡期间最容易自激。水平方向可以取实时 rect（不受抬升影响），纵向不行。
+  3. **自定义属性读回来是原始 token**：`--x: 1rem` 经 `getPropertyValue` 得到字符串 `"1rem"`，`parseFloat` 得到 **1**（不是 16）。本轮先写成 `parseFloat(...)`，避让量算成 67px（应为 52）才暴露——与 `hero-slideshow.js` 里 `.55s` 被 `parseFloat` 小 1000 倍同族。**凡 JS 读 CSS 长度/时长，先判单位再换算**。
+  4. **桩里量浮层先关过渡；判「截图里画没画」看 md5 或红描边**：无头截图常在 JS 跑之前抓帧——本轮 6 次截图里 `data-visible` 断言为 true、`opacity: 1`，像素里却完全没有按钮（加 `outline: 4px solid red !important` 后 md5 才变）。断言一律走 `--dump-dom`，截图只作最后一道肉眼确认；要看终态就把 JS 会写的值直接落进桩标记。
+  5. **MutationObserver 只监听 `body` 的 `childList`，不上 `subtree`**：页面内部变动（筛选刷新、变体切换）跟这个角落无关，上 subtree 会让测量被高频唤醒，而测量里是 `getComputedStyle` + `getBoundingClientRect`（强制样式/布局）。徽标本体埋在深处这种情况，靠「捕获阶段 `load`」补齐。
+
 ---
 
 ## 记录模板（追加新 bug 用）

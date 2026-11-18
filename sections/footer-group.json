@@ -41,7 +41,7 @@
             "heading": "Contact",
             "phone": "(555) 010-0182",
             "email": "support@northbark.example",
-            "page": "shopify://pages/contact"
+            "page": "contact"
           }
         },
         "social_facebook": {

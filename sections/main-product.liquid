@@ -66,6 +66,9 @@
 <script src="{{ 'product-gallery.js' | asset_url }}" defer></script>
 <script src="{{ 'product-form.js' | asset_url }}" defer></script>
 <script src="{{ 'pickup-availability.js' | asset_url }}" defer></script>
+{%- if product.gift_card? and section.settings.show_gift_card_recipient -%}
+  <script src="{{ 'gift-card-recipient.js' | asset_url }}" defer></script>
+{%- endif -%}
 {%- if has_model -%}
   <link
     rel="stylesheet"
@@ -95,7 +98,10 @@
   {%- endif -%}
 
   <div class="main-product__layout">
-    <product-gallery class="product-gallery" data-media-count="{{ media_count }}">
+    <product-gallery
+      class="product-gallery{% if media_count > 1 %} product-gallery--thumbnails{% endif %}"
+      data-media-count="{{ media_count }}"
+    >
       <div class="product-gallery__stage">
         <ul class="product-gallery__slides" role="list" style="--gallery-ratio: {{ gallery_ratio }}">
           {%- for media in product.media -%}
@@ -488,6 +494,15 @@
         {%- form 'product', product, id: form_id, class: 'product-form__form', novalidate: 'novalidate' -%}
           <input type="hidden" name="id" value="{{ current_variant.id }}" data-variant-input>
 
+          {%- comment -%}
+            礼品卡商品的「寄给收件人」字段（合规项 G-09，2026-11-17）。
+            只有 `product.gift_card?` 为真才渲染——普通商品的表单一个字节都不多。
+            位置在数量/加购之上：先决定寄给谁，再决定买几张。
+          {%- endcomment -%}
+          {%- if product.gift_card? and section.settings.show_gift_card_recipient -%}
+            {%- render 'gift-card-recipient', product: product, form: form, section: section -%}
+          {%- endif -%}
+
           <div class="product-form__row">
             <quantity-input class="quantity">
               <button
@@ -777,6 +792,9 @@
        整块高度跟着变，页面上下跳一截。框定死之后，谁也不许改高度。 */
     aspect-ratio: var(--gallery-ratio, 1);
     max-block-size: 78vh;
+    /* 竖图被 78vh 上限“按高定宽”后，盒子会窄于所在列（单图商品常见）：
+       靠 auto 外边距把它居中，别贴左留一大条空白。宽度撑满时 auto 无效。 */
+    margin-inline: auto;
   }
   /* 绝对定位铺满媒体框。用 inset 而不是 height: 100%——框高由 aspect-ratio 派生，
      百分比高度在这条链上会被当不确定值（BUG-052 的同类坑，别再赌）。 */
@@ -998,7 +1016,11 @@
   }
 
   @media (min-width: 1100px) {
-    .product-gallery {
+    /* 两列 = 「76px 缩略图列 + 舞台」。**只有真的有缩略图时才开两列**（BUG-072）：
+       原来不管媒体数量都写死两列，单图商品（礼品卡、只传了一张图的产品）
+       没有 .product-gallery__thumbs，舞台就被塞进 76px 那一列 —— 大图缩成
+       76×101 的小方块，右边整片空白，而 CSS 本身没有任何异常。 */
+    .product-gallery--thumbnails {
       display: grid;
       grid-template-columns: 76px minmax(0, 1fr);
       gap: 0.75rem;
@@ -1031,7 +1053,8 @@
     overflow: hidden;
   }
   /* UA 对未打开的 dialog 已给 display:none，这里显式写一遍：
-     <product-gallery> 在桌面是 grid 容器，绝不能让这个 dialog 占一个格子 */
+     <product-gallery> 在多图时是两列 grid 容器（单图时是普通块），
+     这个 dialog 是它的子节点 —— 一旦被当格子，舞台会被挤走一格 */
   .product-lightbox:not([open]) {
     display: none;
   }
@@ -1111,6 +1134,12 @@
   /* 画布 = 图片以外可点击关闭的区域（灯箱的常规习惯）。
      flex 而非 grid：grid 的隐式行按内容定尺寸，图片的百分比上限会失效。 */
   .product-lightbox__canvas {
+    /* 显式钉在第 2 列（BUG-073）。`grid-template-columns: auto 1fr auto` 是给
+       "箭头 + 画布 + 箭头"三件套准备的；单图时 JS 把两个箭头 hidden，画布就成了
+       唯一的 grid item → 自动落进**第 1 列 auto**，宽度退化成内容宽；而画布的尺寸
+       又由 container-type: size 从自身派生（环），最终 0×0 —— 灯箱一片空白，
+       日志无报错。显式占位后箭头在与不在都不影响画布。 */
+    grid-column: 2;
     /* 尺寸容器：让图片能用 cqw / cqh 取到画布的真实宽高。
        为什么不用百分比——画布高是「1fr 行 → 100%」派生出来的，Chrome 在该链条上
        把高度当不确定值，max-block-size: 100% 直接失效；实测竖版大图会溢出
@@ -1339,6 +1368,116 @@
   }
   .product-form__accelerated .shopify-payment-button__button--unbranded:hover:not([disabled]) {
     background-color: color-mix(in srgb, var(--color-brand) 7%, transparent);
+  }
+
+  /* ===== 礼品卡收件人字段（G-09，2026-11-17） =====
+     宿主 <gift-card-recipient> 勾选才展开。收起规则挂在 `:defined` 上：
+     脚本没跑（无 JS / 资源失败）时 :defined 为假 → 字段保持可见可填，
+     配合隐藏域的 if_present 兜底；脚本接管后 :defined 为真 → 未勾选即收起。
+     这样「无 JS 也能寄」与「有 JS 默认收起」不用各写一份 DOM。 */
+  .gift-recipient {
+    /* 自定义元素默认 display: inline —— 不写死 block 的话，边框与内边距会按
+       行内盒模型碎成一列（实测：容器只剩 1px 宽、字段全部溢出到框外）。 */
+    display: block;
+    margin-block-start: 1rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
+  }
+  .gift-recipient__toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-block-size: 32px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .gift-recipient__checkbox:focus-visible + .gift-recipient__toggle {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  .gift-recipient__tick {
+    position: relative;
+    flex: 0 0 auto;
+    inline-size: 20px;
+    block-size: 20px;
+    border: 1.5px solid color-mix(in srgb, var(--color-foreground) 35%, transparent);
+    border-radius: 5px;
+    background-color: var(--color-background);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  /* 勾号用两条边拼。颜色取 --color-background：浅色预设有白勾压深绿，
+     Noir 有深勾压亮绿——两边都够对比度，且不硬编码色值。 */
+  .gift-recipient__tick::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 46%;
+    inset-inline-start: 50%;
+    inline-size: 9px;
+    block-size: 4px;
+    border-inline-start: 2px solid var(--color-background);
+    border-block-end: 2px solid var(--color-background);
+    opacity: 0;
+    translate: -50% -50%;
+    rotate: -45deg;
+  }
+  .gift-recipient__checkbox:checked + .gift-recipient__toggle .gift-recipient__tick {
+    border-color: var(--color-brand);
+    background-color: var(--color-brand);
+  }
+  .gift-recipient__checkbox:checked + .gift-recipient__toggle .gift-recipient__tick::after {
+    opacity: 1;
+  }
+
+  .gift-recipient__fields {
+    display: grid;
+    gap: 0.75rem;
+    margin-block-start: 0.75rem;
+    padding-block-start: 0.75rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+  .gift-recipient:defined:not([open]) .gift-recipient__fields {
+    display: none;
+  }
+
+  .gift-recipient__field {
+    display: grid;
+    gap: 0.3rem;
+  }
+  .gift-recipient__label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--color-foreground-muted);
+  }
+  .gift-recipient__input {
+    inline-size: 100%;
+    min-block-size: 44px;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font: inherit;
+    font-size: 0.9rem;
+  }
+  .gift-recipient__input::placeholder {
+    color: var(--color-foreground-muted);
+    opacity: 1;
+  }
+  .gift-recipient__input:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 1px;
+  }
+  .gift-recipient__textarea {
+    min-block-size: 4.5rem;
+    resize: vertical;
+  }
+  .gift-recipient__hint {
+    font-size: 0.75rem;
+    color: var(--color-foreground-muted);
   }
 
   /* 信任行 / 自提 / 对比 */
@@ -1630,6 +1769,17 @@
       "type": "checkbox",
       "id": "show_payment_terms",
       "label": "t:sections.main_product.labels.show_payment_terms",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main_product.headers.gift_card"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_gift_card_recipient",
+      "label": "t:sections.main_product.labels.show_gift_card_recipient",
+      "info": "t:sections.main_product.labels.gift_card_recipient_info",
       "default": true
     }
   ],

@@ -86,6 +86,48 @@
         "product_float": true
       }
     },
+    "trust-bar": {
+      "type": "trust-bar",
+      "blocks": {
+        "item-1": {
+          "type": "item",
+          "settings": {
+            "icon": "truck",
+            "text": "Free shipping over $99"
+          }
+        },
+        "item-2": {
+          "type": "item",
+          "settings": {
+            "icon": "warranty",
+            "text": "Warranty protection"
+          }
+        },
+        "item-3": {
+          "type": "item",
+          "settings": {
+            "icon": "parts",
+            "text": "Genuine parts & service"
+          }
+        },
+        "item-4": {
+          "type": "item",
+          "settings": {
+            "icon": "support",
+            "text": "Dedicated customer support"
+          }
+        }
+      },
+      "block_order": [
+        "item-1",
+        "item-2",
+        "item-3",
+        "item-4"
+      ],
+      "settings": {
+        "show_dividers": true
+      }
+    },
     "platform-cards": {
       "type": "platform-cards",
       "blocks": {
@@ -196,6 +238,7 @@
   },
   "order": [
     "hero",
+    "trust-bar",
     "platform-cards",
     "use-cases",
     "featured",

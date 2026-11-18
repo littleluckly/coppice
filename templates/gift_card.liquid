@@ -19,11 +19,202 @@
     {%- endif -%}
 
     {% style %}
-      main {
-        text-align: center;
+      /* 礼品卡页是 layout-none 的独立文档：只用 css-variables 输出的令牌，
+         不依赖任何 section 的样式块（那份样式不在这条渲染链上）。 */
+      .gift-card {
+        display: grid;
+        place-items: center;
+        flex: 1 1 auto;
+        padding: clamp(1.5rem, 5vw, 3rem) var(--page-margin);
+        background-color: var(--color-background);
       }
-      main img {
-        display: unset;
+
+      .gift-card__card {
+        display: grid;
+        justify-items: center;
+        gap: 0.85rem;
+        inline-size: 100%;
+        max-inline-size: 30rem;
+        padding: clamp(1.5rem, 5vw, 2.5rem);
+        border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+        border-radius: 1.25rem;
+        background-color: var(--color-background);
+        text-align: center;
+        box-shadow: 0 10px 30px color-mix(in srgb, var(--color-brand) 10%, transparent);
+      }
+
+      .gift-card__logo {
+        max-inline-size: 240px;
+        block-size: auto;
+      }
+
+      .gift-card__shop {
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--color-foreground);
+      }
+
+      .gift-card__balance-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--color-foreground-muted);
+      }
+
+      /* h1 是金额本身：这是收礼人打开页面要看的那一个数。
+         语义由上面的标签承担，读屏听到的是 "Gift card balance: $100.00"。 */
+      .gift-card__balance {
+        margin-block-start: -0.5rem;
+        font-size: clamp(2rem, 1.6rem + 2vw, 2.75rem);
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--color-brand);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* 过期 / 停用是警告态：用语义令牌，不借品牌色（同 css-variables 的口径） */
+      .gift-card__notice {
+        padding: 0.4rem 0.9rem;
+        border-radius: 999px;
+        background-color: var(--color-warning);
+        color: var(--color-warning-on);
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .gift-card__expires {
+        font-size: 0.85rem;
+        color: var(--color-foreground-muted);
+      }
+
+      /* 二维码：白底板 + 黑码，**不跟随配色**——Noir 预设下页面是深底，
+         深底上的码扫不出来。底板固定白、码固定黑，是扫码与打印的硬需求。 */
+      .gift-card__qr-plate {
+        display: grid;
+        place-items: center;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+        background-color: #ffffff;
+      }
+
+      /* ⚠️ 硬约束：渲染尺寸 ≥ 120×120 px（SDD §5 #13 / §7.1 #5）。
+         qrcode.js 会把 canvas 的 width/height 属性写成 160，这里的 160px 与之对齐，
+         不要改成会缩小的写法。 */
+      .gift-card__qr {
+        inline-size: 160px;
+        block-size: 160px;
+      }
+
+      .gift-card__qr img,
+      .gift-card__qr canvas {
+        display: block;
+        inline-size: 100%;
+        block-size: 100%;
+      }
+
+      .gift-card__qr-hint {
+        max-inline-size: 22rem;
+        font-size: 0.8rem;
+        color: var(--color-foreground-muted);
+      }
+
+      .gift-card__code {
+        padding: 0.5rem 0.9rem;
+        border: 1px dashed color-mix(in srgb, var(--color-foreground) 30%, transparent);
+        border-radius: var(--style-border-radius-inputs);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 1.05rem;
+        letter-spacing: 0.12em;
+        color: var(--color-foreground);
+        overflow-wrap: anywhere;
+      }
+
+      .gift-card__use {
+        font-size: 0.85rem;
+        color: var(--color-foreground-muted);
+      }
+
+      .gift-card__actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-block-start: 0.25rem;
+      }
+
+      .gift-card__print {
+        min-block-size: 44px;
+        padding-inline: 1.5rem;
+        border: 0;
+        border-radius: 999px;
+        background-color: var(--color-brand);
+        color: var(--color-background);
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .gift-card__print:hover {
+        background-color: color-mix(in srgb, var(--color-brand) 85%, var(--color-foreground));
+      }
+
+      .gift-card__print:focus-visible {
+        outline: 2px solid var(--color-brand);
+        outline-offset: 3px;
+      }
+
+      .gift-card__wallet {
+        display: inline-flex;
+        min-block-size: 44px;
+        align-items: center;
+      }
+
+      .gift-card__wallet img {
+        block-size: 40px;
+        inline-size: auto;
+      }
+
+      /* 打印：纸面必须是「白底黑字」，与屏幕预设无关——深色预设下原样打印
+         就是一张黑纸。这组固定色是有意的例外（同压照片遮罩的口径：
+         输出介质固定时，不能跟随主题配色）。 */
+      @media print {
+        .gift-card {
+          padding: 0;
+          background-color: #ffffff;
+        }
+        .gift-card__card {
+          max-inline-size: none;
+          border: 0;
+          border-radius: 0;
+          background-color: #ffffff;
+          color: #000000;
+          box-shadow: none;
+        }
+        .gift-card__balance,
+        .gift-card__shop,
+        .gift-card__code {
+          color: #000000;
+        }
+        .gift-card__balance-label,
+        .gift-card__expires,
+        .gift-card__use,
+        .gift-card__qr-hint {
+          color: #333333;
+        }
+        .gift-card__code {
+          border-color: #333333;
+        }
+        .gift-card__qr-plate {
+          break-inside: avoid;
+        }
+        /* 屏幕上给手点，纸面上给扫：动作按钮不进打印件 */
+        .gift-card__actions {
+          display: none;
+        }
       }
     {% endstyle %}
 
@@ -31,62 +222,119 @@
   </head>
 
   <body>
-    <main>
-      <div class="shopify-section">
-        <h1>{{ gift_card.balance | money }}</h1>
+    <main class="gift-card">
+      <div class="gift-card__card">
+        {%- comment -%}
+          G-13: this branch used to read `settings.logo` before that global
+          setting existed, so it was always false. Now the global Brand logo
+          is real; snippets/brand-logo.liquid also picks the dark variant.
+          Keep the built-in card illustration as the no-logo fallback.
+        {%- endcomment -%}
+        {%- if settings.logo != blank or settings.logo_dark != blank -%}
+          {% render 'brand-logo',
+            logo_class: 'gift-card__logo',
+            logo_width: 300,
+            logo_widths: '150, 300, 450',
+            logo_sizes: '240px',
+            logo_alt: shop.name,
+            logo_loading: 'eager'
+          %}
+        {%- else -%}
+          <img
+            class="gift-card__logo"
+            src="{{ 'gift-card/card.svg' | shopify_asset_url }}"
+            alt="{{ 'gift_card.card' | t }}"
+            width="300"
+            height="200"
+          >
+        {%- endif -%}
 
-        {% if gift_card.enabled == false or gift_card.expired %}
-          <p>{{ 'gift_card.expired' | t }}</p>
-        {% endif %}
+        <p class="gift-card__shop">{{ shop.name }}</p>
 
-        {% if gift_card.expires_on %}
-          {% assign expires_on = gift_card.expires_on | date: '%B %e, %Y' %}
-          <p>
-            {{ 'gift_card.expires_on' | t: expires_on: expires_on }}
-          </p>
-        {% endif %}
+        <p class="gift-card__balance-label" aria-hidden="true">{{ 'gift_card.balance' | t }}</p>
+        <h1 class="gift-card__balance">
+          <span class="visually-hidden">{{ 'gift_card.balance' | t }}:</span>
+          {{ gift_card.balance | money }}
+        </h1>
 
-        <p>
-          {%- comment -%}
-            G-13: this branch used to read `settings.logo` before that global
-            setting existed, so it was always false. Now the global Brand logo
-            is real; snippets/brand-logo.liquid also picks the dark variant.
-            Keep the built-in card illustration as the no-logo fallback.
-          {%- endcomment -%}
-          {%- if settings.logo != blank or settings.logo_dark != blank -%}
-            {% render 'brand-logo',
-              logo_class: 'gift-card__logo',
-              logo_width: 300,
-              logo_widths: '150, 300, 450',
-              logo_sizes: '300px',
-              logo_alt: shop.name,
-              logo_loading: 'eager'
-            %}
-          {%- else -%}
-            <img
-              src="{{ 'gift-card/card.svg' | shopify_asset_url }}"
-              alt="{{ 'gift_card.card' | t }}"
-              width="300"
-              height="200"
-            >
+        {%- if gift_card.enabled == false or gift_card.expired -%}
+          <p class="gift-card__notice">{{ 'gift_card.expired' | t }}</p>
+        {%- endif -%}
+
+        {%- if gift_card.expires_on -%}
+          {%- assign expires_on = gift_card.expires_on | date: '%B %e, %Y' -%}
+          <p class="gift-card__expires">{{ 'gift_card.expires_on' | t: expires_on: expires_on }}</p>
+        {%- endif -%}
+
+        {%- comment -%}
+          G-04: 二维码（≥120×120 px）。码内容是 gift_card.qr_identifier，
+          不是 shop.url——收银台扫的是这张卡的身份串。
+          vendor/qrcode.js 是 Shopify 自托管的官方资产（shopify_asset_url），
+          不是外部 CDN；官方 gift_card 文档给的就是这条路径。
+        {%- endcomment -%}
+        {%- if gift_card.qr_identifier != blank -%}
+          <div class="gift-card__qr-plate">
+            <div
+              class="gift-card__qr"
+              id="gift-card-qr"
+              role="img"
+              aria-label="{{ 'gift_card.qr_code' | t }}"
+            ></div>
+          </div>
+          <p class="gift-card__qr-hint">{{ 'gift_card.qr_hint' | t }}</p>
+        {%- endif -%}
+
+        <p class="gift-card__code">{{ gift_card.code | format_code }}</p>
+        <p class="gift-card__use">{{ 'gift_card.use_at_checkout' | t }}</p>
+
+        <div class="gift-card__actions">
+          <button type="button" class="gift-card__print" data-gift-card-print>
+            {{- 'gift_card.print' | t -}}
+          </button>
+          {%- if gift_card.pass_url -%}
+            <a class="gift-card__wallet" href="{{ gift_card.pass_url }}">
+              <img
+                src="{{ 'gift-card/add-to-apple-wallet.svg' | shopify_asset_url }}"
+                alt="{{ 'gift_card.add_to_apple_wallet' | t }}"
+                width="200"
+                height="60"
+              >
+            </a>
           {%- endif -%}
-        </p>
-
-        <h2>{{ shop.name }}</h2>
-        <p>{{ 'gift_card.use_at_checkout' | t }}</p>
-        <p>{{ gift_card.code | format_code }}</p>
-
-        {% if gift_card.pass_url %}
-          <a href="{{ gift_card.pass_url }}">
-            <img
-              src="{{ 'gift-card/add-to-apple-wallet.svg' | shopify_asset_url }}"
-              alt="{{ 'gift_card.add_to_apple_wallet' | t }}"
-              width="200"
-              height="60"
-            >
-          </a>
-        {% endif %}
+        </div>
       </div>
     </main>
+
+    {%- if gift_card.qr_identifier != blank -%}
+      {%- comment -%}
+        script_tag filter 不支持 defer，直接用它会被 theme check 判为
+        ParserBlockingScript。手写 script 带 defer：defer 脚本一定先于
+        DOMContentLoaded 执行，所以下面那段可以直接用 QRCode 全局。
+      {%- endcomment -%}
+      <script src="{{ 'vendor/qrcode.js' | shopify_asset_url }}" defer></script>
+    {%- endif -%}
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        {%- if gift_card.qr_identifier != blank %}
+        var qrTarget = document.getElementById('gift-card-qr');
+        if (qrTarget && typeof QRCode !== 'undefined') {
+          new QRCode(qrTarget, {
+            text: {{ gift_card.qr_identifier | json }},
+            width: 160,
+            height: 160,
+            colorDark: '#000000',
+            colorLight: '#ffffff'
+          });
+        }
+        {%- endif %}
+        var printButton = document.querySelector('[data-gift-card-print]');
+        if (printButton) {
+          printButton.addEventListener('click', function () {
+            window.print();
+          });
+        }
+      });
+    </script>
   </body>
 </html>

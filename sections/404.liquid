@@ -1,23 +1,460 @@
 {% comment %}
-  This section is used in the 404 template to render page shown when customers
-  enter an invalid store URL.
+  404 页 —— 把迷路的顾客收敛回首页或商品列表。
 
-  https://shopify.dev/docs/storefronts/themes/architecture/templates/404
+  ## 版式来源
+  2026-11-15 刘工给的效果图（Northbark 404）：通栏照片打底，左侧一列文字块
+  —— 超大 404 字标（中间那个 0 做成叶子）、h1、一段说明、实心 + 描边双按钮。
+
+  ## 三个刻意的决定
+
+  1. **404 字标不进可访问树**（`aria-hidden="true"`）。它是排版装饰，不是标题；
+     页面的 h1 是「Oops! Page Not Found」。让屏读用户先听到一串「四零四」再听到
+     真正的标题，是把装饰当成内容塞进了朗读顺序。SEO 同理：404 页不需要
+     title 里带 404 之外的额外信号。
+
+  2. **`0` 是画出来的，不是字体字形**（下方 `.not-found__zero`）。环 + 叶 + 叶脉
+     一次成形，尺寸按 `em` 跟字号缩放。用字体里的 0 再叠叶脉的做法在这里行不通：
+     商家可以换任何 `font_picker` 字体，0 的内孔位置与比例随之变化，
+     叠上去的叶脉会跑到笔画上。自绘图形不依赖字体度量。
+
+  3. **移动端改成「上图下字」，不做文字压图**。桌面靠一层从左到右的背景色渐隐
+     把文字垫在白底上；手机上文字块占满宽度、没有「干净的一侧」可垫，
+     硬压照片只能靠整块半透明遮罩，割草机和文字一起糊掉。
+     750 断点下照片变成 4:3 的独立图片块（`aspect-ratio`），文字落在它下面，
+     对比度 100% 可控。
+
+  ## 无图时的降级
+  主题包里带不了演示照片，`image` 留空是常态。此时右侧没有照片可平衡，
+  所以整块换一套版式：文字列居中、背景一层居中偏左的品牌色柔光。
+  字标 / 标题 / 按钮全部照常，不塌成一行「Page not found.」。
+
+  ## 与 pages-ui.md §12 的差异
+  工单原方案是「文案 + 搜索框 + 用途入口卡」。本轮按效果图实现，未含搜索框与
+  用途卡；若要补，单独加 block，不要塞进这个 section 的设置里。
 {% endcomment %}
 
-<h1>{{ '404.title' | t }}</h1>
+{%- liquid
+  assign s = section.settings
 
-<p>
-  {{ '404.not_found' | t }}
-</p>
+  # 文案：设置留空 → 回落 t: 默认值。分两步 assign 是必需的 ——
+  # 直接串成「default 过滤器接 t 过滤器」会把 default 的结果再翻一次，
+  # 商家清空输入后屏幕上会出现原始键名。
+  assign heading_text = s.heading
+  if heading_text == blank
+    assign heading_text = '404.title' | t
+  endif
 
-<a href="{{ routes.all_products_collection_url }}">
-  {{ '404.back_to_shopping' | t }}
-</a>
+  assign body_text = s.body
+  if body_text == blank
+    assign body_text = '404.not_found' | t
+  endif
+
+  assign primary_label = s.primary_label
+  if primary_label == blank
+    assign primary_label = '404.back_to_home' | t
+  endif
+
+  assign secondary_label = s.secondary_label
+  if secondary_label == blank
+    assign secondary_label = '404.browse_products' | t
+  endif
+
+  # 链接留空 → 回落站内默认出口。routes 对象已含语言/市场前缀，
+  # 不手拼 '/pages/...' 之类路径（多语言下会丢前缀）。
+  assign primary_link = s.primary_link
+  if primary_link == blank
+    assign primary_link = routes.root_url
+  endif
+
+  assign secondary_link = s.secondary_link
+  if secondary_link == blank
+    assign secondary_link = routes.all_products_collection_url
+  endif
+
+  assign has_image = false
+  if s.image != blank
+    assign has_image = true
+  endif
+-%}
+
+<div class="not-found{% if has_image %} not-found--image{% endif %} full-width">
+  {%- if has_image -%}
+    {%- comment -%}
+      背景照片：页面唯一的大图，eager + fetchpriority high（它就是 LCP）。
+      alt 留空 —— 纯装饰背景，页面语义由右侧 h1 承担（同 blog 列表页的 hero）。
+      焦点取自图库里的 presentation.focal_point，商家点一下图即可决定留哪块。
+    {%- endcomment -%}
+    {%- comment -%}
+      image_tag 收到空 alt 时会把 alt 属性整条吞掉（不是输出 alt=""），
+      Lighthouse 判定为「缺 alt」。所以先不带 alt 生成，再补一个进去。
+    {%- endcomment -%}
+    {%- assign hero_img = s.image
+      | image_url: width: 2400
+      | image_tag:
+        widths: '750, 1100, 1500, 2000, 2400',
+        sizes: '100vw',
+        loading: 'eager',
+        fetchpriority: 'high'
+    -%}
+    {%- assign hero_img = hero_img | replace: '<img ', '<img alt="" ' -%}
+    <span class="not-found__media" style="--focal: {{ s.image.presentation.focal_point | default: '50% 50%' }}">
+      {{ hero_img }}
+    </span>
+    <span class="not-found__scrim" aria-hidden="true"></span>
+  {%- endif -%}
+
+  <div class="not-found__inner">
+    <div class="not-found__copy">
+      {%- if s.show_code -%}
+        <p class="not-found__code" aria-hidden="true">
+          <span class="not-found__digit">4</span>
+          <svg class="not-found__zero" viewBox="0 0 74 100" aria-hidden="true" focusable="false">
+            <ellipse cx="37" cy="50" rx="28.5" ry="41" fill="none" stroke="currentColor" stroke-width="19" />
+            <path d="M46 31Q58.5 60.4 27 66Q14.5 36.6 46 31Z" fill="currentColor" />
+            <path d="M28 65Q36.5 48.5 45 32" fill="none" stroke="var(--color-background)" stroke-width="3" stroke-linecap="round" />
+          </svg>
+          <span class="not-found__digit">4</span>
+        </p>
+      {%- endif -%}
+
+      <h1 class="not-found__heading">{{ heading_text | escape }}</h1>
+
+      {%- if body_text != blank -%}
+        <p class="not-found__body">{{ body_text | escape }}</p>
+      {%- endif -%}
+
+      <div class="not-found__actions">
+        <a class="btn-solid not-found__cta" href="{{ primary_link }}">
+          {{- 'icon-arrow-left.svg' | inline_asset_content -}}
+          <span>{{ primary_label | escape }}</span>
+        </a>
+        {%- if s.show_secondary -%}
+          <a class="btn-solid btn-solid--quiet not-found__cta" href="{{ secondary_link }}">
+            <span>{{ secondary_label | escape }}</span>
+          </a>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  /* ── 舞台 ───────────────────────────────────────────────────────────────
+     单格网格：照片 / 遮罩 / 内容三层叠在同一格里，靠 z-index 排序。
+     移动端把 grid-template-areas 换成 'media' 'stage' 两行，
+     照片就从「绝对定位铺满」变成「流内的一块 4:3 图片」——一份 DOM，不复制标记。 */
+  .not-found {
+    position: relative;
+    display: grid;
+    grid-template-areas: 'stage';
+    align-items: center;
+    /* 视口高度三级回落：老浏览器读 32rem，支持 vh 读第二个，支持 svh 读第三个。
+       不用 100vh：移动端地址栏收放会让它溢出。 */
+    min-block-size: 32rem;
+    min-block-size: max(32rem, 82vh);
+    min-block-size: max(32rem, 82svh);
+    background-color: var(--color-background);
+    overflow: hidden;
+  }
+
+  /* 没有照片时垫一层极淡的品牌色柔光，让空块仍然有「被设计过」的体积感，
+     而不是一片死白。用径向不用线性：线性渐变会把读者的视线往一侧推，
+     而这里两侧都没有内容可看。 */
+  .not-found:not(.not-found--image) {
+    background-image: radial-gradient(
+      120% 100% at 28% 42%,
+      color-mix(in srgb, var(--color-brand) 9%, var(--color-background)) 0%,
+      var(--color-background) 62%
+    );
+  }
+
+  /* 无图时右侧没有照片要平衡 —— 22rem 的文字列贴着左边，右边会空掉半屏。
+     改成整列居中，并把桌面那个左内缩归零（居中后它只会让文字偏心）。 */
+  .not-found:not(.not-found--image) .not-found__inner {
+    grid-template-columns: minmax(0, 22rem);
+    justify-content: center;
+    padding-inline-start: 0;
+  }
+
+  /* ── 照片 + 遮罩 ──────────────────────────────────────────────────────── */
+  .not-found__media {
+    grid-area: stage;
+    position: absolute;
+    inset: 0;
+    display: block;
+    z-index: 0;
+  }
+
+  /* image_tag 会输出 width/height 属性，这里显式给 block-size，否则固有比例
+     会参与布局把图撑变形（与搜索页行卡同一个坑）。 */
+  .not-found__media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    object-position: var(--focal, 50% 50%);
+  }
+
+  /* 从左侧把画面渐隐成背景色，给文字垫出一块干净底。
+     **前 32% 必须完全不透明**，这是对比度硬线，不是审美选择：
+     文字列 22rem + 左内缩 72px = 424px，在 1440 视口下正好落在 0–32%。
+     段落用的是 --color-foreground-muted（对纯背景色 4.95:1），
+     一旦压到半透明区，背景被照片提亮、对比度直接掉到 3.3 左右，AA 不过。
+     改文字列宽 / 左内缩 / 断点时，这一段要跟着重算。 */
+  .not-found__scrim {
+    grid-area: stage;
+    position: absolute;
+    inset: 0;
+    display: block;
+    z-index: 1;
+    background-image: linear-gradient(
+      90deg,
+      var(--color-background) 0%,
+      var(--color-background) 32%,
+      color-mix(in srgb, var(--color-background) 80%, transparent) 40%,
+      color-mix(in srgb, var(--color-background) 44%, transparent) 49%,
+      color-mix(in srgb, var(--color-background) 14%, transparent) 58%,
+      transparent 68%
+    );
+  }
+
+  /* ── 内容 ─────────────────────────────────────────────────────────────── */
+  .not-found__inner {
+    grid-area: stage;
+    position: relative;
+    z-index: 2;
+    /* inline-size: 100% 不能省：grid item 上同时出现 margin-inline: auto 时，
+       justify-self: stretch 会失效、宽度退化成 fit-content（BUG-063），
+       整块内容会缩成与文字等宽并飘到页面中间。 */
+    inline-size: 100%;
+    max-inline-size: var(--content-width, 90rem);
+    margin-inline: auto;
+    padding-block: clamp(3rem, 7vw, 5.5rem);
+    /* 文字再退一段：贴到 page-margin 上会显得「顶格」，参考图这里留了约 5% 视口宽 */
+    padding-inline-start: clamp(0px, 5vw, 4.5rem);
+    /* 两列：左列吃文字的 22rem，右列空着让照片露出来。
+       minmax(0, …) 不是装饰 —— grid item 默认 min-width: auto，
+       数字块这种超宽内容会把列撑破、把右侧照片挤没。 */
+    display: grid;
+    grid-template-columns: minmax(0, 22rem) 1fr;
+    align-items: center;
+  }
+
+  .not-found__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-inline-size: 0;
+  }
+
+  /* ── 404 字标 ─────────────────────────────────────────────────────────── */
+  .not-found__code {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    font-size: clamp(4.5rem, 12.5vw, 11rem);
+    font-weight: 700;
+    /* 行高收到 0.9 让字标紧凑；不能更低 —— 「4」的竖笔会顶到上一行的基线 */
+    line-height: 0.9;
+    letter-spacing: -0.025em;
+    color: var(--color-brand);
+  }
+
+  .not-found__digit {
+    display: block;
+  }
+
+  /* 0 的字位：宽高都按 em 走，随字号缩放。
+     0.533em × 0.72em = viewBox 74:100 按「高 = cap-height」折算出来的占位，
+     换字体时会有几个像素的偏差，远小于「拿字体字形叠叶脉」的漂移。 */
+  .not-found__zero {
+    display: block;
+    flex: none;
+    inline-size: 0.533em;
+    block-size: 0.72em;
+  }
+
+  /* ── 文案 ─────────────────────────────────────────────────────────────── */
+  .not-found__heading {
+    margin: 0;
+    font-size: clamp(1.5rem, 2.6vw, 2rem);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    color: var(--color-brand);
+  }
+
+  /* 只有前面真的有 404 字标时才要这段间距 —— 商家关掉字标后，
+     h1 是块首元素，margin-top 会变成一块说不清来由的空白 */
+  .not-found__code + .not-found__heading {
+    margin-block-start: clamp(1.25rem, 2.4vw, 1.75rem);
+  }
+
+  /* 次级文字用 --color-foreground-muted（70% 前景 = 4.95:1），
+     不用自己调 opacity —— 60% 只有 3.69:1，AA 不过。 */
+  .not-found__body {
+    margin: clamp(0.75rem, 1.4vw, 1rem) 0 0;
+    font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+    line-height: 1.6;
+    color: var(--color-foreground-muted);
+  }
+
+  /* ── 按钮 ─────────────────────────────────────────────────────────────── */
+  /* 形状 / 配色 / 光晕 / 扫光全部来自 assets/critical.css 的 .btn-solid，
+     这里只保留 404 自己的尺寸与排版差异。 */
+  .not-found__actions {
+    display: flex;
+    flex-wrap: wrap;
+    /* 10px 而不是 12px：22rem 文字列里两个按钮并排只剩这点余量，
+       再大就会折成上下两行（参考图是并排的） */
+    gap: 0.625rem;
+    margin-block-start: clamp(1.5rem, 3vw, 2.125rem);
+  }
+
+  .not-found__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8125rem 1.375rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    /* 不换行：全圆角胶囊一旦折成两三行，宽高比趋近 1，会变成一个圆球 */
+    white-space: nowrap;
+  }
+
+  .not-found__cta svg {
+    flex: none;
+    inline-size: 1.125em;
+    block-size: 1.125em;
+    /* 箭头比文字视觉上轻，补 1px 让它在胶囊里不显飘 */
+    margin-inline-start: -0.125rem;
+  }
+
+  /* ── 移动端：上图下字 ─────────────────────────────────────────────────── */
+  @media (max-width: 749px) {
+    .not-found {
+      grid-template-areas:
+        'media'
+        'stage';
+      /* 移动端高度由内容决定（照片 4:3 + 文字块），不再吃视口 */
+      min-block-size: 0;
+    }
+
+    .not-found__media {
+      position: static;
+      grid-area: media;
+      /* 4:3 而不是 16:9：竖屏下 16:9 只剩一条窄缝，割草机看不出来 */
+      aspect-ratio: 4 / 3;
+    }
+
+    /* 照片和文字不再重叠，遮罩没有存在的理由 */
+    .not-found__scrim {
+      display: none;
+    }
+
+    .not-found__inner {
+      grid-area: stage;
+      grid-template-columns: minmax(0, 1fr);
+      padding-block: clamp(2.25rem, 8vw, 3rem) clamp(2.5rem, 9vw, 3.5rem);
+      /* 桌面那个左内缩是为「文字压在照片一侧」留的呼吸；手机上照片已经让到上方、
+         文字独占一行，再缩进去只会白吃掉本就很窄的宽度 */
+      padding-inline-start: 0;
+    }
+
+    .not-found__code {
+      font-size: clamp(4rem, 26vw, 6.5rem);
+    }
+  }
+
+  /* 窄屏下两个按钮各自占满一行：并排会挤成两个圆球 */
+  @media (max-width: 419px) {
+    .not-found__cta {
+      inline-size: 100%;
+    }
+  }
+
+  /* 系统要求减少动效：btn-solid 的扫光与光晕过渡是它自带的，
+     这里只管本 section 自己的进场（目前没有动画，留位说明） */
+  @media (prefers-reduced-motion: reduce) {
+    .not-found__cta {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
 
 {% schema %}
 {
   "name": "t:general.404",
-  "settings": []
+  "tag": "section",
+  "class": "not-found-section",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:sections.not_found.labels.image",
+      "info": "t:sections.not_found.labels.image_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_code",
+      "label": "t:sections.not_found.labels.show_code",
+      "info": "t:sections.not_found.labels.show_code_info",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Oops! Page Not Found"
+    },
+    {
+      "type": "textarea",
+      "id": "body",
+      "label": "t:sections.not_found.labels.body",
+      "default": "The page you're looking for might have been removed, had its name changed, or is temporarily unavailable."
+    },
+    {
+      "type": "header",
+      "content": "t:sections.not_found.labels.actions"
+    },
+    {
+      "type": "text",
+      "id": "primary_label",
+      "label": "t:sections.not_found.labels.primary_label",
+      "default": "Back to Home"
+    },
+    {
+      "type": "url",
+      "id": "primary_link",
+      "label": "t:sections.not_found.labels.primary_link",
+      "info": "t:sections.not_found.labels.primary_link_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_secondary",
+      "label": "t:sections.not_found.labels.show_secondary",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "secondary_label",
+      "label": "t:sections.not_found.labels.secondary_label",
+      "default": "Browse Products"
+    },
+    {
+      "type": "url",
+      "id": "secondary_link",
+      "label": "t:sections.not_found.labels.secondary_link",
+      "info": "t:sections.not_found.labels.secondary_link_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.404"
+    }
+  ]
 }
 {% endschema %}
