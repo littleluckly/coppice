@@ -492,7 +492,18 @@
 
 /* 加载骨架（faceted-filters.js 的 _showSkeleton）：fetch 期间盖住结果区。
    列数复刻 .collection__grid 的三档断点；底色走全局变量，Noir 下自动适配；
-   动画按 prefers-reduced-motion 关停（无障碍红线）。 */
+   动画按 prefers-reduced-motion 关停（无障碍红线）。
+
+   ⚠️ 骨架层是 position: absolute; inset: 0，靠**结果区自己是定位上下文**才
+   能只盖住列表。集合页当初在 .collection__results 上写过 position: relative，
+   搜索页漏了 ⇒ 就近的定位祖先是初始包含块 ⇒ 骨架铺满整屏、白底盖住页头与
+   工具栏（2026-11-19 刘工截图）。
+   这条隐式契约现在钉在组件侧：消费方把 data-facets-results 放在结果容器上，
+   就自动是定位上下文，不用再记得另写一条 relative。 */
+[data-facets-results] {
+  position: relative;
+}
+
 .collection__skeleton {
   position: absolute;
   inset: 0;
