@@ -12,6 +12,10 @@
  * 无 JS：变体是原生 radio（带 form 属性可随表单提交）、数量是原生 number、提交是真表单
  * POST /cart/add（跳转购物车页）——渐进增强底线（SDD §6.3 同源原则）。
  *
+ * 购买选项（G-12，2026-11-18）：订阅计划选择不在这里实现，归 `selling-plan-picker`
+ * （assets/selling-plan-picker.js）。本文件只做一件事——提交前调一次它的 `validate()`，
+ * 强制订阅却没选计划就拦下。计划可用性、计划价、提示文案全在那一边，别在这重复实现。
+ *
  * 事件约定沿用 quick-add.js（2026-10-16 起）：
  *   cart:added    点击即冒泡，detail.button —— fly-to-cart.js 飞入动画
  *   cart:updated  document，detail.count —— cart-badge.js 角标同步
