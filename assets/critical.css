@@ -559,13 +559,20 @@ body {
  * **为什么放在 critical.css 而不是独立 .css**：默认态就是隐藏（`visibility: hidden`）。
  * 拆成独立请求时样式晚到，按钮会在页面顶部先闪一下再消失——这种闪烁比省 1 KB 难看得多。
  *
- * 右下角归它独占（2026-11-15：底部对比条已删除，不再需要 :has() 避让）。
+ * **右下角不是我们的地盘（2026-11-18，BUG-074）**：Shopify 自带 hCaptcha 徽标、
+ * Shopify Inbox / 第三方客服挂件全都钉在**物理右下角**，且由平台在首屏之后注入，
+ * 主题既不能改它的样式也不能预判它何时出现。跟它们抢同一个承影角，输的永远是主题
+ * （实测：联系页的 hCaptcha 徽标直接把按钮压掉大半）。
+ * ⇒ 让位到左下（`inset-inline-start`）。代价老实说：左下不是 FAB 的常规位，
+ * 桌面端视线要往左扫一下；但它是纯增强件，位置偏移不影响任何操作路径。
+ * ⚠️ hCaptcha 徽标是**物理**右侧定位，不随 `dir` 翻转；将来主题真上 RTL 时，
+ * 这个逻辑属性会翻回右边重新撞上，届时要改成 `:dir(rtl)` 下强制 `left` 的物理兜底。
  * 安全区（env）计入自身底边距，移动端不会被 Home 指示条压住。
  */
 back-to-top {
   position: fixed;
-  /* 逻辑属性：RTL 下自动翻到左边 */
-  inset-inline-end: 1rem;
+  /* 逻辑属性：RTL 下自动翻到右边（当前的取舍见上，LTR 下即在左下） */
+  inset-inline-start: 1rem;
   inset-block-end: calc(1rem + env(safe-area-inset-bottom));
   z-index: 39; /* 低于页头(50)、toast(60)：万一压上，让它们赢 */
   display: block; /* 自定义元素默认 inline，fixed 定位在 inline 盒上不可靠 */
