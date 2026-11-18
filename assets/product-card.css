@@ -117,6 +117,18 @@
   line-height: 1.4;
   white-space: nowrap;
 }
+/* 单位价（合规 G-08：集合页也要支持单位计价；2026-11-18）。
+   位置在价格三件套之下、星级之上——它是价格的注解，不是独立信息块。
+   字号 0.72rem 与划线价（0.78rem）差半档，避免两个小数点在卡上抢注意力。
+   颜色只用 --color-foreground-muted（70% 前景 = 4.95:1，AA 达标；
+   60% 只有 3.69:1，不过，见配色纪律）。
+   不设 nowrap：手机两列卡内容宽仅 ~106px，"$1,299.00 / 1000ml" 换行好过溢出；
+   换行点落在 "/" 两侧的空格上，不会把价格拆开。 */
+.product-card__unit-price {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-foreground-muted);
+}
 .product-card__rating {
   display: inline-flex;
   align-items: center;

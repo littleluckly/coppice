@@ -3,7 +3,8 @@
 
   输出（视觉基准：效果图-首页 Featured Products 区；标签行基准 2026-10-16 刘工参考图）：
   图 + 收藏心 + 标题 + 价格三件套（现价 / 划线原价 / 折扣胶囊 "Save N%"，
-  2026-10-29 对齐产品详情页）+ 星级 + 规格胶囊行（动力源 · 电池平台 · 切割宽度 ·
+  2026-10-29 对齐产品详情页）+ 单位价（2026-11-18 补，合规项 G-08；商品设了
+  单位计价才出现）+ 星级 + 规格胶囊行（动力源 · 电池平台 · 切割宽度 ·
   排量 · 驱动方式 · 重量，2026-10-29 由"规格行 + 标签行"合并而来，每个字段只出现一次）
   + Compare。
 
@@ -113,6 +114,41 @@
         </span>
       {%- endif -%}
     </p>
+
+    {%- comment -%}
+      单位价（合规 G-08，2026-11-18）：
+      "Unit pricing must be supported on the following pages: Collection page / Product page / Cart page."
+      平台没有 product 级单位价，只有 variant 级 ⇒ 卡片取"卡上会渲染出的那个变体"。
+
+      为什么多一道 `card_variant.price == product.price` 护栏：
+      卡面现价用的是 `product.price`（全变体最低价），而
+      `selected_or_first_available_variant` 是"第一个有货变体"——两者可以不是同一个。
+      价格不等时，这一行单位价会被读成"卡上那个低价也适用此单位价"，属错误信息；
+      宁可整行不渲染（与"缺值不渲染、不显示 0"同一原则，AGENTS §6）。
+      代价：首变体不是最低价的多变体商品在集合页丢单位价（单变体与
+      "首变体即最低价"两种常见形态不受影响）。要彻底消除，得遍历 variants
+      找最低价那一个——集合页每卡一次全变体遍历，与 SDD §8.1 的体量预算冲突，不做。
+
+      三处同源不同层：PDP 用 current_variant、购物车用 item、卡片用
+      selected_or_first_available_variant；文案同 `cart.unit_price` 的 "{{ price }} / {{ unit }}" 形态。
+    {%- endcomment -%}
+    {%- liquid
+      assign card_variant = product.selected_or_first_available_variant
+      assign card_unit_measurement = card_variant.unit_price_measurement
+      assign card_show_unit_price = false
+      if card_unit_measurement != blank and card_variant.price == product.price
+        assign card_show_unit_price = true
+      endif
+    -%}
+    {%- if card_show_unit_price -%}
+      {%- assign card_unit_price = card_variant.unit_price | money -%}
+      {%- assign card_unit_label = card_unit_measurement.reference_value
+        | append: card_unit_measurement.reference_unit
+      -%}
+      <p class="product-card__unit-price">
+        {{- 'products.product_card.unit_price' | t: price: card_unit_price, unit: card_unit_label -}}
+      </p>
+    {%- endif -%}
 
     {%- comment -%} 星级：官方 Product Reviews app metafield；无数据整行不渲染 {%- endcomment -%}    {%- liquid
       assign rating_value = product.metafields.reviews.rating.value.rating
