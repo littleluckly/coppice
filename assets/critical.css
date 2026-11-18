@@ -214,12 +214,22 @@ body {
  */
 :is(
   .hero-slideshow-section,
+  .trust-bar-section,
   .platform-cards-section,
   .use-case-grid-section,
   .featured-collection-section,
   .blog-posts-section
 ) {
   padding-block-end: 1.5rem;
+}
+
+/**
+ * 信任条要贴着 hero 底边（参考效果图里两者之间没有缝）。
+ * hero 自己带 1.5rem 底距是给「下一块是内容区块」准备的，插了信任条就要清零 ——
+ * 否则照片和浅色带之间露出一条白缝，看起来像两段断开的页面。
+ */
+.hero-slideshow-section:has(+ .trust-bar-section) {
+  padding-block-end: 0;
 }
 
 /**
