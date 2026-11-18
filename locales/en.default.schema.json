@@ -553,6 +553,9 @@
     },
     "trust_bar": {
       "name": "Trust bar",
+      "defaults": {
+        "item_text": "Free shipping over $99"
+      },
       "labels": {
         "show_dividers": "Show dividers",
         "show_dividers_info": "Thin vertical lines between items. Hidden on the stacked mobile layout, where there is nothing to separate.",
