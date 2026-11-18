@@ -559,23 +559,34 @@ body {
  * **为什么放在 critical.css 而不是独立 .css**：默认态就是隐藏（`visibility: hidden`）。
  * 拆成独立请求时样式晚到，按钮会在页面顶部先闪一下再消失——这种闪烁比省 1 KB 难看得多。
  *
- * **右下角不是我们的地盘（2026-11-18，BUG-074）**：Shopify 自带 hCaptcha 徽标、
- * Shopify Inbox / 第三方客服挂件全都钉在**物理右下角**，且由平台在首屏之后注入，
- * 主题既不能改它的样式也不能预判它何时出现。跟它们抢同一个承影角，输的永远是主题
- * （实测：联系页的 hCaptcha 徽标直接把按钮压掉大半）。
- * ⇒ 让位到左下（`inset-inline-start`）。代价老实说：左下不是 FAB 的常规位，
- * 桌面端视线要往左扫一下；但它是纯增强件，位置偏移不影响任何操作路径。
- * ⚠️ hCaptcha 徽标是**物理**右侧定位，不随 `dir` 翻转；将来主题真上 RTL 时，
- * 这个逻辑属性会翻回右边重新撞上，届时要改成 `:dir(rtl)` 下强制 `left` 的物理兜底。
+ * **右下角是第三方的地盘，但位置不改（2026-11-18，BUG-074）**：Shopify 自带 hCaptcha 徽标、
+ * Shopify Inbox / 客服挂件都钉在**物理右下角**，且由平台在首屏之后注入，主题既改不了它的
+ * 样式也预判不了它何时出现。联系页实测：徽标直接把按钮压掉大半。
+ * 处理方式是**运行时避让**而不是换角（换到左下反直觉，刘工 2026-11-18 否掉）：
+ * `--back-to-top-lift` 由 back-to-top.js 量出遮挡物高度后写入，没有遮挡物时恒为 0，
+ * 按钮就待在常规角落；有遮挡物才抬到它上方，且带 0.2s 过渡不跳。
+ * 为什么不在 CSS 里写死 `bottom: 5rem`：徽标尺寸由第三方决定（收起 56×56 / 展开 250×46），
+ * 静态偏移会让没有徽标的页面凭空多出一段空白，还会在对方改版时失效。
  * 安全区（env）计入自身底边距，移动端不会被 Home 指示条压住。
+ * RTL：`inset-inline-end` 在 RTL 下翻到物理左边，而徽标钉物理右侧 ⇒ 天然不撞。
  */
 back-to-top {
+  /* 这两个变量是 CSS 与 JS 的接口：
+     --back-to-top-inset 供 measureAvoidance() 读（探针盒由视口推导，不能用按钮实时 rect，
+       否则「抬高→测不到→降回」会自激振荡）
+     --back-to-top-lift  由 JS 写入抬升量，缺省 0 */
+  --back-to-top-inset: 1rem;
+  --back-to-top-lift: 0px;
   position: fixed;
-  /* 逻辑属性：RTL 下自动翻到右边（当前的取舍见上，LTR 下即在左下） */
-  inset-inline-start: 1rem;
-  inset-block-end: calc(1rem + env(safe-area-inset-bottom));
+  /* 逻辑属性：RTL 下自动翻到左边 */
+  inset-inline-end: var(--back-to-top-inset);
+  inset-block-end: calc(
+    var(--back-to-top-inset) + env(safe-area-inset-bottom) + var(--back-to-top-lift)
+  );
   z-index: 39; /* 低于页头(50)、toast(60)：万一压上，让它们赢 */
   display: block; /* 自定义元素默认 inline，fixed 定位在 inline 盒上不可靠 */
+  /* 遮挡物晚到（徽标注入 / 聊天挂件加载）时平滑上移，不硬跳 */
+  transition: inset-block-end 0.2s ease;
 }
 
 .back-to-top__button {
@@ -629,6 +640,9 @@ back-to-top[data-visible] .back-to-top__button {
 
 /* reduce：连位移都不注册，只剩即时显隐（按钮本身是功能，不能藏） */
 @media (prefers-reduced-motion: reduce) {
+  back-to-top {
+    transition: none;
+  }
   .back-to-top__button {
     transition: none;
     translate: none;
