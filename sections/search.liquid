@@ -986,14 +986,38 @@
     overflow-wrap: anywhere;
   }
 
-  /* 工具条：类型标签 + 视图切换，各占一端 */
+  /* 工具条 = 类型标签组 + [Filters] + 排序 + 视图切换 + 已选标签。
+     行序自己定（order），不继承 facets.css 里 .collection__toolbar 那套：
+     搜索页比集合页多一组类型标签，行首是个导航而不是单个按钮。
+     特异性能赢过 facets.css 的 .collection__toolbar .facets__* 规则，靠的是
+     「不给本容器加 .collection__toolbar 类」——两条规则根本不重叠。 */
   .search-page__toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
     gap: 0.75rem;
+    min-block-size: 44px;
     margin-block-end: 1.5rem;
+  }
+  .search-page__toolbar .search-page__types {
+    order: 0;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+  .search-page__toolbar .facets__open {
+    order: 1;
+  }
+  .search-page__toolbar .facets__sort-card {
+    order: 2;
+  }
+  .search-page__toolbar .view-toggle {
+    order: 3;
+  }
+  /* 已选标签恒独占一行（.facets__active 的基础规则已给 flex-basis: 100%，
+     这里只压行序——排在控件之后，靠左起排） */
+  .search-page__toolbar .facets__active {
+    order: 4;
+    flex-basis: 100%;
   }
   .search-page__types-list {
     display: flex;
@@ -1066,19 +1090,40 @@
     display: block;
   }
 
-  /* 左分类栏 + 右结果区。minmax(0, 1fr) 从源头掐断 min-content 传导。 */
+  /* 左栏（分类 + 筛选卡）｜右结果区。minmax(0, 1fr) 从源头掐断 min-content 传导。
+     列宽 260px：筛选卡里要放「价格 From/To 双输入 + 三列 checkbox」，
+     220px（原分类栏宽度）放得下但挤——两侧内边距吃掉 40px 后只剩 180px，
+     药丸输入框里的数字会被截断。集合页左列 320px 是给 570px 越界标题卡用的，
+     搜索页没有那个需求，取中间值。 */
   .search-page__body {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
   }
-  /* 只有真的渲染了左栏才切两列。--no-sidebar（商家没建集合 / 关掉分类栏）
-     时若仍套 220px + 1fr，结果区会掉进第一列被压成 220px 窄条——
-     主题包带不了集合，这个分支装完主题就会命中。 */
   @media (min-width: 990px) {
-    .search-page__body:not(.search-page__body--no-sidebar) {
-      grid-template-columns: 220px minmax(0, 1fr);
+    .search-page__body:not(.search-page__body--no-aside) {
+      grid-template-columns: 260px minmax(0, 1fr);
     }
+  }
+  /* 左栏容器：分类卡在上、筛选卡在下，两张卡之间的间距由 gap 给。
+     移动端退化成 display: contents —— 分类与表单直接成为 .search-page__body
+     的单列子项，顺序不变（分类在前、表单隐藏、结果在后），不会多套一层。 */
+  .search-page__aside-col {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    min-inline-size: 0;
+  }
+  /* 筛选卡槽：桌面就是普通流内卡片（不做集合页那种 sticky 吸顶——搜索页
+     左栏上面还有一张分类卡，吸顶会把它盖住），槽本身只负责收缩链。 */
+  .search-page__filters {
+    min-inline-size: 0;
+  }
+  /* 筛选卡与分类卡同一套卡面（facets.css 给 .facets__aside 的是集合页那套
+     20px 圆角 + 投影；搜索页左栏两张卡并排，圆角/投影必须一致） */
+  .search-page__filters .facets__aside {
+    border-radius: 14px;
+    box-shadow: none;
   }
   .search-page__sidebar {
     align-self: start;
