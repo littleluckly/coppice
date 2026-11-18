@@ -640,6 +640,22 @@
             <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>
               {% render 'compare-button', product: product %}
             </div>
+
+          {%- when '@app' -%}
+            {%- comment -%}
+              合规项 G-02（2026-11-18）：产品主 section 必须支持 @app block，供评价 /
+              捆绑 / 尺码表一类 App 在产品页插槽。
+
+              官方写法就是裸 `{% render block %}`（theme architecture/blocks/app-blocks
+              的「Render app blocks alongside section-defined blocks」一节）：**不套我们的
+              排版 class、不再包一层带 shopify_attributes 的 div**——块的外层标记与编辑器
+              属性由 App / 平台自带，多包一层会让 App 的样式与我们的列间距互相打架。
+
+              位置代价（有意，说清楚）：App 块渲染在本循环里，而 spec_bullets 与
+              trust 组会被「吸」到买盒底部（见上方注释），所以 App 块恒落在
+              规格 / 信任组**之上**，商家把它拖到最底也不会跑到它们下面。
+            {%- endcomment -%}
+            {% render block %}
         {%- endcase -%}
       {%- endfor -%}
 
@@ -1826,6 +1842,9 @@
       "type": "compare",
       "name": "t:sections.main_product.blocks.compare.name",
       "limit": 1
+    },
+    {
+      "type": "@app"
     }
   ],
   "presets": [
