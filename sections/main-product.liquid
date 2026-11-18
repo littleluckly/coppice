@@ -46,10 +46,21 @@
     endif
   endfor
 
+  # 价格基线（G-12，2026-11-18）：URL 带 ?selling_plan= 时平台会给出选中计划
+  # （`product.selected_selling_plan_allocation`），此时价格区必须显示计划价，
+  # 否则刷新后页头价与加购价对不上。无计划选中时它就是变体自身价。
+  assign displayed_price = current_variant.price
+  assign displayed_compare = current_variant.compare_at_price
+  assign selected_allocation = product.selected_selling_plan_allocation
+  if selected_allocation != blank
+    assign displayed_price = selected_allocation.price
+    assign displayed_compare = selected_allocation.compare_at_price | default: current_variant.compare_at_price
+  endif
+
   assign save_percent = 0
-  if current_variant.compare_at_price > current_variant.price
-    assign price_diff = current_variant.compare_at_price | minus: current_variant.price
-    assign save_percent = price_diff | times: 100.0 | divided_by: current_variant.compare_at_price | round
+  if displayed_compare > displayed_price
+    assign price_diff = displayed_compare | minus: displayed_price
+    assign save_percent = price_diff | times: 100.0 | divided_by: displayed_compare | round
   endif
 
   # 媒体框的宽高比（2026-10-28）：取第一张媒体的 preview_image。视频与 3D 也有
@@ -402,20 +413,20 @@
       {%- endif -%}
 
       <div class="main-product__price">
-        <span class="main-product__price-current" data-price>{{ current_variant.price | money }}</span>
+        <span class="main-product__price-current" data-price>{{ displayed_price | money }}</span>
         <s
           class="main-product__price-compare"
           data-compare-price
-          {% unless current_variant.compare_at_price > current_variant.price %}
+          {% unless displayed_compare > displayed_price %}
             hidden
           {% endunless %}
         >
-          {{- current_variant.compare_at_price | money -}}
+          {{- displayed_compare | money -}}
         </s>
         <span
           class="main-product__price-save"
           data-save-badge
-          {% unless current_variant.compare_at_price > current_variant.price %}
+          {% unless displayed_compare > displayed_price %}
             hidden
           {% endunless %}
         >
