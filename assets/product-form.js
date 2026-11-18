@@ -217,6 +217,12 @@ class ProductForm extends HTMLElement {
     if (this._button.disabled) return;
     if (this._button.dataset.state === 'pending') return;
 
+    /* 购买选项（G-12）：变体强制订阅却没选计划 → 就地拦住并提示。
+       按官方 UX 指南，这类错误**不要**用禁用按钮表达（那会让人以为商品不可买），
+       让按钮可点、点完说明原因。校验逻辑归 <selling-plan-picker>，这里只调用。 */
+    const planPicker = this.querySelector('selling-plan-picker');
+    if (planPicker && typeof planPicker.validate === 'function' && !planPicker.validate()) return;
+
     this._button.dataset.state = 'pending';
     this._button.disabled = true;
 
