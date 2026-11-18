@@ -49,6 +49,21 @@
 <script src="{{ 'view-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'search-field.js' | asset_url }}" defer></script>
 {{ 'product-card.css' | asset_url | stylesheet_tag }}
+{%- comment -%}
+  分面筛选 / 排序（2026-11-18 补齐 G-07）：与集合页共用同一套组件 ——
+  样式 assets/facets.css（两页各自 stylesheet_tag 加载，因为
+  stylesheet 标签按 section 聚合、搜索页拿不到集合页那份），
+  行为 assets/faceted-filters.js（<collection-facets> 拦截 GET 提交 →
+  Section Rendering 局部更新 + replaceState，前端零筛选逻辑）。
+  只在「已执行搜索」时加载：起始态没有工具栏、也没有筛选器可渲染，
+  脚本挂上去只会白跑 connectedCallback。bottom-sheet.js 由 theme.liquid
+  全局加载，抽屉直接可用。
+{%- endcomment -%}
+{%- if search.performed -%}
+  {{ 'facets.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'faceted-filters.js' | asset_url }}" defer></script>
+  <script src="{{ 'sort-select.js' | asset_url }}" defer></script>
+{%- endif -%}
 
 {%- liquid
   assign per_page = section.settings.results_per_page | default: 12
@@ -62,6 +77,54 @@
   assign all_results_url = routes.search_url | append: '?q=' | append: encoded_terms
   assign hero_image = section.settings.hero_image
   assign suggested_terms = section.settings.suggested_searches | default: '' | split: ','
+
+  # ── 分面筛选（G-07，2026-11-18）──────────────────────────────────
+  # search.filters 只在本次结果里有商品时才有值（官方：只返回与当前结果
+  # 相关的筛选器；且**一旦带上筛选参数，平台会把所有非商品结果过滤掉**）。
+  # 所以文章/页面类型下不渲染筛选卡——没有可筛的对象，空卡只会误导。
+  assign filterable = false
+  if search.performed and search.filters.size > 0
+    if active_type == '' or active_type == 'product'
+      assign filterable = true
+    endif
+  endif
+
+  # 有筛选器 ≠ 有已选值：价格区间要看 min/max 两个 value，其余看 value.active。
+  # 与集合页同一套判定（collection.liquid 顶部），改口径要两边一起改。
+  assign has_active_filters = false
+  if filterable
+    for filter in search.filters
+      if filter.type == 'price_range'
+        if filter.min_value.value != blank or filter.max_value.value != blank
+          assign has_active_filters = true
+        endif
+      else
+        for value in filter.values
+          if value.active
+            assign has_active_filters = true
+          endif
+        endfor
+      endif
+      if has_active_filters
+        break
+      endif
+    endfor
+  endif
+
+  # 排序：search.sort_options 由平台给（relevance / price-ascending /
+  # price-descending 之类）。文章/页面搜索下平台通常返回空数组，此时
+  # 自然不渲染——不靠类型白名单硬挡。
+  assign sort_by = search.sort_by | default: search.default_sort_by
+  assign show_sort = false
+  if search.performed and section.settings.show_sort and search.sort_options.size > 0
+    assign show_sort = true
+  endif
+
+  # 清除筛选的目标：保留关键词与当前类型，丢掉全部 filter 参数。
+  assign clear_filters_url = all_results_url
+  if active_type != ''
+    assign clear_filters_url = all_results_url | append: '&type=' | append: active_type
+  endif
 -%}
 
 {%- comment -%}
