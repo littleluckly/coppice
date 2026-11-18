@@ -113,20 +113,21 @@ class BackToTop extends HTMLElement {
     if (!vh) return;
 
     const style = getComputedStyle(this);
-    /* 与 CSS 的 --back-to-top-inset 同源，不各写一份 1rem。
-       ⚠️ 自定义属性读回来是声明时的原始 token（"1rem"），不是解析后的 px：
-       直接 parseFloat 会得到 1，探针盒整体偏 15px，避让量就少算 15px。
+    /* 底边基准由 CSS 的 --back-to-top-offset 给（默认 90px，已经把 hCaptcha 徽标让开，
+       见 critical.css 的说明），不在这里各写一份。
+       ⚠️ 自定义属性读回来是声明时的原始 token（"90px" / "1rem"），不是解析后的 px：
+       直接 parseFloat 拿到的是数字本体，遇到 rem 会当 px 用（1rem ⇒ 1，少算 15px）。
        必须按单位换算（与 hero-slideshow 里 .55s 被 parseFloat 小 1000 倍同族）。 */
-    const rawInset = style.getPropertyValue('--back-to-top-inset').trim();
+    const rawOffset = style.getPropertyValue('--back-to-top-offset').trim();
     const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const pad = /rem$/.test(rawInset) ? parseFloat(rawInset) * rootFontSize : parseFloat(rawInset) || 16;
-    /* 安全区（env）没计入：JS 读不到它。iOS 上探针盒底边比真实按钮低 30px 左右
-       （更靠近屏幕底边 ⇒ 徽标还没压到按钮就先抬一点），方向安全，不会漏判 */
+    const offset = /rem$/.test(rawOffset) ? parseFloat(rawOffset) * rootFontSize : parseFloat(rawOffset) || 90;
+    /* 安全区（env）没计入：JS 读不到它。90px 已远大于常见安全区（34px），
+       且方向是「探针盒更靠下 ⇒ 徽标还没压到就抬」，偏保守，不会漏判 */
 
     const own = this.getBoundingClientRect();
     if (!own.width) return; /* 还没上树 */
 
-    const baseBottom = vh - pad;
+    const baseBottom = vh - offset;
     const baseTop = baseBottom - own.height;
     const maxLift = vh * AVOID_MAX_RATIO;
 
