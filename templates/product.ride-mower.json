@@ -1,0 +1,151 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "main-product",
+      "blocks": {
+        "spec_bullets": {
+          "type": "spec_bullets",
+          "settings": {}
+        },
+        "trust_warranty": {
+          "type": "trust_warranty",
+          "settings": {}
+        },
+        "trust_shipping": {
+          "type": "trust_item",
+          "settings": {
+            "icon": "shipping",
+            "text": "Free shipping on orders over $99"
+          }
+        },
+        "trust_returns": {
+          "type": "trust_item",
+          "settings": {
+            "icon": "returns",
+            "text": "30-day returns"
+          }
+        },
+        "compare": {
+          "type": "compare",
+          "settings": {}
+        },
+        "pickup": {
+          "type": "pickup",
+          "settings": {}
+        }
+      },
+      "block_order": [
+        "spec_bullets",
+        "trust_warranty",
+        "trust_shipping",
+        "trust_returns",
+        "compare",
+        "pickup"
+      ],
+      "settings": {
+        "show_breadcrumb": true,
+        "show_description": false,
+        "description_words": 40,
+        "show_accelerated_checkout": true,
+        "show_payment_terms": true
+      }
+    },
+    "product-anchor-nav": {
+      "type": "product-anchor-nav",
+      "settings": {}
+    },
+    "product-highlights": {
+      "type": "product-highlights",
+      "blocks": {
+        "platform": {
+          "type": "platform_compat",
+          "settings": {
+            "collection": ""
+          }
+        },
+        "logistics": {
+          "type": "logistics",
+          "settings": {
+            "text_parcel": "Parcel shipping, 3–5 business days",
+            "text_oversized": "Oversized shipping, 7–10 business days",
+            "text_freight": "Freight (LTL), 7–14 business days"
+          }
+        },
+        "quickview": {
+          "type": "spec_quickview",
+          "settings": {
+            "heading": "Key specifications",
+            "row_1": "cutting_width_mm",
+            "row_2": "power",
+            "row_3": "weight_kg",
+            "row_4": "warranty_months",
+            "row_5": "none"
+          }
+        }
+      },
+      "block_order": [
+        "platform",
+        "logistics",
+        "quickview"
+      ],
+      "disabled": true,
+      "settings": {}
+    },
+    "product-complementary": {
+      "type": "product-complementary",
+      "settings": {
+        "heading": "Pairs well with",
+        "limit": 4
+      }
+    },
+    "product-description": {
+      "type": "product-description",
+      "settings": {
+        "heading": ""
+      }
+    },
+    "product-spec-table": {
+      "type": "product-spec-table",
+      "settings": {
+        "heading": ""
+      }
+    },
+    "product-supplies": {
+      "type": "product-supplies",
+      "settings": {
+        "heading": "Supplies"
+      }
+    },
+    "product-recommendations": {
+      "type": "product-recommendations",
+      "settings": {
+        "heading": "",
+        "limit": 4
+      }
+    },
+    "compare-lookup": {
+      "type": "compare-lookup",
+      "settings": {}
+    }
+  },
+  "order": [
+    "main",
+    "product-anchor-nav",
+    "product-highlights",
+    "product-complementary",
+    "product-description",
+    "product-spec-table",
+    "product-supplies",
+    "product-recommendations",
+    "compare-lookup"
+  ]
+}
