@@ -594,6 +594,18 @@ html[data-collection-view='list'] .collection__skeleton-card .sk-img {
      图被拉成整卡高、比例失真 */
   align-self: start;
 }
+/* 线条限宽：基础规则是占列宽的 70%，在列表卡里信息列有 900px+，
+   70% 会画出一条 650px 的灰长条——不像文字行，像一条分隔带。
+   三档宽度与基础规则同比例，只在列表态封顶。 */
+html[data-collection-view='list'] .collection__skeleton-card .sk-line {
+  inline-size: min(70%, 320px);
+}
+html[data-collection-view='list'] .collection__skeleton-card .sk-line--short {
+  inline-size: min(40%, 180px);
+}
+html[data-collection-view='list'] .collection__skeleton-card .sk-line--price {
+  inline-size: min(30%, 120px);
+}
 
 /* 移动抽屉（dialog 承载同一份筛选 DOM，JS 把 aside 移入）。
    2026-10-16 刘工：① 打开从屏幕底部滑入（不再闪现）；② 标题头部与 Apply
