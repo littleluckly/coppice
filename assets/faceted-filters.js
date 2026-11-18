@@ -476,13 +476,19 @@ class CollectionFacets extends HTMLElement {
    */
   _placeSort() {
     if (!this._mobileQuery) return;
-    const toolbar = this.querySelector('.collection__toolbar');
+    /* 钩子用 data 属性而不是 .collection__toolbar 类名：搜索页 2026-11-18 接入
+       同一套组件后，工具栏的类名与行序都不同（类型标签打头、没有计数列），
+       类名耦合会让"排序卡不归位"这种问题只在搜索页出现。 */
+    const toolbar = this.querySelector('[data-facets-toolbar]');
     const card = this.querySelector('.facets__sort-card');
     if (!toolbar || !card) return;
 
     if (this._mobileQuery.matches) {
       if (card.parentElement !== toolbar) {
-        toolbar.insertBefore(card, toolbar.querySelector('.collection__count'));
+        /* 锚点同理走 data 属性：集合页的计数在工具栏里（.collection__count），
+           搜索页的计数在面包屑那行——用类名会在搜索页拿到 null，
+           排序卡被 append 到工具条末尾，跑到视图切换右边 */
+        toolbar.insertBefore(card, toolbar.querySelector('[data-facets-count]'));
       }
       return;
     }
@@ -553,9 +559,11 @@ class CollectionFacets extends HTMLElement {
   _showSkeleton() {
     const results = this.querySelector('[data-facets-results]');
     if (!results) return null;
-    /* 骨架卡数对齐当前页（夹在 4–12），高度不与完成后差太多 */
+    /* 骨架卡数对齐当前页（夹在 4–12），高度不与完成后差太多。
+       按 .product-card 计数而不是结果项容器类名：集合页是 .collection__item、
+       搜索页是 .search-page__grid-item，卡片本身才是两边共有的东西。 */
     const count = Math.min(
-      Math.max(results.querySelectorAll('.collection__item').length, 4),
+      Math.max(results.querySelectorAll('.product-card').length, 4),
       12
     );
     const layer = document.createElement('div');
