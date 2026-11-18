@@ -581,6 +581,13 @@
           "name": "Trust item"
         }
       }
+    },
+    "custom_liquid": {
+      "name": "Custom Liquid",
+      "labels": {
+        "custom_liquid": "Custom Liquid",
+        "custom_liquid_info": "Paste the code your app gives you. It renders exactly as written - the theme only keeps it inside the page width."
+      }
     }
   },
   "labels": {
