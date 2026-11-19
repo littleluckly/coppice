@@ -75,10 +75,17 @@
   font-size: inherit;
 }
 /* 价格三件套（2026-10-29 刘工：对齐产品详情页）——现价 / 划线原价 / 折扣胶囊。
-   现价与划线价绑成一组 nowrap；胶囊单独一个 flex 项，空间不够时整体换到第二行。
-   手机两列时卡内容宽只有 ~106px（132 卡 − 12×2 padding − 1×2 border），
-   两个价格 + 胶囊无论如何缩都塞不进一行，所以换行点是设计好的：
-   "价格块 / 胶囊"，绝不把两个价格拆开。 */
+   现价与划线价是一组（`.product-card__price-main`），胶囊单独一个 flex 项；
+   空间不够时先在这里折行，再折到"价格块 / 胶囊"。
+   2026-11-18 修 BUG-078：这组原本是 nowrap，等于**不允许折行**——
+   四位数价格（`$3,428.55` + `$3,609.00`）实测 136.0px，比 375 视口的卡内容宽
+   （135.5–136px）还宽、320 视口（~108px）必然溢出 28px，并顺着 grid item 的
+   automatic minimum size 传导成整页横向滚动。
+   现在改成 `wrap`：塞得下时与原来逐像素相同（短价格仍是同一行），
+   塞不下时划线价自己落到第二行——**宁可分行，也不溢出、不裁切**。
+   这是对 2026-10-29「绝不把两个价格拆开」的一次有意识修改：那条决定的依据
+   是"106px 内容宽下合计 104.8px"，用的是短价格；价格位数一变就不成立。
+   实测：现价 136.0px / 划线 59.0px，卡内容宽 108–136px 区间全部无横向溢出。 */
 .product-card__price {
   display: flex;
   flex-wrap: wrap;
@@ -88,10 +95,11 @@
 }
 .product-card__price-main {
   display: inline-flex;
-  flex-wrap: nowrap;
+  /* wrap 不是 nowrap：见上方 2026-11-18 注释。折行点只在「现价 / 划线价」之间，
+     现价自身永远不折（它是单行数字，没有空格可折）。 */
+  flex-wrap: wrap;
   align-items: baseline;
-  /* 0.3rem 而非 0.4rem：手机 106px 内容宽下"现价 + 划线价"合计 104.8px，
-     0.4rem 会到 106.4px 溢出 0.4px（量出来的，不是估的） */
+  /* 0.3rem 而非 0.4rem：短价格下这组是 104.8px，0.4rem 会到 106.4px（量出来的，不是估的） */
   gap: 0.3rem;
 }
 .product-card__price-current {
@@ -116,6 +124,19 @@
   font-weight: 600;
   line-height: 1.4;
   white-space: nowrap;
+}
+/* 单位价（合规 G-08：集合页也要支持单位计价；2026-11-18）。
+   位置在价格三件套之下、星级之上——它是价格的注解，不是独立信息块。
+   字号 0.72rem 与划线价（0.78rem）差半档，避免两个小数点在卡上抢注意力。
+   颜色只用 --color-foreground-muted（70% 前景 = 4.95:1，AA 达标；
+   60% 只有 3.69:1，不过，见配色纪律）。
+   不设 nowrap：手机两列卡内容宽只有 ~108px（320 视口）到 ~136px（375 视口，
+   实测），"$3,428.55 / 1000ml" 换行好过溢出；换行点落在 "/" 两侧的空格上，
+   不会把价格拆开。 */
+.product-card__unit-price {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-foreground-muted);
 }
 .product-card__rating {
   display: inline-flex;

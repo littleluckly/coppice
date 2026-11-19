@@ -12,6 +12,10 @@
  * 无 JS：变体是原生 radio（带 form 属性可随表单提交）、数量是原生 number、提交是真表单
  * POST /cart/add（跳转购物车页）——渐进增强底线（SDD §6.3 同源原则）。
  *
+ * 购买选项（G-12，2026-11-18）：订阅计划选择不在这里实现，归 `selling-plan-picker`
+ * （assets/selling-plan-picker.js）。本文件只做一件事——提交前调一次它的 `validate()`，
+ * 强制订阅却没选计划就拦下。计划可用性、计划价、提示文案全在那一边，别在这重复实现。
+ *
  * 事件约定沿用 quick-add.js（2026-10-16 起）：
  *   cart:added    点击即冒泡，detail.button —— fly-to-cart.js 飞入动画
  *   cart:updated  document，detail.count —— cart-badge.js 角标同步
@@ -119,6 +123,9 @@ class VariantPicker extends HTMLElement {
           variantId: variant.id,
           mediaId: variant.mediaId,
           available: variant.available,
+          /* 带上所属 section：同页可能存在第二个产品块（编辑器里加了两个 main-product、
+             或快速查看预览），监听方据此丢弃别人的变体事件。2026-11-18 桩测发现。 */
+          sectionId: this._section ? this._section.dataset.sectionId : null,
         },
       })
     );
@@ -216,6 +223,12 @@ class ProductForm extends HTMLElement {
     event.preventDefault();
     if (this._button.disabled) return;
     if (this._button.dataset.state === 'pending') return;
+
+    /* 购买选项（G-12）：变体强制订阅却没选计划 → 就地拦住并提示。
+       按官方 UX 指南，这类错误**不要**用禁用按钮表达（那会让人以为商品不可买），
+       让按钮可点、点完说明原因。校验逻辑归 <selling-plan-picker>，这里只调用。 */
+    const planPicker = this.querySelector('selling-plan-picker');
+    if (planPicker && typeof planPicker.validate === 'function' && !planPicker.validate()) return;
 
     this._button.dataset.state = 'pending';
     this._button.disabled = true;

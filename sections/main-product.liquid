@@ -46,10 +46,21 @@
     endif
   endfor
 
+  # 价格基线（G-12，2026-11-18）：URL 带 ?selling_plan= 时平台会给出选中计划
+  # （`product.selected_selling_plan_allocation`），此时价格区必须显示计划价，
+  # 否则刷新后页头价与加购价对不上。无计划选中时它就是变体自身价。
+  assign displayed_price = current_variant.price
+  assign displayed_compare = current_variant.compare_at_price
+  assign selected_allocation = product.selected_selling_plan_allocation
+  if selected_allocation != blank
+    assign displayed_price = selected_allocation.price
+    assign displayed_compare = selected_allocation.compare_at_price | default: current_variant.compare_at_price
+  endif
+
   assign save_percent = 0
-  if current_variant.compare_at_price > current_variant.price
-    assign price_diff = current_variant.compare_at_price | minus: current_variant.price
-    assign save_percent = price_diff | times: 100.0 | divided_by: current_variant.compare_at_price | round
+  if displayed_compare > displayed_price
+    assign price_diff = displayed_compare | minus: displayed_price
+    assign save_percent = price_diff | times: 100.0 | divided_by: displayed_compare | round
   endif
 
   # 媒体框的宽高比（2026-10-28）：取第一张媒体的 preview_image。视频与 3D 也有
@@ -68,6 +79,9 @@
 <script src="{{ 'pickup-availability.js' | asset_url }}" defer></script>
 {%- if product.gift_card? and section.settings.show_gift_card_recipient -%}
   <script src="{{ 'gift-card-recipient.js' | asset_url }}" defer></script>
+{%- endif -%}
+{%- if product.selling_plan_groups.size > 0 and section.settings.show_selling_plans -%}
+  <script src="{{ 'selling-plan-picker.js' | asset_url }}" defer></script>
 {%- endif -%}
 {%- if has_model -%}
   <link
@@ -402,20 +416,20 @@
       {%- endif -%}
 
       <div class="main-product__price">
-        <span class="main-product__price-current" data-price>{{ current_variant.price | money }}</span>
+        <span class="main-product__price-current" data-price>{{ displayed_price | money }}</span>
         <s
           class="main-product__price-compare"
           data-compare-price
-          {% unless current_variant.compare_at_price > current_variant.price %}
+          {% unless displayed_compare > displayed_price %}
             hidden
           {% endunless %}
         >
-          {{- current_variant.compare_at_price | money -}}
+          {{- displayed_compare | money -}}
         </s>
         <span
           class="main-product__price-save"
           data-save-badge
-          {% unless current_variant.compare_at_price > current_variant.price %}
+          {% unless displayed_compare > displayed_price %}
             hidden
           {% endunless %}
         >
@@ -501,6 +515,14 @@
           {%- endcomment -%}
           {%- if product.gift_card? and section.settings.show_gift_card_recipient -%}
             {%- render 'gift-card-recipient', product: product, form: form, section: section -%}
+          {%- endif -%}
+
+          {%- comment -%}
+            购买选项（强制项 #17 / G-12）：商品挂 selling plan 才渲染，普通商品零成本。
+            位置在数量与加购之上——先定"怎么买"，再定"买几件"。
+          {%- endcomment -%}
+          {%- if product.selling_plan_groups.size > 0 and section.settings.show_selling_plans -%}
+            {%- render 'selling-plan-picker', product: product, section: section, variant: current_variant -%}
           {%- endif -%}
 
           <div class="product-form__row">
@@ -640,6 +662,22 @@
             <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>
               {% render 'compare-button', product: product %}
             </div>
+
+          {%- when '@app' -%}
+            {%- comment -%}
+              合规项 G-02（2026-11-18）：产品主 section 必须支持 @app block，供评价 /
+              捆绑 / 尺码表一类 App 在产品页插槽。
+
+              官方写法就是裸 `{% render block %}`（theme architecture/blocks/app-blocks
+              的「Render app blocks alongside section-defined blocks」一节）：**不套我们的
+              排版 class、不再包一层带 shopify_attributes 的 div**——块的外层标记与编辑器
+              属性由 App / 平台自带，多包一层会让 App 的样式与我们的列间距互相打架。
+
+              位置代价（有意，说清楚）：App 块渲染在本循环里，而 spec_bullets 与
+              trust 组会被「吸」到买盒底部（见上方注释），所以 App 块恒落在
+              规格 / 信任组**之上**，商家把它拖到最底也不会跑到它们下面。
+            {%- endcomment -%}
+            {% render block %}
         {%- endcase -%}
       {%- endfor -%}
 
@@ -1269,6 +1307,87 @@
     outline-offset: 2px;
   }
 
+  /* 购买选项（selling plan，G-12）：整行卡片式 radio。
+     不用胶囊（胶囊在窄栏遇到长计划名会折行成球，BUG 台账里踩过）。 */
+  .product-plans {
+    display: block;
+    margin-block-end: 1rem;
+  }
+  .product-plans__set {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .product-plans__heading {
+    padding: 0;
+    margin-block-end: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-foreground);
+  }
+  .product-plans__group + .product-plans__group {
+    margin-block-start: 0.75rem;
+  }
+  .product-plans__group-name {
+    margin: 0 0 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--color-foreground-muted);
+  }
+  .product-plans__option {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+    border-radius: var(--style-border-radius-inputs);
+    cursor: pointer;
+  }
+  /* display: flex 会盖掉 hidden 的 display: none，必须显式兜一刀 */
+  .product-plans__option[hidden] {
+    display: none;
+  }
+  .product-plans__option + .product-plans__option {
+    margin-block-start: 0.5rem;
+  }
+  .product-plans__option:has(.product-plans__radio:checked) {
+    border-color: var(--color-brand);
+    box-shadow: inset 0 0 0 1px var(--color-brand);
+  }
+  .product-plans__option:has(.product-plans__radio:focus-visible) {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 2px;
+  }
+  .product-plans__option:has(.product-plans__radio:disabled) {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .product-plans__radio {
+    flex: none;
+    margin-block-start: 0.25rem;
+    accent-color: var(--color-brand);
+  }
+  .product-plans__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    min-inline-size: 0;
+  }
+  .product-plans__name {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  .product-plans__save {
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+    color: var(--color-brand);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   /* 表单 */
   .product-form__row {
     display: flex;
@@ -1756,6 +1875,17 @@
     },
     {
       "type": "header",
+      "content": "t:sections.main_product.headers.purchase_options"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_selling_plans",
+      "label": "t:sections.main_product.labels.show_selling_plans",
+      "info": "t:sections.main_product.labels.selling_plans_info",
+      "default": true
+    },
+    {
+      "type": "header",
       "content": "t:sections.main_product.headers.checkout"
     },
     {
@@ -1826,6 +1956,9 @@
       "type": "compare",
       "name": "t:sections.main_product.blocks.compare.name",
       "limit": 1
+    },
+    {
+      "type": "@app"
     }
   ],
   "presets": [

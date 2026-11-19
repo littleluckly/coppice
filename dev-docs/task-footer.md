@@ -31,7 +31,7 @@
 | `locales/en.default.json` | **无任何 footer 键** | newsletter 成功/错误/同意语、选择器标签都缺 | T-2.2 |
 | `snippets/back-to-top.liquid` + `assets/back-to-top.js` | 已挂在 `layout/theme.liquid` | 不属页脚，**不要在 footer 里再做一次** | 忽略 |
 | `{% javascript %}` 标签 | 全主题 **0 处使用**，所有脚本都是 `<script src="{{ 'x.js' | asset_url }}" defer>` | 新增脚本按既有约定走 `assets/` + 手写 `defer` 标签 | T-1.7 |
-| Custom Liquid section / `@app` block | **全主题 0 处** | 官方要求"主题必须包含 Custom Liquid section"（F-14），属**独立缺陷**，不在本清单修 | 已立项 → `task-compliance.md` G-01 / G-02 |
+| Custom Liquid section / `@app` block | **全主题 0 处** | 官方要求"主题必须包含 Custom Liquid section"（F-14），属**独立缺陷**，不在本清单修 | 已立项 → `task-compliance.md` G-01 / G-02（**2026-11-18 更新：G-01 已补 `sections/custom-liquid.liquid`，G-10 亦已由页脚 block 满足；G-02 仍开**） |
 
 ### 0.2 已核实官方事实（2026-11-07 重核，逐条带出处）
 

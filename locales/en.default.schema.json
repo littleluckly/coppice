@@ -94,6 +94,8 @@
         "show_categories_info": "Lists up to six collections. Counts show total products in each collection, not matches for the current search.",
         "results_per_page": "Results per page",
         "results_per_page_info": "Shopify allows up to 50 results per page. Lower values keep the page lighter.",
+        "show_sort": "Show sort options",
+        "show_sort_info": "Adds a sort menu to the filters card. Sorting is only shown for product results — article and page results have no sort order.",
         "show_quick_add": "Show quick add on product cards",
         "show_specs": "Show specification chips",
         "show_specs_info": "Adds power source and cutting width to product cards. Leave off for a tighter results grid."
@@ -327,12 +329,15 @@
         "show_accelerated_checkout": "Show accelerated checkout",
         "accelerated_info": "Requires an accelerated checkout method such as Shop Pay. The button styling is controlled by the payment provider and must not be restyled.",
         "show_payment_terms": "Show payment terms (Shop Pay Installments)",
+        "show_selling_plans": "Show purchase options",
+        "selling_plans_info": "Purchase options — subscriptions, pre-orders, try before you buy — come from an app that creates selling plans. This block only appears on products that have them.",
         "show_gift_card_recipient": "Show recipient information form for gift card products",
         "gift_card_recipient_info": "Only applies when the product is a gift card. Buyers can email the card to someone else, with a message and an optional send date."
       },
       "headers": {
         "checkout": "Checkout",
-        "gift_card": "Gift card"
+        "gift_card": "Gift card",
+        "purchase_options": "Purchase options"
       },
       "blocks": {
         "spec_bullets": {
@@ -580,6 +585,13 @@
         "item": {
           "name": "Trust item"
         }
+      }
+    },
+    "custom_liquid": {
+      "name": "Custom Liquid",
+      "labels": {
+        "custom_liquid": "Custom Liquid",
+        "custom_liquid_info": "Paste the code your app gives you. It renders exactly as written - the theme only keeps it inside the page width."
       }
     }
   },

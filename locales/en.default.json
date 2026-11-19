@@ -309,6 +309,9 @@
       "decrease_quantity": "Decrease quantity",
       "increase_quantity": "Increase quantity",
       "unit_price_separator": "per",
+      "purchase_options": "Purchase options",
+      "one_time_purchase": "One-time purchase",
+      "choose_purchase_option": "Choose a purchase option to continue.",
       "warranty_years": "{{ years }}-year warranty",
       "warranty_months": "{{ months }}-month warranty",
       "pickup_heading": "Pickup availability",
@@ -342,6 +345,7 @@
       "add_error": "Sorry, something went wrong. Try again.",
       "sold_out": "Sold out",
       "rating_label": "Rated {{ rating }} out of 5",
+      "unit_price": "{{ price }} / {{ unit }}",
       "spec_cutting_width": "Cutting width",
       "spec_power_source": "Power source",
       "spec_weight": "Weight"

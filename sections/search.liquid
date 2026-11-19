@@ -10,6 +10,18 @@
       → 工具条（类型标签 + 网格/列表视图切换）
       → 左侧分类导航 + 右侧结果区（商品网格 / 内容行卡 / 分页 / 空态）
 
+  2026-11-18 补齐分面筛选（G-07，official requirement §4）：
+    条款原文「You need to support faceted search filtering on collection pages
+    and search pages.」——集合页与搜索页是**并列**关系，不是二选一。
+    本轮把集合页那套组件搬进来，同一个 snippet、同一个 JS、同一份 CSS：
+    - snippets/faceted-filters.liquid（筛选组）+ active-facets.liquid（已选标签）
+    - assets/faceted-filters.js（<collection-facets> 拦截 GET → Section Rendering
+      局部更新 + replaceState）
+    - assets/facets.css（2026-11-18 从 collection.liquid 抽出的组件样式，
+      两页各自 stylesheet_tag 加载）
+    版式仍是 pages-ui §11 定的那套：桌面左栏「分类 + 筛选卡」（筛选卡同集合页
+    形态，移动端进底部抽屉），工具条 [Filters] [排序] [视图切换] [已选标签]。
+
   复用与依据：
   - 商品卡走 product-card snippet + assets/product-card.css；2/3/4 列断点、
     圆形分页、color-mix 配色、hover 签名全部对齐 collection.liquid。
@@ -22,11 +34,21 @@
     见 https://shopify.dev/docs/storefronts/themes/navigation-search/search
   - 结果类型判别按官方示例：object_type 明确是 article / page 的进内容组，其余按商品。
 
+  平台事实（官方文档已核，改这块前先读）：
+  - `search.filters` 只返回**与本次结果相关**的筛选器，计数按前 1000 条结果算。
+  - **一旦带筛选参数，平台会把所有非商品结果过滤掉**（"If you apply filters on
+    the search results page, then all non-product results are filtered out."）。
+    ⇒ 筛选后 results 里只剩商品，文章/页面分组自然消失；不需要也不该自己过滤。
+  - `search.sort_options` 由平台给，没有 "Most Popular"，自研排序违反
+    「数据来自服务端」红线。
+
   明确的取舍（不要误当成遗漏）：
-  - **不做 `search.filters` 筛选，也不做排序下拉**。前者依赖 Search & Discovery 后台
-    配置 + faceted-filters.js 的 Section Rendering 改造（pages-ui §6.1 独立工单）；
-    后者官方只有 relevance / price-ascending / price-descending 三个值，没有
-    "Most Popular"，自研排序违反「数据来自服务端」红线。
+  - **类型标签的链接只带 q（+ type），刻意清掉筛选参数**。产品筛选对文章没有
+    意义，而带筛选参数时非商品结果又会被平台过滤——"Articles" 标签点上却只剩
+    空结果，比清掉筛选更糟。代价：筛选态下点 All/Articles 会丢掉已选条件，
+    界面上「已选标签 + Clear all」常驻，用户看得见自己在放弃什么。
+  - **筛选只在结果里有商品时渲染**（filterable 判定）。type=article/page 下
+    search.filters 本来就是空数组，这里只是把"空"变成"不渲染空卡"。
   - **类型标签不带各类型计数**：search.results_count 是当前 type 过滤后的总数，
     一次渲染只给一个数；切到 type=product 后结果里根本没有 article/page。
   - **推荐搜索词是商家配置的静态词，不是热门搜索统计**：Liquid 没有搜索词统计对象，
@@ -49,6 +71,21 @@
 <script src="{{ 'view-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'search-field.js' | asset_url }}" defer></script>
 {{ 'product-card.css' | asset_url | stylesheet_tag }}
+{%- comment -%}
+  分面筛选 / 排序（2026-11-18 补齐 G-07）：与集合页共用同一套组件 ——
+  样式 assets/facets.css（两页各自 stylesheet_tag 加载，因为
+  stylesheet 标签按 section 聚合、搜索页拿不到集合页那份），
+  行为 assets/faceted-filters.js（<collection-facets> 拦截 GET 提交 →
+  Section Rendering 局部更新 + replaceState，前端零筛选逻辑）。
+  只在「已执行搜索」时加载：起始态没有工具栏、也没有筛选器可渲染，
+  脚本挂上去只会白跑 connectedCallback。bottom-sheet.js 由 theme.liquid
+  全局加载，抽屉直接可用。
+{%- endcomment -%}
+{%- if search.performed -%}
+  {{ 'facets.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'faceted-filters.js' | asset_url }}" defer></script>
+  <script src="{{ 'sort-select.js' | asset_url }}" defer></script>
+{%- endif -%}
 
 {%- liquid
   assign per_page = section.settings.results_per_page | default: 12
@@ -62,6 +99,56 @@
   assign all_results_url = routes.search_url | append: '?q=' | append: encoded_terms
   assign hero_image = section.settings.hero_image
   assign suggested_terms = section.settings.suggested_searches | default: '' | split: ','
+
+  # ── 分面筛选（G-07，2026-11-18）──────────────────────────────────
+  # search.filters 只在本次结果里有商品时才有值（官方：只返回与当前结果
+  # 相关的筛选器；且**一旦带上筛选参数，平台会把所有非商品结果过滤掉**）。
+  # 所以文章/页面类型下不渲染筛选卡——没有可筛的对象，空卡只会误导。
+  assign filterable = false
+  if search.performed and search.filters.size > 0
+    if active_type == '' or active_type == 'product'
+      assign filterable = true
+    endif
+  endif
+
+  # 有筛选器 ≠ 有已选值：价格区间要看 min/max 两个 value，其余看 value.active。
+  # 与集合页同一套判定（collection.liquid 顶部），改口径要两边一起改。
+  assign has_active_filters = false
+  if filterable
+    for filter in search.filters
+      if filter.type == 'price_range'
+        if filter.min_value.value != blank or filter.max_value.value != blank
+          assign has_active_filters = true
+        endif
+      else
+        for value in filter.values
+          if value.active
+            assign has_active_filters = true
+          endif
+        endfor
+      endif
+      if has_active_filters
+        break
+      endif
+    endfor
+  endif
+
+  # 排序：search.sort_options 由平台给（relevance / price-ascending /
+  # price-descending 之类）。文章/页面搜索下平台通常返回空数组，此时
+  # 自然不渲染——不靠类型白名单硬挡。
+  # 绑在 filterable 上而不是 search.performed：排序卡渲染在筛选表单**内部**
+  # （桌面临到筛选卡顶部、移动端被 JS 搬进工具条），没有表单就没有它的位置。
+  assign sort_by = search.sort_by | default: search.default_sort_by
+  assign show_sort = false
+  if filterable and section.settings.show_sort and search.sort_options.size > 0
+    assign show_sort = true
+  endif
+
+  # 清除筛选的目标：保留关键词与当前类型，丢掉全部 filter 参数。
+  assign clear_filters_url = all_results_url
+  if active_type != ''
+    assign clear_filters_url = all_results_url | append: '&type=' | append: active_type
+  endif
 -%}
 
 {%- comment -%}
@@ -274,86 +361,195 @@
   {%- endif -%}
 </div>
 
-<div class="search-page">
-  <div class="search-page__meta">
-    <nav class="search-page__breadcrumb" aria-label="{{ 'general.breadcrumb' | t }}">
-      <ol class="search-page__breadcrumb-list" role="list">
-        <li class="search-page__breadcrumb-item">
-          <a href="{{ routes.root_url }}">{{ 'collections.breadcrumb_home' | t }}</a>
-        </li>
-        <li class="search-page__breadcrumb-item" aria-current="page">{{ 'search.title' | t }}</li>
-      </ol>
-    </nav>
-    {%- if search.performed -%}
-      <p class="search-page__count">
-        {{ 'search.results_count' | t: count: search.results_count }}
-        <span class="search-page__terms">“{{ search.terms | escape }}”</span>
-      </p>
-    {%- endif -%}
-  </div>
+{%- assign has_aside = has_categories -%}
+{%- if filterable -%}{%- assign has_aside = true -%}{%- endif -%}
 
-  {%- comment -%}
-    工具条的渲染条件是 search.performed，**不是** has_results（2026-11-12 修复）：
-    切到某个 0 结果的类型（如 Pages）时 results_count 为 0，若跟着结果一起隐藏，
-    用户就没有标签可以切回 All，等于被困在空结果页。
-  {%- endcomment -%}
-  {%- if search.performed -%}
-    <div class="search-page__toolbar">
-      <nav class="search-page__types" aria-label="{{ 'search.type_label' | t }}">
-        <ul class="search-page__types-list" role="list">
-          <li>
-            <a class="search-page__type" href="{{ all_results_url }}"{% if active_type == '' %} aria-current="page"{% endif %}>
-              {{ 'search.type_all' | t }}
-            </a>
+{%- comment -%}
+  <collection-facets> 必须包住「工具条 + 左列筛选表单 + 结果区」：
+  Section Rendering 局部更新替换的是本元素的全部子节点，缺任何一边都会
+  「筛选后网格不刷新」（集合页同一结构，代价是横幅/标题随局部更新重渲染——
+  搜索页没有横幅，只多一个面包屑与类型标签，代价更小）。
+  hero 刻意留在外面：它是首屏 LCP 元素，重渲染会让搜索框失焦、
+  背景图重新解码。
+{%- endcomment -%}
+<div class="search-page">
+  <collection-facets class="search-page__facets" data-section-id="{{ section.id }}">
+    <div class="search-page__meta">
+      <nav class="search-page__breadcrumb" aria-label="{{ 'general.breadcrumb' | t }}">
+        <ol class="search-page__breadcrumb-list" role="list">
+          <li class="search-page__breadcrumb-item">
+            <a href="{{ routes.root_url }}">{{ 'collections.breadcrumb_home' | t }}</a>
           </li>
-          <li>
-            <a class="search-page__type" href="{{ all_results_url }}&amp;type=product"{% if active_type == 'product' %} aria-current="page"{% endif %}>
-              {{ 'search.products' | t }}
-            </a>
-          </li>
-          <li>
-            <a class="search-page__type" href="{{ all_results_url }}&amp;type=article"{% if active_type == 'article' %} aria-current="page"{% endif %}>
-              {{ 'search.articles' | t }}
-            </a>
-          </li>
-          <li>
-            <a class="search-page__type" href="{{ all_results_url }}&amp;type=page"{% if active_type == 'page' %} aria-current="page"{% endif %}>
-              {{ 'search.pages' | t }}
-            </a>
-          </li>
-        </ul>
+          <li class="search-page__breadcrumb-item" aria-current="page">{{ 'search.title' | t }}</li>
+        </ol>
       </nav>
-      {%- comment -%} 视图切换只在真有结果时才有意义，但类型标签必须恒在 {%- endcomment -%}
-      {%- if has_results -%}
-        <view-toggle class="view-toggle" data-view-toggle>
-          <button
-            type="button"
-            class="view-toggle__button"
-            aria-pressed="false"
-            aria-label="{{ 'collections.view.list_label' | t }}"
-          >
-            <span class="view-toggle__icon view-toggle__icon--grid" aria-hidden="true">
-              {{- 'icon-view-grid.svg' | inline_asset_content -}}
-            </span>
-            <span class="view-toggle__icon view-toggle__icon--list" aria-hidden="true">
-              {{- 'icon-view-list.svg' | inline_asset_content -}}
-            </span>
-          </button>
-        </view-toggle>
+      {%- comment -%}
+        data-facets-count：既是 aria-live 播报区（局部更新后由新 DOM 自然播报
+        新的结果数），也是 faceted-filters.js 在移动端插入排序卡的锚点。
+      {%- endcomment -%}
+      {%- if search.performed -%}
+        <p class="search-page__count" data-facets-count aria-live="polite">
+          {{ 'search.results_count' | t: count: search.results_count }}
+          <span class="search-page__terms">“{{ search.terms | escape }}”</span>
+        </p>
       {%- endif -%}
     </div>
-  {%- endif -%}
 
-  <div class="search-page__body{% unless has_categories %} search-page__body--no-sidebar{% endunless %}">
-    {%- if has_categories -%}
-      <aside class="search-page__sidebar" aria-labelledby="SearchCategoriesHeading">
-        <h2 class="search-page__sidebar-title" id="SearchCategoriesHeading">{{ 'search.categories_heading' | t }}</h2>
-        <ul class="search-page__categories" role="list">{{ categories_markup }}</ul>
-        <p class="search-page__sidebar-note">{{ 'search.categories_note' | t }}</p>
-      </aside>
+    {%- comment -%}
+      工具条的渲染条件是 search.performed，**不是** has_results（2026-11-12 修复）：
+      切到某个 0 结果的类型（如 Pages）时 results_count 为 0，若跟着结果一起隐藏，
+      用户就没有标签可以切回 All，等于被困在空结果页。
+
+      行内顺序由 search.liquid 的 stylesheet 用 order 控制（不沿用集合页那套
+      .collection__toolbar 的 order：搜索页多一组类型标签，行序不同）。
+    {%- endcomment -%}
+    {%- if search.performed -%}
+      <div class="search-page__toolbar" data-facets-toolbar>
+        <nav class="search-page__types" aria-label="{{ 'search.type_label' | t }}">
+          <ul class="search-page__types-list" role="list">
+            <li>
+              <a class="search-page__type" href="{{ all_results_url }}"{% if active_type == '' %} aria-current="page"{% endif %}>
+                {{ 'search.type_all' | t }}
+              </a>
+            </li>
+            <li>
+              <a class="search-page__type" href="{{ all_results_url }}&amp;type=product"{% if active_type == 'product' %} aria-current="page"{% endif %}>
+                {{ 'search.products' | t }}
+              </a>
+            </li>
+            <li>
+              <a class="search-page__type" href="{{ all_results_url }}&amp;type=article"{% if active_type == 'article' %} aria-current="page"{% endif %}>
+                {{ 'search.articles' | t }}
+              </a>
+            </li>
+            <li>
+              <a class="search-page__type" href="{{ all_results_url }}&amp;type=page"{% if active_type == 'page' %} aria-current="page"{% endif %}>
+                {{ 'search.pages' | t }}
+              </a>
+            </li>
+          </ul>
+        </nav>
+        {%- comment -%}
+          类型标签的链接只带 q（+ type），**刻意不带任何 filter 参数**：
+          切换结果类型等于换一批对象，产品筛选（价格/品牌/功率）对文章没有意义；
+          平台也会在带筛选参数时把非商品结果全部过滤掉，两者不能混。
+          代价：在筛选状态下点 All/Articles 会清掉已选筛选——界面上
+          「已选标签 + Clear all」始终可见，用户看得见自己在放弃什么。
+        {%- endcomment -%}
+
+        {%- comment -%}
+          [Filters] 按钮：桌面由 CSS 隐藏（.facets__open 基础 display:none），
+          移动端在 data-facets-ready 后才出现——无 JS 时筛选面板本来就在流内，
+          按钮没有意义（同集合页，规则在 assets/facets.css）。
+        {%- endcomment -%}
+        {%- if filterable -%}
+          <button
+            type="button"
+            class="facets__open"
+            data-facets-open
+            aria-controls="FacetsDialog-{{ section.id }}"
+          >
+            {{ 'collections.filters.open' | t }}
+            {{ 'icon-chevron-down.svg' | inline_asset_content }}
+          </button>
+        {%- endif -%}
+
+        {%- comment -%} 视图切换只在真有结果时才有意义，但类型标签必须恒在 {%- endcomment -%}
+        {%- if has_results -%}
+          <view-toggle class="view-toggle" data-view-toggle>
+            <button
+              type="button"
+              class="view-toggle__button"
+              aria-pressed="false"
+              aria-label="{{ 'collections.view.list_label' | t }}"
+            >
+              <span class="view-toggle__icon view-toggle__icon--grid" aria-hidden="true">
+                {{- 'icon-view-grid.svg' | inline_asset_content -}}
+              </span>
+              <span class="view-toggle__icon view-toggle__icon--list" aria-hidden="true">
+                {{- 'icon-view-list.svg' | inline_asset_content -}}
+              </span>
+            </button>
+          </view-toggle>
+        {%- endif -%}
+
+        {%- if filterable -%}
+          {%- render 'active-facets', filters: search.filters, clear_url: clear_filters_url -%}
+        {%- endif -%}
+      </div>
     {%- endif -%}
 
-    <div class="search-page__results">
+    <div class="search-page__body{% unless has_aside %} search-page__body--no-aside{% endunless %}">
+      <div class="search-page__aside-col">
+        {%- if has_categories -%}
+          <aside class="search-page__sidebar" aria-labelledby="SearchCategoriesHeading">
+            <h2 class="search-page__sidebar-title" id="SearchCategoriesHeading">{{ 'search.categories_heading' | t }}</h2>
+            <ul class="search-page__categories" role="list">{{ categories_markup }}</ul>
+            <p class="search-page__sidebar-note">{{ 'search.categories_note' | t }}</p>
+          </aside>
+        {%- endif -%}
+        {%- if filterable -%}
+          {%- comment -%}
+            筛选表单（GET）——与集合页同一个片段、同一个提交流程：
+            · q / type 是隐藏域：GET 提交会把 action 上的查询串整个替换掉，
+              少了它们筛选一提交就丢了搜索词（搜索页最贵的那个 bug）。
+            · 排序 select 恒带 form 属性：移动端排序卡被 JS 搬进工具条后
+              已经不在 form 子树里，靠 form 归属继续参与提交。
+            · 不设 novalidate / 不写 JS 提交逻辑：无 JS 时「Apply」走原生
+              GET 整页刷新，URL 可分享、刷新保留（SDD §6.1 红线）。
+          {%- endcomment -%}
+          <div class="search-page__filters" data-facets-form-slot>
+            <form
+              class="facets__form"
+              id="FacetsForm-{{ section.id }}"
+              action="{{ routes.search_url }}"
+              method="get"
+              data-facets-form
+            >
+              <input type="hidden" name="q" value="{{ search.terms | escape }}">
+              {%- if active_type != '' -%}
+                <input type="hidden" name="type" value="{{ active_type | escape }}">
+              {%- endif -%}
+
+              {%- capture sort_card -%}
+                {%- if show_sort -%}
+                  <div class="facets__sort-card">
+                    <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
+                      {{ 'collections.sort.label' | t }}
+                    </label>
+                    <facet-sort
+                      class="facets__sort-select"
+                      data-label-close="{{ 'navigation.close' | t }}"
+                    >
+                      <select
+                        id="SortBy-{{ section.id }}"
+                        name="sort_by"
+                        data-facets-sort
+                        form="FacetsForm-{{ section.id }}"
+                      >
+                        {%- for option in search.sort_options -%}
+                          <option
+                            value="{{ option.value }}"
+                            {% if option.value == sort_by %}
+                              selected
+                            {% endif %}
+                          >
+                            {{ option.name | escape }}
+                          </option>
+                        {%- endfor -%}
+                      </select>
+                    </facet-sort>
+                  </div>
+                {%- endif -%}
+              {%- endcapture -%}
+
+              {%- render 'faceted-filters', filters: search.filters, sort_card: sort_card -%}
+            </form>
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div class="search-page__results" data-facets-results tabindex="-1">
       {%- if has_results -%}
         {%- paginate search.results by per_page -%}
           {%- liquid
@@ -487,6 +683,21 @@
             </nav>
           {%- endif -%}
         {%- endpaginate -%}
+      {%- elsif has_active_filters -%}
+        {%- comment -%}
+          筛选后 0 结果：必须与「搜不到东西」分开。此时搜索词是好的，
+          是用户自己叠的筛选组合太窄——文案要指向筛选，给的是「清除筛选」
+          而不是「换个词再搜」（否则用户会以为关键词写错了）。
+          复用集合页的两条键：口径完全一致，没必要为搜索页再造一遍。
+        {%- endcomment -%}
+        <div class="search-page__empty">
+          <span class="search-page__empty-icon" aria-hidden="true">{{ 'icon-search.svg' | inline_asset_content }}</span>
+          <h2 class="search-page__empty-title">{{ 'collections.no_matches' | t }}</h2>
+          <p class="search-page__empty-body">{{ 'search.empty_body' | t }}</p>
+          <a class="search-page__empty-cta btn-solid" href="{{ clear_filters_url }}">
+            {{ 'collections.clear_filters' | t }}
+          </a>
+        </div>
       {%- else -%}
         {%- if search.performed -%}
           {%- comment -%} ── 无结果 ── {%- endcomment -%}
@@ -518,8 +729,27 @@
           </section>
         {%- endif -%}
       {%- endif -%}
+      </div>
     </div>
-  </div>
+  </collection-facets>
+
+  {%- if filterable -%}
+    {%- comment -%}
+      移动端筛选抽屉（<990px）：<bottom-sheet> 管开合动效与 Esc 收口，
+      dialog 只当容器。faceted-filters.js 打开时把**整个 form** 移进来
+      ——同一份 DOM、无副本，抽屉内勾选与 Apply 的控件归属不会分裂（BUG-041）。
+      放在 <collection-facets> 外面是刻意的：局部更新只替换它的子节点，
+      抽屉一旦在里面就会被 replaceChildren 拆掉，开着的抽屉会凭空消失。
+    {%- endcomment -%}
+    <bottom-sheet media="(max-width: 989.98px)">
+      <dialog
+        id="FacetsDialog-{{ section.id }}"
+        class="facets__dialog"
+        scroll-lock
+        aria-label="{{ 'collections.filters.label' | t }}"
+      ></dialog>
+    </bottom-sheet>
+  {%- endif -%}
 </div>
 
 {% stylesheet %}
@@ -531,6 +761,13 @@
      =================================================================== */
   .search-page {
     padding-block: 1.5rem clamp(3rem, 6vw, 5rem);
+  }
+  /* 容器型 Custom Element 必须显式 block（BUG-071 的同一课）：
+     未升级时 UA 给 inline，子元素会散在行盒里、margin 失效，
+     而且它正是局部更新的替换边界，不该是一个行内盒子。 */
+  .search-page__facets {
+    display: block;
+    min-inline-size: 0;
   }
 
   /* ═══════════════════════════════════════════════════════════════════
@@ -780,14 +1017,38 @@
     overflow-wrap: anywhere;
   }
 
-  /* 工具条：类型标签 + 视图切换，各占一端 */
+  /* 工具条 = 类型标签组 + [Filters] + 排序 + 视图切换 + 已选标签。
+     行序自己定（order），不继承 facets.css 里 .collection__toolbar 那套：
+     搜索页比集合页多一组类型标签，行首是个导航而不是单个按钮。
+     特异性能赢过 facets.css 的 .collection__toolbar .facets__* 规则，靠的是
+     「不给本容器加 .collection__toolbar 类」——两条规则根本不重叠。 */
   .search-page__toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
     gap: 0.75rem;
+    min-block-size: 44px;
     margin-block-end: 1.5rem;
+  }
+  .search-page__toolbar .search-page__types {
+    order: 0;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+  .search-page__toolbar .facets__open {
+    order: 1;
+  }
+  .search-page__toolbar .facets__sort-card {
+    order: 2;
+  }
+  .search-page__toolbar .view-toggle {
+    order: 3;
+  }
+  /* 已选标签恒独占一行（.facets__active 的基础规则已给 flex-basis: 100%，
+     这里只压行序——排在控件之后，靠左起排） */
+  .search-page__toolbar .facets__active {
+    order: 4;
+    flex-basis: 100%;
   }
   .search-page__types-list {
     display: flex;
@@ -860,19 +1121,40 @@
     display: block;
   }
 
-  /* 左分类栏 + 右结果区。minmax(0, 1fr) 从源头掐断 min-content 传导。 */
+  /* 左栏（分类 + 筛选卡）｜右结果区。minmax(0, 1fr) 从源头掐断 min-content 传导。
+     列宽 260px：筛选卡里要放「价格 From/To 双输入 + 三列 checkbox」，
+     220px（原分类栏宽度）放得下但挤——两侧内边距吃掉 40px 后只剩 180px，
+     药丸输入框里的数字会被截断。集合页左列 320px 是给 570px 越界标题卡用的，
+     搜索页没有那个需求，取中间值。 */
   .search-page__body {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
   }
-  /* 只有真的渲染了左栏才切两列。--no-sidebar（商家没建集合 / 关掉分类栏）
-     时若仍套 220px + 1fr，结果区会掉进第一列被压成 220px 窄条——
-     主题包带不了集合，这个分支装完主题就会命中。 */
   @media (min-width: 990px) {
-    .search-page__body:not(.search-page__body--no-sidebar) {
-      grid-template-columns: 220px minmax(0, 1fr);
+    .search-page__body:not(.search-page__body--no-aside) {
+      grid-template-columns: 260px minmax(0, 1fr);
     }
+  }
+  /* 左栏容器：分类卡在上、筛选卡在下，两张卡之间的间距由 gap 给。
+     移动端退化成 display: contents —— 分类与表单直接成为 .search-page__body
+     的单列子项，顺序不变（分类在前、表单隐藏、结果在后），不会多套一层。 */
+  .search-page__aside-col {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    min-inline-size: 0;
+  }
+  /* 筛选卡槽：桌面就是普通流内卡片（不做集合页那种 sticky 吸顶——搜索页
+     左栏上面还有一张分类卡，吸顶会把它盖住），槽本身只负责收缩链。 */
+  .search-page__filters {
+    min-inline-size: 0;
+  }
+  /* 筛选卡与分类卡同一套卡面（facets.css 给 .facets__aside 的是集合页那套
+     20px 圆角 + 投影；搜索页左栏两张卡并排，圆角/投影必须一致） */
+  .search-page__filters .facets__aside {
+    border-radius: 14px;
+    box-shadow: none;
   }
   .search-page__sidebar {
     align-self: start;
@@ -942,8 +1224,28 @@
     color: var(--color-foreground-muted);
   }
   @media (max-width: 989px) {
+    /* 左栏容器退回 contents：分类卡与筛选卡直接成为单列 body 的子项，
+       顺序跟 DOM 一致（分类 → 筛选 → 结果），不额外多一层包裹盒。
+       有 JS 时筛选 form 被 facets.css 藏掉并搬进抽屉，这一层自然消失。 */
+    .search-page__aside-col {
+      display: contents;
+    }
     .search-page__categories {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* 结果区由 JS 在局部更新后接管焦点（tabindex="-1"）：它是容器不是控件，
+     接管焦点时不该冒出一圈焦点环 */
+  .search-page__results:focus {
+    outline: none;
+  }
+  /* 移动端 + JS 就绪：表单已经搬进抽屉，这个槽只剩一个空壳。
+     不藏掉的话它会占一个 grid 行，body 的 gap 会在分类卡与结果区之间
+     多插 1.5rem 空气（form 是 display:none，槽本身没空）。 */
+  @media (max-width: 989px) {
+    collection-facets[data-facets-ready] .search-page__filters {
+      display: none;
     }
   }
 
@@ -1443,6 +1745,13 @@
       "default": 12,
       "label": "t:sections.search.settings.results_per_page",
       "info": "t:sections.search.settings.results_per_page_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sort",
+      "default": true,
+      "label": "t:sections.search.settings.show_sort",
+      "info": "t:sections.search.settings.show_sort_info"
     },
     {
       "type": "checkbox",

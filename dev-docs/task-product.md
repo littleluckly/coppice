@@ -62,7 +62,7 @@
 | 13 | Related recommendations | `product-recommendations`（`intent=related`）→ `Similar Mowers` | 无推荐时不渲染空壳 |
 | 14 | Complementary recommendations | 官方 `intent=complementary`，作耗材区**退化路径**（见 §5 风险 5） | 留一款空耗材主机实测 |
 | 15 | Rich product media | 画廊支持 image / video / external_video / model 四类 | 自建含 3D+视频的测试商品 |
-| 17 | Selling plans | **未实现**（演示店无 selling plan，实现后无可验证路径）；购物车页显示不在本清单 | 见 §5 风险 13 |
+| 17 | Selling plans | **2026-11-18 补齐（G-12）并在演示店实测通过**：`snippets/selling-plan-picker.liquid`（组 / 计划 radio，`name="selling_plan"`，一次性购买作默认项）+ `assets/selling-plan-picker.js`（按变体禁用不适用计划、选中后价格换 allocation 价、强制订阅未选时拦提交）；购物车行显示见 `snippets/cart-line.liquid` | 实测记录见 §5 风险 13 |
 | 18 | Shop Pay Installments | `form` 的 `payment_terms` 过滤器 | 平台资质存在时出横幅 |
 | 19 | Unit pricing | `variant.unit_price_measurement` 渲染 | 测试商品设单位计价 |
 | 20 | Variant images | 切换变体 → 主图联动到 `featured_media` | 多变体测试商品 |
@@ -340,7 +340,7 @@
 | 10 | ~~5% + 取整在低价商品上被放大~~ **已定案**（2026-10-28 选 A） | 配件若打折会出现 4%/6%/7% 徽标 | 配件不打折、`Compare-at price` 留空；脚本 `validate()` 已加断言拦截"配件带对比价" |
 | 11 | CSV 重导会顺带覆盖库存与图片 | 库存被打回 25、图片可能重复 | 导入时选 Overwrite existing products 前先确认；导入后抽查 3 款价格 + 图片数 |
 | 12 | **多变体链路未实测**（演示店 21 款全 `Default Title`） | 变体选择、变体图切换、价格/按钮态更新、自提补拉四段逻辑只过了代码评审，没跑过真实多变体商品 | 建 1 款 2 变体测试商品（含变体专属图 + 变体专属价）跑一遍，实测后回填本节；未实测前不得在验收单上打勾 |
-| 13 | **订阅计划（#17）未实现** | 有 selling plan 的商品加购不带订阅选项 | 需要 1 款挂订阅计划的测试商品才能验证渲染与加购；在此之前保持现状并在 §3 该行标注「未实现」 |
+| 13 | **订阅计划（#17）已在演示店实测通过**（2026-11-18） | 演示店装上 Shopify Subscriptions app（该 app 支持 PayPal Express，不强制 Shopify Payments）→ 建 1 个 plan（`Subscribe & save`，30 天 10% / 60 天 15%）→ 真商品页渲染正常。**实测观察值**：`nb-21p` 选 60 天计划后价格区 `$467.50` / 划线 `$550.00` / `Save 15%`（550 × 0.85 ✓，划线价取自 `allocation.compare_at_price`——只反映计划折扣，会把商品自身的 5% 折扣遮掉，属平台口径）；加购后抽屉里商品标题下出现 `Deliver every 60 days, 15% off`，数量 2 行小计 `$935.00`（467.5 × 2 ✓） | 剩余未验只有**结账页**：官方明确 Bogus Gateway 不兼容订阅商品、测试订阅订单只能用 Shopify Payments test mode（大陆主体不可得）⇒ 结账段按「代码符合官方写法」判定。**不要加 app 的 Subscription widget block，并确认 App embeds 里 widget 关闭**，否则页面会出现两份选择器 |
 
 ---
 
@@ -366,7 +366,7 @@
 | T-1.1 | `snippets/compare-button.liquid` |
 | T-1.2 | **2026-11-02 重新落地（右侧悬浮版，非原顶部锚点条）**：`sections/product-anchor-nav.liquid` + `assets/product-anchor-nav.js`；桌面 ≥990px 且页面可滚动才出现，锚点 Overview / Specifications / Supplies，`enabled_on.templates: ["product"]` |
 | T-1.3 | `snippets/spec-bullets.liquid` + `assets/icon-spec-{width,bar,engine,drive}.svg` |
-| T-2.1 | `sections/main-product.liquid` + `assets/product-gallery.js` + `assets/product-form.js` + `assets/pickup-availability.js` + `assets/icon-{play,truck,return,warranty}.svg`（旧 `sections/product.liquid` 已删） |
+| T-2.1 | `sections/main-product.liquid` + `assets/product-gallery.js` + `assets/product-form.js` + `assets/pickup-availability.js` + `assets/icon-{play,truck,return,warranty}.svg`（旧 `sections/product.liquid` 已删）；**2026-11-18 追加购买选项**：`snippets/selling-plan-picker.liquid` + `assets/selling-plan-picker.js`（强制项 #17 / G-12） |
 | T-2.2 | `sections/product-highlights.liquid` + `assets/icon-battery.svg` |
 | T-2.3 | `sections/product-supplies.liquid`（耗材）+ `sections/product-complementary.liquid`（互补整机）+ `assets/supplies.js` + `assets/product-recommendations.js` |
 | T-2.4 | `sections/product-spec-table.liquid` |
@@ -402,7 +402,7 @@
 - Lighthouse Performance / Accessibility 三页双端实测（沙箱跑不了，需刘工本机）
 - 多变体链路（变体选择 → 价格/按钮态 → 变体图切换 → 自提补拉）：演示店全 `Default Title`，**四段逻辑未跑过真实商品**（风险 12）
 - 3D / 视频媒体：演示店无素材（风险 1）
-- 订阅计划 #17：未实现（风险 13）
+- ~~订阅计划 #17~~：**2026-11-18 演示店实测通过**（计划渲染 / 价格联动 / 加购后购物车行显示计划名）；结账页因无可用订阅网关无法验（风险 13）
 - **滚动入场动画的观感与触发时机**：`data-reveal` 标记已确认落到 4 个区块（配件页 2 个，因为无规格表与耗材），但"跟手不跟手"必须肉眼在浏览器里滚一遍——静态 HTML 只能验到属性在
 - 购物车角标联动 / 飞入动画：需真实加购
 - **`Add all N items`（批量加购）**：演示店每台主机只挂 1 件耗材，N 永远 = 1 → 按钮按设计不出现，`assets/supplies.js` 这段逻辑**一次都没在真页面跑过**。要么给一款主机挂 2 件耗材，要么接受未实测
@@ -426,6 +426,7 @@
 | 2026-10-28 | v1.1 | 补两条裁定：① 折扣 = MSRP × 0.95 **取整到整数美元**，21 款主机实算全部正好 5%（明细表进 T-0.2）；11 款配件取整后有 4 款显示 4%/6%/7% → **三选一待拍**（推荐 A：配件不打折）。② judge.me 已在后台卸载 → T-0.3 去掉"先卸载"前置，改为直接改文件 + 复核；风险 4 降级、新增风险 9（列名未经官方模板逐字校验）与风险 10（取整误差） |
 | 2026-10-28 | v1.2 | ① 配件定 A 方案（不打折），T-0.2 三选一结案。② 官方模板入仓 `dev-docs/mower-import/product_template.csv`，脚本 `TEMPLATE_PATH` 改指向它、逐字校验常态生效；列名确认 `Compare-at price`。③ 脚本已改并重生成 CSV（52 列 / 32 款 / 53 行 / 0 错 0 警），定价走 `Decimal + ROUND_HALF_UP`，`validate()` 三条断言经反向测试确认会拦。④ 风险 9/10 关闭，新增风险 11（重导覆盖库存与图片）。导入动作仍待刘工执行 |
 | 2026-10-28 | v1.3 | 编码启动（刘工确认已导入 CSV）。① T-0.3 完成：`product.json` 移除 judge.me `apps` 块。② T-1.1 完成：`snippets/compare-button.liquid`（`<compare-toggle>` + `<button aria-pressed>`，复用 compare.js 契约，脚本零改动）。③ T-1.3 完成：`snippets/spec-bullets.liquid` + 4 个规格图标；顺带扩展 `spec-value` 的 `displacement_cc` / `power_w` 两种单位（原缺动力换算出口）。④ locale 加 6 键，`check-locale-keys.py` 0 错；`shopify theme check` **0 error**（3 warning：1 条既有 `UnusedAssign` + 2 条新 snippet 未接线的 `OrphanedSnippet`，接线后消失）。⑤ 待确认：cc 不转 cu in 的口径偏离 |
+| 2026-11-18 | v1.14 | **补强制项 #17 / G-12：产品页购买选项（订阅计划）**。新增 `snippets/selling-plan-picker.liquid` + `assets/selling-plan-picker.js`：按 `product.selling_plan_groups` 渲染组与计划，「一次性购买」为默认项（`product.requires_selling_plan` 为真时整条不出）；提交字段就是 `selling_plan`，走原生 form，JS 不拼请求体。**三件事**：① 变体切换按 `variant.selling_plan_allocations` 禁用/隐藏不适用计划，选中项失效自动回落到一次性；② 选中计划后价格区换 allocation 价（含划线价与 Save N%），与 `VariantPicker._apply` 同口径、靠 `variant:change` 同步派发覆盖；③ 变体强制订阅却没选时由 `<product-form>` 调 `validate()` 拦提交并播报（**不禁用按钮**，按官方 UX 指南）。URL 带 `?selling_plan=` 时 Liquid 价格基线改用 `product.selected_selling_plan_allocation`，刷新不掉档。新增 `show_selling_plans` 设置（默认开）+ 3 个正文键 + 3 个 schema 键。`theme check` 0 error / 1 既有 warning（`image.liquid` OrphanedSnippet）。**桩测**：无头 Chrome 两个桩 34 条断言全过（可用性 / 价格三件 / validate / FormData 携带 `selling_plan`）。**补丁（同日）**：桩测抓到真缺陷——`variant:change` 是 document 级事件，同页若有第二个产品块（编辑器里放两个 `main-product`、或预览态），别人的变体切换会把本块价格与可用性一起改掉；已在事件 detail 补 `sectionId`、监听方按 section 过滤。另新增 `tools/preview-selling-plans.rb`（真实 snippet + 真实样式渲染三种形态的预览页）与第三轮验证：真实 Liquid 产物上 24 条断言全过。**实测定论（同日）**：演示店建 plan 后 `nb-21p` 真商品渲染正常——选 60 天计划，价格区 `$467.50` / 划线 `$550.00` / `Save 15%`，加购后抽屉里标题下显示 `Deliver every 60 days, 15% off`、数量 2 小计 `$935.00`；计划名已含百分比时不再重复补徽标。**仅结账页未验**（Bogus 不兼容订阅商品、Shopify Payments test mode 大陆不可得）。 |
 | 2026-11-02 | v1.13 | **产品页新增右侧悬浮锚点导航**（刘工）：新 section `product-anchor-nav`（Custom Element，`enabled_on.templates: ["product"]`），固定竖排在视口右侧，锚到 Overview / Specifications / Supplies。**只在页面确实能滚动时显示**（量 `scrollHeight`，推荐区异步撑高由 ResizeObserver 重算）、桌面 ≥990px 才出现；目标 section 不存在（商家删了 / 商品无耗材）就摘掉对应链接，剩不到 2 项整条不出现。**不接管点击**：原生 `<a href="#id">` 负责 hash 与焦点，平滑滚动用 CSS `scroll-behavior`、吸顶避让用 `scroll-padding-top` + 脚本实测的 `--anchor-nav-offset`；滚动时用 `aria-current="location"` 标当前分区。`templates/product.json` 在 `main` 之后插入该 section；schema locale 名改为 Anchor navigation，复用既有的 `sections.product_anchor_nav.label/overview/specs/supplies` 键 |
 | 2026-11-02 | v1.12 | **取消 Tab，回到纯垂直平铺**（刘工）：`product-tabs` 拆回 `sections/product-description.liquid`（Overview）与 `sections/product-spec-table.liquid`（Specifications）两个独立 section，与 `product-supplies` 同一形态（标题 1.25rem/500、段距 2rem、`data-reveal`）；`product.json` 顺序 main → 互补 → Overview → Specifications → Supplies → 推荐；删除 `sections/product-tabs.liquid` / `assets/product-tabs.js` / `snippets/product-description-content.liquid` / `snippets/product-spec-table-content.liquid`，并清掉两个 locale 文件里的 `product_tabs` 键；规格表保留 2026-10-29 的圆角斑马线样式，「Why specs can vary」提示回到标题行右侧 |
 | 2026-10-28 | v1.11 | **改为"关摘要、留全文"**（刘工按推荐方案定稿）：`main-product` 的 `show_description` 设 `false`，`product-description` 加回模板并排在 `Specifications` 之前；页面上描述只出现一次，且是富文本全文。**根因订正**：重复不是模板缺陷——演示数据描述仅 38 词，而摘要是 `truncatewords: 40`，阈值比正文还长，摘要==全文。描述写长后（≥120 词）可重新打开摘要。`product.json` 回到 8 个 section |

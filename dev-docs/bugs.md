@@ -710,6 +710,90 @@
 
 ---
 
+### BUG-075 · 跨 section 复用组件时样式「拿不到」不报错：stylesheet 按 section 聚合 + 令牌有作用域
+
+- **日期**：2026-11-18 ｜ **状态**：Fixed（G-07 搜索页筛选接入时暴露并顺手解决）
+- **现象**：搜索页要复用集合页的筛选组件（同一个 snippet、同一个 JS），把标记搬过去以后**看起来"没装样式"**：筛选卡没有卡面、排序按钮没有边框和圆角、Apply 是裸文字。控制台零报错，`theme check` 也零相关告警。
+- **根因**（两层，都是静默的）：
+  1. **`{% stylesheet %}` 按 section 聚合、只随渲染它的 section 加载**。`.facets__*` 全部写在 `sections/collection.liquid` 的 stylesheet 块里，搜索页不渲染 collection section ⇒ 那份 CSS 根本不在页面上。它不像 `assets/x.css` 那样可以跨 section 引用。
+  2. **`--facet-control-radius` / `--facet-control-border` 定义在 `.collection` 作用域**。搜索页没有 `.collection` 祖先 ⇒ `var()` 解析失败 ⇒ 整条 `border` / `border-radius` 声明被丢弃。CSS 变量解析失败**不报错、不回退**，元素就是没有那条属性。
+- **修复**：
+  1. `.facets__*`（筛选组 / 排序 / 已选标签 / 骨架 / 抽屉）整块抽到 `assets/facets.css`，两个 section 各自 `stylesheet_tag` 条件加载（集合页：`collection.filters.size > 0 or show_sort`；搜索页：`search.performed`）。
+  2. 三个控制令牌提到 `:root`（值仍是 `max(var(--style-border-radius-inputs), 14px)`，商家设置照样生效），并从 `.collection` 里删掉旧定义——**不留第二份**：同值重复定义会让"改了一处不生效"成为最难查的问题。
+  3. 选择器里的 `.collection__` 前缀归一化：`collection-facets[data-facets-ready]` / `[data-facets-count]` / `[data-facets-toolbar]` / `.product-card`。搜索页不该为了复用样式而假装自己是集合页。
+- **预防**（可执行）：
+  1. **抽 CSS 用脚本、不用手抄**：`tools/split-facets-css.py` 按「选择器归属白名单」切分，可重跑。切分后必须过四项校核——① 规则数守恒（原始 = 组件 + 剩余，除有意改名的选择器）；② `.facets*` 类名集合零丢失；③ 两文件花括号各自平衡；④ 每一段 `@media` 内的规则递归判归属（混装段最容易只搬走一半）。
+  2. **先跑「变量依赖清单」再落盘**：`grep -oE "var\(--[a-z0-9-]+" 新文件 | sort -u`，逐个确认定义在 `:root` 或该文件的祖先作用域里。凡出现"定义在某个 section 根类上"的令牌，一律提到 `:root`。
+  3. **用一个"计算样式探针"代替肉眼**：`tools/probe-facets-css.py` 从真实 section / snippet 抽标记（不手抄），挂真实 `critical.css` + 目标 CSS，用无头 Chrome `--dump-dom` 读 `getComputedStyle`。两档视口各跑一次（1440 与 500），断言写成"该有的值"而不是"看着对"。本次靠它一次抓出 `--facet-control-*` 的作用域问题。
+  4. **判断"样式该放哪"的一句话判据**：*这个 section 被移除时，这条样式还该不该留在页面上？* 该留 ⇒ `assets/*.css`；不该留 ⇒ section 的 stylesheet。
+
+---
+
+### BUG-076 · 搜索页的加载骨架铺满整屏：absolute 覆盖层没人给它定位祖先
+
+- **日期**：2026-11-19 ｜ **状态**：Fixed
+- **现象**（刘工截图，`/search?q=push` 勾筛选时）：fetch 期间的白底骨架从页头下方一直盖到视口底部、横向铺满，把分类栏、工具栏、结果卡全糊住。集合页同一套骨架正常。
+- **根因**：`.collection__skeleton` 是 `position: absolute; inset: 0`，**只遮住最近定位祖先**。集合页早在 `.collection__results` 上写过 `position: relative`；搜索页的 `.search-page__results`（同一个 `data-facets-results` 钩子）**从来没写过** ⇒ 就近定位祖先是初始包含块 ⇒ 骨架 = 视口大小。两页共用一份骨架样式，差异却被写在了消费方的样式里。
+- **修复**：把契约上移到组件侧 —— `assets/facets.css` 的骨架段开头加
+  `[data-facets-results] { position: relative; }`。消费方只要把 `data-facets-results` 放在结果容器上，就自动是定位上下文，不用再各自记得补一条 relative。
+- **同轮补齐（列表视图骨架）**：`html[data-collection-view='list']` 下结果网格变单列，骨架却仍是 2/3/4 列方格 —— 「切到列表 → 勾筛选」会先闪一片方格再跳成横条。按 `product-card` 的列表版式给骨架加了横排形态：单列 + 卡内 `clamp(104px,30%,168px)` 左图 + 右侧三条线（线条限宽 320/180/120，否则 70% 会被拉成 650px 的灰长带）。集合页共用这套骨架，一并受益。
+- **验证**（`tools/probe-facets-css.py` 新增两条断言：骨架 rect 必须等于结果区 rect；列表态骨架必须单列且卡内两列）：
+  - 修复后 1440 视口：结果区 `1145×1247@0`，骨架 `1145×1247@0`（视口 `1440×813`）✅
+  - 反证（把 `[data-facets-results]` 强行改回 `static`，复现修复前）：骨架 `1429×813@0` —— 与截图的"铺满整屏"完全一致，根因确认
+  - 列表态 1440：骨架 `1145px` 单列、卡内 `168px + 935px`、图 `168×168`、三条线 `320/180/120`；500 视口：单列 `500px`、`142+316`、图 `142×142`、线 `221/126/95`（按比例缩，未触顶）
+  - 500 / 900 两档网格态：骨架与结果区逐值相等
+- **预防**（可执行）：
+  1. **组件里的 absolute 覆盖层，定位上下文必须写在组件自己的 CSS 里**，锚 `data-*` 钩子，绝不留给消费方"记得补 relative"。判据：*这条样式是不是为了让组件某一部分正确工作？是 ⇒ 和组件放一起。*
+  2. **probe 常驻一条"覆盖层尺寸 == 容器尺寸"断言**（本次已加进 `probe-facets-css.py`）。这类 bug 肉眼只在"刚好在加载"的半秒里出现，截图和肉眼都容易错过；尺寸比对是唯一稳定的抓法。
+  3. 新增骨架 / 遮罩 / loading 层时先回答一句：**这个 absolute 盒子的 GPS 是谁？** 答不出来就是错的。
+
+---
+
+### BUG-077 · `sections/search.liquid` 头注释整段重复粘贴，theme check 报 2 个 error（G-08 收口时踩到）
+
+- **日期**：2026-11-18 ｜ **状态**：Fixed
+- **现象**：跑 `shopify theme check` 时 `sections/search.liquid` 报 2 条 error —— `LiquidHTMLSyntaxError` + `LiquidSyntaxError`，均为 *"Attempting to close LiquidTag 'comment' before it was opened without a matching 'comment'"*，指向第 79 行。`theme check` 因此不是 0 error，**属于"不许提交"状态**。
+- **根因**：2026-11-18 搜索页改版（G-07）改头注释时，末段 12 行（推荐搜索词 / 分类计数口径 / hero 默认图 / 不引入 collection 设置）被**整段重复粘贴**了一次：第 66 行已有 `{% endcomment %}`，第 67–78 行是重复正文，第 79 行是第二个 `{% endcomment %}`。后果有两层——① 第二个 `endcomment` 无匹配 ⇒ 语法 error；② 即使语法过关，第 67–78 行是**裸文本**，会原样输出到页面 `<head>` 区域上方。
+- **修复**：删掉第 67–79 行（13 行），保留第 66 行的 `{% endcomment %}`。删除前用 `diff` 确认第 67–78 行与第 54–65 行逐字相同（唯一差异是第 66 行多出的 `endcomment`），不是"看起来像重复"。
+- **预防**（可执行）：
+  1. **改大段注释后必须跑一次 `theme check`**，不能只看"页面渲染正常"。`endcomment` 多一个时 Liquid 不中止渲染，只是把后文当文本吐出来——肉眼很容易漏；`theme check` 一条就抓住。本次是顺手跑 G-08 的验证时才发现，说明上次改完没跑。
+  2. **`check-tag-balance.py` 抓不到这类问题**（它只配 HTML 标签，Liquid 标签不在其范围）。Liquid 结构问题只有 `theme check` 算数——已写进 AGENTS §2，这条是它的实例。
+  3. 粘贴式改动后 `grep -c "endcomment"` 与 `grep -c "^{% comment"` 对不上就是手工核验的最快信号（本例 2 vs 1）。
+
+---
+
+### BUG-078 · 商品卡价格三件套在窄屏横向溢出：`nowrap` 的"现价 + 划线价"组比卡内容宽还宽
+
+- **日期**：2026-11-18 ｜ **状态**：Fixed（刘工 2026-11-18 拍板走 **A**：允许组内折行）
+- **现象**：375px 视口、集合页两列网格下，9 字符价格（演示店最贵档 `$3,428.55` / 划线 `$3,609.00`）的商品卡里，`.product-card__price-main` 实测 **136.0px**，而卡内容宽 **135.5–136px**（`(375 − 20×2 − 12) / 2 − 26`）——**临界**。主题字体（Montserrat 系）比探针用的 `-apple-system` 宽 ⇒ 实机上会溢出；320px 视口内容宽仅 ~108px，**必然溢出 28px**。卡内容溢出会顺着 grid item 的 automatic minimum size 传导成整页横向滚动（MEMORY"grid/flex item 横向溢出"同族）。
+- **根因**：2026-10-29 定"现价与划线价绑成 `nowrap` 一组，换行点只在'价格块 / 折扣胶囊'之间"时，依据是"手机 106px 内容宽下合计 104.8px"——那是**短价格**（如 `$699.00` + `$749.00` 实测 111.3px，已超）的量值。价格位数一变（四位数 + 两位小数），这组就撑破容器，而 `nowrap` 让它无处可折。
+- **影响面**：集合页 / 首页 featured-collection / 搜索页 / 各推荐位（共用同一张卡）；触发条件是「四位数价格 + 有划线价 + 窄屏」。
+
+**修复（2026-11-18，方案 A）**
+
+`.product-card__price-main` 的 `flex-wrap: nowrap` → `wrap`（`assets/product-card.css`），并在
+`snippets/product-card.liquid` 的价格注释里写明行为变化。**没有**加 `min-inline-size: 0`：
+这一组的 min-content 就是"最宽那个价格"，压到它以下会让现价自己溢出，属于把问题换个地方藏。
+
+- **代价（明确记下）**：这是对 2026-10-29「绝不把两个价格拆开」的有意识修改——划线价在装不下时会落到第二行。只在装不下时发生，短价格逐像素不变。
+- **验证**（`/tmp/probe6`，标记从 `snippets/product-card.liquid` 正则抽取、非手抄；`--page-margin: 20` / gap 12 / 两列）：
+
+| 视口 | 卡内容宽 | `$3,428.55`+`$3,609.00` | `$699.00`+`$749.00` | `$1,299.00`+`$1,499.00` | 只有现价 | 整页横向溢出 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 375 | 135.5px | 组高 42.8px（**已折行**，修复前 136.0px 溢出） | 组高 21.0px（单行，与修复前一致） | 组高 21.0px（单行） | 21.0px | **无**（`docScrollW=375`） |
+| 320 | 108.0px | 42.8px（折行） | 42.8px（折行，修复前溢出 3.3px） | 42.8px（折行，修复前溢出 25px） | 21.0px | **无**（`docScrollW=320`） |
+
+  所有卡片 `最大超出 = 0.0px`；`.product-card__unit-price` 在两种宽度都是单行 16px、宽 = 内容宽。
+  截图（375，四张卡对照）：现价 / 划线价 / `Save N%` / 单位价 四层顺序在折行后仍然读得顺，无裁切。
+
+- **候选修法（决策留痕，A 已采纳）**：
+  - **A（最小改动，已采纳）**：`.product-card__price-main { flex-wrap: wrap }` —— 装不下时划线价自己落到第二行。代价：**正是当年刻意避免的"两个价格被拆开"**，但只在这组装不下时发生，正常价位零变化。落地时**去掉了候选里的 `min-inline-size: 0`**（理由见"修复"段）。
+  - **B（保分组）**：窄屏用容器查询把 `.product-card__price-current` 降到 0.85rem、划线价降到 0.72rem，让 136px 缩进 108px。代价：价格字号随卡片宽度浮动，同一页可能两种字号。
+  - **C（不改版式，只收口）**：给 `.product-card__price` 加 `overflow: clip`。**不推荐**：等于把划线价裁掉，信息丢失，比换行更糟。
+- **预防**：① 价格类的"合计宽度"结论必须**按最长价格串（`$9,999.99`）算**，不能按当时看到的那几个价格算——写进卡内测量注释前先量最长值。这条同时提醒：CSS 注释里的"实测 xx px 放得下"必须写明**测量用的是什么数据**，否则下一轮换价格就失效。② 判"是否折行"别用 `top` 差 —— 同排的 `s`（0.78rem）与现价（0.95rem）是**基线对齐**，顶边天然差 3px，用 `top` 差 <2px 判会全部误判成"已折行"（本次先踩了一次）。判据用**组高**：单行 21px / 双行 42.8px。
+
+---
+
 ## 记录模板（追加新 bug 用）
 
 ```

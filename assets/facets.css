@@ -1,0 +1,864 @@
+/* =====================================================================
+   facets — 筛选 / 排序组件样式（集合页与搜索页共用）
+   ---------------------------------------------------------------------
+   来源：2026-11-18 从 sections/collection.liquid 的 {% stylesheet %} 中
+   整块抽出。原因：{% stylesheet %} 按 section 聚合、只随渲染它的 section
+   加载，搜索页当时拿不到这套样式；同一组件两套外观必然分叉。
+
+   消费方：
+     sections/collection.liquid  → collection.filters.size > 0 or show_sort
+     sections/search.liquid      → search.performed（搜索页只有结果态才有工具栏）
+
+   分区：① 控制令牌 ② 表单骨架 ③ 排序卡与排序选择器 ④ 已选标签
+        ⑤ 筛选组 / 价格 / 应用按钮 ⑥ 加载骨架 ⑦ 移动抽屉与面板头
+        ⑧ 就绪态门控（data-facets-ready）
+
+   落到这里之后必须遵守的两条：
+   · 只放组件自足的东西。集合页特有的布局（左列粘性、工具栏行序、
+     左列与右列等高）留在 collection.liquid——搜索页左列结构不同，
+     粘性与行序照搬会打架。
+   · 不再用 .collection__ 前缀做选择器锚点（已归一化为元素名
+     collection-facets 与 data-* 钩子），否则搜索页得假装自己是集合页。
+   ===================================================================== */
+
+/* ① 控制令牌
+   Filters 按钮 / 排序控件 / 视图切换共用的描边与圆角。原先定义在 .collection
+   作用域里，抽出来后必须提到 :root，否则搜索页没有 .collection 祖先时
+   var() 解析失败、整条 border/radius 声明静默失效（不报错，看起来像"没样式"）。
+   仍然尊重商家设置，只用 max() 兜住 14px 下限：6px 在 44px 高的按钮上
+   几乎看不出圆角，两个控件并排会像两个时代的产物。 */
+:root {
+  --facet-control-radius: max(var(--style-border-radius-inputs), 14px);
+  --facet-control-border: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
+}
+
+/* 左列只剩一张筛选卡（2026-10-20 排序卡已并进卡顶部的 .facets__sort-slot），
+   form 不再需要两张卡之间的 gap。定宽轨道里的每一级都要 min-width: 0：
+   排序 select 的最长选项文本会撑破 320px 轨道、叠到右侧产品列
+   （BUG 链：form → slot → sort-card → select）。 */
+.facets__form {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+}
+/* 筛选卡同风险：长筛选标签 / 计数也可能撑破轨道 */
+.facets__aside {
+  min-width: 0;
+}
+/* 排序卡落点（桌面在筛选卡顶部、移动端被 JS 搬进工具条）。
+   空槽（未启用排序）不渲染分隔线。 */
+.facets__sort-slot:not(:empty) {
+  padding-block-end: 0.9rem;
+  margin-block-end: 0.9rem;
+  border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+}
+.facets__sort-card {
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+  min-width: 0;
+}
+.facets__sort-card-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.facets__sort-card select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 0.75rem;
+  /* select 同 input 不继承 color；边框从 foreground 派生（配色纪律） */
+  border: var(--facet-control-border);
+  border-radius: var(--facet-control-radius);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  text-overflow: ellipsis;
+}
+/* ---- 排序选择器（<facet-sort>，2026-10-17 刘工效果图）----
+   有 JS：全断点接管，构建描边按钮；≥990px 开浮层 listbox，
+   <990px 开底部面板（2026-11-03 刘工：与 Filters 同一种滑入）。
+   无 JS：保持上面这条原生 select 样式（GET 表单照常提交）。 */
+.facets__sort-select {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+.facets__sort-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 44px;
+  /* 与 .facets__open 逐值一致：padding / 描边 / 圆角都走同一组令牌，
+     两个控件并排时高度与轮廓才对得上（2026-11-03） */
+  padding: 8px 1rem;
+  border: var(--facet-control-border);
+  border-radius: var(--facet-control-radius);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: 0.92rem;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.facets__sort-btn:hover {
+  border-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+}
+.facets__sort-btn:focus-visible {
+  outline: 2px solid var(--color-brand-accent);
+  outline-offset: 1px;
+}
+.facets__sort-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.facets__sort-chevron {
+  flex: none;
+  color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  transition: transform 0.15s ease;
+}
+.facets__sort-btn[aria-expanded='true'] .facets__sort-chevron {
+  transform: rotate(180deg);
+}
+.facets__sort-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.4rem;
+  list-style: none;
+  background-color: var(--color-background);
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  border-radius: 12px;
+  /* 投影：配色纪律的合法例外（永远黑） */
+  box-shadow: 0 12px 32px rgb(0 0 0 / 12%);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.facets__sort-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+.facets__sort-option:hover,
+.facets__sort-option.is-active {
+  background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+}
+.facets__sort-option[aria-selected='true'] {
+  background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  color: var(--color-brand);
+  font-weight: 500;
+}
+.facets__sort-check {
+  flex: none;
+  visibility: hidden;
+}
+.facets__sort-option[aria-selected='true'] .facets__sort-check {
+  visibility: visible;
+}
+/* 工具条形态（无筛选集合，桌面）：按钮随内容自适应，浮层右对齐防溢出视口 */
+.collection__toolbar .facets__sort-btn {
+  width: auto;
+  white-space: nowrap;
+}
+.collection__toolbar .facets__sort-list {
+  left: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+
+  .facets__sort-chevron {
+    transition: none;
+  }
+}
+/* 排序卡在工具条里的形态（无筛选集合常驻；有筛选集合仅移动端，由 JS 移入）：
+   竖向卡面变横排，靠行尾。桌面无筛选集合靠 auto 外边距右贴，计数跟在它右侧。 */
+.collection__toolbar .facets__sort-card {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+.collection__toolbar .facets__sort-card select {
+  width: auto;
+}
+
+/* ---- 移动端排序底部面板（2026-11-03 刘工：与 Filters 保持同一种滑入）----
+   这里只做"容器"：选项列表复用桌面浮层那一份 DOM（.facets__sort-list），
+   打开时由 sort-select.js 搬进来，所以要把浮层的绝对定位与描边清掉。
+   用 <dialog> + showModal()：焦点锁定、背景 inert、Esc 全由平台给（AGENTS §8），
+   与集合页筛选抽屉、购物车抽屉同一套做法。
+   动效参数逐值对齐 .facets__dialog（16px 上圆角 / 85vh / 0.28s ease-out / 遮罩 40% 黑）。 */
+@media (max-width: 989.98px) {
+
+  .facets__sort-sheet {
+    border: none;
+    /* 顶部内边距给抓手让位：与 .facets__panel 的 padding-top 同值，
+       两个面板的抓手离顶边的距离一致（16px） */
+    padding: 1rem 0 0;
+    width: 100vw;
+    /* max-width 必须显式覆盖：UA 对 dialog:modal 默认
+       max-width: calc((100% - 6px) - 2em)，不覆盖时 100vw 会被钳窄 */
+    max-width: 100vw;
+    max-height: 85vh;
+    margin: auto auto 0;
+    border-radius: 16px 16px 0 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  .facets__sort-sheet[open] {
+    display: flex;
+    flex-direction: column;
+    /* 开合动效由 <bottom-sheet> 组件（sort-select.js 包了一层），见 critical.css */
+  }
+
+  .facets__sort-sheet::backdrop {
+    background: rgb(0 0 0 / 40%);
+  }
+
+  .facets__sort-sheet-head {
+    flex-shrink: 0;
+    /* 头行 = 标题 + 关闭钮两端对齐（同筛选抽屉的 .facets__mobile-head） */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    /* 上内边距交给抓手的外边距（0.9rem），与筛选面板的头行同一个节奏 */
+    padding: 0 1.25rem 0.5rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    /* 拖拽热区：抓手只有 6px 高，头部行一起算（同筛选面板的 .facets__mobile-head） */
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* 关闭钮本体（.facets__sort-sheet-close）与筛选抽屉的 .facets__close
+     共用上面那条统一规则，这里不重复定义。 */
+  .facets__sort-sheet-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .facets__sort-sheet-body {
+    min-block-size: 0;
+    overflow-y: auto;
+    /* 滚到底不把滚动传给背后的页面 */
+    overscroll-behavior: contain;
+    padding: 0.5rem 1.25rem calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  /* 选项列表在面板里回到常规流：抹掉浮层形态的定位、描边、投影与限高 */
+  .facets__sort-sheet .facets__sort-list {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* 面板里按行铺开，触摸目标 44px（浮层里是 40px 的紧凑版） */
+  .facets__sort-sheet .facets__sort-option {
+    min-height: 44px;
+    padding: 10px 0.25rem;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+
+  /* 焦点指示落在**当前选项**上，而不是整个 listbox：
+     全局 :focus-visible 是 2px currentColor 方角环，套在圆角面板里就是一整圈
+     多余的黑框。listbox 仍拿焦点（方向键要靠它），所以这里只抑制它自己的环，
+     改由 .is-active 选项承担可见焦点。 */
+  .facets__sort-sheet .facets__sort-list:focus-visible {
+    outline: none;
+  }
+
+  .facets__sort-sheet .facets__sort-option.is-active {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: -2px;
+  }
+}
+.facets__open {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 8px 1rem;
+  border: var(--facet-control-border);
+  border-radius: var(--facet-control-radius);
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+/* 箭头与排序按钮里的 .facets__sort-chevron 同尺寸同色（16px / 前景色 60%），
+   两枚按钮并排时才是同一套东西。flex:none 防长文案把它压扁。
+   stroke-width 用 CSS 压过文件里的属性值：icon-chevron-down.svg 是 24 视图、
+   描边 1.5（按 16px 显示只有 1px，比排序按钮原来那个 1.8px 的细一圈）。
+   这里统一成 24 视图 / 描边 2 ⇒ 显示 1.33px，两枚箭头才算同一个形状。 */
+.facets__open svg {
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  stroke-width: 2;
+  color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+}
+
+/* 已选标签：移动端独占一行（规格「已选标签横滑」）；桌面与计数同行（order 见 ≥990px） */
+.facets__active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex-basis: 100%;
+}
+.facets__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.facets__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 32px;
+  padding: 4px 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
+  border-radius: 999px;
+  background-color: var(--color-background);
+  font-size: 0.82rem;
+  color: inherit;
+  text-decoration: none;
+}
+.facets__chip:hover {
+  border-color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+}
+.facets__chip-x {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--color-foreground) 50%, transparent);
+}
+.facets__clear {
+  font-size: 0.82rem;
+  color: var(--color-brand-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* 筛选组 */
+.facets__group {
+  border: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  /* fieldset 的 UA 默认 min-inline-size:min-content 不许收缩——长内容（价格
+     双输入框、长标签）会撑破 260px 左列叠到产品列表。放开收缩，内容随轨道截。 */
+  min-width: 0;
+}
+.facets__group-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0;
+  margin-block-end: 0.5rem;
+}
+.facets__values {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+.facets__value-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.facets__value-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  /* 勾选态用品牌强调色（与 Clear all 链接同令牌），preset 换色自动跟随 */
+  accent-color: var(--color-brand-accent);
+}
+.facets__value-text {
+  flex: 1;
+}
+.facets__value-count {
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+}
+.facets__price {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+/* 2026-10-17 刘工参考图：药丸形输入框（无边框浅灰填充、$ 居左、数值右对齐）。
+   填充色从 foreground 派生（配色纪律：不硬编码 rgb），preset 换色自动跟随 */
+.facets__price-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 1rem;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--color-foreground) 5%, transparent);
+}
+.facets__price-currency {
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--color-foreground) 70%, transparent);
+}
+.facets__price-field input {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  /* input 不继承 color（UA 默认黑），必须显式给令牌——Noir 下否则黑字贴黑底 */
+  color: var(--color-foreground);
+  caret-color: var(--color-foreground);
+  text-align: right;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.facets__price-field input::placeholder {
+  color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
+}
+.facets__price-field input::-webkit-outer-spin-button,
+.facets__price-field input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.facets__price-sep {
+  flex: none;
+  font-size: 0.9rem;
+}
+.facets__price-field input:focus {
+  outline: none;
+}
+.facets__price-field:focus-within {
+  outline: 2px solid var(--color-brand-accent);
+  outline-offset: 1px;
+}
+.facets__apply {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-block-start: 0.75rem;
+  padding: 10px 1rem;
+  /* 2026-10-16 刘工：与产品卡加购按钮同款配色（静态品牌绿 + hover 提亮） */
+  border: 1px solid var(--color-brand);
+  /* 2026-11-03 刘工：圆角跟加购按钮一致 —— .btn-solid 是 999px 胶囊，
+     这里原来读 --style-border-radius-inputs（商家输入框圆角，默认 4–6px），
+     同一个页面里一个胶囊一个方角，看着像两个年代的控件。
+     写死 999px 而不是再引用变量：胶囊就是胶囊，不该随输入框圆角设置变。 */
+  border-radius: 999px;
+  background-color: var(--color-brand);
+  color: var(--color-background);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.facets__apply:hover {
+  background-color: var(--color-brand-accent);
+  border-color: var(--color-brand-accent);
+}
+
+/* 加载骨架（faceted-filters.js 的 _showSkeleton）：fetch 期间盖住结果区。
+   列数复刻 .collection__grid 的三档断点；底色走全局变量，Noir 下自动适配；
+   动画按 prefers-reduced-motion 关停（无障碍红线）。
+
+   ⚠️ 骨架层是 position: absolute; inset: 0，靠**结果区自己是定位上下文**才
+   能只盖住列表。集合页当初在 .collection__results 上写过 position: relative，
+   搜索页漏了 ⇒ 就近的定位祖先是初始包含块 ⇒ 骨架铺满整屏、白底盖住页头与
+   工具栏（2026-11-19 刘工截图）。
+   这条隐式契约现在钉在组件侧：消费方把 data-facets-results 放在结果容器上，
+   就自动是定位上下文，不用再记得另写一条 relative。 */
+[data-facets-results] {
+  position: relative;
+}
+
+.collection__skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  align-content: start;
+  background: var(--color-background);
+}
+.collection__skeleton-card {
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+  padding: 0.75rem;
+  /* 块/描边从 foreground 派生——黑 alpha 硬编码在 Noir 深底上不可见
+     （2026-10-17 刘工实测），配色纪律的另一课 */
+  border: 0.5px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  border-radius: 12px;
+}
+.collection__skeleton-card .sk-img {
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+}
+.collection__skeleton-card .sk-line {
+  width: 70%;
+  height: 10px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+}
+.collection__skeleton-card .sk-line--short {
+  width: 40%;
+}
+.collection__skeleton-card .sk-line--price {
+  width: 30%;
+}
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.collection__skeleton-card > * {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@media (min-width: 750px) {
+
+  .collection__skeleton {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 1280px) {
+
+  .collection__skeleton {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .collection__skeleton-card > * {
+    animation: none;
+  }
+}
+/* 列表视图（html[data-collection-view='list']）：结果网格变单列，骨架必须跟着
+   变横排——否则「切到列表 → 勾筛选」会先闪一片方格、再跳成横条，观感像错版。
+   形态对齐 product-card 的列表版式（见 collection.liquid 的
+   html[data-collection-view='list'] .collection__grid .product-card）：
+   左图 clamp(104–168px)、右侧三条信息线。图列宽与那边同值，换一处要两处一起换。 */
+html[data-collection-view='list'] .collection__skeleton {
+  grid-template-columns: 1fr;
+}
+html[data-collection-view='list'] .collection__skeleton-card {
+  grid-template-columns: clamp(104px, 30%, 168px) minmax(0, 1fr);
+  column-gap: 1rem;
+  row-gap: 0.35rem;
+}
+html[data-collection-view='list'] .collection__skeleton-card > * {
+  grid-column: 2;
+}
+html[data-collection-view='list'] .collection__skeleton-card .sk-img {
+  grid-column: 1;
+  /* span 3 = 三条信息线各占一行；线条数若改，最坏只是图矮一点，不会错位 */
+  grid-row: 1 / span 3;
+  /* 必须显式 start：grid item 默认 stretch 会压掉 aspect-ratio 的高度，
+     图被拉成整卡高、比例失真 */
+  align-self: start;
+}
+/* 线条限宽：基础规则是占列宽的 70%，在列表卡里信息列有 900px+，
+   70% 会画出一条 650px 的灰长条——不像文字行，像一条分隔带。
+   三档宽度与基础规则同比例，只在列表态封顶。 */
+html[data-collection-view='list'] .collection__skeleton-card .sk-line {
+  inline-size: min(70%, 320px);
+}
+html[data-collection-view='list'] .collection__skeleton-card .sk-line--short {
+  inline-size: min(40%, 180px);
+}
+html[data-collection-view='list'] .collection__skeleton-card .sk-line--price {
+  inline-size: min(30%, 120px);
+}
+
+/* 移动抽屉（dialog 承载同一份筛选 DOM，JS 把 aside 移入）。
+   2026-10-16 刘工：① 打开从屏幕底部滑入（不再闪现）；② 标题头部与 Apply
+   按钮钉死在抽屉两端，只有中间筛选组列表滚动——flex 纵链
+   dialog → form → aside → panel → .facets__scroll，滚动只发生在最后一层。
+   注意 display:flex 必须限定 [open]：UA 对未打开 dialog 的 display:none
+   会被作者样式的 display:flex 压过，关着的抽屉会裸露在页面上。 */
+.facets__dialog {
+  border: none;
+  border-radius: 16px 16px 0 0;
+  padding: 0;
+  /* 通栏底部抽屉（2026-10-16 刘工）：宽度与屏幕一致。
+     max-width 必须显式覆盖——UA 对 dialog:modal 默认
+     max-width: calc((100% - 6px) - 2em)，不覆盖时 width:100vw 会被钳到屏宽减 ~38px。 */
+  width: 100vw;
+  max-width: 100vw;
+  max-height: 85vh;
+  margin: auto auto 0;
+}
+.facets__dialog[open] {
+  display: flex;
+  flex-direction: column;
+  /* 开合动效（滑入 / 滑出 / 遮罩淡入淡出）由 <bottom-sheet> 组件负责，
+     见 critical.css 的 bottom-sheet 段——这里只留布局 */
+}
+.facets__dialog::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+.facets__dialog .facets__form,
+.facets__dialog .facets__aside,
+.facets__dialog .facets__panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.facets__dialog .facets__panel {
+  padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  overflow: hidden; /* 滚动下沉到 .facets__scroll，头/按钮不随内容滚走 */
+}
+.facets__dialog .facets__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* 抓手横线（2026-10-16 刘工，iPhone 底部抽屉同款）：拖拽把手，
+   按住下拉收回弹窗（JS 见 faceted-filters.js 的 _onDragStart）。
+   touch-action:none 让浏览器不把手势抢给滚动（初触目标决定手势归属）；
+   user-select:none 防鼠标拖拽时选中标题文字。 */
+.facets__dialog .facets__grabber,
+.facets__sort-sheet .facets__grabber {
+  flex-shrink: 0;
+  /* 2026-11-03 刘工：手指经常抓不到。视觉条 40×5 → 56×6，
+     命中区再用伪元素扩到约 120×54——按 Apple/Material 的口径，
+     可点区域至少 44px 见方，光靠 5px 高的条子必然抓不稳。
+     视觉上仍是"细横线"，不会变成一条粗杠。
+     两个底部面板（筛选 / 排序）共用这一份定义，形状与手感一致。 */
+  position: relative;
+  width: 56px;
+  height: 6px;
+  margin: 0 auto 0.9rem;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
+  touch-action: none;
+  user-select: none;
+}
+/* 只吃指针、不参与绘制。命中区实测 120×54（视觉条 56×6）：
+   横向 ±32px 容忍左右偏；纵向在筛选面板里向上被 .facets__panel 的
+   overflow:hidden 截在面板内边距（16px）处，所以向下补到 32px——
+   下方就是头部行，本来就是拖拽热区，多铺这一层不改变行为，
+   也不会挡住关闭按钮（它在头部行最右端，横向够不着）。
+   排序面板没有那层裁切，向上这段是真吃到遮罩上的 16px（无害：那里点下去
+   也只是开始拖拽，松手没越过阈值就弹回）。 */
+.facets__dialog .facets__grabber::after,
+.facets__sort-sheet .facets__grabber::after {
+  content: '';
+  position: absolute;
+  inset: -16px -32px -32px;
+}
+.facets__dialog .facets__mobile-head {
+  touch-action: none; /* 头部行也是拖拽热区 */
+  user-select: none;
+}
+.facets__dialog .facets__mobile-head,
+.facets__dialog .facets__apply {
+  flex-shrink: 0;
+}
+.facets__mobile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 1rem;
+}
+.facets__panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+/* 面板关闭钮（2026-11-03 刘工：筛选抽屉 / 排序底部面板 / 购物车抽屉三处
+   统一成 X 图标）。几何与购物车抽屉的 .cart-drawer__close 逐值同参：
+   44px 圆形热区、18px 图标、悬停 6% 前景色浅底。原先筛选抽屉这里是
+   文字钮「Done」，排序面板没有关闭钮——三处一个来源才算统一。 */
+.facets__close,
+.facets__sort-sheet-close {
+  inline-size: 44px;
+  block-size: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 999px;
+}
+.facets__close:hover,
+.facets__sort-sheet-close:hover {
+  background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+}
+.facets__close svg,
+.facets__sort-sheet-close svg {
+  inline-size: 24px;
+  block-size: 24px;
+}
+
+/* 桌面两栏：纯 CSS 媒体查询，不依赖 JS（无 JS 也能筛选——应用按钮整页 GET 提交）。
+   data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
+@media (min-width: 990px) {
+
+  /* 筛选卡（含顶部排序组）：白卡浮在浅灰内容底上（参考稿 filters-card）。
+     排序卡已并进卡内，不再单独套卡面；工具条里那份（无筛选集合）是紧凑
+     控件，也不套卡面（见 .collection__toolbar 的横排形态）。 */
+  .facets__aside {
+    padding: 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    border-radius: 20px;
+    background-color: var(--color-background);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 4%);
+  }
+
+  /* 最后一组筛选不再留底边距——卡片内边距已提供呼吸感 */
+  .facets__aside .facets__group:last-of-type {
+    margin-block-end: 0;
+  }
+
+  /* 工具条行序：已选标签在左（可换行），计数靠行尾。有筛选集合的排序卡在
+     左列（不在此处）；无筛选集合的排序卡常驻工具条，排在计数左侧
+     ——「计数在 Sort by 右侧」（2026-10-16 刘工）在两种形态下都成立。 */
+  .collection__toolbar .facets__active {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .collection__toolbar .facets__sort-card {
+    order: 2;
+  }
+
+  .collection__toolbar [data-facets-count] {
+    order: 3;
+  }
+
+  .collection__toolbar .view-toggle {
+    order: 4;
+  }
+
+  /* 筛选卡头部：桌面复用抽屉的头行做「Filters」卡头（参考稿同形态），
+     关闭按钮只在抽屉里有意义，桌面隐藏。 */
+  .facets__mobile-head {
+    display: flex;
+  }
+
+  .facets__close {
+    display: none;
+  }
+}
+collection-facets[data-facets-ready] .facets__apply {
+  display: none;
+}
+/* ===================================================================
+   移动端（<990px）：筛选 DOM 进抽屉、工具条只留 [筛选] [排序]。
+   JS 就绪（data-facets-ready）才隐藏流内表单——无 JS 时筛选面板
+   照常流内展示、整页 GET 提交，全功能可用。
+   =================================================================== */
+@media (max-width: 989.98px) {
+  collection-facets[data-facets-ready] .facets__open {
+    display: inline-flex;
+  }
+
+  /* 抽屉承载筛选 DOM：form 整体移入 dialog（见 faceted-filters.js），
+     流内不再渲染，产品列表回到工具条正下方（BUG-042）。无 JS 时
+     data-facets-ready 缺席，筛选面板照常流内展示。 */
+  collection-facets[data-facets-ready] .facets__form {
+    display: none;
+  }
+
+  /* 工具条行序（pages-ui §4 移动端）：[筛选☰] [排序▾] …… [N 款]；
+     已选标签另行横滑（.facets__active 的 flex-basis: 100% 保证换行）。 */
+  .collection__toolbar .facets__open {
+    order: 1;
+  }
+
+  .collection__toolbar .facets__sort-card {
+    order: 2;
+    /* 不右推：紧邻 Filters，自由空间全给计数，行尾对齐 */
+    margin-inline-start: 0;
+  }
+
+  /* 视图切换紧跟「排序」右侧（2026-11-03 刘工），计数推到行尾 */
+  .collection__toolbar .view-toggle {
+    order: 3;
+  }
+
+  .collection__toolbar [data-facets-count] {
+    order: 4;
+    margin-inline-start: auto;
+  }
+
+  .collection__toolbar .facets__active {
+    order: 4;
+  }
+
+  /* 行宽紧张（375px 内容列约 335px）：排序标签转视觉隐藏——label[for] 仍在
+     无障碍树里提供可访问名（口径同 critical.css 的 .visually-hidden），
+     select 限宽，避免长排序名把计数挤下整行。 */
+  .collection__toolbar .facets__sort-card-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* 高度与 Filters 按钮对齐（原 40px，比相邻的 Filters 矮 4px）；
+     限宽防长排序名把计数挤下整行——按钮分支是移动端的实际形态，
+     select 分支只在无 JS 时出现，两者限同一档。 */
+  .collection__toolbar .facets__sort-card select {
+    min-height: 44px;
+    max-width: 40vw;
+  }
+
+  .collection__toolbar .facets__sort-btn {
+    /* 与原 select 同一档限宽：44vw 会让「Alphabetically, A-Z」这类长名
+       把计数挤到下一行（375px 下总宽刚好越界） */
+    max-width: 40vw;
+  }
+
+  /* 抽屉 / 无 JS 流内：排序卡在筛选卡顶部（.facets__sort-slot 已给分隔线），
+     这里只把 form 退回 block，不再重复画一条线。 */
+  .facets__form {
+    display: block;
+  }
+}

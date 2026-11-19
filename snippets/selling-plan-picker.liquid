@@ -1,0 +1,152 @@
+{%- comment -%}
+  购买选项（selling plan 选择器）—— 强制项 #17「Selling plans」的产品页入口（G-12 补口）。
+
+  **为什么需要它**：购物车 `snippets/cart-line.liquid` 早就显示
+  `item.selling_plan_allocation.selling_plan.name`，但产品页原来没有任何入口能选计划
+  ⇒ 那段显示逻辑永远不执行。本片段补上「选 → 提交 → 购物车显示」的完整链路。
+
+  数据口径（全部来自平台，不自造）：
+  - `product.selling_plan_groups` → 组名 + 组内计划。**variant 没有 `selling_plans`**，
+    只有 `variant.selling_plan_allocations`（每项带 `selling_plan` / `price` /
+    `compare_at_price` / `per_delivery_price`）—— applicability 与订阅价都从它取。
+  - `product.requires_selling_plan`（所有变体都要求计划）决定是否出现「一次性购买」。
+    逐变体是否要求计划看 `variant.requires_selling_plan`，由 JS 按当前变体切换。
+  - 提交字段就是 `selling_plan`（= 计划 id），与 Cart AJAX API 的 `selling_plan`
+    参数同名；空值表示一次性购买，官方教程明确允许。
+
+  **价格区联动**：选中计划后价格区显示 allocation 价（含划线价与 Save N%），
+  未选/一次性时回到变体价。写价格的实现与 `assets/product-form.js` 的
+  VariantPicker._apply 同口径——那边先写变体价，这边在 `variant:change`
+  （同步派发）里覆盖，顺序天然正确。改任一处要同步另一处。
+
+  **数据岛为什么在这里**：变体可用性 + 各变体下的计划价必须一次给全，否则变体切换
+  要回服务器。体量 = 变体数 × 计划数 × 一个对象，只在商品真有 selling plan 时才输出
+  （无计划时整块不渲染，正常商品零成本）。
+
+  **无 JS 的代价（说明白）**：不适用当前变体的计划也会渲染出来（服务端只能按
+  首屏变体算一次）。无 JS 时顾客可能选中不适用项，提交后由平台返回 422。
+  留着比「切换变体后没有 DOM 可显示」要好——渐进增强的底线是能买，不是处处完美。
+{%- endcomment -%}
+
+{%- liquid
+  assign picker_variant = variant | default: product.selected_or_first_available_variant
+  assign plan_heading = true
+  if product.requires_selling_plan and product.selling_plan_groups.size == 1
+    assign plan_heading = false
+  endif
+-%}
+
+{%- capture plan_data -%}
+  {
+  {%- for v in product.variants -%}
+    "{{ v.id }}": {
+      "price": {{ v.price | money | json }},
+      "compare": {% if v.compare_at_price > v.price %}{{ v.compare_at_price | money | json }}{% else %}null{% endif %},
+      "save": {% if v.compare_at_price > v.price %}{{ v.compare_at_price | minus: v.price | times: 100.0 | divided_by: v.compare_at_price | round }}{% else %}0{% endif %},
+      "requiresPlan": {{ v.requires_selling_plan | default: false }},
+      "plans": {
+        {%- for allocation in v.selling_plan_allocations -%}
+          "{{ allocation.selling_plan.id }}": {
+            "price": {{ allocation.price | money | json }},
+            "compare": {% if allocation.compare_at_price > allocation.price %}{{ allocation.compare_at_price | money | json }}{% else %}null{% endif %},
+            "save": {% if allocation.compare_at_price > allocation.price %}{{ allocation.compare_at_price | minus: allocation.price | times: 100.0 | divided_by: allocation.compare_at_price | round }}{% else %}0{% endif %}
+          }{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+      }
+    }{%- unless forloop.last -%},{%- endunless -%}
+  {%- endfor -%}
+  }
+{%- endcapture -%}
+
+<selling-plan-picker
+  class="product-plans"
+  data-variant-id="{{ picker_variant.id }}"
+  data-save-template="{{ 'products.product.save_percent' | t: percent: '[percent]' | escape }}"
+  data-required-message="{{ 'products.product.choose_purchase_option' | t | escape }}"
+>
+  <script type="application/json" data-plan-json>{{ plan_data | strip }}</script>
+
+  <fieldset class="product-plans__set">
+    {%- if plan_heading -%}
+      <legend class="product-plans__heading">{{ 'products.product.purchase_options' | t }}</legend>
+    {%- else -%}
+      <legend class="visually-hidden">{{ 'products.product.purchase_options' | t }}</legend>
+    {%- endif -%}
+
+    {%- comment -%}
+      一次性购买：只有「所有变体都强制订阅」时才整条不渲染。
+      部分变体强制的情况留 DOM，由 JS 按 `variant.requiresPlan` 禁用。
+    {%- endcomment -%}
+    {%- unless product.requires_selling_plan -%}
+      <div class="product-plans__group" data-plan-group>
+        <label class="product-plans__option" data-plan-option>
+          <input
+            class="product-plans__radio"
+            type="radio"
+            id="plan-{{ section.id }}-one-time"
+            name="selling_plan"
+            value=""
+            data-plan-radio
+            data-one-time
+            {% if product.selected_selling_plan == blank %}
+              checked
+            {% endif %}
+          >
+          <span class="product-plans__body">
+            <span class="product-plans__name">{{ 'products.product.one_time_purchase' | t }}</span>
+          </span>
+        </label>
+      </div>
+    {%- endunless -%}
+
+    {%- for group in product.selling_plan_groups -%}
+      <div class="product-plans__group" data-plan-group>
+        <p class="product-plans__group-name">{{ group.name | escape }}</p>
+
+        {%- for plan in group.selling_plans -%}
+          {%- comment -%}
+            折扣徽标只认「单条 percentage 调整」的计划：多层定价（前 N 月 20%、之后 15%）
+            写成一个百分比会误导，宁可不出。按官方 UX 指南，选项里不写精确金额。
+
+            计划名本身已经写了百分比时（app 生成的常见形态，如
+            "Deliver every 30 days, 10% off"）不再补徽标 —— 2026-11-18 演示店实测发现
+            会读成 "10% off  Save 10%" 的重复。商家自定义名不带百分比时徽标才补位。
+          {%- endcomment -%}
+          {%- assign plan_save = 0 -%}
+          {%- if plan.price_adjustments.size == 1 -%}
+            {%- assign first_adjustment = plan.price_adjustments.first -%}
+            {%- if first_adjustment.value_type == 'percentage' -%}
+              {%- assign plan_save = first_adjustment.value -%}
+            {%- endif -%}
+          {%- endif -%}
+          {%- if plan.name contains '%' -%}
+            {%- assign plan_save = 0 -%}
+          {%- endif -%}
+
+          <label class="product-plans__option" data-plan-option>
+            <input
+              class="product-plans__radio"
+              type="radio"
+              id="plan-{{ section.id }}-{{ plan.id }}"
+              name="selling_plan"
+              value="{{ plan.id }}"
+              data-plan-radio
+              data-plan-id="{{ plan.id }}"
+              {% if product.selected_selling_plan.id == plan.id %}
+                checked
+              {% endif %}
+            >
+            <span class="product-plans__body">
+              <span class="product-plans__name">{{ plan.name | escape }}</span>
+              {%- if plan_save > 0 -%}
+                <span class="product-plans__save">
+                  {{- 'products.product.save_percent' | t: percent: plan_save -}}
+                </span>
+              {%- endif -%}
+            </span>
+          </label>
+        {%- endfor -%}
+      </div>
+    {%- endfor -%}
+  </fieldset>
+</selling-plan-picker>
