@@ -608,6 +608,7 @@
     "brand": "Brand color (headers, banner)",
     "brand_accent": "Brand accent (buttons, links)",
     "brand_name": "Brand name",
+    "brand_name_info": "Shown in the header when no logo is set. Leave blank to use the store name.",
     "button_label": "Button label",
     "button_label_2": "Secondary button label",
     "button_link": "Button link",
