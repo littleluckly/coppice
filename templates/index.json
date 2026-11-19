@@ -15,8 +15,8 @@
         "slide_K4yFhb": {
           "type": "slide",
           "settings": {
-            "image": "shopify://shop_images/banner-bg_webp.webp",
-            "image_mobile": "shopify://shop_images/banner-bg-mobile_webp.webp",
+            "image": "shopify://shop_images/banner-bg.png",
+            "image_mobile": "shopify://shop_images/banner-bg_webp.webp",
             "product_image": "shopify://shop_images/banner-island-push-mower_rmbg_webp.webp",
             "eyebrow": "",
             "heading": "Lightweight Power, Fresh Lawn",
@@ -93,32 +93,28 @@
           "type": "item",
           "settings": {
             "icon": "truck",
-            "text": "Free shipping over $99",
-            "link": ""
+            "text": "Free shipping over $99"
           }
         },
         "item-2": {
           "type": "item",
           "settings": {
             "icon": "warranty",
-            "text": "Warranty protection",
-            "link": ""
+            "text": "Warranty protection"
           }
         },
         "item-3": {
           "type": "item",
           "settings": {
             "icon": "parts",
-            "text": "Genuine parts & service",
-            "link": ""
+            "text": "Genuine parts & service"
           }
         },
         "item-4": {
           "type": "item",
           "settings": {
             "icon": "support",
-            "text": "Dedicated customer support",
-            "link": ""
+            "text": "Dedicated customer support"
           }
         }
       },
