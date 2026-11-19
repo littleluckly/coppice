@@ -3,9 +3,9 @@
     "name": "theme_info",
     "theme_name": "Coppice",
     "theme_version": "0.1.0",
-    "theme_author": "Shopify",
-    "theme_documentation_url": "https://help.shopify.com/manual/online-store/themes",
-    "theme_support_url": "https://support.shopify.com/"
+    "theme_author": "Coppice",
+    "theme_documentation_url": "https://littleluckly.github.io/coppice/",
+    "theme_support_email": "hncu1900@gmail.com"
   },
   {
     "name": "t:general.brand",
