@@ -82,10 +82,11 @@
                 {%- endunless -%}
                 {%- if block.settings.image_mobile != blank -%}
                   {%- comment -%}
-                    --focal-m：移动图自己的焦点。必须写在这里——<source> 不能承载
-                    object-position，而 <img> 上那条内联样式来自 image_tag，取的是
-                    **桌面图**的焦点。样式侧用 .hero-slideshow__media picture img
-                    在 749 断点把它换回来，见下方 @media 块。
+                    --focal-m：移动图自己的焦点。必须写在 <picture> 上——<source> 不能
+                    承载 object-position，而 <img> 身上那条内联样式是 image_tag 按
+                    **桌面图**（block.settings.image）写的。≤749px 时浏览器改取本
+                    <source> 的 srcset（画 image_mobile 的像素），但 img 元素与它的
+                    内联焦点都没变。样式侧在 749 断点把它换回来，见下方 @media 块。
                   {%- endcomment -%}
                   <picture style="--focal-m: {{ block.settings.image_mobile.presentation.focal_point | default: '50% 50%' }}">
                     <source
@@ -336,13 +337,15 @@
     object-fit: cover;
   }
 
-  /* 移动端换图（<picture><source>）时的焦点归属。
-     背景：image_tag 在有焦点时会给 <img> 写内联 object-position ——那是**桌面图**
-     的焦点。<source> 换图后 <img> 元素没变（这是 <picture> 的机制，不是 bug），
-     于是移动图会顶着桌面图的焦点排版，商家给 mobile 图设的焦点完全失效。
-     破法只能从样式侧：<picture> 上带 --focal-m，这里在断点内改回移动图的焦点。
-     **!important 是必需的**——内联样式优先级高于任何选择器，没有它这条规则永远不会命中。
-     选择器刻意挂在 picture 后代上：没有移动图 → 没有 <picture> → 这条不命中，
+  /* 移动端底图的焦点归属（<picture> + <source>）。
+     先排除一个误解：这不是「运行时换图」——轮播是整屏切换（每屏各自一套
+     <picture>/<img>，JS 只翻 hidden 与 loading），没有任何代码改 img 的 src。
+     问题出在**媒体条件选源**：≤749px 时浏览器改取 <source> 的 srcset，画的是
+     image_mobile 的像素，但 <img> 元素和它身上 image_tag 写的内联 object-position
+     都没变——那是**桌面图**的焦点。于是商家给移动图设的焦点设了也不生效。
+     破法只能从样式侧：<picture> 上带 --focal-m，断点内改回移动图的焦点。
+     **!important 是必需的**——内联样式优先级高于任何选择器，没有它这条规则永不命中。
+     选择器刻意挂在 picture 后代上：没配移动图就没有 <picture>，这条不命中，
      桌面图的焦点照旧由 image_tag 的内联样式生效。 */
   @media screen and (max-width: 749px) {
     .hero-slideshow__media picture img {
