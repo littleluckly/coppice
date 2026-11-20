@@ -1,14 +1,4 @@
-{% comment %}
-  Blog posts — 首页选购指南引流（task-index T-2.5，pages-ui §2）。
-  文章块 ×3：左图右文行卡 + 标题 + 摘要 + 阅读更多。
 
-  2026-11-12 刘工：图位改为**恒定存在**。原实现只在 article.image 非空时输出
-  media，演示店多数博文没配图 ⇒ 三张卡里两三张是纯文字灰卡，看起来完全不像图文卡。
-  现在缺图一律用 icon-leaf.svg 占位，口径照抄 sections/search.liquid 的博文默认图
-  （品牌淡底 + 55% 品牌色绿叶），整块与搜索页行卡是同一套视觉语言。
-  卡片 hover 走全站签名 --card-hover-shadow / --card-hover-lift，配色全部从
-  --color-* 派生（原 rgb(0 0 0 / x) 硬编码在 Noir 深底上摘要几乎不可读）。
-{% endcomment %}
 
 {%- liquid
   assign blog_source = section.settings.blog
@@ -51,11 +41,7 @@
             </span>
             <span class="blog-posts__body">
               <h3 class="blog-posts__title">{{ article.title | escape }}</h3>
-              {%- comment -%}
-                按词截断（与 search.liquid 的 24 词同口径），不按字符 truncate: 90 ——
-                字符截断会在第 90 个字符处切出半词（"matter" → "matt..."）。
-                这里只限制 DOM 文本长度，视觉上的两行收口交给 CSS 的 line-clamp。
-              {%- endcomment -%}
+
               {%- if article.excerpt != blank -%}
                 <p class="blog-posts__excerpt">{{ article.excerpt | strip_html | truncatewords: 24 }}</p>
               {%- elsif article.content != blank -%}
@@ -78,7 +64,7 @@
   }
   .blog-posts__grid {
     display: grid;
-    /* minmax(0, 1fr) 从源头掐断 min-content 传导，裸 1fr 会被长标题撑出视口 */
+
     grid-template-columns: minmax(0, 1fr);
     gap: 0.75rem;
     list-style: none;
@@ -93,8 +79,7 @@
   .blog-posts__item {
     min-inline-size: 0;
   }
-  /* 左图右文：固定图列 + 可收缩文字列。与 search.liquid 的行卡同构，
-     只是首页图位放大到 120px（卡本身更宽）。 */
+
   .blog-posts__card {
     display: grid;
     grid-template-columns: 7.5rem minmax(0, 1fr);
@@ -107,8 +92,7 @@
     background-color: var(--color-background);
     color: inherit;
     text-decoration: none;
-    /* 用 translate 而非 transform：滚动入场的 animation 用 transform，
-       两套机制互不抢占（见 critical.css 的 reveal-in 注释）。 */
+
     transition: border-color 0.2s ease, box-shadow 0.2s ease, translate 0.2s ease;
   }
   .blog-posts__card:hover {
@@ -128,9 +112,7 @@
     border-radius: 8px;
     background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
   }
-  /* 图脱离文档流：width:100% 的流内 img 会按固有宽高比参与 grid 行高，
-     摘要长度不同的卡会被拉得忽高忽矮（use-case-grid 7:3→5:5 的教训）。
-     显式 height:100% 也压掉 image_tag 输出的 HTML height presentational hint。 */
+
   .blog-posts__media img,
   .blog-posts__media-placeholder {
     position: absolute;
@@ -161,7 +143,7 @@
     font-size: 1rem;
     font-weight: 500;
     line-height: 1.35;
-    /* break-word 只在单词超宽时才断，anywhere 会拆断 Chainsaws 这类词 */
+
     overflow-wrap: break-word;
   }
   .blog-posts__excerpt {

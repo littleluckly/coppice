@@ -22,35 +22,18 @@
     不传则槽为空（:empty 时不渲染分隔线）。
 {% enddoc %}
 <aside class="facets__aside" data-facets-aside>
-  {%- comment -%}
-    .facets__scroll 是移动抽屉的滚动层（2026-10-16 刘工）：标题头部与 Apply 按钮
-    固定在抽屉两端、只有筛选组列表滚动。集合页 dialog 外的流内/桌面视图里
-    这层无样式，纯 block 透传，零影响。
-  {%- endcomment -%}
+
   <div class="facets__panel">
-    {%- comment -%} 抓手横线（2026-10-16 刘工，iPhone 底部抽屉同款）：仅移动抽屉内
-      可见（样式限定 .facets__dialog 作用域）；touch-action:none 的拖拽把手，
-      按住下拉收回弹窗（faceted-filters.js）。 {%- endcomment -%}
+
     <div class="facets__grabber" aria-hidden="true"></div>
     <div class="facets__mobile-head">
       <h2 class="facets__panel-title">{{ 'collections.filters.label' | t }}</h2>
-      {%- comment -%}
-        X 图标关闭钮（2026-11-03 刘工：三个面板头部统一）。几何与购物车抽屉
-        .cart-drawer__close 同参（44px 圆形热区 / 18px 图标 / 悬停浅底），
-        样式目前定义在唯一消费方 collection.liquid 的 .facets__close。
-        图标是装饰：可访问名来自 aria-label（navigation.close）。
-      {%- endcomment -%}
+
       <button type="button" class="facets__close" data-facets-close aria-label="{{ 'navigation.close' | t }}">
         {{ 'icon-close.svg' | inline_asset_content }}
       </button>
     </div>
 
-    {%- comment -%}
-      排序卡落点（2026-10-20 刘工拍板：排序并进 Filters 卡顶部，参考稿同形态）。
-      桌面由 faceted-filters.js 的 _placeSort 把 .facets__sort-card 搬进这个槽；
-      移动端搬去工具条。槽在 .facets__scroll 之外——滚动只发生在筛选组列表，
-      排序卡与头部、Apply 按钮一起钉在抽屉两端。
-    {%- endcomment -%}
     <div class="facets__sort-slot" data-facets-sort-slot>{{ sort_card }}</div>
 
     <div class="facets__scroll">
@@ -91,11 +74,7 @@
           </div>
         </fieldset>
       {%- else -%}
-        {%- comment -%}
-          可见值预探：0 值防御 + N/A 防御（两条与下方渲染循环各写一遍，改必须同步），
-          全组可见值为 0 时整组不渲染——否则 N/A 独占的维度（如打草机集合的
-          Drive Type）会剩一个孤零零的组标题。
-        {%- endcomment -%}
+
         {%- assign facets_visible_values = 0 -%}
         {%- for value in filter.values -%}
           {%- if value.count == 0 and value.active == false -%}{%- continue -%}{%- endif -%}

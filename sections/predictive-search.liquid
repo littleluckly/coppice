@@ -1,36 +1,4 @@
-{% comment %}
-  Predictive search RESULTS markup — re-rendered by Shopify's Section Rendering API.
 
-  Do not put the search input in this file. It exists for one reason: when the JS
-  requests `search/suggest?section_id=…&predictive_search=true`, Shopify re-renders
-  THIS section with `predictive_search.performed == true` and returns its HTML,
-  which the script injects into the panel.
-
-  Split from snippets/predictive-search-entry.liquid because a section cannot be
-  rendered into another file. main-nav renders the snippet for the input; this file
-  only ever produces the results fragment — so it carries its own styles, since the
-  caller is not part of the response.
-
-  Endpoint parameters (verified against the Predictive Search API reference):
-    q                    — required
-    section_id           — returns this section's HTML
-    predictive_search    — required for predictive_search to populate
-    resources[type]      — product, collection, page, article, query (comma separated)
-    resources[limit]     — 1..10
-
-  Fields are minimal on purpose (AGENTS §7): titles and prices only, never body
-  HTML. `body` is explicitly discouraged for multi-language stores because it mixes
-  translations.
-
-  Prices (2026-10-29): the product rows carry the same three-part treatment as the
-  product page — current / struck compare-at / "Save N%" pill — computed inline per
-  product from `compare_at_price`. The percentage reuses the PDP formula
-  (main-product.liquid, top of file) so the two can never drift; the pill colours come
-  from the shared `--color-sale` tokens.
-
-  "No results → hide the panel" lives in the JS, not here: an empty fragment means
-  "close", so no markup is shipped for that case.
-{% endcomment %}
 
 {%- if predictive_search.performed -%}
   {%- if predictive_search.resources.products.size > 0 -%}
@@ -69,11 +37,7 @@
               <span class="predictive-search__title">
                 {{ product.title | highlight: predictive_search.terms }}
               </span>
-              {%- comment -%}
-                价格三件套（2026-10-29 刘工：对齐产品详情页）——现价 / 划线原价 / 折扣百分比。
-                折扣缺数据时只出现现价，不留空位、不显示 0%（AGENTS §6）。
-                `s` 的语义由 PDP 延续：视觉划线，读屏按普通文本读（与详情页一致）。
-              {%- endcomment -%}
+
               <span class="predictive-search__price">
                 <span class="predictive-search__price-current">
                   {%- if product.price_varies -%}
@@ -156,10 +120,6 @@
     </ul>
   {%- endif -%}
 
-  {%- comment -%}
-    官方 UX 要求：始终提供"查看全部结果"出口，
-    这样即使联想没命中，顾客也不会被困在输入框里。
-  {%- endcomment -%}
   <div class="predictive-search__footer">
     <a
       class="predictive-search__all"
@@ -171,12 +131,6 @@
 {%- endif -%}
 
 {% stylesheet %}
-  /* ---- 结果列表视觉（2026-10-10 刘工：极简 / 高端 / 沉浸式 / 工业力量感） ----
-     无卡片无底色：靠字号层级 + 发丝线 + 大留白分区；
-     分组标签 = 小号大写大字距（工业感），与抽屉标题同款；
-     命中词加重而非黄底色块（去掉 mark 高亮块的"促销感"）；
-     商品图微降饱和，hover 恢复（机械图先给人"冷"的重量感）；
-     结果逐项淡入（沉浸式），respect prefers-reduced-motion。 */
 
   .predictive-search__heading {
     margin: 0;
@@ -185,7 +139,7 @@
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    /* 2026-10-29：从 foreground 派生（原 rgb(0 0 0 / 45%) 在深色骨架下不可见，BUG-059） */
+
     color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
 
@@ -202,7 +156,7 @@
     padding: 0.75rem 1.5rem;
     color: inherit;
     text-decoration: none;
-    /* 发丝线分区：组与组之间靠 heading 上的留白区分，行间用细线 */
+
     border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 7%, transparent);
   }
 
@@ -220,9 +174,6 @@
     filter: none;
   }
 
-  /* 选中项必须有可见变化，不能只靠颜色（SDD §8.2）。
-     hover 底色：品牌色 8% 透明淡染（2026-10-10 刘工）——用 color-mix
-     从 --color-brand 现派生，商家换主题色时自动跟随，不硬编码色值 */
   .predictive-search__item[aria-selected='true'] .predictive-search__link,
   .predictive-search__link:hover {
     background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
@@ -252,11 +203,6 @@
     text-decoration-thickness: 1px;
   }
 
-  /* 价格三件套（2026-10-29 刘工：对齐产品详情页的现价 / 划线原价 / 折扣徽标）。
-     抽屉行窄（360px 抽屉里文字列只剩 ~180px），所以全部按行内小字缩放，
-     不做 PDP 的 1.75rem 大价；换行由 flex-wrap 兜住，徽标绝不裁切。
-     配色全走令牌：划线价用 muted（页头组已按骨架色重算，Noir 下不会消失），
-     徽标用 --color-sale / --color-sale-surface（与 PDP 同一组值，4.91:1）。 */
   .predictive-search__price {
     display: flex;
     flex-wrap: wrap;
@@ -287,16 +233,12 @@
     white-space: nowrap;
   }
 
-  /* 命中词：加重代替色块（极简、去促销感） */
   .predictive-search mark {
     background-color: transparent;
     color: inherit;
     font-weight: 700;
   }
 
-  /* View all 钉底（2026-10-10 刘工）：sticky bottom——列表可滚时它
-     常驻面板可视区底边（自带底色，滚过的内容不透出），列表不足一屏时
-     呆在自然位置（列表底部），两种情况都不会超出 dialog 下边缘 */
   .predictive-search__footer {
     position: sticky;
     bottom: 0;
@@ -304,7 +246,6 @@
     border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 7%, transparent);
   }
 
-  /* View all：通栏行 + 行尾箭头（AGENTS §6 箭头准则允许的两类位置之一） */
   .predictive-search__all {
     display: flex;
     align-items: center;
@@ -331,7 +272,6 @@
     background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
   }
 
-  /* 结果逐项浮现：上限 8 项做阶梯延迟，余项统一第三档 */
   .predictive-search__item {
     animation: predictive-search-item-in 0.3s ease backwards;
   }
