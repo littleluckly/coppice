@@ -832,6 +832,20 @@
 - **修复**：无代码改动（页面本来就是对的）。改的是受影响的结论：`dev-docs/lighthouse/README.md` 里"首页 LCP 偏乐观"整段删除，改为"图已就位，93 分有效"。
 - **预防**：① **判断元素是否存在，不要用带长度上限的正则**：要么 `grep -c '<img'`（只数标签开头），要么用 DOM（`document.querySelectorAll('img').length`），要么正则写 `[^>]*` 不设上限。② 任何"页面里没有 X"的结论，先自问一句「我的工具能不能看见 X」——超长属性、注释、转义实体都会让匹配静默失败。③ 这是 BUG-079 的同族第二次（那次是 `grep` 字样 0 命中被当成"平台没实现"，这次是正则截断），**"零结果"永远要先验证工具本身**。
 
+### BUG-083 · 加购后抽屉先闪「Your cart is empty」，等第二次请求回来才变成商品行
+
+- **日期**：2026-11-20 ｜ **状态**：Fixed
+- **现象**：刘工截图。点商品卡 Add to cart，抽屉立刻打开，内容区显示空态文案 + 一个样式坏掉的「Continue shopping」按钮（白字带下划线、压在深绿胶囊上边缘、比胶囊还宽）；约一秒后自己变成正常商品行。
+- **根因（两件事，只是同时在截图上出现）**：
+  1. **空态是"请求拿到加购前的快照"**。`assets/quick-add.js`（product-form / supplies 同）派 `cart:added` 的时刻是 **fetch `/cart/add.js` 之前**（2026-10-16 为飞入动画不迟滞定的）。`cart-drawer._onAdded` 收到就 `_show()` → `_refresh()` 发 `?sections=`，这个请求与 `/cart/add.js` **并发**且常先到服务端 ⇒ 服务端读到的还是空车 ⇒ 返回的 HTML 就是空态。等 `/cart/add.js` 成功、`_syncCartCount()` 派 `cart:updated` 触发**第二次**刷新才对。也就是每次加购都必然先渲染一次错误内容（不是"旧内容没换"，是"新内容本身就是错的"）。
+  2. **按钮坏是漏了排版类**。`.btn-solid` 只定义形状与配色（position / min-height 44 / border-radius / 背景 / 颜色 / 光晕），**display、居中、内边距、text-decoration 一律由用法方补**——全站 13 处用法每一处都补了，只有 `sections/cart-drawer.liquid` 的空态 CTA 是裸 `<a class="btn-solid">`。裸用渲染成 `display:block`、`min-height:44px`、`padding:0`、带 `<a>` 默认下划线的块，文字顶在上边缘、左右贴边。实测复现：`display:block / minHeight:44px / padding:0px / textDecoration:underline / alignItems:normal`。
+- **修复**：
+  1. `assets/cart-drawer.js`：`_onAdded` 改为**只挂骨架、不发请求**（`data-cart-loading` + 面板 `aria-busy`），刷新时机改挂 `cart:updated`——它由三处加购在 `/cart/add.js` 成功、`/cart.js` 查回 `item_count` **之后**派发，那一刻服务端已经是加完的购物车。补 `cart:add-failed` 事件（三条加购路径的 catch 各派一次）让失败时退出等待；12s 超时兜底自愈；`_refresh` 用 `finally` 收骨架 + 请求序号 `_refreshSeq` 丢弃过期响应；`_onOpen` 在 pending 期间不抢先刷新。
+  2. `sections/cart-drawer.liquid`：新增 `[data-cart-skeleton]` 骨架（放在 `[data-cart-section]` **内部**，跟着整块替换，服务端那份也带着它）；`.cart-drawer__empty-cta` 补 `display:inline-flex / align-items / justify-content / padding`。
+  3. `assets/critical.css`：`.btn-solid` 补 `text-decoration: none`（`<a>` 当按钮用时白字下划线会横穿胶囊底部；此前 13 处各自写过一遍，属于形状固有属性，上收到唯一出口）。
+- **验证**：① 无头 Chrome 桩 fetch 跑时序：`cart:added` 后 150ms `loading=true / body=display:none / skeleton=grid` 且**零次 `?sections=` 请求**；`cart:updated` 后才出现请求，返回后 `loading=false / body=block / 骨架消失`；`cart:add-failed` 路径同样能退出骨架。② 空态按钮渲染实测：白字垂直居中、无下划线、左右 1.5rem 内边距。③ 骨架在 500px 视口量得 `left=20 right=480`（容器 500），不横向溢出。
+- **预防**：① **"刷新内容"必须挂在写操作完成的信号上，不能挂在"点击即发"的信号上**。本项目 `cart:added` 是乐观事件（喂飞入动画的），`cart:updated` 才是事实事件（带服务端回查的真实 `item_count`）——凡是"要根据新数据重渲染"的消费方，一律只听后者。判据：问一句"这个事件派发时，服务端的状态改了吗？"没改就不能拿它当刷新触发。② **`cart:added` 的消费方必须能"等"**：现在契约是 added → (updated | add-failed)，新增加购路径两条事件都要派，否则抽屉会卡骨架（有 12s 兜底，但那是遮丑不是修复）。③ `.btn-solid` **不是完整按钮**，新增用法必须自带排版类；改动它之后跑一次空态/次级态截图，别只看主流程。④ 记录这类"闪一下"的问题要附实测时序表（请求发在哪、事件派在哪），否则下次只能靠肉眼复现。
+
 ---
 
 ## 记录模板（追加新 bug 用）

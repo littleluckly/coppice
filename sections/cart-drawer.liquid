@@ -79,7 +79,13 @@
               <div class="cart-drawer__empty">
                 <p class="cart-drawer__empty-heading">{{ 'cart.empty_heading' | t }}</p>
                 <p class="cart-drawer__empty-text">{{ 'cart.empty_text' | t }}</p>
-                <a class="btn-solid" href="{{ routes.all_products_collection_url }}">
+                {%- comment -%}
+                  必须带 cart-drawer__empty-cta：.btn-solid 只给形状与配色，
+                  display / 居中 / 内边距由用法方补（全站 13 处用法无一例外）。
+                  裸用会渲染成 min-height 44px 的 block，文字顶在上边缘、带链接下划线
+                  —— 2026-11-20 BUG-083 实测复现。
+                {%- endcomment -%}
+                <a class="btn-solid cart-drawer__empty-cta" href="{{ routes.all_products_collection_url }}">
                   {{- 'cart.continue_shopping' | t -}}
                 </a>
               </div>
@@ -90,6 +96,34 @@
                 {%- endfor -%}
               </ul>
             {%- endif -%}
+          </div>
+
+          {%- comment -%}
+            刷新占位（2026-11-20，BUG-083）。加购那一刻服务端还没收到 /cart/add.js，
+            `?sections=` 只能取回**加购前**的购物车——空车时就渲染成「Your cart is empty」，
+            等第二次请求回来才换成商品行。所以等待期间要盖住真实内容，只露骨架。
+
+            为什么骨架写在 `[data-cart-section]` **内部**：它跟着这一块被整块替换，
+            服务端渲染的那一份也带着它（默认 display:none），结构与状态永远一致；
+            放在外面就得处理它被替换后悬空的 loading 属性。
+            显隐只看 `<cart-drawer data-cart-loading>`，由 cart-drawer.js 写。
+          {%- endcomment -%}
+          <div class="cart-drawer__skeleton" data-cart-skeleton aria-hidden="true">
+            <div class="cart-drawer__skeleton-row">
+              <span class="cart-drawer__skeleton-thumb"></span>
+              <span class="cart-drawer__skeleton-lines">
+                <span class="cart-drawer__skeleton-line"></span>
+                <span class="cart-drawer__skeleton-line cart-drawer__skeleton-line--short"></span>
+                <span class="cart-drawer__skeleton-line cart-drawer__skeleton-line--price"></span>
+              </span>
+            </div>
+            <div class="cart-drawer__skeleton-row">
+              <span class="cart-drawer__skeleton-thumb"></span>
+              <span class="cart-drawer__skeleton-lines">
+                <span class="cart-drawer__skeleton-line"></span>
+                <span class="cart-drawer__skeleton-line cart-drawer__skeleton-line--short"></span>
+              </span>
+            </div>
           </div>
 
           {%- if cart.item_count > 0 -%}
@@ -299,6 +333,84 @@
   }
   .cart-drawer__empty-text {
     color: var(--color-foreground-muted);
+  }
+  /* 空态 CTA：.btn-solid 只给形状（见 critical.css 那段注释），
+     display / 居中 / 内边距一律由用法方补——与下面的 __checkout / __view 同一口径。
+     漏了这三行就是「文字顶在胶囊上边缘 + 带链接下划线」，2026-11-20 BUG-083。 */
+  .cart-drawer__empty-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.5rem;
+  }
+
+  /* ---- 刷新占位（BUG-083）----
+     加购瞬间 `?sections=` 拿到的是加购前的购物车（空车），不盖住就会闪一下空态。
+     显隐只认 `<cart-drawer data-cart-loading>`，由 cart-drawer.js 在等待期间写。 */
+  .cart-drawer__skeleton {
+    display: none;
+    align-self: start;
+    /* 水平内边距不能省：骨架在 .cart-drawer__body 外面（要盖住它），
+       拿不到 body 那圈的 1.25rem，不补就整块贴到抽屉左边缘 */
+    padding: 1rem 1.25rem;
+  }
+  cart-drawer[data-cart-loading] .cart-drawer__skeleton {
+    display: grid;
+    gap: 1rem;
+  }
+  cart-drawer[data-cart-loading] .cart-drawer__body,
+  cart-drawer[data-cart-loading] .cart-drawer__footer {
+    display: none;
+  }
+  .cart-drawer__skeleton-row {
+    display: grid;
+    /* 与 .cart-line 同一套列宽（80px 图 + 剩余），骨架和真内容落在同一条竖线上 */
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 0.45rem 0.75rem;
+    align-items: start;
+  }
+  .cart-drawer__skeleton-thumb {
+    inline-size: 80px;
+    block-size: 80px;
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  .cart-drawer__skeleton-lines {
+    display: grid;
+    align-content: start;
+    gap: 0.5rem;
+    padding-block-start: 0.25rem;
+  }
+  .cart-drawer__skeleton-line {
+    block-size: 0.75rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  .cart-drawer__skeleton-line--short {
+    inline-size: 45%;
+  }
+  .cart-drawer__skeleton-line--price {
+    inline-size: 30%;
+  }
+  /* 呼吸只改透明度：便宜，且不会被误读成"真的有一行内容" */
+  cart-drawer[data-cart-loading] .cart-drawer__skeleton-thumb,
+  cart-drawer[data-cart-loading] .cart-drawer__skeleton-line {
+    animation: cart-drawer-skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes cart-drawer-skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    cart-drawer[data-cart-loading] .cart-drawer__skeleton-thumb,
+    cart-drawer[data-cart-loading] .cart-drawer__skeleton-line {
+      animation: none;
+    }
   }
 
   /* reduce 下"直接出现"由 <bottom-sheet> 组件负责（不挂动效类），这里无需覆盖 */

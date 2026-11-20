@@ -10,6 +10,10 @@
  * 2026-10-16：派发两个事件——cart:added（点击即冒泡，不等接口，fly-to-cart.js
  * 飞入动画）、cart:updated（成功后 document，含 /cart.js 查回的 item_count，
  * cart-badge.js 角标同步）。
+ *
+ * 2026-11-20（BUG-083）：失败时补一个 cart:add-failed。购物车抽屉在 cart:added
+ * 那一刻就打开了并挂着骨架，只等 cart:updated 收尾；加购失败则永远等不到它，
+ * 顾客会盯着一屏骨架。这个事件是给抽屉的「退出等待」信号。
  */
 class QuickAdd extends HTMLElement {
   static REVERT_DELAY_MS = 2500;
@@ -63,6 +67,8 @@ class QuickAdd extends HTMLElement {
       this._syncCartCount();
     } catch (error) {
       if (error.name === 'AbortError') return;
+      /* 通知抽屉退出骨架等待（它只等 cart:updated，失败时永远等不到） */
+      document.dispatchEvent(new CustomEvent('cart:add-failed', { detail: { button: this._button } }));
       this._button.dataset.state = '';
       this._announce(this._button.dataset.errorMessage || '');
       this._reset();
