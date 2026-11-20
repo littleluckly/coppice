@@ -310,7 +310,7 @@
         {%- if product.available -%}
           {%- render 'quick-view', product: product -%}
         {%- else -%}
-          <button type="button" class="product-card__add product-card__sold-out btn-solid" disabled>
+          <button type="button" class="product-card__add btn-solid" disabled>
             {{- 'products.product_card.sold_out' | t -}}
           </button>
         {%- endif -%}
