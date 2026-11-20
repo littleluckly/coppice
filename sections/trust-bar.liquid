@@ -11,7 +11,6 @@
     endif
   endfor
 
-  # 列数上限 6 与 schema.max_blocks 对齐；>6 时按 6 列排（第 7 项起自然落到第二行）。
   assign columns = section.blocks.size
   if columns > 6
     assign columns = 6

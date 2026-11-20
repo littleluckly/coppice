@@ -3,9 +3,6 @@
 {%- liquid
   assign s = section.settings
 
-  # 文案：设置留空 → 回落 t: 默认值。分两步 assign 是必需的 ——
-  # 直接串成「default 过滤器接 t 过滤器」会把 default 的结果再翻一次，
-  # 商家清空输入后屏幕上会出现原始键名。
   assign heading_text = s.heading
   if heading_text == blank
     assign heading_text = '404.title' | t
@@ -26,8 +23,6 @@
     assign secondary_label = '404.browse_products' | t
   endif
 
-  # 链接留空 → 回落站内默认出口。routes 对象已含语言/市场前缀，
-  # 不手拼 '/pages/...' 之类路径（多语言下会丢前缀）。
   assign primary_link = s.primary_link
   if primary_link == blank
     assign primary_link = routes.root_url

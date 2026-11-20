@@ -1,7 +1,6 @@
 
 
 {%- liquid
-  # ── 预扫描：哪些区域真的有内容（决定外层容器是否出现）──
   assign has_brand_block = false
   assign has_newsletter = false
   assign column_count = 0
@@ -48,7 +47,6 @@
     assign has_columns = true
   endif
 
-  # ── 支付图标（F-3）：来源只能是 enabled_payment_types，且必须全彩 ──
   assign show_payment = false
   if section.settings.show_payment_icons and shop.enabled_payment_types.size > 0
     assign show_payment = true
@@ -59,7 +57,6 @@
     assign has_aside = true
   endif
 
-  # ── 选择器条件（F-6：多于一个才输出，是官方规则不是优化）──
   assign show_country = false
   if localization.available_countries.size > 1
     assign show_country = true
@@ -78,7 +75,6 @@
     endif
   endfor
 
-  # ── 左侧景观图（主题包不带照片，演示店在编辑器里上传）──
   assign has_media = false
   if section.settings.background_image != blank
     assign has_media = true

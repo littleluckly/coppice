@@ -3,9 +3,6 @@
 {%- liquid
   assign s = section.settings
 
-  # 标题三级回落：section 设置 → 页面标题 → 翻译兜底。
-  # 分步 assign 是必需的：`default` 与 `t` 串在一条管道里会把结果再翻一次，
-  # 屏幕上会出现原始键名（同 404.liquid 的注释）。
   assign heading_text = s.heading
   if heading_text == blank
     assign heading_text = page.title
@@ -24,8 +21,6 @@
     assign has_info = true
   endif
 
-  # tel: 里不能有空格和括号（RFC 3966）；可见文本保持商家输入的排版。
-  # 归一化只做字符剥离，不做 +1 → 00 之类的猜测性改写（同 footer.liquid）。
   assign tel_href = s.info_phone
   if tel_href != blank
     assign tel_href = tel_href | remove: ' ' | remove: '(' | remove: ')' | remove: '-' | remove: '.'

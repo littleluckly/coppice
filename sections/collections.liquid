@@ -7,7 +7,6 @@
   if columns > 3
     assign tablet_columns = 3
   endif
-  # sizes 提示按实际列数算：固定值在 2 列 / 4 列时会多取近一倍图
   assign desktop_vw = 100 | divided_by: columns
   assign tablet_vw = 100 | divided_by: tablet_columns
   assign sizes_str = '(min-width: 990px) '
@@ -15,7 +14,6 @@
   assign sizes_str = sizes_str | append: 'vw, (min-width: 750px) '
   assign sizes_str = sizes_str | append: tablet_vw
   assign sizes_str = sizes_str | append: 'vw, 46vw'
-  # H1 兜底：商家清空标题设置时仍要有一个有文字的 h1（每页恰好一个 h1）
   assign heading_text = section.settings.heading
   if heading_text == blank
     assign heading_text = 'collections.list.title' | t
@@ -61,7 +59,6 @@
             if forloop.index == 1
               assign card_priority = 'high'
             endif
-            # 入场延迟封顶 360ms：24 张卡按 80ms 递增会排到 1.9s，越往下越像卡住
             assign reveal_delay = forloop.index0 | times: 60 | at_most: 360
           -%}
           <li

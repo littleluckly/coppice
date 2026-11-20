@@ -18,10 +18,6 @@
           {%- when 'platform_compat' -%}
             {%- liquid
               assign platform = product.metafields.platform.battery_platform.value
-              # 链接目标：优先 block 选定的集合；没选就按电压推导同平台集合
-              # （40V → 40v-battery，演示店四个平台集合都按这个命名建好了）。
-              # 集合不存在时 `.title` 为空 —— 绝不用 `if collections[handle]` 判存在，
-              # 不存在的 handle 返回的是 truthy 空 drop（BUG 台账已记）。
               assign platform_url = ''
               if block.settings.collection != blank
                 assign platform_url = block.settings.collection.url

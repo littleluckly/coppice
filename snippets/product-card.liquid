@@ -1,33 +1,4 @@
-{% doc %}
-  product-card — 商品卡（首页 featured-collection 与集合页共用，task-index T-1.2）。
 
-  输出（视觉基准：效果图-首页 Featured Products 区；标签行基准 2026-10-16 刘工参考图）：
-  图 + 收藏心 + 标题 + 价格三件套（现价 / 划线原价 / 折扣胶囊 "Save N%"，
-  2026-10-29 对齐产品详情页）+ 单位价（2026-11-18 补，合规项 G-08；商品设了
-  单位计价才出现）+ 星级 + 规格胶囊行（动力源 · 电池平台 · 切割宽度 ·
-  排量 · 驱动方式 · 重量，2026-10-29 由"规格行 + 标签行"合并而来，每个字段只出现一次）
-  + Compare。
-
-  纪律：
-  - 参数行逐项判空：缺值跳项，分隔符自动正确（li+li::before），不留空位（SDD §5.7）
-  - 星级读官方 Product Reviews app 的 reviews.rating / reviews.rating_count metafield；
-    app 未装或无数据 → 星级行整个不渲染（不显示 0，Dawn 同款方案）
-  - 收藏为 localStorage 版（ib:wishlist:v1，assets/wishlist-toggle.js）：
-    本机持久、不跨设备同步——UI 不承诺同步（评估结论 2026-10-09）
-  - 对比按钮 spec.compare_hidden == 'TRUE' 或 compare_group 为空 → 不渲染
-
-  @param {product} product - product 对象（必填）
-  @param {boolean} lazy - true → 图片 lazy（非首屏）；缺省 false → eager
-  @param {boolean} show_width - true → 规格行显示切割宽度（经 spec-value 换算）
-  @param {boolean} show_cc - true → 规格行显示排量（cc，不换算）
-  @param {boolean} show_power - true → 规格行显示动力源（枚举原样）
-  @param {boolean} show_weight - true → 规格行显示整机重量（经 spec-value 换算）
-  @param {string} sizes - 图片 sizes 提示，**必传**（theme check 规则：@param 全部必传）。
-    调用方按自己的列数估：首页 6 列 '15vw/30vw/45vw'，集合页桌面 3 列 '25vw/32vw/45vw'。
-  @param {boolean} quick_add - true → 单变体款渲染快速加购（2026-10-13 拍板：
-    仅单变体且 available 渲染；多变体卡不渲染任何 CTA；售罄置灰 disabled；
-    无 JS 降级为表单 POST /cart/add；交互由 assets/quick-add.js 的 quick-add 自定义元素接管）
-{% enddoc %}
 
 {%- if product != blank -%}
 

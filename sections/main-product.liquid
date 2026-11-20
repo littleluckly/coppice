@@ -15,9 +15,6 @@
     endif
   endfor
 
-  # 价格基线（G-12，2026-11-18）：URL 带 ?selling_plan= 时平台会给出选中计划
-  # （`product.selected_selling_plan_allocation`），此时价格区必须显示计划价，
-  # 否则刷新后页头价与加购价对不上。无计划选中时它就是变体自身价。
   assign displayed_price = current_variant.price
   assign displayed_compare = current_variant.compare_at_price
   assign selected_allocation = product.selected_selling_plan_allocation
@@ -32,10 +29,6 @@
     assign save_percent = price_diff | times: 100.0 | divided_by: displayed_compare | round
   endif
 
-  # 媒体框的宽高比（2026-10-28）：取第一张媒体的 preview_image。视频与 3D 也有
-  # preview_image（视频是自动截的封面帧），所以三种类型都有值。
-  # 用 preview_image 而不是原始媒体尺寸：预览图才是页面上真正被看到的那一版。
-  # 取不到时按 1（正方）兜底——宁可方正，也不要让框塌成 0。
   assign gallery_ratio = 1
   assign first_media = product.media.first
   if first_media.preview_image

@@ -4,20 +4,12 @@
   assign menu = section.settings.menu
   assign brand_name = section.settings.brand_name | default: shop.name
 
-  # 「All series」入口（2026-11-14 刘工）：数据取自全局 collections，不依赖菜单配置 ——
-  # 商家不必为了一个"全部系列"入口手工维护一条菜单（菜单里也放不下"全部"这个语义）。
-  # 桌面 = mega 面板（系列网格 + View all 出口），移动 = 抽屉里一条直达 /collections 的链接。
   assign show_series = section.settings.show_all_series
   assign series_label = section.settings.all_series_label
   if series_label == blank
     assign series_label = 'navigation.all_series' | t
   endif
-  # 插在菜单的哪个位置：first / before_last / last。
-  # before_last = 排在菜单最后一项之前 —— Support / Contact 这类支持项通常放最后，
-  # 这个档位让"全部系列"留在商品入口这一侧，而不是被顶到支持项后面（演示店用这一档）。
   assign series_position = section.settings.all_series_position | default: 'last'
-  # 兜底：菜单只有 0–1 项时 before_last 没有"倒数第二"可插（循环里的插入点不触发），
-  # 这时退回菜单末尾，否则入口会整个消失。
   assign series_at_end = false
   if series_position == 'last'
     assign series_at_end = true
@@ -25,8 +17,6 @@
   if series_position == 'before_last' and menu.links.size <= 1
     assign series_at_end = true
   endif
-  # 当前页判定走 template.name，不比字符串路径：市场用语言子目录时
-  # request.path 会带 /en 前缀，和 routes.collections_url 比会永远不等。
   assign series_is_current = false
   if template.name == 'list-collections'
     assign series_is_current = true

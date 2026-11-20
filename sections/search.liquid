@@ -15,8 +15,6 @@
 
 {%- liquid
   assign per_page = section.settings.results_per_page | default: 12
-  # search.types 是本次搜索实际命中的类型数组。我们的标签只产生单类型 URL，
-  # 所以「size == 1」即代表用户点了某个类型；不带 type 参数（或全类型）一律视为 All。
   assign active_type = ''
   if search.types.size == 1
     assign active_type = search.types.first
@@ -26,10 +24,6 @@
   assign hero_image = section.settings.hero_image
   assign suggested_terms = section.settings.suggested_searches | default: '' | split: ','
 
-  # ── 分面筛选（G-07，2026-11-18）──────────────────────────────────
-  # search.filters 只在本次结果里有商品时才有值（官方：只返回与当前结果
-  # 相关的筛选器；且**一旦带上筛选参数，平台会把所有非商品结果过滤掉**）。
-  # 所以文章/页面类型下不渲染筛选卡——没有可筛的对象，空卡只会误导。
   assign filterable = false
   if search.performed and search.filters.size > 0
     if active_type == '' or active_type == 'product'
@@ -37,8 +31,6 @@
     endif
   endif
 
-  # 有筛选器 ≠ 有已选值：价格区间要看 min/max 两个 value，其余看 value.active。
-  # 与集合页同一套判定（collection.liquid 顶部），改口径要两边一起改。
   assign has_active_filters = false
   if filterable
     for filter in search.filters
@@ -59,18 +51,12 @@
     endfor
   endif
 
-  # 排序：search.sort_options 由平台给（relevance / price-ascending /
-  # price-descending 之类）。文章/页面搜索下平台通常返回空数组，此时
-  # 自然不渲染——不靠类型白名单硬挡。
-  # 绑在 filterable 上而不是 search.performed：排序卡渲染在筛选表单**内部**
-  # （桌面临到筛选卡顶部、移动端被 JS 搬进工具条），没有表单就没有它的位置。
   assign sort_by = search.sort_by | default: search.default_sort_by
   assign show_sort = false
   if filterable and section.settings.show_sort and search.sort_options.size > 0
     assign show_sort = true
   endif
 
-  # 清除筛选的目标：保留关键词与当前类型，丢掉全部 filter 参数。
   assign clear_filters_url = all_results_url
   if active_type != ''
     assign clear_filters_url = all_results_url | append: '&type=' | append: active_type

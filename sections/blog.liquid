@@ -8,13 +8,11 @@
   assign show_newsletter = section.settings.show_newsletter
   assign cat_limit = section.settings.categories_limit | default: 6
 
-  # H1 兜底：商家清空标题设置时回落博客名，每页始终恰好一个 h1
   assign hero_heading = section.settings.heading
   if hero_heading == blank
     assign hero_heading = blog.title
   endif
 
-  # 分类计数只在「首页 + 总篇数 ≤ 50」时输出，理由见文件头第 3 条
   assign counts_visible = false
   if current_tags == blank and blog.articles_count > 0 and blog.articles_count <= 50
     assign counts_visible = true
@@ -30,7 +28,6 @@
     assign has_sidebar = true
   endif
 
-  # sizes 按实际列数：三列约 24vw（内容列 1100 时卡宽 356），两列 40vw，单列满宽
   assign card_sizes = '(min-width: 1080px) 24vw, (min-width: 560px) 40vw, 92vw'
 -%}
 
@@ -185,7 +182,6 @@
               {%- liquid
                 assign chars = article.content | strip_html | size
                 assign minutes = chars | divided_by: 1000.0 | ceil | at_least: 1
-                # 入场延迟封顶 360ms：9 张卡按 60ms 递增会排到 480ms，越往下越像卡住
                 assign reveal_delay = forloop.index0 | times: 60 | at_most: 360
               -%}
               <li class="blog-index__item" data-reveal style="--reveal-delay: {{ reveal_delay }}ms">

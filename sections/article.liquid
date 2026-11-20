@@ -8,7 +8,6 @@
   assign show_tags = section.settings.show_tags
   assign show_more = section.settings.show_more_guides
 
-  # 只有博客里还有别的文章时才可能出现侧栏；否则正文列居中
   assign has_aside = false
   if show_more and blog.articles_count > 1
     assign has_aside = true
