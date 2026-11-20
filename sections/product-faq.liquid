@@ -23,12 +23,13 @@
   「用户动过就停」，不接管点击，也不重写 aria。`name` 在老浏览器被忽略时，
   脚本切换前会显式关掉其余条目，行为一致。
 
-  **停播的四个触发**（WCAG 2.2.2：超过 5 秒的自动变化必须可停）：
-    ① 用户点/键盘开过任意一条（永久停，不再复活）
-    ② 鼠标悬停 / 焦点进入（CSS `:hover` / `:focus-within` 挂 animation-play-state）
-    ③ 区块离开视口（IntersectionObserver 打 data-paused）
-    ④ 标签页切到后台（visibilitychange）
-  ①③④ 由 assets/product-faq.js 处理，②是纯 CSS。
+  **挂起的三条路**（WCAG 2.2.2：超过 5 秒的自动变化必须可停）：
+    ① 鼠标悬停 / 焦点进入（CSS `:hover` / `:focus-within` 挂 animation-play-state）
+    ② 区块离开视口（IntersectionObserver 打 data-paused）
+    ③ 标签页切到后台（visibilitychange）
+  ②③ 由 assets/product-faq.js 处理，①是纯 CSS。①有个必须知道的副作用：点完手风琴
+  光标还停在卡片上时，倒计时是**暂停**的（这是"别在用户眼皮底下换内容"的保护），
+  移开光标即继续——看着像"失效"，其实是暂停。
 
   依赖「动画跑完」而不是 JS 计时器：动画被 `prefers-reduced-motion` 摘掉时
   就永远不会有 `animationend`，自动播放自然失效——不需要在 JS 里再判一次。

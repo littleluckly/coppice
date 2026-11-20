@@ -447,7 +447,7 @@
       "image_info": "Shown on the right of the questions. Leave empty to use the product's featured image.",
       "autoplay_header": "Auto-advance",
       "autoplay": "Advance to the next question automatically",
-      "autoplay_info": "The progress bar under an open question is its countdown. It pauses on hover or focus, stops for good once a shopper opens a question, and never runs when the system asks for reduced motion.",
+      "autoplay_info": "The progress bar under an open question is its countdown. It pauses on hover or focus and when the section is off screen, and it never runs when the system asks for reduced motion. Opening a question yourself restarts its countdown instead of stopping the rotation.",
       "autoplay_seconds": "Seconds per question",
       "button_info": "Defaults to the selected blog when left empty."
     },
