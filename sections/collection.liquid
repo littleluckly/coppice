@@ -1251,12 +1251,15 @@
 
     /* 左列的内边距随 display: contents 一起没了：无 JS 时筛选面板在流内出现，
        自己补页面边距。有 JS 时表单被搬进抽屉 / 隐藏，槽是空的，不能再撑出
-       20px 空隙（否则横幅与产品区之间多一道白条）。 */
+       20px 空隙（否则横幅与产品区之间多一道白条）。
+       门控同样用 `html.js` 而非 `[data-facets-ready]`：后者晚于首帧，槽会先
+       带着 20px 内边距渲染一次，就绪后再归零 —— 与 form 的位移叠在一起
+       （见 assets/facets.css 同名规则）。 */
     .facets__form-slot {
       padding: 0 20px 20px;
     }
 
-    collection-facets[data-facets-ready] .facets__form-slot {
+    html.js .facets__form-slot {
       padding: 0;
     }
 

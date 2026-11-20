@@ -16,3 +16,19 @@
 dev-docs/
 docs/
 minimal-repro/
+
+# 仓库文档：不属于主题文件。注意 AGENTS.md 会被 CLI 打进 zip（2026-11-19 实测），
+# 其余根目录 .md 目前没被打进去，一并显式排除，避免换 CLI 版本后行为变化。
+AGENTS.md
+README.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+LICENSE.md
+
+# 备份与系统垃圾：`settings_schema.json.bak-YYYYMMDD` 这类会随 zip 一起发出去
+*.bak*
+*.bak-*
+
+# macOS 生成，任何层级都要排（2026-11-19 实测：assets/ sections/ locales/ 各进了一个）
+.DS_Store
+

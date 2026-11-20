@@ -4,12 +4,14 @@
 > **权威关系**：功能口径以 `dev-docs/sdd.md` §7.1 为准；本清单只做"官方要求 ↔ 主题现状"的映射，不新增产品决策。修复方案涉及设计取舍时，回填对应页面清单（`task-product.md` / `task-collection.md` / `task-footer.md` 等）。
 > **范围**：主题级必填项——section/block 能力、全局设置、模板页面完整性、强制功能落点。
 > **不在范围**：各页面清单已覆盖的项（页脚 newsletter / 社交 / 国家语言 → `task-footer.md`；页头菜单与搜索 → `task-header.md`；购物车 → `task-cart.md`；集合页 → `task-collection.md`；产品页主体 → `task-product.md`）。**本清单只在它们漏掉的接缝处补位。**
-> **版本**：v1.5 ｜ 2026-11-18 ｜ **不含工期**
+> **版本**：v1.7 ｜ 2026-11-19 ｜ **不含工期**
 > **v1.1 变更**：G-03 / G-11 / G-13 已实现（全局 Brand 设置、favicon、品牌 logo）；§5.2 顾客端配色开关经刘工拍板**不做**。
 > **v1.2 变更**：G-01 已实现（新建 `sections/custom-liquid.liquid`）；G-10 经对账销项（页脚 `custom_liquid` block 早已落地，本清单漏勾）；G-02 已实现（`main-product` 支持 `@app` block）。
 > **v1.3 变更**：G-08 已实现（商品卡补单位价，集合页 / 首页 / 搜索页 / 推荐位共用同一 snippet 一并生效）。**剩余 4 条缺口，其中 S1 3 条**（G-05 / G-06 / G-14）、S2 1 条（G-12）。
 > **v1.4 变更**：G-12 已实现（产品页购买选项选择器 + `selling_plan` 提交 + 变体联动 + 价格改 allocation 价 + 强制订阅校验）。**剩余 3 条缺口，全部 S1**（G-05 / G-06 / G-14）。
 > **v1.5 变更**：G-12 **演示店实测通过**（装 Shopify Subscriptions → 建 plan → `nb-21p` 渲染正常、加购后购物车行显示计划名）。口径从「代码符合官方写法」升级为「面板与购物车已实证，仅结账页按代码判定」；顺手修掉计划名含百分比时徽标重复。剩余缺口仍是 G-05 / G-06 / G-14（全 S1）。
+> **v1.6 变更**：G-05 **销项**——但结论与条目标题相反：焦点不是「未实现」，而是**平台自动实现、原判定是误判**（`image_tag` 有焦点时自动写内联 `object-position`，主题只需用 `image_tag` + `object-fit: cover`）。本轮只补了真洞（hero 移动端 `<picture>` 的焦点归属），并新增 `tools/check-focal-points.py` 把判据固化。**剩余 2 条缺口：G-06 / G-14（S1）**。
+> **v1.7 变更**：二次复扫，**15 条全部销项**。① G-06 落地（`theme_info` → `Coppice Studio` + 文档站 200 + 支持邮箱）；② G-14 补销（11-17 已做联系页，本清单漏勾）；③ **新发现并修掉 G-15**——`main-nav` 的 `brand_name` schema 默认值硬编码 `"Northbark"`，导致 `| default: shop.name` 永久失效，商家装完页头显示别人的品牌名。凡 `settings.x | default: <平台对象>` 的写法都要先查 schema 有没有 `default`。
 
 ---
 
@@ -45,9 +47,10 @@
 | ✅ G-02 | 产品主 section 无 `@app` block | *"Themes must support app blocks (blocks of type `@app`) in the main product section and featured product section."* | ~~S1~~ **已销 2026-11-18** |
 | ✅ G-03 | 没有 favicon 设置 | *"Must have a favicon setting."* | ~~S1~~ **已销 2026-11-12** |
 | ✅ G-04 | 礼品卡页没有二维码 | *"Must show a QR code. The minimum size required is 120px x 120px."* | ~~S1~~ **已销 2026-11-17** |
-| G-05 | 图片焦点（focal point）未实现 | *"Make sure that your theme supports the focal point of an image."* | **S1** |
-| G-06 | `theme_info` 作者与链接仍是 Skeleton 默认 | §Theme info（*"Must have a `theme_info` section"* 已满足，但内容错） | **S1** |
-| G-14 | **缺 `page.contact.json` 联系表单模板**（且全站没有联系表单） | *"Themes must support the following templates … `page.contact.json`"* + Page requirements: *"Must include an alternate template for a contact form."* | **S1** |
+| ✅ G-05 | 图片焦点（focal point）—— **原判定「未实现」是误判**，实为平台自动应用 | *"Make sure that your theme supports the focal point of an image."* | ~~S1~~ **已销 2026-11-19（见 §G-05）** |
+| ✅ G-06 | `theme_info` 作者与链接仍是 Skeleton 默认 | §Theme info（*"Must have a `theme_info` section"* 已满足，但内容错） | ~~S1~~ **已销 2026-11-19** |
+| ✅ G-14 | 缺 `page.contact.json` 联系表单模板（且全站没有联系表单） | *"Themes must support the following templates … `page.contact.json`"* + Page requirements: *"Must include an alternate template for a contact form."* | ~~S1~~ **已销 2026-11-17** |
+| ✅ G-15 | 页头品牌名 schema 默认值硬编码 `"Northbark"`，`shop.name` 回落永不触发 | 官方 "Themes must not include placeholder content"（要求页 Content 段） | ~~S1~~ **已销 2026-11-19** |
 | ✅ G-07 | 搜索页没有分面筛选 | *"You need to support faceted search filtering on collection pages and search pages."* | ~~S2~~ **已销 2026-11-18** |
 | ✅ G-08 | 商品卡不显示单位价（集合页 / 首页 / 搜索页共用同一 snippet） | *"Unit pricing must be supported on: Collection page / Product page / Cart page."* | ~~S2~~ **已销 2026-11-18** |
 | ✅ G-09 | 礼品卡商品没有"寄给收件人"字段 | *"Gift card products must have the option to send the card to a recipient."* + `form.email` / `form.name` / `form.message` / `form.send_on` | ~~S2~~ **已销 2026-11-17** |
@@ -56,7 +59,7 @@
 | ✅ G-12 | 产品页无法选择订阅计划 | §Selling plans 只要求购物车**显示**；但选不了 ⇒ 显示逻辑永远是死代码 | ~~S2~~ **已销 2026-11-18** |
 | ✅ G-13 | 礼品卡模板引用不存在的 `settings.logo` | 非条款问题 | ~~S3~~ **已销 2026-11-12** |
 
-> **进度（2026-11-18）**：14 条缺口中 G-01 / G-02 / G-03 / G-04 / G-07 / G-08 / G-09 / G-10 / G-11 / G-12 / G-13 已实现，**剩余 3 条，全部 S1**（G-05 / G-06 / G-14）。下表保留全部原始行以便追溯，已销项以 ✅ 标记，落地记录见 §2.0 / §2.0b / §2.0c / §2.0d / §2.0e / §2.0f。
+> **进度（2026-11-19 二次复扫）**：15 条缺口**全部销项**（14 条原清单 + 本轮新发现的 G-15）。已销项以 ✅ 标记，落地记录见 §2.0 / §2.0b / §2.0c / §2.0d / §2.0e / §2.0f / §G-05 / §2.0g。**代码层已无未闭合的合规缺口**；剩下的阻塞项不在本清单范围（打包清洁 → `task-package.md`、文档站 → `task-docs.md`、Lighthouse 与空白店安装属实测验收）。
 
 > **G-10 与页脚清单重叠**：`task-footer.md` T-1.10 已规划在页脚加一个 `liquid` block，**能满足 G-10**。两边不重复做，谁先落地谁把这条勾掉。
 
@@ -205,6 +208,51 @@
 
 ---
 
+### 2.0g 已实现项落地记录（2026-11-19 二次复扫，G-06 / G-14 补销）
+
+| 编号 | 做法 | 主要文件 |
+| --- | --- | --- |
+| G-06 | `theme_info` 改为真实作者与文档站：`theme_author` = `Coppice Studio`、`theme_documentation_url` = `https://littleluckly.github.io/coppice-docs/`（实测 200）、支持渠道用 `theme_support_email` | `config/settings_schema.json` |
+| G-14 | 联系表单 section + `page.contact.json` 模板 + 页脚入口（`"page": "contact"` 裸 handle，`shopify://pages/…` 解析为空 drop） | `sections/contact-form.liquid`、`templates/page.contact.json`、`sections/footer-group.json` |
+
+**本轮才发现的两个坑**
+
+- **`theme_support_email` 与 `theme_support_url` 只能二选一**，两个都写平台直接报错（官方 settings_schema.json 文档原文）。现取邮箱。
+- **`grep focal_point` / `grep "type": "liquid"` 这类「0 命中 ⇒ 未实现」的推断必须再验一步**：G-05 就是反例（平台自动写内联 `object-position`，主题无需手写消费点，见 BUG-079）。本清单所有否定结论都要求"否定 + 平台机制核对"两步。
+
+---
+
+### ✅ G-15 页头品牌名默认值硬编码 `"Northbark"`（2026-11-19 已实现，见 §2.0g）
+
+**官方条款**
+
+> "Themes must not include placeholder content."（Theme Store requirements · Content）
+
+**原状与根因**
+
+```liquid
+{%- comment -%} sections/main-nav.liquid:55 {%- endcomment -%}
+assign brand_name = section.settings.brand_name | default: shop.name
+```
+
+```json
+{ "type": "text", "id": "brand_name", "label": "t:labels.brand_name", "default": "Northbark" }
+```
+
+`section.settings.brand_name` **永远不为 blank**（schema 给了默认值）⇒ `| default: shop.name` 那条回落从第一天起就是死代码。商家装完主题，页头与移动抽屉都显示别人的虚拟品牌名 `Northbark`。
+
+**为什么它不是打包清洁项**：`sections/header-group.json` 里的 `"brand_name": "Northbark"` 是演示店的存值，清掉只能治演示店；**schema 默认值在代码里**，装到任何店里都会重新生效。两处都要处理，但只有删默认值才是修根。
+
+**修法（2026-11-19 已落地）**
+
+- 删 `"default": "Northbark"`，补 `"info": "t:labels.brand_name_info"`（`en.default.schema.json` 新增键：*Shown in the header next to the logo. Leave blank to use the store name.*）。
+- 行为验证：留空 ⇒ `| default: shop.name` 生效（Liquid 标准 filter 行为，无需实测）。演示店因 JSON 里有存值仍显示 `Northbark`，属正常。
+- **同类排查口径**：凡 `assign x = settings.y | default: <平台对象>` 的写法，**先看 schema 里那个设置有没有 `default`**——有默认值就等于回落永久失效。本次全站扫了所有 `section.settings.*` 默认值，除本项外都是通用电商示例文案（"Free shipping on orders over $99" 一类，官方允许）与平台标准 handle（`main-menu` / `customer-account-main-menu`）。
+
+**验证（2026-11-19）**：`shopify theme check` → 85 files / 0 error / 1 已知 `OrphanedSnippet` 误报；`check-locale-keys.py` 双命名空间全命中。
+
+---
+
 ### ✅ G-01 没有 Custom Liquid section（2026-11-18 已实现，见 §2.0c）
 
 **官方原文**
@@ -287,30 +335,58 @@
 
 ---
 
-### G-05 图片焦点未实现
+### ✅ G-05 图片焦点（2026-11-19 销项：原判定是误判）
 
 **官方原文**
 
 > "Make sure that your theme supports the focal point of an image. Focal points can be set in the theme editor `image_picker` setting, or from the Files page."
 
-**现状证据**
+**官方机制（第一轮核错的就是这里）**
 
-- `grep -rnE "focal_point|presentation" sections/ snippets/ assets/` → **0 命中**
-- `snippets/image.liquid` 只用 `image_url: width, height, crop`，`crop` 传的是 `center` 之类的固定值
-- 官方 `image_url` 文档：`crop` 只接受 `top` / `center` / `bottom` / `left` / `right` / `region` —— **没有焦点参数**（已核官方文档）
+theme 开发文档「image focal points」给出的检查清单只有两条：
 
-**影响**：商家在后台设的焦点被完全忽略。裁成方形的图（商品卡、hero、集合 banner）会把主体切掉——这正是焦点功能存在的理由。
+> "Render your images using the `image_tag` filter."
+> "Consider positioning images within containers using `object-fit: cover`."
 
-**做法**：焦点只能靠 CSS 应用——`object-position: {{ image.presentation.focal_point }}`。落点：
+并且明确写了自动行为：
 
-- 会裁剪的地方优先（hero、集合 banner、商品卡、产品画廊、博客卡）
-- 不裁剪的（`object-fit: contain` 或保持原始比例）**不用改**，改了没效果还增加噪音
+> "Using `image_tag`, if a focal point was provided, then an `object-position` style is added to the image tag, with the value set to the focal point."
 
-**坑**：全站 **24 处直接 `image_tag`** + 5 处 `{% render 'image' %}`，**不要逐个手改**——先收敛到一个输出点（扩 `snippets/image.liquid` 或新建专用 snippet），否则第三份副本出现时就开始漂移（同 BUG-064 的教训）。
+⇒ **焦点不需要主题逐处写 `object-position`**。`image_tag` 在有焦点时自动写内联样式，主题只要做到两件事：**(a) 用 `image_tag` 出图；(b) 裁剪容器 `object-fit: cover`**。
+
+**原判定错在哪（第二次踩同类陷阱）**
+
+- 2026-11-07 用 `grep -rnE "focal_point|presentation"` 得 **0 命中**，据此写成「完全未实现」。
+- 0 命中只证明「没有手写消费点」，与「平台是否自动应用」是两件不同的事。**否定结论要查机制，不能只查字样**——与 §0.2 的 grep 多词陷阱同源，这次是把「平台能力」误当成「主题缺失」。
+- 后果不小：这条被列成 S1、排进 T-1.5（「改动面最大」），如果真按 15 处逐个手写 `object-position`，等于给平台已有行为加一层冗余，其中几处还会顶掉设计构图。
+
+**现状核对（2026-11-19，已脚本化）**
+
+`python3 tools/check-focal-points.py` 输出：
+
+- liquid 内 `object-fit: cover` **18 处**（分布在 14 个文件），全部在 `image_tag` 通道上 ⇒ 焦点已生效；另有 `assets/product-card.css` 1 处，其图由 `snippets/product-card.liquid` 的 `image_tag` 输出。
+- `object-position` 共 11 处落点，**全部是「无焦点时的设计兜底」**（`center right` / `62% center` / `center 45%` 等）。内联样式优先级高于任何选择器 ⇒ 商家一设焦点就被顶掉、没设就走构图。**这是正确行为，不是「写死 center 覆盖焦点」**（原缺口描述里的这句判断是错的）。
+- `presentation.focal_point` 手写消费 4 处（404 / 博客列表 hero / 密码页 / hero 移动端 `--focal-m`），都是「`<img>` 之外还需要坐标」的场景，属补充而非必需。
+
+**本轮实际改动（补的是真洞）**
+
+1. `sections/hero-slideshow.liquid`：移动端底图走 `<picture><source>`。**先说清这不是「运行时换图」**——轮播是整屏切换（每屏各自一套 `<picture>` / `<img>`，JS 只翻 `hidden` 与 `loading`，没有代码改 `img.src`）。问题出在**媒体条件选源**：`<source>` 不能承载 `object-position`，≤749px 时浏览器改取它的 `srcset`（画的是 `image_mobile` 的像素），但 `<img>` 元素与它身上 `image_tag` 按**桌面图**写的内联 `object-position` 都没变 ⇒ 商家给移动图设的焦点不生效。改为 `<picture style="--focal-m: …">` + 749 断点内 `object-position: var(--focal-m, 50% 50%) !important`。`!important` 是必需的：要压过 `image_tag` 写的内联样式，否则规则永不命中；选择器挂在 `picture` 后代上，没有移动图时整条不生效。
+2. `snippets/image.liquid`：去掉 `image_url` 的 `crop` 传参。服务端定死裁剪后 `object-position` 无从生效，**用这个 snippet 反而会丢焦点**（当前无调用方，属预防性修正）。
+3. 新增 `tools/check-focal-points.py`（对应 §4.2 的固化成脚本）：
+   - **A（硬）** 文件里有 `object-fit: cover` 就必须出现 `image_tag`——手写 `<img>` 拿不到内联焦点；
+   - **B（警告）** `<picture>` 缺 `--focal-m`：`object-fit: contain` 的图不裁剪，规范明说不用接，故只告警；
+   - **C（硬）** 禁止 `image_url` 传 `crop:` 后接 `image_tag`（favicon 那种只出 URL 的固定方形裁剪不算）。
+
+**有意不接的两处**
+
+- hero 产品岛（`object-fit: contain` + `object-position: center bottom`）：不裁剪，接了反而会被 `50% 50%` 顶掉底部对齐。脚本按警告输出并注明。
+- 404 / 密码页 / 博客 hero / 搜索 hero 的 CSS 兜底值：见上，是设计构图，不是覆盖。
+
+**验收口径**：在后台给任意 `image_picker` 图或商品图设焦点 → 该图 `<img>` 出现内联 `object-position`，且 `cover` 容器里焦点区域不被裁掉。移动端另需在 749px 以下确认 hero 用的是**移动图**的焦点。
 
 ---
 
-### G-06 `theme_info` 作者与链接还是 Skeleton 默认
+### ✅ G-06 `theme_info` 作者与链接还是 Skeleton 默认（2026-11-19 已实现，见 §2.0g）
 
 **现状证据**（`config/settings_schema.json`）
 
@@ -479,7 +555,7 @@ URL 可分享、无 JS 整页 GET），否则同一个组件在两页上的行�
 
 ---
 
-### G-14 缺 `page.contact.json` 联系表单模板
+### ✅ G-14 缺 `page.contact.json` 联系表单模板（2026-11-17 已实现，见 §2.0g）
 
 **官方原文**
 
@@ -512,9 +588,10 @@ URL 可分享、无 JS 整页 GET），否则同一个组件在两页上的行�
 - [x] **T-1.2** `main-product.liquid` 补 `@app` block（G-02）· 依赖：无
 - [x] **T-1.3** 全局品牌设置：`favicon` + `logo` / `logo_dark` + 亮度自动选图（G-03 / G-13 / §5.1）· 依赖：无
 - [x] **T-1.4** 礼品卡二维码（G-04）· 依赖：无
-- [ ] **T-1.5** 图片焦点：先收敛输出点，再按"会裁剪处"逐个接（G-05）· 依赖：无 · **改动面最大**
-- [ ] **T-1.6** `theme_info` 更正（G-06）· 依赖：真实作者名与文档地址
-- [ ] **T-1.7** 联系表单 section + `page.contact.json` 模板（G-14）· 依赖：无
+- [x] **T-1.5** 图片焦点（G-05）· 2026-11-19 完成——**原方案作废**：焦点由 `image_tag` 自动应用，不需要「按会裁剪处逐个接」。实改 1 处真洞（hero 移动端 `<picture>` 的 `--focal-m`）+ 1 处预防性修正（`snippets/image.liquid` 去 `crop`）+ 判据脚本化
+- [x] **T-1.6** `theme_info` 更正（G-06）· 2026-11-19 完成（作者 `Coppice Studio` + 文档站 200 + 支持邮箱，见 §2.0g）
+- [x] **T-1.7** 联系表单 section + `page.contact.json` 模板（G-14）· 2026-11-17 完成（见 §2.0g）
+- [x] **T-1.8** 页头品牌名默认值（G-15）· 2026-11-19 完成——删 schema `default`，让 `| default: shop.name` 生效
 
 ### P2 S2 功能级
 
@@ -550,6 +627,7 @@ URL 可分享、无 JS 整页 GET），否则同一个组件在两页上的行�
 | 富媒体（3D / 视频 / 外链视频） | `main-product.liquid:150/192/194` |
 | 产品页单位价 | `main-product.liquid:426` |
 | 商品卡单位价（G-08） | `snippets/product-card.liquid` —— `selected_or_first_available_variant.unit_price_measurement`；样式 `assets/product-card.css` |
+| 图片焦点（G-05） | 18 处 `object-fit: cover` 全部经 `image_tag` 出图（自动内联 `object-position`）；hero 移动端 `<picture>` 补 `--focal-m`；`python3 tools/check-focal-points.py` 通过 |
 | 购物车单位价 + 订阅计划显示 | `cart-line.liquid:218 / 132` |
 | 所有设置都有 `label` | 脚本全量扫描 `sections/` + `blocks/`：**0 缺** |
 | 文案无 `&` 符号 | 两个 locale 全文无裸 `&`；2026-11-12 修掉 `general.header_skeleton` 的 `Header & footer colors`（旧核查只查 `&amp;`，漏了裸 `&`） |
@@ -575,7 +653,7 @@ tools/check-compliance.py
   ├─ 检查 "type": "liquid" / "@app" 是否存在
   ├─ 检查 settings_schema.json 是否有 image_picker(favicon)
   ├─ 检查 templates/gift_card.liquid 是否含二维码
-  ├─ 检查 focal_point / presentation 是否有消费点
+  ├─ 检查 focal_point / presentation 是否有消费点 ← **已落地为 tools/check-focal-points.py**（判据是「有没有绕开 image_tag」，不是「有没有 focal_point 字样」）
   ├─ 检查 product-card 是否有 unit_price
   └─ 所有 grep 内部用 re 模块，不用 shell
 ```

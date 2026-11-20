@@ -792,6 +792,46 @@
   - **C（不改版式，只收口）**：给 `.product-card__price` 加 `overflow: clip`。**不推荐**：等于把划线价裁掉，信息丢失，比换行更糟。
 - **预防**：① 价格类的"合计宽度"结论必须**按最长价格串（`$9,999.99`）算**，不能按当时看到的那几个价格算——写进卡内测量注释前先量最长值。这条同时提醒：CSS 注释里的"实测 xx px 放得下"必须写明**测量用的是什么数据**，否则下一轮换价格就失效。② 判"是否折行"别用 `top` 差 —— 同排的 `s`（0.78rem）与现价（0.95rem）是**基线对齐**，顶边天然差 3px，用 `top` 差 <2px 判会全部误判成"已折行"（本次先踩了一次）。判据用**组高**：单行 21px / 双行 42.8px。
 
+### BUG-079 · 合规对账把「平台自动实现」判成「主题未实现」：G-05 图片焦点被列成 S1 缺口
+
+- **日期**：2026-11-19 ｜ **状态**：Fixed
+- **现象**：`task-compliance.md` 把「图片焦点（focal point）未实现」列为 **S1 拒审级**缺口，还据此排了一条「改动面最大」的 T-1.5（按 15 处会裁剪的地方逐个手写 `object-position`）。实际主题**早就支持**：`image_tag` 在有焦点时自动给 `<img>` 写内联 `object-position`，全站 18 处 `object-fit: cover` 全部在 `image_tag` 通道上。若按原方案执行，等于给平台已有行为加一层冗余，其中几处还会顶掉设计构图（集合 banner 的 `center right`、搜索 hero 的 `62% center`）。
+- **根因**：判定依据是 `grep -rnE "focal_point|presentation"` 得 **0 命中**。0 命中只能证明「主题里没有手写消费点」，证明不了「平台没做这件事」。**用字样检索代替了机制核实**——与 §0.2 的 grep 多词陷阱同源，只是方向相反（那次把已实现误判成缺失，这次把平台能力误判成主题缺失）。
+- **修复**：① 按官方机制重核：theme 开发文档「image focal points」的检查清单只有「用 `image_tag` 渲染」+「容器 `object-fit: cover`」，且明写「若提供焦点，`image_tag` 会加 `object-position` 样式」。② 找出唯一真洞并补掉：hero 移动端底图走 `<picture><source>`，`<source>` 不能承载 `object-position`，`<img>` 上带的是**桌面图**焦点 → 补 `--focal-m` + 749 断点 `!important` 覆盖。③ `snippets/image.liquid` 去掉 `image_url` 的 `crop` 传参（定死裁剪会让焦点失效）。④ 新建 `tools/check-focal-points.py`。
+- **预防**：① 任何「主题不支持 X」的否定结论，先查官方文档里 X 的**生效条件**——是主题要做，还是平台自动做；首选查 `shopify.dev/docs/api/liquid/filters/<filter>` 与 `shopify.dev/docs/storefronts/themes/architecture/settings/input-settings`。② 判据固化成 `python3 tools/check-focal-points.py`：只查「有没有绕开 `image_tag`」，**不查 `focal_point` 字样**；改动任何 cover 图或 `<picture>` 后跑一次。③ 合规清单里凡是写「未实现」的行，必须同时写「怎么才算实现」（可执行的验收动作）——写不出验收动作，说明结论还没核到机制层。
+
+### BUG-080 · `shopify theme package` 无视 `.shopifyignore` 的文件级规则，把仓库文档、备份与 `.DS_Store` 打进提交包
+
+- **日期**：2026-11-19 ｜ **状态**：Fixed（打包流程加清理步骤）
+- **现象**：`shopify theme package` 生成的 `Coppice-0.1.0.zip`（CLI **4.9.4**）里带了三样不该进包的东西：根目录 `AGENTS.md`（18.6 KB）、`config/settings_schema.json.bak-20261119`、以及 `assets/` `sections/` `locales/` 各一个 `.DS_Store`。共 5 个文件。若直接上传，商家装完会拿到我们的开发守则和一份 schema 备份。
+- **根因**：`.shopifyignore` 里原本只有 `dev-docs/` `docs/` `minimal-repro/` 三个**目录**条目，它们确实生效了（dev-docs 没进包）。但本轮补的**文件级规则全部无效**——做过两次对照：① 写通配符 `*.bak*` 与 `.DS_Store`；② 写精确路径 `config/settings_schema.json.bak-20261119` 与 `assets/.DS_Store`。两次重新打包，这 5 个条目照旧在 zip 里。**结论：这个版本的 package 只按目录排除，文件级/通配符规则被忽略**（不排除其他版本行为不同，见预防②）。
+- **修复**：打包后清一遍
+  ```bash
+  zip -d Coppice-0.1.0.zip "*.DS_Store" "*.bak*" "AGENTS.md"
+  unzip -l Coppice-0.1.0.zip | grep -E "\.bak|DS_Store|\.md"   # 应为空
+  ```
+  清理后 171 个文件、顶层只剩 8 个主题目录。
+- **根上的隐患**：`AGENTS.md` 进包这件事本身说明 **CLI 对根目录 `.md` 有内置的排除名单**（`README.md` / `CONTRIBUTING.md` / `LICENSE.md` / `CODE_OF_CONDUCT.md` 都没进，只有我们自己新增的 `AGENTS.md` 进了）。这个名单不公开，**新增任何根目录文件后都要重新验证一次包内容**，不能假定"上次干净这次也干净"。
+- **预防**：① 打包必须走"打包 → `zip -d` → `unzip -l` 验证"三步，缺一步不算打完（已写进 `task-package.md` §7 第 3 步）。② 升级 CLI 后重跑一次对照实验：若新版开始支持文件级 `.shopifyignore`，可以去掉 `zip -d`，但**在没验证前不要删这一步**。③ 判断"包里有没有脏东西"只看 `unzip -l` 的输出，不看 `.shopifyignore` 写了什么——写了不等于生效。
+
+### BUG-081 · 移动端集合页/搜索页 CLS 0.34：筛选表单"JS 就绪后才隐藏"，而就绪晚于首帧
+
+- **日期**：2026-11-20 ｜ **状态**：Fixed
+- **现象**：benchmark 店集合页移动端 Lighthouse **CLS 0.339**、Performance 71（同店其它五页 CLS 都 ≤0.005）。puppeteer 抓到的位移证据：`div.collection__content` 在 **2838ms** 从 `y=656, h=259` 变成 `y=259, h=656` —— 下方内容整体上跳 **397px**。
+- **根因**：`assets/facets.css` 的移动端规则用 `collection-facets[data-facets-ready] .facets__form { display: none }` 控制"表单移入抽屉后不再占流内空间"。`data-facets-ready` 由组件的 `connectedCallback` 写入（`faceted-filters.js:255`），**晚于首帧**。于是：首帧表单按流内布局占约 397px → 组件就绪 → `display:none` → 全部商品卡上跳。这是"渐进增强"（无 JS 时表单必须流内可见）与 CLS 的正面冲突，当初只考虑了前一半。
+- **为什么演示店没暴露**：演示店那页筛选源为空，表单根本没渲染，位移为 0。**只要有筛选条件的集合页必然触发**，属于商家装完就会遇到的问题。
+- **修复**：门控换成 `html.js`（`layout/theme.liquid:5-7` 的内联脚本在首次绘制前加，原本就有），改两处：① `assets/facets.css` 的 `.facets__form { display: none }`；② `sections/collection.liquid` 的 `.facets__form-slot { padding: 0 }`（那条依赖 `[data-facets-ready]` 的 rule 会把 20px 内边距留到就绪后）。搜索页与集合页共用同一套 `<collection-facets>` + `.facets__form`，一并修好。
+- **验证**：① puppeteer 复测 `total: 0, count: 0`，`content` 首帧即在 `y=259` 不动；② 禁 JS 复测：`htmlClass=""`、`.facets__form` `display: block`、高 378px、slot padding 仍是 `0px 20px 20px` ⇒ 渐进增强边界没变；③ Lighthouse 集合页移动端 **71 → 98**，CLS 0，LCP 2.3s。
+- **预防**：① **任何"JS 就绪后才隐藏 / 折叠首屏内容"的 CSS 规则，门控必须是首帧前就能确定的东西**（`html.js` 这类内联标记，或服务端已定的属性），不能用组件生命周期里写的 `data-*`。判据：问一句"这个属性在第一帧存在吗？"——不存在就会跳。② `:defined` 也不够：`customElements.define` 在 defer 脚本里执行，仍晚于首帧。③ 新增/修改移动端折叠式组件后，跑一次 puppeteer 量 `PerformanceObserver` 的 layout-shift（脚本见 §验证），别只看 Lighthouse 总分——CLS 在总分里可能只扣几分，但它是硬线（目标 <0.1）。
+
+### BUG-082 · 用带长度上限的正则查 `<img>`，"匹配 0 个"被当成"元素不存在"，误判首页 hero 无图
+
+- **日期**：2026-11-20 ｜ **状态**：Fixed（结论已纠正，代码无改动）
+- **现象**：检查 benchmark 店首页 HTML，声称 `<hero-slideshow>` 里"四个 slide 一张 `<img>` 都没有"，并据此判断"首页 93 分是上限估计、切图后要复测"。实际页面里有 **8 张**（4 张 `banner-bg*` 背景 + 4 张 `banner-island-*` 产品岛），Lighthouse 的 `network-requests` 也记录了它们当时全部下载过（62 KB / 118 KB / 91 KB…）。刘工贴截图指出有图，才发现判错。
+- **根因**：脚本写的是 `re.findall(r'<img[^>]{0,200}>', seg)`。真实 `<img>` 带 `src` + `srcset`（多档 width）+ `sizes` + `width`/`height` + `style`，**标签长度远超 200 字符** ⇒ 一个都匹配不上，返回空列表。**"正则没匹配到"被直接读成"页面没有这个元素"**，中间缺一步验证。
+- **修复**：无代码改动（页面本来就是对的）。改的是受影响的结论：`dev-docs/lighthouse/README.md` 里"首页 LCP 偏乐观"整段删除，改为"图已就位，93 分有效"。
+- **预防**：① **判断元素是否存在，不要用带长度上限的正则**：要么 `grep -c '<img'`（只数标签开头），要么用 DOM（`document.querySelectorAll('img').length`），要么正则写 `[^>]*` 不设上限。② 任何"页面里没有 X"的结论，先自问一句「我的工具能不能看见 X」——超长属性、注释、转义实体都会让匹配静默失败。③ 这是 BUG-079 的同族第二次（那次是 `grep` 字样 0 命中被当成"平台没实现"，这次是正则截断），**"零结果"永远要先验证工具本身**。
+
 ---
 
 ## 记录模板（追加新 bug 用）

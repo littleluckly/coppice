@@ -798,8 +798,15 @@ collection-facets[data-facets-ready] .facets__apply {
 
   /* 抽屉承载筛选 DOM：form 整体移入 dialog（见 faceted-filters.js），
      流内不再渲染，产品列表回到工具条正下方（BUG-042）。无 JS 时
-     data-facets-ready 缺席，筛选面板照常流内展示。 */
-  collection-facets[data-facets-ready] .facets__form {
+     筛选面板照常流内展示。
+
+     ⚠️ 门控用 `html.js`（`<head>` 内联脚本在首次绘制前加）而**不是**
+     `[data-facets-ready]`：后者由组件的 connectedCallback 写入，晚于首帧
+     —— 表单会先按流内布局占约 397px，就绪后再 display:none，集合页
+     移动端实测 CLS 0.31（`collection__content` 从 y=656 跳到 259）。
+     换成 `.js` 后首帧即为隐藏态；脚本整体不可用时 `.js` 不存在，
+     表单照旧可见，渐进增强边界不变。 */
+  html.js collection-facets .facets__form {
     display: none;
   }
 

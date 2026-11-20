@@ -1,3 +1,15 @@
+# 环境清单：`shopify theme push -e <名字>`
+# 少打 -e 会落到 CLI 默认环境（第一个），所以两个都必须写清楚，
+# 避免改动误推到对外展示的演示店。
+
+# 演示店：OPE 真实内容（商品、集合、AI 图），用来看商家装完的观感
 [environments.coppice]
 theme = "coppice/main"
 store = "coppice-gizo4hzt.myshopify.com"
+
+# benchmark 店：官方标准商品数据（2000 商品 / 20 集合），Lighthouse 验收口径
+# theme 用数字 id 而不是名字：名字是上传 zip 时按文件名生成的（coppice-0-1-0），
+# 换一个 zip 就会变；id 不会。
+[environments.benchmark]
+theme = "191882166593"
+store = "coppice-benchmark-b0qhynch.myshopify.com"

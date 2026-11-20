@@ -22,7 +22,7 @@ Shopify 后台编辑器里的每一次改动（菜单、文案、图片、社交
 
 `shopify theme pull` 会把这些拉回本地 ⇒ **直接打包当前工作区 = 把演示店的私货发给商家**。
 
-还有一层：`shopify://shop_images/xxx` 指向的是**演示店「文件」里上传的图片**，它不在主题包内（主题包只带 `assets/`）。`shopify://collections|pages|blogs/xxx` 是按 handle 引用商家自己的资源。**这两类引用在任何其他店铺都必然解析为空。**
+还有一层：`shopify://shop_images/xxx` 指向的是**演示店「文件」里上传的图片**，它不在主题包内（主题包只带 `assets/`）。`shopify://collections|pages|blogs/xxx` 是按 handle 引用商家自己的资源。**这两类引用默认都会解析为空**——唯一的例外是新店恰好上传了**同名文件**（2026-11-20 实测：benchmark 店传入同名 `banner-bg_webp.webp` 后，`shopify://shop_images/banner-bg_webp.webp` 立即生效）。商家店不可能有这个巧合，所以打包照旧必须清。
 
 ---
 
@@ -38,8 +38,13 @@ Shopify 后台编辑器里的每一次改动（菜单、文案、图片、社交
 | 6 | `templates/index.json` | **16 处** `image` / `product_image` / 卡图 | `shopify://shop_images/…webp` 与 `…png` | 见 §2 决策 |
 | 7 | `templates/index.json` | **4 处** `collection` | `shopify://collections/{walk-behind, riding, chainsaw, string-trimmer}` | 见 §2 决策 |
 | 8 | `templates/collection.json` | `banner_background_image` | `shopify://shop_images/banner-bg.png` | 见 §2 决策 |
+| 9 | `sections/header-group.json` | `main-nav` 的 `brand_name` | `"Northbark"`（演示店写入） | 清空。新店会回落 `shop.name`——schema 里那个 `"default": "Northbark"` 已于 2026-11-19 删除（`sections/main-nav.liquid`），但**演示店的存值仍会写回 JSON**，不清就等于硬编码别人的品牌名 |
+| 10 | `sections/footer-group.json` | `brand` block 的 `email` | `support@northbark.example` | 清空（假邮箱，装到商家店里会被当成真实客服地址） |
+| 11 | `templates/page.contact.json` | `info_email` | `support@northbark.example` | 清空 → 信息卡四项全空时走 `contact__grid--single` 单列降级，不会裂版 |
 
-> 合计：`sections/` 4 处 + `templates/` 21 处 = **25 处 `shopify://` 引用**（2026-11-08 扫描）。
+> 合计：`sections/` 3 处（header-group 2 + footer-group 1）+ `templates/` 21 处（index 20 + collection 1）+ `config/settings_data.json` 2 处 = **26 处 `shopify://` 引用**（2026-11-19 扫描；11-08 为 25 处，多出来的是页脚背景图）。
+>
+> **`grep shopify://` 抓不到的还有三处**：`config/settings_data.json` 的 `compare_collections`（四个演示店集合 handle 的**裸 handle 数组**）、上面 #9 的 `brand_name`、`templates/index.json` 里 `"button_link": "shopify://collections/…"` 属于 url 类型故能被抓到。打包前必须单独核 `compare_collections`。
 
 > 核实现状的命令（打包前跑一次，输出应为空）：
 > ```bash
@@ -68,21 +73,27 @@ Shopify 后台编辑器里的每一次改动（菜单、文案、图片、社交
 
 ## 3. P0 · 主题元信息（不改 = 直接拒审）
 
-`config/settings_schema.json` 的 `theme_info`，**2026-11-08 实测现状**：
+`config/settings_schema.json` 的 `theme_info`，**2026-11-19 已改**（备份 `config/settings_schema.json.bak-20261119`）：
 
 ```json
 {
   "name": "theme_info",
   "theme_name": "Coppice",
   "theme_version": "0.1.0",
-  "theme_author": "Shopify",                                    ← 必须改成你自己
-  "theme_documentation_url": "https://help.shopify.com/manual/online-store/themes",  ← 必须换成你的文档地址
-  "theme_support_url": "https://support.shopify.com/"           ← 必须换成你的支持地址
+  "theme_author": "Coppice Studio",
+  "theme_documentation_url": "https://littleluckly.github.io/coppice-docs/",
+  "theme_support_email": "hncu1900@gmail.com"
 }
 ```
 
-- [ ] `theme_author` 改成真实作者名
-- [ ] `theme_documentation_url` / `theme_support_url` 换成自己的（指向 Shopify 官方帮助中心 = 冒充，S1 拒审项）
+> ⚠️ **两个硬约束**：
+> 1. **`theme_support_email` 与 `theme_support_url` 只能二选一**——两个都写平台直接报错（官方 settings_schema.json 文档原文）。现取邮箱，别再补 URL。
+> 2. **文档 URL 已上线**（2026-11-19 实测 `curl` 返回 **200**，站点 `https://littleluckly.github.io/coppice-docs/`，仓库 `littleluckly/coppice-docs`，Pages source = `master` / 根目录）。内容为初版单页，子页面待补 → `dev-docs/task-docs.md`。
+>
+> 📌 `theme_author` = **`Coppice Studio`**（2026-11-19 刘工定）。初版曾写成 `Coppice`（与 `theme_name` 完全同名），因"作者 = 主题名"容易被审核当成未填真实身份而改掉；加 `Studio` 后缀后与产品名区分开，且不引入新主体。
+
+- [x] `theme_author` 改成真实作者名 → `Coppice Studio`（2026-11-19）
+- [x] `theme_documentation_url` / 支持渠道换成自己的 → GitHub Pages 预定地址 + 支持邮箱（**站点待建，见 `task-docs.md`**）
 - [ ] `theme_version` 在每次提交前升号
 - [ ] **至少一个主题 preset 名 = 主题名**。现状 `config/settings_data.json` 的 `presets` 是 `Coppice` / `Coppice Noir` ⇒ 已满足
 - [ ] 上传后 **主题名与 preset 名不可再修改**，上传前最后一次确认
@@ -141,10 +152,14 @@ grep -rn "shopify://" sections templates config   # 必须为空（§1 §2 做�
    git checkout -b release/1.0    # 或打 tag
    ```
 2. 按 §1 / §3 / §4 改完，**跑 §6 三条检查**
-3. 打包
+3. 打包 + 清理 + 验证（三步缺一不可）
    ```bash
    shopify theme package
+   # CLI 4.9.4 不认 .shopifyignore 的文件级规则（BUG-080），必须手动清
+   zip -d Coppice-<version>.zip "*.DS_Store" "*.bak*" "AGENTS.md"
+   unzip -l Coppice-<version>.zip | grep -E "\.bak|DS_Store|\.md"   # 必须为空
    ```
+   > `AGENTS.md` 会被打进包、而 `README.md` / `LICENSE.md` 不会 —— CLI 对根目录 `.md` 有一份不公开的排除名单。**新增任何根目录文件后都要重新看 `unzip -l`**。
 4. **解压核对**：只应有 §4 那 7 个目录，没有 `res.json` / `dev-docs/` / `tools/`
 5. 用**空白测试店**装一次，逐页看坏图 / 空块（§2 的验收）
 6. 上传

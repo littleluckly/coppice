@@ -26,6 +26,7 @@ shopify theme pull         # 拉取线上主题
 
 python3 tools/check-locale-keys.py    # 校验 t: 翻译键在两个 locale 文件里都存在
 python3 tools/check-tag-balance.py   # 校验 HTML 标签配对（theme check 的本地补充）
+python3 tools/check-focal-points.py  # 校验图片焦点（G-05）生效条件：cover 图必须走 image_tag、<picture> 要交代移动图焦点、禁止 image_url 传 crop
 python3 tools/split-facets-css.py    # 重抽筛选组件样式（改了 collection 里的 .facets__* 之后必跑）
 python3 tools/probe-facets-css.py    # 生成离线计算样式探针 + 无头 Chrome --dump-dom 读 getComputedStyle
 ruby tools/preview-selling-plans.rb  # 用真实 snippet/CSS 渲染「购买选项」预览页（演示店无 selling plan，只能这样看；依赖 `gem install liquid -v 5.3.0 --user-install`）
