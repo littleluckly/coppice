@@ -1,4 +1,20 @@
-
+/**
+ * quick-add — 商品卡快速加购（task-collection T-1.1）。
+ *
+ * 渲染条件（snippet 侧已裁）：仅单变体且 available 的商品卡输出本元素。
+ * 行为：拦截表单提交 → POST /cart/add.js → 按钮短暂 "Added" 态 + role=status 播报。
+ * 无 JS：表单原生 POST /cart/add（跳转购物车页）——渐进增强底线（SDD §6.3 同源原则）。
+ * 可复用：Collection Rendering 替换 DOM 后重新 connected 也不会重复绑定
+ *（监听挂在自身，元素被替换即随旧 DOM 销毁，AbortController 一次性拆除）。
+ *
+ * 2026-10-16：派发两个事件——cart:added（点击即冒泡，不等接口，fly-to-cart.js
+ * 飞入动画）、cart:updated（成功后 document，含 /cart.js 查回的 item_count，
+ * cart-badge.js 角标同步）。
+ *
+ * 2026-11-20（BUG-083）：失败时补一个 cart:add-failed。购物车抽屉在 cart:added
+ * 那一刻就打开了并挂着骨架，只等 cart:updated 收尾；加购失败则永远等不到它，
+ * 顾客会盯着一屏骨架。这个事件是给抽屉的「退出等待」信号。
+ */
 class QuickAdd extends HTMLElement {
   static REVERT_DELAY_MS = 2500;
 
@@ -26,6 +42,8 @@ class QuickAdd extends HTMLElement {
     this._button.disabled = true;
     this._button.dataset.state = 'pending';
 
+    /* 2026-10-16 刘工：飞入动画不等接口——点击即飞（原先是成功后才飞，弱网下明显迟滞）。
+       代价已知：请求失败时动画已经飞完（纯视觉层，可接受）；角标同步仍等真实总数。 */
     this.dispatchEvent(
       new CustomEvent('cart:added', { bubbles: true, detail: { button: this._button } })
     );
@@ -44,10 +62,12 @@ class QuickAdd extends HTMLElement {
       this._announce(this._button.dataset.addedMessage || '');
       this._revertTimer = setTimeout(() => this._reset(), QuickAdd.REVERT_DELAY_MS);
 
+      /* cart:updated —— /cart.js 查回准确 item_count 后派发（cart-badge.js 监听）。
+         监听方都挂在 document，本元素被局部刷新替换也不影响订阅。 */
       this._syncCartCount();
     } catch (error) {
       if (error.name === 'AbortError') return;
-
+      /* 通知抽屉退出骨架等待（它只等 cart:updated，失败时永远等不到） */
       document.dispatchEvent(new CustomEvent('cart:add-failed', { detail: { button: this._button } }));
       this._button.dataset.state = '';
       this._announce(this._button.dataset.errorMessage || '');
@@ -65,6 +85,7 @@ class QuickAdd extends HTMLElement {
     if (this._status && message) this._status.textContent = message;
   }
 
+  /** 查询购物车真实总数并广播。失败静默——角标不更新只是回退到旧行为，不阻塞加购主流程 */
   async _syncCartCount() {
     try {
       const response = await fetch('/cart.js', {
@@ -78,7 +99,7 @@ class QuickAdd extends HTMLElement {
         new CustomEvent('cart:updated', { detail: { count: cart.item_count } })
       );
     } catch (error) {
-      if (error.name !== 'AbortError') return;
+      if (error.name !== 'AbortError') return; /* 其他错误静默：主流程已完成 */
     }
   }
 }

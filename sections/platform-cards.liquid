@@ -1,4 +1,12 @@
+{% comment %}
+  Platform cards — 首页动力平台入口（task-index T-2.2，SDD §6.5）。
+  视觉基准：效果图 Shop by Platform——浅灰横条卡（图左 + 标题/工具数 + 右箭头），
+  标题行右侧 View All 入口。
 
+  状态要点（pages-ui §2）：
+    - 每卡绑定一个自动化集合；显示兼容工具数（collection.all_products_count，循环外取值）
+    - 空集合隐藏该卡（不是灰卡）；全部为空 → 整个 section 不渲染
+{% endcomment %}
 
 {%- liquid
   assign visible_blocks = ''
@@ -98,7 +106,9 @@
     gap: 1rem;
     margin-block-end: 0.75rem;
   }
-
+  /* 标题 + 副标题绑成左列，View All 单独在右列。header 的 align-items: baseline
+     会以 group 的第一行（h2）基线对齐右侧链接，链接的 44px 触摸目标
+     就不再撑开「标题 → 副标题」的距离。 */
   .platform-cards__heading-group {
     min-inline-size: 0;
   }
@@ -176,10 +186,13 @@
     margin-inline-start: auto;
     font-size: 1.2rem;
     color: rgb(0 0 0 / 45%);
-
+    /* transform 动画需要块级/内联块盒，span 默认 inline 不响应位移 */
     display: inline-block;
   }
 
+  /* ===== hover 绿色渐变光晕（对齐 product-card 的 hover 反馈）=====
+     光晕垫在图片下面、只从图片透明区域透出（koutu alpha 图可见，
+     不透明图自动隐没），产品像素零接触。仅 hover:hover + pointer:fine 生效。 */
   @media (hover: hover) and (pointer: fine) {
     .platform-cards__card {
       transition: background-color 0.15s ease, box-shadow 0.8s ease;
@@ -209,12 +222,14 @@
       pointer-events: none;
     }
     .platform-cards__media img {
-      position: relative;
+      position: relative; /* 压到 ::before 之上，光晕只在其透明区域可见 */
     }
     .platform-cards__card:hover .platform-cards__media::before {
       opacity: 1;
     }
 
+    /* 箭头 hover 动画：向右滑出淡出、跳回左侧再滑入，循环（hover 期间持续，
+       移开即停——WCAG 2.2.2 自动移动内容有 hover 暂停手段）。 */
     @keyframes platform-arrow-slide {
       0% {
         transform: translateX(0);

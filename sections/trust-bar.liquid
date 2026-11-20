@@ -1,4 +1,30 @@
+{% comment %}
+  Trust bar —— 首页 hero 正下方的信任条（2026-11-18，照参考效果图新增）。
 
+  形态：通栏浅色带 + 一行 4 项「图标 + 粗体承诺语」，项间一条细竖线。
+  每项是一个 block，商家可增删/改文案/换图标/挂链接。
+
+  ## 为什么是独立 section，而不是塞进 hero
+  · 一条承诺带在产品页、集合页同样成立（"Free shipping over $99" 不属于某一屏 banner）；
+    独立 section 才能被商家拖到任何模板里复用。
+  · hero 那屏的 block 是 slide（背景图/产品岛/CTA 一整套），塞第四种 block 会让
+    "正在编辑第几屏"变模糊。
+
+  ## 三条硬约束
+  1. **竖线是伪元素、不是 border**。border 会拉满整条带高（参考图里竖线只有图标那么高），
+     而且 1 列布局时要能整条关掉 —— border 得逐项写 `border: 0` 才能撤，伪元素只改
+     `display` 一处。
+  2. **列数由 block 数决定，从 Liquid 传进来（`--trust-cols`）**。写死 4 列的话，
+     商家删到 3 项会空出一格、加第 5 项会掉行；`repeat(auto-fit, …)` 又会随视口
+     抖出 3 列（4 项排成 3+1）。上限 6 与 schema 的 max_blocks 对齐。
+  3. **不能自己加下边距**：hero 的 `padding-block-end: 1.5rem` 由 critical.css 统一给，
+     这条带要紧贴 hero 底边（参考图无缝隙）⇒ 在 critical.css 里用
+     `.hero-slideshow-section:has(+ .trust-bar-section)` 把那段间距清零。
+
+  ## 降级
+  · 所有 block 文案都为空 → 整条不渲染（不留一条空白带）。
+  · 图标选到不存在的资源时不报错、只是没有图标：选项是固定枚举，不会走到这一步。
+{% endcomment %}
 
 {%- liquid
   assign s = section.settings
@@ -11,6 +37,7 @@
     endif
   endfor
 
+  # 列数上限 6 与 schema.max_blocks 对齐；>6 时按 6 列排（第 7 项起自然落到第二行）。
   assign columns = section.blocks.size
   if columns > 6
     assign columns = 6
@@ -32,7 +59,10 @@
         -%}
 
         {%- if item_text != blank -%}
-
+          {%- comment -%}
+            图标是装饰（文字已经说完了意思），所以整块 aria-hidden 包住。
+            文案走 escape：商家可能填 "&" 或 "<"，不转义会破版。
+          {%- endcomment -%}
           {%- capture item_inner -%}
             <span class="trust-bar__icon" aria-hidden="true">
               {{- icon_asset | inline_asset_content -}}
@@ -54,7 +84,9 @@
 {%- endif -%}
 
 {% stylesheet %}
-
+  /* ── 通栏带 ──────────────────────────────────────────────────────────────
+     底色 = 前景色 4% 混页面底色：Coppice 下是极浅的暖灰、Noir 下比页面稍亮一档，
+     两种 preset 都不需要单独写色值。 */
   .trust-bar {
     inline-size: 100%;
     background-color: color-mix(in srgb, var(--color-foreground) 4%, var(--color-background));
@@ -69,6 +101,7 @@
     list-style: none;
   }
 
+  /* ── 单项 ────────────────────────────────────────────────────────────── */
   .trust-bar__item {
     position: relative;
     display: flex;
@@ -88,7 +121,8 @@
     line-height: 1.35;
     text-align: start;
     text-decoration: none;
-
+    /* 品牌色粗体：Coppice #1E4B3C 压 #F7F7F5 ≈ 8.3:1、Noir #A3E635 压 #17181A ≈ 10:1，
+       两套 preset 都远超 AA。图标同样取品牌色（图形只需 3:1）。 */
     color: var(--color-brand);
   }
 
@@ -103,6 +137,7 @@
     block-size: 22px;
   }
 
+  /* break-word 而不是 anywhere：承诺语里有 "Parts & Service" 这类词，任何处断字会很难看 */
   .trust-bar__text {
     min-inline-size: 0;
     overflow-wrap: break-word;
@@ -120,6 +155,10 @@
     border-radius: 4px;
   }
 
+  /* ── 列数 ────────────────────────────────────────────────────────────────
+     1 列（手机）→ 2 列（≥600）→ N 列（≥990，N = block 数）。
+     列间距为 0 是刻意的：竖线画在项的左边缘，正落在两格交界处，
+     视觉间距由 .trust-bar__item 的 padding-inline 给。 */
   @media (min-width: 600px) {
     .trust-bar__list {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -137,6 +176,9 @@
     }
   }
 
+  /* ── 竖线 ────────────────────────────────────────────────────────────────
+     只画在"上一格确实存在"的位置：2 列时是偶数项（永远在第 2 列），
+     N 列时是第一项之外的所有项（此时 N 列正好一行放完，不会出现行首竖线）。 */
   .trust-bar--dividers .trust-bar__item::after {
     content: '';
     position: absolute;

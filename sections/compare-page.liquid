@@ -1,4 +1,31 @@
+{% comment %}
+  compare-page — 对比页主体（SDD §6.2）。挂在 `templates/page.compare.json` 上。
 
+  ## 为什么是一个 section 而不是三个
+  SDD/pages-ui 原设想拆 compare-intro / compare-data / compare-table。实现时合并，
+  原因是三者必须共享**同一份商品列表**：
+  · 拆开 → 每个 section 各查一次集合，数据库开销翻倍；
+  · 合并 → 一次查询同时产出默认表与数据岛，且两者天然同源，不可能不一致。
+  数据岛仍然放在 DOM 末尾、只序列化当前分组的白名单字段、列式编码，位置闸与
+  字段闸不变；唯一变化是数据岛与表头缩略图共享同一次查询（原纪律「数据岛模板
+  只碰 metafield」是为分离模板服务的，合并后不再适用）。
+
+  ## 分组从哪来
+  `page.handle` 必须以 `-compare` 结尾，去掉后缀即分组键（§6.2.1）。
+  例：标题「Chainsaw Compare」→ handle `chainsaw-compare` → 分组 `chainsaw`。
+
+  ## 商品从哪来
+  Liquid **无法按 metafield 查询商品**，只能走集合。所以每个分组需要一个集合：
+  商家在主题设置 `compare_collections` 里选，集合用 metafield `custom.compare_group`
+  声明归属（未声明则退回「集合 handle 等于分组键」）。
+  集合缺失 → 显示配置提示，不渲染空表骨架（§6.2.2 空状态）。
+
+  ## 编排
+  ① 界内：标题 + 选型文案 + 服务端默认表（可索引、无 JS 可读）
+  ② 界外末尾：`<script type="application/json" id="cmp-data">` 数据岛
+  JS 有有效选择时用同一标记结构重建表格并替换（§6.2.4）。
+
+{% endcomment %}
 
 {%- liquid
   assign compare_group = ''
@@ -52,6 +79,10 @@
   endif
 -%}
 
+{%- comment -%}
+  对比页标记：底部确认条据此判断「我自己就在对比页」，从而不显示
+  —— 在对比页上再给一个「查看对比」是多余的。
+{%- endcomment -%}
 <span hidden data-compare-page-marker></span>
 
 {%- if compare_group == blank -%}
@@ -90,6 +121,12 @@
       {%- endif -%}
     </header>
 
+    {%- comment -%}
+      表格完全由 JS 按访客清单构建（数据源 = 页面末尾的数据岛）。
+      服务端**不再渲染默认表**（2026-10-22 刘工定）：对比页 noindex、不走 SEO，
+      而默认表会让「有选择的访客」先看到一版别人的商品再突变成自己的 —— 那个闪烁不值。
+      没选择的访客看空状态 + 引导；无 JS 的访客看 noscript 说明。
+    {%- endcomment -%}
     <div class="compare-table-wrap" data-compare-table-wrap></div>
 
     <div class="compare-empty" data-compare-empty>
@@ -107,7 +144,7 @@
         {{ 'compare.page.over_limit' | t: count: compare_total, limit: 50 }}
       </p>
       {%- if request.design_mode -%}
-
+        {%- comment -%} 只在编辑器里出现：商家必须提前知道，而不是等顾客撞上 {%- endcomment -%}
         <p class="compare-page__editor-warning" role="note">
           {{ 'compare.page.editor_warning' | t: count: compare_total, limit: 50 }}
         </p>
@@ -115,6 +152,10 @@
     {%- endif -%}
   </section>
 
+  {%- comment -%}
+    数据岛（§6.2.1）：DOM 末尾、列式编码、只装当前分组的白名单字段。
+    不含价格 / 图片 / 库存 —— JS 侧缩略图取自 localStorage 里加入时存下的 120px 派生图。
+  {%- endcomment -%}
   {%- capture compare_rows_json -%}
     {%- for row_key in row_keys -%}
       {%- if forloop.index > 1 -%},{%- endif -%}
@@ -151,30 +192,54 @@
 {%- endif -%}
 
 {% stylesheet %}
+/* ===== 对比页（SDD §6.2）=====
+   颜色一律由主题令牌派生；表格用 caption + th scope 支撑屏读顺序。
+   移动端横滚 + 首列与表头 sticky（§6.2.4）。 */
 
 .compare-page-section {
   --compare-border: color-mix(in srgb, var(--color-foreground) 14%, transparent);
   --compare-muted: color-mix(in srgb, var(--color-foreground) 60%, transparent);
-
+  /* 兜底裁切：只负责拦住残余溢出、别让它传到文档级（连带把抽屉撑宽）。
+     ⚠️ 它**不负责**让表格能滚。一旦内部真的溢出，这里会把右侧直接裁掉 ——
+     手机上"滚不动 + 看不见"的可见症状就是它造成的（BUG-063）。
+     能滚的前提只有一个：滚动容器的宽度窄于内容宽度，见 .compare-page 的注释。 */
   overflow-x: clip;
   min-inline-size: 0;
 }
 
 .compare-page {
-
+  /* ⚠️ inline-size: 100% 不能省，也不能只留 max-inline-size。
+     .shopify-section 是三列 grid（margin | content | margin），本元素是 grid item。
+     grid item 上的 `margin-inline: auto` 会让 justify-self: stretch **失效**
+     （auto margin 先吸走剩余空间），宽度改由内容 fit-content 决定 ⇒ 被表格的
+     640px 撑到 680（= 640 + 两侧 padding）。于是滚动容器与表格同宽，横向滚动
+     永不触发，超出的部分被包裹层的 overflow-x: clip 裁掉 —— 手机上就是
+     "滚不动 + 看不见"。显式给 100% 后宽度回到列宽内，auto margin 只负责
+     宽屏下 max-inline-size 生效时的居中。
+     2026-11-06 实测（500 视口）：列宽 460、item 宽 680、wrap clientW 640 = scrollW；
+     补上本行后 item 460 / wrap 420 / scrollW 640，横向滚动恢复。 */
   inline-size: 100%;
   max-inline-size: 1400px;
   margin-inline: auto;
   padding-block: clamp(2rem, 5vw, 4rem);
   padding-inline: clamp(1rem, 4vw, 2.5rem);
-
+  /* 拦 automatic minimum size：即使将来有人删掉 inline-size: 100%，
+     这一条也能保证 item 不被 min-content 顶出轨道。 */
   min-inline-size: 0;
 }
 
+/* ===== 表格渐显（2026-10-22）=====
+   对比页有两版内容：服务端默认表（3 列）→ JS 按访客清单重建（N 列）。
+   两版之间会「突变」，肉眼像闪一下。这里让表格在 JS 执行窗口内先不可见，
+   再用纯 CSS 渐显：JS 快 → 用户看到的是重建后的表在渐入；JS 慢 → 顶多晚 0.4s 出现。
+   **纯 CSS 不依赖 JS 回调**：即使 compare.js 加载失败，动画照样跑完并停在 opacity 1，
+   不会把内容永久藏起来。无 JS 时 html 没有 .js，直接按不透明渲染。 */
+/* 表格完全由 JS 构建：未就绪前不显示（也就不会有「默认表 → 清单表」的突变） */
 [data-compare-table-wrap]:not([data-ready]) {
   display: none;
 }
 
+/* 就绪后短促淡入一次，只为别「啪」地跳出来 */
 html.js [data-compare-table-wrap][data-ready] {
   animation: compare-table-reveal 0.22s ease both;
 }
@@ -194,6 +259,7 @@ html.js [data-compare-table-wrap][data-ready] {
   }
 }
 
+/* 空状态：没选过商品 / 无 JS。服务端默认渲染这一块，JS 有选择时把它藏起来。 */
 .compare-empty {
   display: flex;
   flex-direction: column;
@@ -208,6 +274,7 @@ html.js [data-compare-table-wrap][data-ready] {
   display: none;
 }
 
+/* 无 JS 时藏掉「还没选商品」这句，只留 noscript 里的说明 */
 html:not(.js) .compare-empty__js {
   display: none;
 }
@@ -228,7 +295,8 @@ html:not(.js) .compare-empty__js {
 }
 
 .compare-page__notice {
-
+  /* 同 .compare-page：grid item + margin-inline: auto 会退化成 fit-content，
+     显式 100% 让 stretch 生效（内容窄，视觉无变化，只防同类回归）。 */
   inline-size: 100%;
   max-inline-size: 62ch;
   margin-inline: auto;
@@ -249,6 +317,8 @@ html:not(.js) .compare-empty__js {
   text-decoration: none;
 }
 
+/* 超出数据岛范围的列（集合 > 50 款时排在后面的商品）：
+   整列淡底 + 表头说明，让「缺数据」和「这个商品没填这个参数」一眼可区分 */
 .compare-table__col--out-of-scope,
 .compare-table__cell--out-of-scope {
   background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
@@ -283,11 +353,13 @@ html:not(.js) .compare-empty__js {
 }
 
 .compare-table {
-
+  /* 窄屏下宽度取下限 640px，由 .compare-table-wrap 横向滚动消费。
+     max() 与 min-inline-size 同时写是防御性的（无头实测：只写 min-inline-size
+     在 Chrome 里同样生效，两写法结果一致）。 */
   inline-size: max(100%, 640px);
   min-inline-size: 640px;
   border-collapse: collapse;
-
+  /* 固定布局：列宽不随内容长短变化，否则标题长的列更宽、图片被撑得大小不一（实测） */
   table-layout: fixed;
   font-size: 0.9rem;
 }
@@ -305,6 +377,7 @@ html:not(.js) .compare-empty__js {
   font-weight: 400;
 }
 
+/* 固定布局下第一列（行标签）定宽，其余列自动均分 */
 .compare-table__corner,
 .compare-table__row-label {
   inline-size: 10rem;
@@ -314,6 +387,7 @@ html:not(.js) .compare-empty__js {
   inline-size: auto;
 }
 
+/* 表头 × ：移除该对比商品（JS 接管后才有；至少保留 1 列） */
 .compare-table__col {
   position: relative;
 }
@@ -338,6 +412,7 @@ html:not(.js) .compare-empty__js {
   cursor: pointer;
 }
 
+/* 视觉 24px，命中区外扩到 44×44（AGENTS §8） */
 .compare-table__col-remove::after {
   content: '';
   position: absolute;
@@ -385,6 +460,8 @@ html:not(.js) .compare-empty__js {
   color: var(--compare-muted);
 }
 
+/* 差异值高亮（§6.2.2）：只有 JS 重建的表带 data-compare-diff，
+   服务端默认表不加标记，避免所有行一起加粗 */
 .compare-table tr[data-compare-diff] .compare-table__value {
   font-weight: 600;
 }
@@ -399,6 +476,7 @@ html:not(.js) .compare-empty__js {
   cursor: pointer;
 }
 
+/* 变体差异提示：原生 details，自带展开状态与键盘支持（§6.2.4） */
 .compare-table__note {
   margin-block-start: 0.35rem;
   font-size: 0.8rem;
@@ -433,6 +511,8 @@ html:not(.js) .compare-empty__js {
     background-color: var(--color-background);
   }
 
+  /* 行标签（首列）不固定（2026-11-06 刘工定）：横向滚动时随表格一起走，
+     不再吸在左边。相应地也不需要底色与 z-index —— 它们只为遮挡滚动内容。 */
 }
 {% endstylesheet %}
 

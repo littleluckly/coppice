@@ -1,8 +1,40 @@
+{% comment %}
+  联系页 —— 左侧表单、右侧联系信息卡，用于 templates/page.contact.json。
 
+  ## 为什么单独一个 section，而不是塞进 page.liquid
+  联系页的主内容是**交互**（原生 `{% form 'contact' %}`），通用 page 模板只渲染
+  `page.content` 富文本，塞不进去。Shopify 的页面模板靠 handle 后缀选择
+  （`page.contact.json`），所以这个 section 只挂在 contact 模板上；
+  商家在后台建页面时把模板选成 "contact" 即可。
+
+  ## 三条不可改的约定
+
+  1. **`{% form 'contact' %}` 与字段名都是平台的，不能改。**
+     `contact[name]` / `contact[email]` / `contact[phone]` / `contact[body]`
+     一个字母都不能错 —— 错了不报错、页面照常跳转，只是收不到邮件。
+     `body` 是留言正文的固定键（不是 `message`），这是 Shopify 的约定。
+
+  2. **成功/失败状态由 `form.posted_successfully?` 与 `form.errors` 给，
+     不做 AJAX。** 联系表单是「提交后整页重载」的同步表单，无 JS 也能用 ——
+     这是官方对主题的要求，也是唯一不需要商家装 App 的实现。
+     后台若开了 Google reCAPTCHA，平台会自己往表单里注入 token 脚本，主题不管。
+
+  3. **提交结果用 `role="status"` / `role="alert"`**，且在表单**之上**。
+     重载后页面停在顶部，读屏用户先听到结果再听到表单，顺序与视觉一致。
+
+  ## 降级
+  · 信息卡的四项（电话/邮箱/地址/营业时间）全部留空时整块不渲染，
+    表单自动独占一行 —— 不出现「Contact details」下面一片空白。
+  · `page.content` 为空是常态（商家往往只填了标题），此时只输出标题区。
+  · 标题默认取 `page.title`；商家在 section 里填了 heading 就以它为准。
+{% endcomment %}
 
 {%- liquid
   assign s = section.settings
 
+  # 标题三级回落：section 设置 → 页面标题 → 翻译兜底。
+  # 分步 assign 是必需的：`default` 与 `t` 串在一条管道里会把结果再翻一次，
+  # 屏幕上会出现原始键名（同 404.liquid 的注释）。
   assign heading_text = s.heading
   if heading_text == blank
     assign heading_text = page.title
@@ -21,6 +53,8 @@
     assign has_info = true
   endif
 
+  # tel: 里不能有空格和括号（RFC 3966）；可见文本保持商家输入的排版。
+  # 归一化只做字符剥离，不做 +1 → 00 之类的猜测性改写（同 footer.liquid）。
   assign tel_href = s.info_phone
   if tel_href != blank
     assign tel_href = tel_href | remove: ' ' | remove: '(' | remove: ')' | remove: '-' | remove: '.'
@@ -44,10 +78,18 @@
       {%- endif -%}
     </div>
 
+    {%- comment -%}
+      商家在页面正文里写的内容（如「响应时间」「保修说明」）照常渲染，
+      与表单同宽，避免它被挤到两栏之外变成孤立的一段。
+    {%- endcomment -%}
     {%- if page.content != blank -%}
       <div class="rte contact__body">{{ page.content }}</div>
     {%- endif -%}
 
+    {%- comment -%}
+      没有联系方式时用单列：否则空着的第二列仍占 0.65fr，
+      表单被压到 65% 宽度、右边一片空白（实测截图确认过）。
+    {%- endcomment -%}
     <div class="contact__grid{% unless has_info %} contact__grid--single{% endunless %}">
       <div class="contact__form-col">
         {%- form 'contact', class: 'contact__form', id: 'ContactForm' -%}
@@ -154,7 +196,10 @@
           </div>
 
           <div class="contact__actions">
-
+            {%- comment -%}
+              按钮里不放箭头：AGENTS §6 的箭头准则只允许 View All 链接与行尾导航元素，
+              表单按钮不属于这两类。
+            {%- endcomment -%}
             <button class="btn-solid contact__submit" type="submit">
               {{- 'contact.form.submit' | t -}}
             </button>
@@ -188,7 +233,10 @@
             {%- if s.info_address != blank -%}
               <div class="contact__detail">
                 <dt>{{ 'contact.info.address' | t }}</dt>
-
+                {%- comment -%}
+                  textarea 的换行是商家有意给的排版（门牌/城市/邮编各一行），
+                  escape 后再 newline_to_br —— 顺序不能反，否则 <br> 会被转义成字面量。
+                {%- endcomment -%}
                 <dd>{{ s.info_address | escape | newline_to_br }}</dd>
               </div>
             {%- endif -%}
@@ -211,7 +259,12 @@
 </div>
 
 {% stylesheet %}
-
+  /* ── 容器 ────────────────────────────────────────────────────────────────
+     与 product-highlights 同一套：page-width 居中 + page-margin 内缩。
+     根 div 显式 inline-size: 100% —— Shopify 的 section 包裹层是 grid，
+     grid item 的 automatic minimum size 会让它按内容宽度顶出去（MEMORY 第五节）。
+     contact__inner 带 margin-inline: auto，此时 min-inline-size: 0 不管用，
+     只能给根元素定死宽度（BUG-063）。 */
   .contact {
     inline-size: 100%;
     padding-block: 2.5rem 3.5rem;
@@ -224,6 +277,7 @@
     padding-inline: var(--page-margin);
   }
 
+  /* ── 标题区 ──────────────────────────────────────────────────────────── */
   .contact__intro {
     max-inline-size: 42rem;
   }
@@ -235,7 +289,8 @@
     line-height: 1.2;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-
+    /* 品牌色小字：Coppice #1E4B3C 压白 ≈ 8.6:1、Noir #A3E635 压 #0F1012 ≈ 11:1，
+       两套 preset 都远超 AA，所以这里可以直接用品牌色而不是次级前景色。 */
     color: var(--color-brand);
   }
 
@@ -259,6 +314,9 @@
     margin-block-start: 1.25rem;
   }
 
+  /* ── 两栏 ────────────────────────────────────────────────────────────────
+     只在 ≥990 分栏。窄屏时信息卡落到表单之后 —— 先让顾客填表，
+     联系信息是"还有别的路子"的备选，不该抢在表单前面占满首屏。 */
   .contact__grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -280,6 +338,8 @@
     }
   }
 
+  /* 单列（没有联系方式卡）时不能留半屏空白；同时把表单钳到可读宽度 ——
+     1400px 宽的行输入框会让眼睛在两端来回跳，40rem 约 60 字符/行。 */
   .contact__grid--single {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -320,6 +380,8 @@
     line-height: 1.4;
   }
 
+  /* 必填星号只对视觉说话（aria-hidden），语义由 input 的 required 承担；
+     这行小字是给"看不见星号"的场景补的说明。 */
   .contact__required {
     margin-inline-start: 0.125rem;
   }
@@ -338,6 +400,7 @@
     color: var(--color-foreground-muted);
   }
 
+  /* ── 输入框 ────────────────────────────────────────────────────────────── */
   .contact__input {
     inline-size: 100%;
     min-block-size: 3rem;
@@ -358,6 +421,8 @@
     color: var(--color-foreground-muted);
   }
 
+  /* 焦点必须自带描边：只改 border-color 在浅色底上肉眼几乎看不出来，
+     键盘用户会丢失焦点位置。品牌色描边在浅/深两套 preset 下都 ≥3:1。 */
   .contact__input:focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 1px;
@@ -374,6 +439,7 @@
     line-height: 1.6;
   }
 
+  /* ── 提交 ────────────────────────────────────────────────────────────── */
   .contact__actions {
     display: grid;
     gap: 0.875rem;
@@ -395,6 +461,11 @@
     color: var(--color-foreground-muted);
   }
 
+  /* ── 结果提示 ────────────────────────────────────────────────────────────
+     成功卡的文字用前景色、只让边框和背景带品牌色：Noir 下品牌色是亮 lime，
+     lime 字压在淡 lime 底上只有 1.6:1 左右，直接违反 AA。
+     失败卡沿用全站固定的 --color-sale / --color-sale-surface（深红压浅粉 4.91:1，
+     见 css-variables 里的注释），深色 preset 下也保持同一组值。 */
   .contact__alert {
     display: grid;
     gap: 0.375rem;
@@ -432,6 +503,7 @@
     list-style: disc;
   }
 
+  /* ── 联系信息卡 ──────────────────────────────────────────────────────── */
   .contact__info {
     padding: 1.5rem;
     border: 1px solid color-mix(in srgb, var(--color-brand) 14%, transparent);
@@ -473,6 +545,8 @@
     color: var(--color-foreground-muted);
   }
 
+  /* break-word 而不是 anywhere：邮箱/地址里的长串要能折行，但不许词内随意断开
+     （同搜索页行卡的教训）。 */
   .contact__detail dd {
     margin: 0;
     font-size: 0.9375rem;

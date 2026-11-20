@@ -1,7 +1,40 @@
+{% doc %}
+  product-card — 商品卡（首页 featured-collection 与集合页共用，task-index T-1.2）。
 
+  输出（视觉基准：效果图-首页 Featured Products 区；标签行基准 2026-10-16 刘工参考图）：
+  图 + 收藏心 + 标题 + 价格三件套（现价 / 划线原价 / 折扣胶囊 "Save N%"，
+  2026-10-29 对齐产品详情页）+ 单位价（2026-11-18 补，合规项 G-08；商品设了
+  单位计价才出现）+ 星级 + 规格胶囊行（动力源 · 电池平台 · 切割宽度 ·
+  排量 · 驱动方式 · 重量，2026-10-29 由"规格行 + 标签行"合并而来，每个字段只出现一次）
+  + Compare。
+
+  纪律：
+  - 参数行逐项判空：缺值跳项，分隔符自动正确（li+li::before），不留空位（SDD §5.7）
+  - 星级读官方 Product Reviews app 的 reviews.rating / reviews.rating_count metafield；
+    app 未装或无数据 → 星级行整个不渲染（不显示 0，Dawn 同款方案）
+  - 收藏为 localStorage 版（ib:wishlist:v1，assets/wishlist-toggle.js）：
+    本机持久、不跨设备同步——UI 不承诺同步（评估结论 2026-10-09）
+  - 对比按钮 spec.compare_hidden == 'TRUE' 或 compare_group 为空 → 不渲染
+
+  @param {product} product - product 对象（必填）
+  @param {boolean} lazy - true → 图片 lazy（非首屏）；缺省 false → eager
+  @param {boolean} show_width - true → 规格行显示切割宽度（经 spec-value 换算）
+  @param {boolean} show_cc - true → 规格行显示排量（cc，不换算）
+  @param {boolean} show_power - true → 规格行显示动力源（枚举原样）
+  @param {boolean} show_weight - true → 规格行显示整机重量（经 spec-value 换算）
+  @param {string} sizes - 图片 sizes 提示，**必传**（theme check 规则：@param 全部必传）。
+    调用方按自己的列数估：首页 6 列 '15vw/30vw/45vw'，集合页桌面 3 列 '25vw/32vw/45vw'。
+  @param {boolean} quick_add - true → 单变体款渲染快速加购（2026-10-13 拍板：
+    仅单变体且 available 渲染；多变体卡不渲染任何 CTA；售罄置灰 disabled；
+    无 JS 降级为表单 POST /cart/add；交互由 assets/quick-add.js 的 quick-add 自定义元素接管）
+{% enddoc %}
 
 {%- if product != blank -%}
-
+  {%- comment -%} 根节点是 tilt-element 自定义元素（2026-10-17 建、2026-10-20 泛化）：
+     hover 3D 倾斜由 assets/tilt-element.js 驱动，配色走 CSS 变量
+     （参考 dev-docs/local-assets/product-3d.html）。倾斜目标 = 媒体图，
+     触发区 = 媒体盒（与泛化前一致）；无 JS 时仅失去倾斜，卡片照常显示；
+     role="article" 补回原生 article 语义。 {%- endcomment -%}
   <tilt-element
     class="product-card"
     role="article"
@@ -27,6 +60,13 @@
         {%- endif -%}
       </a>
 
+      {%- comment -%}
+        收藏与「能否对比」是两件事（2026-11-12 搜索页改版时发现）：
+        这里原先被 compare_group / compare_hidden 的判空包住，导致 11 件配件
+        （没有对比分组）整块没有收藏入口。收藏只依赖 data-wishlist-handle，
+        wishlist-toggle.js 也不读任何 metafield，所以无条件渲染。
+        下方对比入口保留自己的判空，两者互不影响。
+      {%- endcomment -%}
       <button
         type="button"
         class="product-card__wishlist"
@@ -44,6 +84,17 @@
       <a href="{{ product.url }}">{{ product.title | escape }}</a>
     </h3>
 
+    {%- comment -%}
+      价格三件套（2026-10-29 刘工：对齐产品详情页）——现价 / 划线原价 / 折扣百分比。
+      现价与划线价是 .product-card__price-main 一组，折扣胶囊单独一个 flex 项。
+      换行优先级（2026-11-18 修 BUG-078 后）：先在这组**内部**折（划线价让位到
+      第二行），再折到"价格块 / 胶囊"。原来这组是 nowrap，四位数价格
+      （$3,428.55 + $3,609.00 = 136.0px）比 375 视口的卡内容宽（135.5px）还宽，
+      320 视口必溢出 28px 并传导成整页横向滚动。现在的行为：塞得下与原来逐像素
+      相同（短价格仍同一行），塞不下才分行——宁可分行，不溢出、不裁切。
+      折扣缺数据时只出现现价，不留空位、不显示 0%（AGENTS §6）。
+      百分比与 PDP 同一算法（main-product.liquid 顶部同款），两处不会漂。
+    {%- endcomment -%}
     {%- liquid
       assign card_has_discount = false
       assign card_save_percent = 0
@@ -67,6 +118,23 @@
       {%- endif -%}
     </p>
 
+    {%- comment -%}
+      单位价（合规 G-08，2026-11-18）：
+      "Unit pricing must be supported on the following pages: Collection page / Product page / Cart page."
+      平台没有 product 级单位价，只有 variant 级 ⇒ 卡片取"卡上会渲染出的那个变体"。
+
+      为什么多一道 `card_variant.price == product.price` 护栏：
+      卡面现价用的是 `product.price`（全变体最低价），而
+      `selected_or_first_available_variant` 是"第一个有货变体"——两者可以不是同一个。
+      价格不等时，这一行单位价会被读成"卡上那个低价也适用此单位价"，属错误信息；
+      宁可整行不渲染（与"缺值不渲染、不显示 0"同一原则，AGENTS §6）。
+      代价：首变体不是最低价的多变体商品在集合页丢单位价（单变体与
+      "首变体即最低价"两种常见形态不受影响）。要彻底消除，得遍历 variants
+      找最低价那一个——集合页每卡一次全变体遍历，与 SDD §8.1 的体量预算冲突，不做。
+
+      三处同源不同层：PDP 用 current_variant、购物车用 item、卡片用
+      selected_or_first_available_variant；文案同 `cart.unit_price` 的 "{{ price }} / {{ unit }}" 形态。
+    {%- endcomment -%}
     {%- liquid
       assign card_variant = product.selected_or_first_available_variant
       assign card_unit_measurement = card_variant.unit_price_measurement
@@ -85,7 +153,7 @@
       </p>
     {%- endif -%}
 
-        {%- liquid
+    {%- comment -%} 星级：官方 Product Reviews app metafield；无数据整行不渲染 {%- endcomment -%}    {%- liquid
       assign rating_value = product.metafields.reviews.rating.value.rating
       assign rating_count = product.metafields.reviews.rating_count.value
     -%}
@@ -102,6 +170,19 @@
       </a>
     {%- endif -%}
 
+    {%- comment -%}
+      统一胶囊行（2026-10-29 刘工：规格行与标签行合并、全部用胶囊、去重）。
+      原来的两行有一半内容是重复的 —— 切割宽度（同一个 `spec-value`、同一组参数，
+      输出逐字相同）与动力源（同一个 `power_source` 原值）在两行里各出现一次。
+      合并后**每个字段只出现一次**，顺序按买家的决策链：
+        动力源（Gasoline / Battery，最上层的分裂）→ 电池平台（40V）→ 切割宽度
+        → 排量 → 驱动方式 → 重量。
+      开关沿用调用方参数（show_power / show_width / show_cc / show_weight）；
+      电池平台与驱动方式没有开关，只跳 'N/A'。
+      数值型参数按 `> 0` 判，不按 blank：`spec-value` 对 0 输出空串，
+      只判 blank 会留下一个空胶囊（2026-10-29 一并收紧）。
+      缺值跳项，整行可空 —— 11 件配件这六个字段全空，卡片就没有胶囊行。
+    {%- endcomment -%}
     {%- liquid
       assign battery_platform = product.metafields.platform.battery_platform.value
       assign drive_type = product.metafields.spec.drive_type.value
@@ -174,6 +255,11 @@
       </ul>
     {%- endif -%}
 
+    {%- comment -%} 对比入口（SDD §6.2.8）：行为由 assets/compare.js 的
+        <compare-toggle> 接管；文案与上限全部由 Liquid 下发，脚本不硬编码。
+        分组键为空或 compare_hidden 为真 → 整个入口不渲染。
+        缩略图存 480px 派生：对比页表头要铺到 ~400px，存 120px 会在表头上被放大成糊图
+        （2026-10-22 实测）。飞入动画的克隆层也取这张。 {%- endcomment -%}
     {%- if product.metafields.spec.compare_group.value != blank
       and product.metafields.spec.compare_hidden.value != 'TRUE' -%}
       {%- assign compare_group = product.metafields.spec.compare_group.value -%}
@@ -209,6 +295,9 @@
       </compare-toggle>
     {%- endif -%}
 
+    {%- comment -%} 快速加购（T-1.1）：仅调用方传 quick_add 且单变体时渲染；多变体无 CTA；售罄置灰。
+        无 JS 时整表单 POST /cart/add（默认跳转购物车页），JS 由 quick-add 自定义元素拦截为 fetch。
+        2026-10-16 刘工：挪到卡内最末 + margin-top:auto，各卡文字行数不一时按钮仍统一贴卡底。 {%- endcomment -%}
     {%- if quick_add and product.variants.size == 1 -%}
       <quick-add class="product-card__quick-add">
         <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">

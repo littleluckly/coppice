@@ -1,5 +1,6 @@
+/** Critical CSS for the theme. This file is included on every page. */
 
-
+/* Reset styles inspired by https://www.joshwcomeau.com/css/custom-css-reset/ */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -12,16 +13,33 @@ body {
   min-height: 100svh;
 }
 
+/* body 是 flex 容器 → main 是 flex item，默认 min-inline-size: auto 等于其内容的
+   min-content 宽。对比表有 min-inline-size: 640px，会把 main 直接撑到 640，
+   于是「容器宽 == 内容宽」，内部横向滚动无从发生（2026-10-22 实测：
+   wrap 宽 640、scrollWidth 也 640、列导航判定无溢出）。
+   这一条把自动最小尺寸截断，超宽内容交由各自的滚动容器消化。 */
 .main-content {
   min-inline-size: 0;
 }
 
 html:has(dialog[scroll-lock][open], details[scroll-lock][open]) {
   overflow: hidden;
-
+  /* 锁滚动时滚动条从布局中消失，内容区凭空变宽一个滚动条宽度 → 页面抖动。
+     scrollbar-gutter: stable 在锁定期间保留滚动条占位（经典滚动条系统；
+     overlay 滚动条本无布局宽度，不受影响）。仅在锁定时生效，短页面不常驻空槽。 */
   scrollbar-gutter: stable;
 }
 
+/* ---- 全局滚动条（2026-10-29 刘工：默认样式太重，换细条）----
+   两套写法并存、各管一段：
+   · 标准属性（scrollbar-width / scrollbar-color）：Firefox 全系 + Safari 18.2+
+     + Chrome 121+。不改变 macOS overlay 滚动条「滚动时才浮现」的行为，只换色变细。
+   · ::-webkit-scrollbar：老 Safari / 老 Chrome 的兜底。⚠️ 已知代价：webkit 私有
+     规则会把 macOS 的 overlay 滚动条强制成常驻占位的经典滚动条（历史行为，
+     无法绕开）——只有走这条兜底的老 Safari / 老 Chrome 用户受影响。
+   Chrome 121+ 两套都认识时以标准属性为准、忽略 webkit 私有规则。
+   颜色一律从 --color-foreground 派生（配色纪律），Noir 深色预设自动翻转，
+   轨道恒透明（页面底色即轨道）。 */
 * {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--color-foreground) 30%, transparent) transparent;
@@ -33,7 +51,8 @@ html:has(dialog[scroll-lock][open], details[scroll-lock][open]) {
 *::-webkit-scrollbar-track {
   background: transparent;
 }
-
+/* thumb 视觉宽 = 10px − 上下左右透明描边 2.5px × 2 = 5px：
+   border 只负责留白，背景裁进 padding-box 才是可见部分（圆头细条） */
 *::-webkit-scrollbar-thumb {
   border: 2.5px solid transparent;
   border-radius: 999px;
@@ -101,21 +120,58 @@ p:empty {
   margin-block-end: 0;
 }
 
+/** Theme styles below */
 body {
   font-family: var(--font-primary--family);
   background-color: var(--color-background);
   color: var(--color-foreground);
 }
 
+/**
+ * 骨架配色映射（2026-10-16，深色骨架 / Noir 预设）。
+ *
+ * 这里【重新映射变量】而不是逐个改选择器：site-header 与页脚内部所有
+ * var(--color-background / foreground / brand) 自动读到骨架值——包括
+ * .main-nav 下的 mega 面板，以及两个由 showModal() 打开的 <dialog> 抽屉
+ * （top layer 只改层叠顺序，不改 DOM 继承链，仍从 .main-nav 继承）。
+ *
+ * 之所以能这么省：导航与 mega 的"浅色叠加"本就写成
+ * color-mix(in srgb, var(--color-foreground) N%, transparent)，
+ * 前景色一翻转，叠加方向自动跟着翻，无需逐条改写那 50 余处引用。
+ *
+ * 值出自 snippets/css-variables.liquid：三个骨架色留空时等于全局色，
+ * 因此本条规则在浅色预设下不产生任何视觉变化——加它在前后渲染一致。
+ *
+ * 注意 --color-brand-accent 故意不映射：它在骨架内无消费点（公告栏与
+ * 品牌名走 --color-brand），映射它反而会让内容区的按钮色被牵连。
+ */
 .shopify-section-group-header-group,
 .site-footer {
   --color-background: var(--color-skeleton-background);
   --color-foreground: var(--color-skeleton-foreground);
   --color-brand: var(--color-skeleton-accent);
-
+  /* 次级文字色必须在这里**重算一遍**（2026-10-29）：自定义属性值里的 var()
+     在「声明它的元素」（:root）上就解析完了，--color-foreground-muted 里烤进去的
+     是 :root 的前景色。只翻 --color-foreground 不会带着它一起变——深色骨架下
+     它仍是 #333@70%，压在 #0F1012 上等于看不见（无头 Chrome 实测：在翻过的子树里
+     继承值依然是 color(srgb 0.2 0.2 0.2 / 0.7)）。重算后页头组内的 muted 文字
+     （搜索抽屉里的划线价等）才跟得上骨架色。 */
   --color-foreground-muted: color-mix(in srgb, var(--color-skeleton-foreground) 70%, transparent);
 }
 
+/** Section layout utilities */
+
+/**
+ * Setup a grid that enables both full-width and constrained layouts
+ * depending on the class of the child elements.
+ *
+ * By default, a minimum content margin is set on the left and right
+ * sides of the section and the content is centered in the viewport to
+ * not exceed the maximum page width.
+ *
+ * When a child element is given the `full-width` class, it will span
+ * the entire viewport.
+ */
 .shopify-section {
   --content-width: min(
     calc(var(--page-width) - var(--page-margin) * 2),
@@ -124,25 +180,38 @@ body {
   --content-margin: minmax(var(--page-margin), 1fr);
   --content-grid: var(--content-margin) var(--content-width) var(--content-margin);
 
+  /* This is required to make <img> elements work as background images */
   position: relative;
   grid-template-columns: var(--content-grid);
   display: grid;
   width: 100%;
 }
 
+/* Child elements, by default, are constrained to the central column of the grid. */
 .shopify-section > * {
   grid-column: 2;
 }
 
+/* Child elements that use the full-width utility class span the entire viewport. */
 .shopify-section > .full-width {
   grid-column: 1 / -1;
 }
 
+/**
+ * Section 直属的 script / link（defer 脚本、stylesheet_tag）不得参与布局。
+ * 部分 UA 不隐藏 body 内的 <link>，它会在沉浸式 section（如集合页横幅）的
+ * 根 div 上方生成行盒，把内容顶下去——横幅贴不住页头。强制隐藏，位置任意。
+ */
 .shopify-section > script,
 .shopify-section > link {
   display: none !important;
 }
 
+/**
+ * Vertical rhythm for content sections (效果图节奏：区块间 ≈ 3.5rem，标题贴齐上一区块底)。
+ * 新增内容 section 时，把它的 schema "class" 加进下面的 :is() 列表。
+ * hero 之后的区块间距来自前一块的 padding-block-end，首块（hero）自身不参与。
+ */
 :is(
   .hero-slideshow-section,
   .trust-bar-section,
@@ -154,10 +223,21 @@ body {
   padding-block-end: 1.5rem;
 }
 
+/**
+ * 信任条要贴着 hero 底边（参考效果图里两者之间没有缝）。
+ * hero 自己带 1.5rem 底距是给「下一块是内容区块」准备的，插了信任条就要清零 ——
+ * 否则照片和浅色带之间露出一条白缝，看起来像两段断开的页面。
+ */
 .hero-slideshow-section:has(+ .trust-bar-section) {
   padding-block-end: 0;
 }
 
+/**
+ * 首页内容区块副标题 —— 四个区块共用的「全站签名」（2026-11-12 刘工）。
+ * platform-cards / use-case-grid / featured-collection / blog-posts 全部走这一套，
+ * 与 .btn-solid 同理：口径只写一处，改一处全站同步，不再各 section 自行发挥。
+ * 字色取 --color-foreground-muted（70% 前景，AA 达标），不硬编码色值。
+ */
 :is(
   .platform-cards__subheading,
   .use-case-grid__subheading,
@@ -170,21 +250,49 @@ body {
   color: var(--color-foreground-muted);
 }
 
+/**
+ * 间距承接（2026-11-12 刘工：四个区块的「标题→副标题」「副标题→内容」要逐像素一致）。
+ * 上间距 0.25rem 由全站签名的 margin-top 统一给；下间距按结构分两路，结果都是 12px：
+ *   ① 无 View All 的 use-case / blog：由副标题自己的 margin-bottom 给
+ *      （use-case 的 grid margin-top 同为 0.75rem，相邻折叠后仍是 12px）；
+ *   ② 有 View All 的 platform / featured：副标题在 heading-group 内，下边距归零，
+ *      改由 header 的 margin-block-end: 0.75rem 给，否则 header 内会多出 12px 空白。
+ * blog 的 heading 原本带 0.75rem 下边距，有副标题时归零，避免双倍间距。
+ */
 .blog-posts__heading:has(+ .blog-posts__subheading) {
   margin-block-end: 0;
 }
-
+/* 0,2,0 特异性压过上面 :is() 的 0,1,0；只对 group 内的副标题生效 */
 .platform-cards__heading-group .platform-cards__subheading,
 .featured-collection__heading-group .featured-collection__subheading {
   margin-block-end: 0;
 }
 
+/**
+ * Main landmark — the skip link target (see layout/theme.liquid).
+ *
+ * 这里刻意【不限宽、不加内边距】（2026-10-10 刘工）：
+ * 页宽与页边距统一由每个 .shopify-section 的内容网格管理——
+ *   第 2 列 = 内容列（所有 section 的文案都落在这列，天然对齐）；
+ *   根节点带 .full-width 的 section 通栏（hero 由此占满屏幕宽度）。
+ * 此前在这里加 max-width + padding，既框死了 full-width，
+ * 又与网格的 minmax(page-margin, 1fr) 边距列叠加成双倍页边距。
+ */
+
+/**
+ * Skip link.
+ *
+ * Lives here rather than only in the section's {% stylesheet %} because it must be
+ * painted the instant the header is parsed — a skip link that flashes in late is
+ * useless for the keyboard users it exists for.
+ */
 .skip-link {
   position: absolute;
   inset-block-start: 0;
   inset-inline-start: 0;
   z-index: 100;
-
+  /* Off-screen until focused. NOT display:none — that would remove it from the
+     focus order entirely and defeat the purpose. */
   padding: 0.75rem 1rem;
   color: var(--color-background);
   background-color: var(--color-foreground);
@@ -198,6 +306,8 @@ body {
   outline-offset: -2px;
 }
 
+/**
+ * Visually hidden, screen-reader accessible only */
 .visually-hidden {
   position: absolute !important;
   width: 1px;
@@ -205,13 +315,20 @@ body {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-
+  /* clip-path 是 clip 的现代替代：clip 在 flex/grid 容器里仍可能占位，
+     clip-path: inset(50%) 会真正移出流（AGENTS §8）。两者并存以兼容旧浏览器。 */
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }
 
+/**
+ * 移除 visually-hidden 的绝对定位。
+ *
+ * 用于「视觉隐藏但仍需占位」的场合，例如移动端汉堡按钮：
+ * 焦点可达、读屏可播报，但不推开同排的其他元素（AGENTS §8）。
+ */
 .visually-hidden--inline {
   position: static !important;
   width: auto;
@@ -223,11 +340,44 @@ body {
   white-space: normal;
 }
 
+/**
+ * 页头组不再有包裹层（2026-10-18 定论方向）：
+ * 曾经用 <site-header> / div.site-header + display:contents 包裹 {% sections 'header-group' %}，
+ * 线上编辑器中间画布把整组渲染成空，而页脚组（无包裹、section 是 body 直接子级）正常。
+ * 现在 `{% sections 'header-group' %}` 直接挂在 body 下，各 section 的包裹层
+ * （div.shopify-section.shopify-section-group-header-group）就是 body 的直接子项，
+ * sticky 包含盒本来就是 body，无需再靠 display:contents 拆盒。
+ * ⇒ 因此这里不再有 site-header 规则；辨识页头 section 请用
+ *   .shopify-section-group-header-group（Shopify 自动打在组内每个 section 包裹层上）。
+ */
+
+/**
+ * 集合页沉浸页头：2026-10-20 已整组删除（刘工拍板「集合页弃沉浸」）。
+ *
+ * 原因：集合页改版为「左列 320px 文字卡侵入 banner」的两栏式后，横幅不再是
+ * 全幅、左列是浅底黑字——透明页头（白字）横跨全宽必然叠在文字卡上互相干扰。
+ * 沉浸机制是为旧的全幅 banner 设计的，布局换了就失去意义；与其留一个
+ * 「开了也没用」的设置，不如连同 settings.immersive_header、site-header.js
+ * 一起收掉（导航行全程实底）。
+ *
+ * 若将来要做首页 hero 沉浸，别照抄旧实现：那条路依赖 body 复合类
+ * （.template-collection.immersive-header.site-header--solid，BUG-046），
+ * 且偏移量与 solid 阈值是两个独立的量（BUG-045），重写时先分清。
+ */
+
+/**
+ * 焦点可见的统一口径（SDD §8.2） */
 :focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
 
+/**
+ * 图片组件基础样式（原 snippets/image.liquid 的样式块，2026-10-18 迁入）。
+ * 原因：样式块标签只允许出现在 section/block 顶层。该片段被 collections /
+ * search 等自带样式块的 section render，形成"一个 section 两个样式块"，
+ * 编辑器装载这些 section 时整段渲染失败（另一处同类问题见 main-nav）。
+ */
   .image {
     display: block;
     position: relative;
@@ -241,13 +391,29 @@ body {
     height: auto;
   }
 
+/**
+ * 滚动入场（首页 + 产品页通用；2026-10-28 立项，2026-11-12 扩展到首页并支持卡片级联）。
+ *
+ * **无 JS 不隐藏**：初始隐藏态挂在 `[data-reveal-state='pending']` 上，而该属性只由
+ * assets/reveal-on-scroll.js 写入 —— 脚本没跑时区块就是正常显示的。
+ * 只动 opacity / transform，不动盒模型 → 零 CLS。
+ * 时长与缓动刻意偏"沉"（0.5s / 先快后缓），比线性 0.3s 更像内容自己浮上来。
+ *
+ * **为什么用 animation 而不是 transition**：首页卡片自身带 hover 过渡
+ * （use-case 的 grid-template-columns / translate / box-shadow，商品卡的 hover 态），
+ * 一条全局 `transition` 简写会把那些声明整个覆盖掉，入场播完 hover 就变硬切。
+ * animation 与 transition 是两套独立机制，互不抢占。
+ * fill-mode 用 backwards：级联延迟期间保持首帧隐藏，播完不留终态，
+ * 元素自然回到自己的默认样式，不长期占着合成层。
+ */
 [data-reveal-state='pending'] {
   opacity: 0;
   transform: translateY(24px);
 }
 [data-reveal-state='shown'] {
   animation: reveal-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
-
+  /* var() 必须带兜底，且单独写长属性：解析不到时只丢 delay，
+     不会连 animation-name 一起失效（那会变成硬切，还不报错）。 */
   animation-delay: var(--reveal-delay, 0ms);
 }
 @keyframes reveal-in {
@@ -260,7 +426,7 @@ body {
     transform: none;
   }
 }
-
+/* 系统要求减少动效 → 直接给终态，动画与级联延迟都不注册 */
 @media (prefers-reduced-motion: reduce) {
   [data-reveal-state='pending'],
   [data-reveal-state='shown'] {
@@ -270,22 +436,46 @@ body {
   }
 }
 
+/**
+ * 实心主按钮 — 全站加购 / 主 CTA 的唯一形状出口（2026-10-29 收敛）
+ *
+ * 这套处理原先有四份拷贝：产品页加购 `.product-form__submit`、商品卡加购
+ * `.product-card__add`、配件区 `.product-supplies__button` / `__bundle-button`、
+ * 首页 hero `.hero-slideshow__cta`。靠注释"改一处记得同步别处"维持必然漂移
+ * （配件区的套装按钮就已经漏了胶囊化和光晕）。现在形状 / 配色 / 光晕 / 扫光 /
+ * 过渡只写在这里；各 section 自己的类只保留尺寸、排版、布局差异。
+ *
+ * 用法：
+ *   <button class="btn-solid product-form__submit">Add to cart</button>
+ *   <a class="btn-solid btn-solid--quiet hero-slideshow__cta">Learn more</a>
+ *
+ * ⚠️ 这里**只给形状与配色**：display / 居中 / 内边距 / 字号由用法方补。
+ * 裸写 `class="btn-solid"` 会渲染成 block + min-height 44px + padding 0 的块，
+ * 文字顶在上边缘、左右贴边（2026-11-20 BUG-083，抽屉空态 CTA 踩的）。
+ *
+ * ⚠️ 覆盖规则：局部类要改这里定义的东西（颜色 / 阴影），**别赌注入顺序**——
+ * section 的 {% stylesheet %} 产物与 critical.css 谁先到由平台决定。
+ * 用更高特异性（`.hero-slideshow .hero-slideshow__cta`，0,2,0）写覆盖，
+ * 或者把变体也放进本文件（同文件内靠源序就够，如 .btn-solid--quiet）。
+ */
 .btn-solid {
   position: relative;
-
+  /* 扫光带移出按钮的部分必须裁掉，否则会扫到隔壁元素上 */
   overflow: hidden;
-
+  /* 触摸目标 ≥ 44（AGENTS §8） */
   min-height: 44px;
   border: 1px solid var(--color-brand);
-
+  /* 全圆角胶囊：与数量选择器、Buy it now 同一套形状 */
   border-radius: 999px;
   background-color: var(--color-brand);
-
+  /* 用背景色当前景色而非硬编码 #fff：Noir 下品牌色是亮 lime，
+     白字压亮绿不达 AA；换成背景色后浅色底仍是白字、Noir 下自动变深字 */
   color: var(--color-background);
-
+  /* <a> 默认带下划线，被拿来当按钮时白字下划线会横穿胶囊底部。
+     这里统一清掉——此前 13 处用法各自写过一遍 text-decoration:none，漏一处就是 BUG-083。 */
   text-decoration: none;
   cursor: pointer;
-
+  /* 常驻光晕：品牌色投影（color-mix 派生，不硬编码色值） */
   box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);
   transition:
     background-color 0.15s ease,
@@ -293,6 +483,7 @@ body {
     box-shadow 0.2s ease;
 }
 
+/* 扫光：hover 时一条高光从左扫到右。纯 hover 触发、不循环。 */
 .btn-solid::before {
   content: '';
   position: absolute;
@@ -316,7 +507,7 @@ body {
 .btn-solid:hover:not(:disabled) {
   background-color: var(--color-brand-accent);
   border-color: var(--color-brand-accent);
-
+  /* hover 光晕加深扩散 */
   box-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand) 30%, transparent);
 }
 
@@ -327,6 +518,7 @@ body {
   cursor: not-allowed;
 }
 
+/* 加购结果态：由 JS 写 data-state（product-form.js / quick-add.js / supplies.js） */
 .btn-solid[data-state='added'] {
   background-color: var(--color-brand-accent);
   border-color: var(--color-brand-accent);
@@ -337,6 +529,8 @@ body {
   cursor: wait;
 }
 
+/* 次级变体：白底品牌字。形状与节奏跟主按钮同一套，配色安静。
+   扫光换成品牌色淡染 —— 白底按钮上扫一条"背景色"等于什么都没发生。 */
 .btn-solid--quiet {
   background-color: var(--color-background);
   color: var(--color-brand);
@@ -358,6 +552,7 @@ body {
   box-shadow: none;
 }
 
+/* 无障碍：扫光是纯装饰过渡，reduce 下不注册（只留即时颜色反馈） */
 @media (prefers-reduced-motion: reduce) {
   .btn-solid,
   .btn-solid::before {
@@ -365,20 +560,45 @@ body {
   }
 }
 
+/**
+ * 回到顶部按钮 — 全站浮层（2026-10-30，snippets/back-to-top.liquid + assets/back-to-top.js）
+ *
+ * **为什么放在 critical.css 而不是独立 .css**：默认态就是隐藏（`visibility: hidden`）。
+ * 拆成独立请求时样式晚到，按钮会在页面顶部先闪一下再消失——这种闪烁比省 1 KB 难看得多。
+ *
+ * **右下角是第三方的地盘，但位置不改（2026-11-18，BUG-074）**：Shopify 自带 hCaptcha 徽标、
+ * Shopify Inbox / 客服挂件都钉在**物理右下角**，且由平台在首屏之后注入，主题既改不了它的
+ * 样式也预判不了它何时出现。联系页实测：徽标直接把按钮压掉大半。
+ * 处理方式是**默认底距抬到 90px（刘工 2026-11-18 定）** + 运行时避让兜底：
+ *   · 90px 已经把 hCaptcha 让开——徽标占底边 14 + 高 46 = 60px（收起态 56×56 = 70px），
+ *     按钮占 90–134px，两者之间留 20–30px。绝大多数第三方挂件（Inbox 气泡等）都不超过这个高度，
+ *     所以**平时不需要任何 JS** 就不会撞。
+ *   · 比 90px 还高的挂件由 `--back-to-top-lift` 兜住：back-to-top.js 量到按钮那一格被占，
+ *     再往上抬到对方顶部 + 8px；没有遮挡物时恒为 0，位置就是 90px。
+ * 不换角（挪左下反直觉，刘工否掉）；也不把 90px 加进 JS 判断（静态值够用，少一个动的地方）。
+ * 换角/换高度记录见 dev-docs/bugs.md BUG-074。
+ * 安全区：90px 远大于常见 `env(safe-area-inset-bottom)`（刘海屏 34px 最大），
+ * 但仍取 `max()` —— 万一将来出现更大的安全区，宁可多抬不可被 Home 指示条压住。
+ * RTL：`inset-inline-end` 在 RTL 下翻到物理左边，而徽标钉物理右侧 ⇒ 天然不撞。
+ */
 back-to-top {
-
+  /* 这三个变量是两个接口：
+     --back-to-top-gap     横向内间距
+     --back-to-top-offset  底边基准偏移，由 measureAvoidance() 读取（探针盒由视口推导，
+                           不能用按钮实时 rect，否则「抬高→测不到→降回」会自激振荡）
+     --back-to-top-lift    由 JS 写入的额外抬升量，缺省 0 */
   --back-to-top-gap: 1rem;
   --back-to-top-offset: 90px;
   --back-to-top-lift: 0px;
   position: fixed;
-
+  /* 逻辑属性：RTL 下自动翻到左边 */
   inset-inline-end: var(--back-to-top-gap);
   inset-block-end: calc(
     max(var(--back-to-top-offset), 1rem + env(safe-area-inset-bottom)) + var(--back-to-top-lift)
   );
-  z-index: 39;
-  display: block;
-
+  z-index: 39; /* 低于页头(50)、toast(60)：万一压上，让它们赢 */
+  display: block; /* 自定义元素默认 inline，fixed 定位在 inline 盒上不可靠 */
+  /* 遮挡物晚到（更高的挂件注入）时平滑上移，不硬跳 */
   transition: inset-block-end 0.2s ease;
 }
 
@@ -386,7 +606,7 @@ back-to-top {
   display: flex;
   align-items: center;
   justify-content: center;
-
+  /* 触摸目标 ≥ 44（AGENTS §8） */
   inline-size: 44px;
   block-size: 44px;
   padding: 0;
@@ -394,17 +614,18 @@ back-to-top {
   border-radius: 50%;
   background-color: var(--color-background);
   color: var(--color-foreground);
-
+  /* 与对比条胶囊同一套浮起感：同一屏里两块浮层不该有两种投影语言 */
   box-shadow: 0 4px 18px color-mix(in srgb, var(--color-foreground) 16%, transparent);
   cursor: pointer;
   opacity: 0;
-
+  /* visibility 而非 display：visibility: hidden 会一并移出 tab 序列，
+     不会留下「看不见却能聚焦」的幽灵焦点；display 则会让过渡失效 */
   visibility: hidden;
   translate: 0 8px;
   transition:
     opacity 0.25s ease,
     translate 0.25s ease,
-
+    /* visibility 是离散过渡：显→隐时它能撑到 0.25s 结束后才翻转，淡出才看得见 */
     visibility 0.25s,
     border-color 0.15s ease,
     color 0.15s ease,
@@ -430,6 +651,7 @@ back-to-top[data-visible] .back-to-top__button {
   }
 }
 
+/* reduce：连位移都不注册，只剩即时显隐（按钮本身是功能，不能藏） */
 @media (prefers-reduced-motion: reduce) {
   back-to-top {
     transition: none;
@@ -443,8 +665,24 @@ back-to-top[data-visible] .back-to-top__button {
   }
 }
 
+/**
+ * 轻提示 — <ui-tooltip>（2026-11-15 刘工：页头对比入口的 hover 说明）
+ * 行为在 assets/tooltip.js，这里只管外观与四向定位。
+ *
+ * **为什么放 critical.css**：它挂在页头上，属于全站骨架的一部分（每个页面都有），
+ * 拆成独立 .css 会多一次请求去换 1 KB；而且和 back-to-top 同一类「默认隐藏的
+ * 增强件」——样式晚到就是闪一下，比省这点体积难看。
+ *
+ * 配色：前景/背景互换，不硬编码色值。浅色骨架下是「深底浅字」的常规提示，
+ * 深色骨架（Noir）下自动成为「浅底深字」；两者对比度都等于正文那块的反向值，
+ * 天然满足 AA。**不要改成 opacity 压淡**——那会把对比度一起压低。
+ *
+ * 层级：气泡 z-index 30，高于页头内的 mega 面板（10/20）。祖先
+ * .main-nav-section 的 z-index 20 已经把它托在内容区之上，向下溢出不会被盖。
+ */
 ui-tooltip {
-
+  /* 自定义元素默认 inline：inline 盒上的 absolute 子元素以行盒为基准，
+     行高变化会让气泡跳。inline-flex 让锚点盒就是内容盒。 */
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -453,7 +691,8 @@ ui-tooltip {
 .tooltip {
   position: absolute;
   z-index: 30;
-
+  /* 纯装饰层：永不吃点击。移到气泡上时指针仍在下面的元素上，
+     气泡因此不会被自己挡住——也就不需要 mouseleave 的「进气泡延时收起」那套。 */
   pointer-events: none;
   inline-size: max-content;
   max-inline-size: 15rem;
@@ -464,14 +703,26 @@ ui-tooltip {
   font-size: 0.8125rem;
   line-height: 1.45;
   text-align: start;
-
+  /* ⚠️ 必须显式复位换行：页头行 `.main-nav__inner` 定了 `white-space: nowrap`
+     （导航项永不折行），这条会一路继承进气泡——`max-inline-size` 把盒子钳到
+     239px，文字却不肯断行，整句直接冲出气泡外（2026-11-15 刘工截图实测：
+     气泡 w=239、文字单行溢出）。浮层的排版规则必须自成一套，不给继承留口子。 */
   white-space: normal;
-
+  /* 长单词 / 长 URL 兜底。用 break-word 不用 anywhere ——
+     后者会把 "Chainsaws" 这类词从中间拆开（搜索页行卡的同款教训）。 */
   overflow-wrap: break-word;
-
+  /* 提示层要有「浮起来」的实感，但不能太抢——一层近距离落地影足够 */
   box-shadow: 0 6px 18px color-mix(in srgb, #000 22%, transparent);
   opacity: 0;
-
+  /* ⚠️ 这是**刻意的**：不用 visibility / display 参与显隐。
+     气泡在 DOM 里常驻、靠 opacity 收放——因为它的文本要通过 aria-describedby
+     一直可被屏读问到（提示是「描述」，不是只在某一刻存在的东西）；
+     而且它 pointer-events: none、绝对定位、内部无可聚焦元素，
+     opacity 0 不会留下任何幽灵焦点或占位。
+     试过 visibility + 过渡：关闭时 getComputedStyle 迟迟不翻 hidden
+     （2026-11-15 实测 300ms 后仍是 visible），气泡在页面上赖着不走。 */
+  /* --tooltip-shift 由 JS 写（贴边平移）；--tooltip-lift 是入场位移，按方向定。
+     两个都是变量，好让 translate 单独参与过渡、不跟居中用的 transform 打架。 */
   --tooltip-shift: 0px;
   --tooltip-lift: 4px;
   translate: var(--tooltip-shift) var(--tooltip-lift);
@@ -480,6 +731,9 @@ ui-tooltip {
     translate 0.14s ease;
 }
 
+/* ---- 四向定位 ----
+   top / bottom：水平居中于锚点（transform 只管居中，与入场用的 translate 互不干扰）
+   start / end：垂直居中于锚点（逻辑属性，RTL 下自动换边） */
 .tooltip[data-placement='top'],
 .tooltip[data-placement='bottom'] {
   inset-inline-start: 50%;
@@ -505,11 +759,13 @@ ui-tooltip {
   inset-inline-start: calc(100% + 8px);
 }
 
+/* 打开态写在定位规则之后：同特异性靠源序覆盖 --tooltip-lift */
 .tooltip[data-open] {
   opacity: 1;
   --tooltip-lift: 0px;
 }
 
+/* 箭头：8px 方块旋转 45°，一半压在气泡底上，看起来是从气泡上长出来的 */
 .tooltip::before {
   content: '';
   position: absolute;
@@ -518,7 +774,10 @@ ui-tooltip {
   background-color: inherit;
   rotate: 45deg;
 }
-
+/* 箭头带反向补偿：气泡为了不贴边会整体平移（--tooltip-shift），
+   箭头必须反推同样距离才仍然指着锚点，否则会出现「气泡在左、箭头指空气」
+   （2026-11-15 刘工截图：图标中心与箭头差约 22px）。
+   补偿量由 JS 写入并已按气泡半宽 clamp，不会跑到圆角外面。 */
 .tooltip[data-placement='top']::before {
   inset-block-end: -4px;
   inset-inline-start: calc(50% - 4px + var(--tooltip-arrow, 0px));
@@ -536,6 +795,7 @@ ui-tooltip {
   inset-block-start: calc(50% - 4px);
 }
 
+/* reduce：位移整段不注册，只剩即时显隐。提示是信息，不能因为减免动效就不给 */
 @media (prefers-reduced-motion: reduce) {
   .tooltip {
     transition: none;
@@ -543,6 +803,25 @@ ui-tooltip {
   }
 }
 
+/* ==========================================================================
+ * 购物车页两栏（2026-11-02 · task-cart §0.3）
+ *
+ * 为什么写在 critical.css 而不是某个 section 的 {% stylesheet %}：
+ * 这个栅格跨四个 section（行项 / 摘要 / 物流条 / 推荐位），任何单个 section
+ * 都管不了另外三个；它属于模板级布局，与骨架同生命周期。
+ *
+ * 结构：把 #MainContent 收成内容区宽度并居中，内部两栏；每个 section 的
+ * 包装层退化为单列（--content-grid: 1fr），不再二次收页边距。
+ *
+ * 两个必须**同时**做的覆盖（少一条就错位）：
+ *   1. --content-grid: 1fr —— 否则每个 section 内部再按 page-margin 缩一次，
+ *      两栏的可用宽度被吃掉两侧边距，摘要卡被挤成一条。
+ *   2. .shopify-section > * { grid-column: 1 } —— 全局规则写的是 grid-column: 2，
+ *      单列网格下它会创建一个隐式第二列，内容整体右移一整列。
+ *
+ * 列定位靠 schema "class" 落到包装元素上（cart-lines-section 等），
+ * **不依赖 section 顺序**——商家在编辑器里上下移动 section 也不会错位。
+ * ========================================================================== */
 .template-cart #MainContent {
   --cart-summary-width: 360px;
   inline-size: min(
@@ -563,6 +842,7 @@ ui-tooltip {
   grid-column: 1;
 }
 
+/* 窄屏单列时行项同样要截断自动最小尺寸：长标题会把 grid item 撑到内容宽度 */
 .template-cart .cart-lines-section {
   min-inline-size: 0;
 }
@@ -578,18 +858,34 @@ ui-tooltip {
   }
   .template-cart .cart-summary-section {
     grid-column: 2;
-
+    /* 关键：grid item 的高度默认按内容收缩，容器不给高度，里面的 sticky 就
+       "无处可粘"——滚动时摘要卡直接跟着走。stretch 让包装层占满整行高度，
+       sticky 才有位移空间。 */
     align-self: stretch;
   }
-
+  /* 汇总条与推荐位各占一整行：跨两栏 = 内容区通栏，但不超出内容区 */
   .template-cart .cart-banner-section,
   .template-cart .cart-recommendations-section {
     grid-column: 1 / -1;
   }
 }
 
+/* ===================================================================
+   bottom-sheet —— 底部抽屉的开合行为（assets/bottom-sheet.js，2026-11-03 刘工）
+   组件只管"滑"，不管内容与外观：作者自带的 <dialog> 是面板本体，圆角、宽度、
+   flex 结构全归宿主 section 的样式块。这里只放三个由脚本添加的状态类和 keyframes，
+   三个面板（筛选抽屉 / 排序面板 / 购物车抽屉）共用这一份。
+   .is-entering  滑入（0.28s ease-out）
+   .is-closing   收起途中：禁点击 + 遮罩淡出（拖拽收起也走它）
+   .is-close-anim  keyframes 下滑（0.22s ease-in，比进场快半拍）；
+                  拖拽收起刻意不挂它——keyframes 的 transform 会压过内联 style
+   这里的 keyframes 是**默认方向（向下）**。方向不属于组件：宿主用一个
+   优先级更高的选择器（如 `.cart-drawer__dialog.is-entering`）覆盖
+   animation 即可改成右滑——组件只认"面板自身的 animationend"，不绑动画名。
+   =================================================================== */
 bottom-sheet {
-
+  /* 不生成盒子：包裹层不能成为父级 grid/flex 的 item
+     （集合页 .collection 是 grid，多一个 item 会把整块布局顶乱） */
   display: contents;
 }
 bottom-sheet > dialog.is-entering {
@@ -599,7 +895,7 @@ bottom-sheet > dialog.is-entering::backdrop {
   animation: sheet-backdrop-in 0.28s ease-out;
 }
 bottom-sheet > dialog.is-closing {
-
+  /* 收起途中面板不可点；背景本来就被 showModal 置为 inert，点击会被吞掉 */
   pointer-events: none;
 }
 bottom-sheet > dialog.is-closing::backdrop {
@@ -641,11 +937,42 @@ bottom-sheet > dialog.is-close-anim {
   }
 }
 
+/* ==========================================================================
+ * 富文本排版 .rte —— 页面正文 / 文章正文（2026-11-07，BUG-064）
+ *
+ * 为什么需要这一整段：
+ * 本文件顶部的 reset 是 `* { box-sizing: border-box; margin: 0 }`，它把
+ * h1–h6 / p / ul / ol 的块间距**全部清零**，且主题里没有任何一处恢复它
+ * （实测：h2 margin-block 计算值 0px/0px、line-height normal）。
+ * 商家在后台富文本编辑器里看到的是「编辑器自己的 iframe 样式」，跟前台
+ * 主题 CSS 无关，所以后台好看不代表前台好看。
+ *
+ * 为什么放 critical.css 而不是某个 section 的 {% stylesheet %}：
+ * 富文本出现在 page.content / article.content / 将来的 page-content blocks
+ * 多处，属跨 section 的通用排版；写进单个 section 会变成三份各自漂移的副本。
+ *
+ * 为什么类名用 .rte 而不是 --rte 后缀：
+ * 这是 Shopify 生态的既有约定（Theme Store 审核也按它认），商家从别的主题
+ * 迁移过来、或第三方文档描述富文本样式时都对得上。
+ *
+ * 刻意不做的一件事：不恢复 `p:empty`（顶部 reset 区有 `p:empty{display:none}`）。
+ * 富文本里靠敲空行控距会同时叠加「空行高度 + 段间距」= 双倍空白；
+ * 段间节奏交给下面的 margin，商家该用标题层级分段，不靠空行。
+ * ========================================================================== */
+/* 基础字号/行高用 :where() 包住 = 特异性 0。
+   `.rte` 这个类名在本主题里已经有两个既有消费者：sections/page.liquid、
+   sections/article.liquid（本次新增），以及 sections/collection.liquid 的
+   `.collection__description rte`（早就在用，自带 1.05rem/1.5 与 62% 前景区块）。
+   若这里写成普通 `.rte {}`，集合描述的排版会被这份基础规则按源序压掉一半。
+   :where() 让它退化成"仅在无人声明时才生效"的兜底，既有规则优先级不变。
+   子元素规则（.rte h2 / .rte p …）保持正常特异性——它们是新增能力，
+   集合描述里若有多段正文同样受益。 */
 :where(.rte) {
   font-size: 1rem;
   line-height: 1.7;
 }
 
+/* 首尾元素贴边：避免容器上下多出一段无用的空白（特异性高于下面的 margin 规则） */
 .rte > :first-child {
   margin-block-start: 0;
 }
@@ -655,7 +982,13 @@ bottom-sheet > dialog.is-close-anim {
 
 .rte :is(h2, h3, h4, h5, h6) {
   color: var(--color-foreground);
-
+  /* 700，不是 500（2026-11-07 刘工指出后修正）。
+     两个理由叠在一起，任一条都足以定 700：
+     ① 本主题只 font_face 了两档字重（snippets/css-variables.liquid：原字重 + bold），
+        500 没有对应字体面，按 CSS 字重匹配规则退到最近的 400 ⇒ 标题渲染成常规字重，
+        等于"没加粗"。任何介于 400 和 700 之间的值在这个主题里都是无效值。
+     ② 富文本编辑器和浏览器 UA 默认给 h1–h6 的就是 bold，商家在后台看到的是加粗，
+        前台的默认预期也应一致；调成 500 属于"主题偷偷改了商家的排版意图"。 */
   font-weight: 700;
   text-wrap: balance;
 }
@@ -691,7 +1024,7 @@ bottom-sheet > dialog.is-close-anim {
 .rte li + li {
   margin-block-start: 0.375rem;
 }
-
+/* 嵌套列表：上下的 0.875rem 在紧凑的 li 里太大 */
 .rte li > :is(ul, ol) {
   margin-block: 0.375rem;
 }
@@ -701,7 +1034,7 @@ bottom-sheet > dialog.is-close-anim {
   text-underline-offset: 0.2em;
 }
 .rte a:hover {
-
+  /* 悬停压深一档，不用第二个硬编码色值（配色纪律：一律 color-mix 派生） */
   color: color-mix(in srgb, var(--color-brand) 78%, var(--color-foreground));
 }
 
@@ -725,7 +1058,8 @@ bottom-sheet > dialog.is-close-anim {
 .rte :is(img, video, iframe) {
   margin-block: 1.25rem;
 }
-
+/* 图片说明（figure > figcaption）：浏览器默认给的是斜体 1em，
+   在正文里比正文还重。压成小一号的次级文字，按全站口径取 muted。 */
 .rte figcaption {
   margin-block-start: 0.5rem;
   font-size: 0.82rem;
@@ -737,6 +1071,7 @@ bottom-sheet > dialog.is-close-anim {
   border-radius: var(--style-border-radius-inputs);
 }
 
+/* 富文本表格：商家粘贴进来的规格表常是裸 <table>，不给样式会变成一根根线 */
 .rte table {
   inline-size: 100%;
   border-collapse: collapse;
@@ -749,11 +1084,23 @@ bottom-sheet > dialog.is-close-anim {
   vertical-align: top;
 }
 .rte th {
-
+  /* 同上面的理由：本主题没有 500，写 500 = 写 400 */
   font-weight: 700;
   color: var(--color-foreground);
 }
 
+/* ==========================================================================
+ * 内容页容器（page / article 模板）
+ *
+ * 两个 section 原本直接裸输出 `{{ page.content }}`，既没有排版层，也没有
+ * 阅读宽度约束——长行在大屏上会拉到 1000px 以上，读起来极难跟行。
+ * pages-ui.md §6 对 page 模板的规格是「单列内容流，桌面限宽 ~720px，移动全宽」，
+ * 这里按那条落地。
+ *
+ * `inline-size: 100%` 不能省：这两个容器是 .shopify-section（三列 grid）的
+ * grid item，item 上同时有 margin-inline: auto，会让 justify-self: stretch
+ * 失效、宽度退化成 fit-content（BUG-063 的同一通路）。
+ * ========================================================================== */
 .page-content,
 .article-content {
   inline-size: 100%;
@@ -762,6 +1109,8 @@ bottom-sheet > dialog.is-close-anim {
   padding-block: 1.5rem 3rem;
 }
 
+/* 页面自己的 h1（page.title / article.title）——reset 没给字号，浏览器默认 32px，
+   标题与正文的比例在这里定 */
 :is(.page-content, .article-content) > h1 {
   font-size: clamp(1.75rem, 1.15rem + 1.8vw, 2.25rem);
   line-height: 1.15;
@@ -769,17 +1118,20 @@ bottom-sheet > dialog.is-close-anim {
   text-wrap: balance;
 }
 
+/* 文章页的发布日期/作者行 */
 .article-content__meta {
   font-size: 0.875rem;
   color: var(--color-foreground-muted);
   margin-block-end: 1.5rem;
 }
 
+/* 文章页大图与标题之间不要贴死 */
 .article-content > img {
   margin-block-end: 1.5rem;
   border-radius: var(--style-border-radius-inputs);
 }
 
+/* 评论区与正文拉开距离并加一道分隔线（评论块自身也带 .rte，见 sections/article.liquid） */
 .article-content__comments {
   margin-block-start: 3rem;
   padding-block-start: 2rem;

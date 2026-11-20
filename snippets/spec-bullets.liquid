@@ -1,4 +1,25 @@
+{% doc %}
+  spec-bullets — 买盒里的三条决策参数（task-product T-1.3，拍板 10）。
 
+  **只吃已有字段，不新增 metafield**：
+    1. 切割宽度 `spec.cutting_width_mm`；链锯没有切割宽度 → 自动改用导板长度
+       `spec.bar_length_mm`（同一条 bullet 位，图标与文案随之切换）
+    2. 动力：汽油机取 `spec.displacement_cc`；电池机优先取 `spec.power_w`，
+       缺值时退回 `platform.battery_platform`（如 "40V battery"）——**演示店 7 款
+       电池机里 6 款没填 power_w**，不退回就会整条消失，白白少一项决策信息
+    3. 驱动方式 `spec.drive_type`；值为 `N/A` 或空（链锯/打草机）→ 该条不出现；
+       **值本身含 "drive" 时不再加 "drive" 标签**（否则出现 "Rear-wheel drive drive"）
+
+  缺值/0 → 该条不出现，全空 → 整个列表不渲染（SDD §5.7：不留空壳、不显示 0）。
+  单位换算全部走 `snippets/spec-value.liquid`，本文件不碰系数（AGENTS.md §4 红线）。
+
+  **注意**：metafield 一律写全路径（`product.metafields.spec.xxx.value`），
+  不 `assign` namespace 对象——Shopify 未把 namespace 当可赋值 drop，写全路径是唯一稳的写法。
+
+  **样式归属**：样式由调用方 section 的 `{% stylesheet %}` 提供（snippet 不写样式块）。
+
+  @param {product} product - product 对象（必填）
+{% enddoc %}
 
 {%- liquid
   assign b1_value = product.metafields.spec.cutting_width_mm.value

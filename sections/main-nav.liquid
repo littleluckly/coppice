@@ -1,15 +1,73 @@
+{% comment %}
+  Main navigation — desktop mega menu (PC) + off-canvas drawer (mobile).
 
+  Decisions in force (task-header.md, 2026-10-09 / 2026-10-12):
+  - O-5: two separate DOM trees, never shared. Desktop is hover/focus-within driven;
+    mobile is a native <dialog> opened with showModal() so focus trapping, background
+    inert, Esc-to-close and ::backdrop come from the platform instead of hand-rolled JS.
+  - O-1: sticky is PC only, and only inside the min-width media query.
+  - BUG-023: a menu item that has children is a GROUP. Its url may be empty, so it must
+    never be rendered as an <a> — that would emit a dead href="#" link.
+  - ARIA: current page is taken from link.current / link.child_current rather than by
+    comparing URL strings ourselves.
+  - 2026-10-12 mega rework: top-level groups render a full-width mega panel
+    (columns per second-level item, third level listed inside the column) instead of a
+    narrow dropdown with a flyout. The panel spans the whole viewport width (anchored
+    against the desktop row), while its inner content stays aligned to the content
+    column. It slides in and out (display transition with allow-discrete, graceful
+    degradation to instant hide on older browsers). Right column: auto-derived
+    collection grid. Every second-level menu item that points to a collection
+    renders as a card (cover image + title), no section block or merchant config
+    required. The column is omitted when the top-level item has no collection links.
+  - 2026-10-12 second round (刘工): no dropdown chevrons on desktop. A dark sliding
+    pill (assets/nav-pill.js, custom element nav-pill) follows hover/keyboard focus
+    across the top-level items and hides when the pointer leaves the nav. aria-current
+    stays as static brand-color text — a "you are here" cue must not vanish with the
+    hover state (SDD §8.2). No-JS fallback: hovered item tints itself dark, no sliding.
+  - 2026-10-13 mobile drawer rework (刘工, 参考效果图): the mobile drawer is a
+    bottom sheet — dialog slides UP from the bottom edge (translate 0 100% → 0).
+    Submenus are drill-down panels instead of an in-place accordion: tapping a
+    group row slides a full panel in from the right (iOS-style stack: the panel
+    being left slides out to -100%). Each sub panel carries its own head row
+    (back arrow / title / close). Panels are all rendered server-side (flat list,
+    three capped loops) and toggled by nav-drawer.js via an explicit stack —
+    no DOM building at navigation time.
+  - 2026-11-03 accordion instead of drill-down (刘工): 上一条的"整块面板从右侧滑入"
+    已废除。一级、二级都在同一列表内就地展开（[data-nav-toggle] + aria-expanded,
+    子容器 .nav-drawer__sub.is-open 用 grid-template-rows 0fr→1fr 过渡），
+    同层只留一个展开项；收起态给子容器打 inert。原因：面板切换是"换页"语义，
+    菜单是"展开"语义，钻取一层就会丢掉上一层的滚动位置。
+    同一轮还加了两件：顶部抓手横线（56×6，与购物车抽屉 / 筛选面板同系数）
+    与下拉收起；开合整体移交 <bottom-sheet>（keyframes 在 critical.css），
+    section 里不再自己写 translate 过渡——dialog 从 display:none 打开的同一帧里
+    transition 没有起点，只会闪现。
+    同一日补：打开抽屉时自动展开"当前页所在的那一组"——分组按钮上由
+    `link.child_current or link.child_active` 打出 data-nav-branch，
+    nav-drawer.js 的 _resetToCurrent 在每次打开时把带标记的按钮逐层展开
+    （三级当前页时一、二级两个按钮都带标记）。没有这一条，顾客在某个子分类页
+    打开菜单只能看到一排收起的组，"你在哪"这件事被手风琴藏掉了。
+
+  Recursion is deliberately capped at three levels (Shop > Mowers > Walk-behind).
+{% endcomment %}
 
 {%- liquid
   assign menu = section.settings.menu
   assign brand_name = section.settings.brand_name | default: shop.name
 
+  # 「All series」入口（2026-11-14 刘工）：数据取自全局 collections，不依赖菜单配置 ——
+  # 商家不必为了一个"全部系列"入口手工维护一条菜单（菜单里也放不下"全部"这个语义）。
+  # 桌面 = mega 面板（系列网格 + View all 出口），移动 = 抽屉里一条直达 /collections 的链接。
   assign show_series = section.settings.show_all_series
   assign series_label = section.settings.all_series_label
   if series_label == blank
     assign series_label = 'navigation.all_series' | t
   endif
+  # 插在菜单的哪个位置：first / before_last / last。
+  # before_last = 排在菜单最后一项之前 —— Support / Contact 这类支持项通常放最后，
+  # 这个档位让"全部系列"留在商品入口这一侧，而不是被顶到支持项后面（演示店用这一档）。
   assign series_position = section.settings.all_series_position | default: 'last'
+  # 兜底：菜单只有 0–1 项时 before_last 没有"倒数第二"可插（循环里的插入点不触发），
+  # 这时退回菜单末尾，否则入口会整个消失。
   assign series_at_end = false
   if series_position == 'last'
     assign series_at_end = true
@@ -17,18 +75,59 @@
   if series_position == 'before_last' and menu.links.size <= 1
     assign series_at_end = true
   endif
+  # 当前页判定走 template.name，不比字符串路径：市场用语言子目录时
+  # request.path 会带 /en 前缀，和 routes.collections_url 比会永远不等。
   assign series_is_current = false
   if template.name == 'list-collections'
     assign series_is_current = true
   endif
 -%}
 
-<nav class="main-nav full-width" aria-label="{{ 'navigation.menu' | t }}">
+{% comment -%}
+  This section is the whole sticky header row (decision 2026-10-09, option A).
 
+  account and cart used to be separate sections, which broke sticky: they are
+  sibling nodes of this one, so the menu would pin to the viewport top while the
+  cart and account icons scrolled away — leaving an unusable strip. Everything that
+  belongs on the pinned row therefore lives INSIDE this section.
+
+  Layout is three zones (logo / menu / tools). Search is an icon-only toggle in
+  the tools cluster; clicking it opens a right-side drawer (the <search-drawer>
+  element at the bottom of this file) that carries the full predictive search
+  form — 2026-10-10 刘工 requirement: the row itself never grows a search input.
+
+  Mobile is unaffected: it uses the drawer at the bottom of this file, which already
+  renders its own account and cart copies.
+{% endcomment -%}
+
+<nav class="main-nav full-width" aria-label="{{ 'navigation.menu' | t }}">
+  {%- comment -%}
+    BUG-044 防御修法：编辑器对大体积纯 ASCII 的 section 输出会静默丢弃整组。
+    判据落在 <nav> 首子节点的文本字节层（含 ≥1 个非 ASCII 字节才走正常路径，
+    深处或 HTML 实体均无效——2026-10-19 刘工实测）。此 span 是唯一的非 ASCII
+    落点：字面量「→」(U+2192)，视觉与无障碍树均隐藏，不产生任何可见痕迹。
+    平台 bug 修复后此元素应删除（见 dev-docs/bugs.md BUG-044）。
+  {%- endcomment -%}
   <span class="main-nav__bug044-guard" aria-hidden="true">→</span>
   <div class="main-nav__desktop" data-nav-pill-anchor>
     <div class="main-nav__inner">
+      {%- comment -%}
+        Zone 0: logo + brand name. Links home. The image is decorative
+        (alt="") because the visible brand text already names the link.
 
+        2026-11-12: the logo now comes from the GLOBAL Brand settings
+        (settings.logo / settings.logo_dark), not from this section. The
+        section-level image_picker was removed so merchants have one place
+        to change it. `snippets/brand-logo.liquid` picks the dark-background
+        variant from the skeleton color and outputs nothing when no logo is
+        configured — this <a> then falls back to the plain brand name.
+
+        No bundled theme logo fallback, on purpose: assets/logo_webp.webp is
+        a 156 KB original, image_url cannot resize assets, and pulling 156 KB
+        for a 40px icon is wasteful. Dimensions stay intrinsic (image_tag)
+        and CSS pins block-size only, so a wide wordmark is never squashed
+        into a square (Lighthouse image-aspect-ratio).
+      {%- endcomment -%}
       <a class="main-nav__logo" href="{{ routes.root_url }}">
         {% render 'brand-logo',
           logo_class: 'main-nav__logo-img',
@@ -43,11 +142,29 @@
 
       {%- if menu.links.size > 0 or show_series -%}
         <nav-pill class="main-nav__list-wrap">
-
+          {%- comment -%}
+            All series 的 <li> 只写一遍，插到哪由下面循环里的插入点决定
+            （first / before_last / last 三档，见 all_series_position 设置）。
+          {%- endcomment -%}
           {%- capture series_nav_markup -%}
-
+              {%- comment -%}
+                All series 入口（2026-11-14）：一级项 + 单层 mega 面板。
+                面板里刻意不放 [data-mega-tab] / [data-mega-panel] ——
+                nav-pill.js 的 tab 切换只在「有 tab 且有 panel」的作用域里接管
+                （见 _scopes 的循环过滤），这个面板两者都没有，于是走"全部内容
+                可见"的基线路径：不写一行新脚本也不会被 hide。
+                系列清单取全局 collections（字母序，平台给定），空集合与
+                frontpage（平台给每个店自动建的"主页"集合）不列 —— 与 /collections
+                列表页同一口径，两个入口不会打架。
+                当前页判定走 template.name（市场用语言子目录时 request.path 带 /en 前缀，
+                与 routes.collections_url 永远不等）。
+              {%- endcomment -%}
               <li class="main-nav__item main-nav__item--group main-nav__item--series">
-
+                {%- comment -%}
+                  与其他 group 项唯一的不同：这一项有真实去处（/collections 列表页），
+                  所以做成 <a> 而不是 <span> —— 点一下就进页面，触屏/无 hover 设备
+                  也有可靠路径；面板仍由 li:hover / :focus-within 展开，两者不冲突。
+                {%- endcomment -%}
                 <a
                   class="main-nav__link main-nav__link--group{% if series_is_current %} main-nav__link--current{% endif %}"
                   href="{{ routes.collections_url }}"
@@ -60,7 +177,12 @@
                 </a>
                 <div class="main-nav__mega">
                   <div class="main-nav__mega-inner">
-
+                    {%- comment -%}
+                      左轨与另两个 mega 面板完全同构：左上小标签、底部 View all 出口
+                      （.main-nav__mega-viewall 自带 margin-block-start: auto 与上分隔线）。
+                      区别只在中区：这里没有二级分类，所以没有 [data-mega-tab]，
+                      中区直接铺"系列清单"而不是商品卡组。
+                    {%- endcomment -%}
                     <div class="main-nav__mega-nav">
                       <span class="main-nav__mega-label">{{ series_label | escape }}</span>
                       <a
@@ -72,19 +194,31 @@
                       </a>
                     </div>
                     <div class="main-nav__mega-content">
-
+                      {%- comment -%}
+                        不限条数：直接把 collections 全量铺出来（刘工 2026-11-14）。
+                        ⚠️ for 循环本身有 50 次硬上限，集合超过 50 个时第 51 个起不会出现
+                        —— 这是平台限制，不是这里的取舍；那种规模本来也该走 /collections 页。
+                      {%- endcomment -%}
                       <ul class="main-nav__mega-cards main-nav__mega-cards--series" role="list">
                         {%- for series_item in collections -%}
                           {%- if series_item.handle == 'frontpage' -%}
                             {%- continue -%}
                           {%- endif -%}
                           {%- if series_item.all_products_count > 0 -%}
-
+                            {%- comment -%}
+                              集合页上的"当前项"：循环变量不叫 collection，
+                              就是为了不遮住全局 collection 对象（集合模板上才有）。
+                            {%- endcomment -%}
                             {%- assign series_link_current = false -%}
                             {%- if template.name == 'collection' and collection.handle == series_item.handle -%}
                               {%- assign series_link_current = true -%}
                             {%- endif -%}
-
+                            {%- comment -%}
+                              上图下文，整套复用 .main-nav__mega-card（与另两个面板的商品卡
+                              同一份样式）：图 1:1 改成 4:3 只在 --series 修饰类里覆盖 ——
+                              集合图多是横幅实景，1:1 会裁两侧；4:3 更省纵向空间。
+                              无图走 --empty 色块占位，与商品卡同一套降级。
+                            {%- endcomment -%}
                             {%- assign series_image = series_item.featured_image -%}
                             <li class="main-nav__mega-card">
                               <a
@@ -174,13 +308,32 @@
                 class="main-nav__item{% if in_branch %} main-nav__item--in-branch{% endif %}{% if has_children %}{% if has_mega_content %} main-nav__item--group{% else %} main-nav__item--dropdown{% endif %}{% endif %}"
               >
                 {%- if has_children -%}
-
+                  {%- comment -%}
+                    分组项：只出 <span>，不输出 <a>（BUG-023）。
+                    "li 自身不能创建定位上下文"仅针对 mega 项——mega 面板锚定在
+                    .main-nav__desktop 上（整行宽、内容列对齐）；普通下拉反过来
+                    锚在 li 上，所以只有 --dropdown 那一支给 li 加 position: relative。
+                    不带下拉箭头（2026-10-12 刘工）：选中态交给滑动药丸指示器。
+                  {%- endcomment -%}
+                  {%- comment -%}
+                    键盘可达性（2026-10-28）：span 必须可聚焦，否则 :focus-within
+                    永不成立、Tab 键根本打不开面板（WCAG 2.1 AA 键盘可操作）。
+                    面板展开由 CSS :hover / :focus-within 驱动，不需要 JS 响应
+                    Enter/Space，故不设 role="button"（那是"按下即动作"的语义，
+                    与这里"聚焦即展开"不符）。focus-visible 轮廓已有全局规则。
+                  {%- endcomment -%}
                   <span class="main-nav__link main-nav__link--group" aria-haspopup="true" tabindex="0">
                     {{ link.title }}
                   </span>
 
                   {%- if has_mega_content -%}
-
+                  {%- comment -%}
+                    Mega 面板（2026-10-13 第八轮，参考 demo 截图三段式）：
+                    左列 = 二级分类导航（直接取菜单二级项，无 block 配置）；
+                    中区 = 二级集合项的产品卡组（集合直接取自该菜单项指向的集合，
+                    零配置；图/价/产品数均走真实对象，不伪造）。
+                    叶子二级项只在左列出链接，中区不输出空壳组。
+                  {%- endcomment -%}
                   <div class="main-nav__mega">
                     <div class="main-nav__mega-inner">
                       <div class="main-nav__mega-nav">
@@ -212,7 +365,10 @@
                             </li>
                           {%- endfor -%}
                         </ul>
-
+                        {%- comment -%}
+                          View all products（2026-10-13 刘工）：官方内置的
+                          /collections/all 路由，箭头符合准则（View All 链接）。
+                        {%- endcomment -%}
                         <a
                           class="main-nav__mega-viewall"
                           href="{{ routes.all_products_collection_url }}"
@@ -230,11 +386,29 @@
                               assign mega_collection = child.object
                             endif
                           -%}
-
+                          {%- comment -%}
+                            存在性用 all_products_count 判（计数随 collection 对象返回，不加载商品）；
+                            勿用 collection.products.size——那会为每个集合型二级项拉满整页商品，
+                            导航是全局组件，这条开销每次开面板都要付。
+                          {%- endcomment -%}
                           {%- if mega_collection != blank and mega_collection.all_products_count > 0 -%}
-
+                            {%- comment -%}
+                              产品卡阵列（2026-10-28 改）：集合直接取该二级菜单项
+                              指向的集合（link.object），零配置、无 block 映射。
+                              组头带 "集合名 (n) →" 出口（View All 型链接，箭头合规）；
+                              集合名与菜单项同名时不重复输出，只留计数。
+                              三级链接收进组底小链接行，导航功能不丢。
+                            {%- endcomment -%}
                             <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
-
+                              {%- comment -%}
+                                组头一段式（2026-10-28 刘工）：左侧单个入口
+                                "All {集合名} (n) →"，不再有右侧 All 链接。
+                                一段式的好处：不留空壳、不重复、可访问名完整
+                                （不能只留 "(n) →"——那样链接名只剩数字）。
+                                文案走 navigation.all_collection_products，
+                                变量用 total 而非 count：count 在 Shopify 翻译里
+                                会触发复数形式查找。
+                              {%- endcomment -%}
                               <div class="main-nav__mega-group-head">
                                 <a
                                   class="main-nav__mega-group-title-link"
@@ -304,7 +478,11 @@
                               {%- endif -%}
                             </div>
                           {%- elsif child.links.size > 0 -%}
-
+                            {%- comment -%}
+                              回退：二级项自身不是集合链接（指向页面/商品/无链接）
+                              但有三级子项时 → 把三级项渲染成集合卡组，
+                              保证任何菜单结构都有体面呈现，不留空壳。
+                            {%- endcomment -%}
                             <div class="main-nav__mega-group" data-mega-panel="{{ forloop.index }}">
                               <span class="main-nav__mega-group-title">{{ child.title }}</span>
                               <ul class="main-nav__mega-cards" role="list">
@@ -339,7 +517,7 @@
                                             }}
                                           </span>
                                         {%- else -%}
-
+                                          {%- comment -%} 集合无图：色块占位，不渲染空 img {%- endcomment -%}
                                           <span
                                             class="main-nav__mega-card-media main-nav__mega-card-media--empty"
                                             aria-hidden="true"
@@ -352,7 +530,7 @@
                                           </span>
                                         {%- endif -%}
                                       {%- else -%}
-
+                                        {%- comment -%} 非集合链接的三级项：纯文字卡，体面降级 {%- endcomment -%}
                                         <span
                                           class="main-nav__mega-card-media main-nav__mega-card-media--empty"
                                           aria-hidden="true"
@@ -371,7 +549,13 @@
                     </div>
                   </div>
                   {%- else -%}
-
+                    {%- comment -%}
+                      普通下拉（2026-10-28）：子项全是页面/博客等非集合链接时，
+                      不出 mega 三栏（中区会一片空白），改成贴在项下方的小面板。
+                      纯 CSS :hover / :focus-within 驱动——面板是 li 的后代，
+                      鼠标移进面板时 li 的 hover 链不断，不需要 JS 拖尾。
+                      不带 --group 类，故不进 JS 的 _groups，不触左列药丸与 tab 切换。
+                    {%- endcomment -%}
                     <div class="main-nav__dropdown">
                       <ul class="main-nav__dropdown-list" role="list">
                         {%- for child in link.links -%}
@@ -391,7 +575,7 @@
                     </div>
                   {%- endif -%}
                 {%- else -%}
-
+                  {%- comment -%} 叶子项：才输出 <a> {%- endcomment -%}
                   <a
                     class="main-nav__link{% if is_current %} main-nav__link--current{% endif %}"
                     href="{{ link.url }}"
@@ -412,6 +596,14 @@
         </nav-pill>
       {%- endif -%}
 
+      {%- comment -%}
+        Zone 2: tools. Rendered here (not as sibling sections) so they stay on the
+        pinned row — see the file header note.
+
+        The search toggle is icon-only (2026-10-10 刘工): the input never lives on
+        the row. It opens the <search-drawer> at the bottom of this file.
+        results_limit rides along into the drawer via the snippet param.
+      {%- endcomment -%}
       <div class="main-nav__tools">
         <button
           type="button"
@@ -424,12 +616,22 @@
         </button>
 
         {% render 'account-entry', menu: section.settings.customer_account_menu %}
-
+        {%- comment -%}
+          对比入口紧邻购物车左侧（SDD §6.2.8）；单文件内部做页面探测，未配置则整块不输出。
+          2026-11-15：外面包一层 <ui-tooltip>——悬停或键盘聚焦时说明这个图标是干什么的。
+          空态下这是唯一能把「可以对比商品」告诉新顾客的地方（图标已改为常驻弱化）。
+          label 的初始值是空态文案，compare.js 在 sync() 里按真实状态改写它。
+        {%- endcomment -%}
         <ui-tooltip placement="bottom" label="{{ 'compare.entry_tip' | t }}">
           {% render 'compare-entry' %}
         </ui-tooltip>
         {% render 'cart-entry' %}
 
+        {%- comment -%}
+          #21 Follow on Shop. Default off: action 'follow' needs extra store config,
+          and an unconfigured button is a dead control. Colours are the component's
+          own — do not restyle (AGENTS.md §5).
+        {%- endcomment -%}
         {%- if section.settings.show_follow_on_shop and shop.customer_accounts_enabled -%}
           <div class="account__follow">
             {{ shop | login_button }}
@@ -439,6 +641,14 @@
     </div>
   </div>
 
+  {%- comment -%}
+    ═══════ 下面是 y7 实验时整段删掉的代码，用 HTML 注释包着保留 ═══════
+    放开某一段 = 删掉那一段的 HTML 注释开行（单独一行 <!--）与闭行（单独一行 -->），
+    三段彼此不嵌套、各段内标签自平衡，可以单独放开单独验证。
+    注意：HTML 注释里的 Liquid 仍会被服务端执行（只是输出不可见），无副作用；
+    调试结束后这三段应当删除，不要留在正式主题里。
+  {%- endcomment -%}
+  {%- comment -%} 【A】移动块外壳 + 两枚按钮（原文件 458–478，末行是 697 的收尾 div） {%- endcomment -%}
   <div class="main-nav__mobile">
     <button
       type="button"
@@ -450,6 +660,12 @@
       {{ 'icon-menu.svg' | inline_asset_content }}
     </button>
 
+    {%- comment -%}
+      移动端：汉堡居左，(搜索 + 购物车) 推到最右。
+      购物车入口此前只存在于 ☰ 抽屉里，吸顶之后顾客滚到页面中段找不到它——
+      2026-11-02 刘工要求固定在顶部。复用 cart-entry snippet，计数角标与桌面共用
+      同一套 cart-badge.js 同步逻辑。
+    {%- endcomment -%}
     <button
       type="button"
       class="main-nav__search-toggle main-nav__search-toggle--mobile"
@@ -462,20 +678,38 @@
 
     {% render 'cart-entry', class: 'cart-entry--mobile' %}
   </div>
+  {%- comment -%} 【B】移动抽屉 nav-drawer（2026-11-03 手风琴改版） {%- endcomment -%}
 
   <nav-drawer>
-
+    {%- comment -%}
+      开合交给 <bottom-sheet>（与购物车抽屉 / 集合页筛选面板同一套）：滑入、滑出、
+      Esc 收口都在组件里；抓手的拖拽收起在本 section 的 nav-drawer.js。
+    {%- endcomment -%}
     <bottom-sheet>
       <dialog class="nav-drawer" data-nav-drawer scroll-lock aria-labelledby="nav-drawer-title">
-
+        {%- comment -%} 内容存 <template>，首次打开才实例化（AGENTS §6） {%- endcomment -%}
         <template data-nav-drawer-template>
-
+          {%- comment -%}
+            2026-11-03 手风琴改版（刘工）：一级、二级都在同一列表内就地展开，
+            不再把子菜单整块从右侧滑进来。理由：面板切换是"换页"语义，
+            菜单是"展开"语义；钻取一次就丢掉上一层的滚动位置。
+            展开态由 nav-drawer.js 切 [aria-expanded] + .is-open；
+            收起态给子容器打 inert——grid 0fr 只是视觉裁切，挡不住 Tab 焦点。
+            分组行是 <button>（BUG-023：有子项即 GROUP，无 url，绝不渲染成 <a>）。
+          {%- endcomment -%}
           <div class="nav-drawer__grabber" aria-hidden="true"></div>
 
           <div class="nav-drawer__head nav-drawer__head--root">
-
+            {%- comment -%}
+              品牌区复刻参考图：logo + 品牌名，链回首页。图片 alt=""
+              ——可见的品牌文字已命名该链接（与桌面 Zone 0 同一约定）。
+            {%- endcomment -%}
             <a class="nav-drawer__brand" href="{{ routes.root_url }}">
-
+              {%- comment -%}
+                与桌面 Zone 0 同一约定：装饰图 alt=""、无 logo 时只留品牌名文字。
+                选图统一交给 snippets/brand-logo.liquid（全局 Brand 设置），
+                移动抽屉与桌面页头因此永远不会显示不同的 logo。
+              {%- endcomment -%}
               {% render 'brand-logo',
                 logo_class: 'nav-drawer__brand-img',
                 logo_width: 96,
@@ -489,7 +723,10 @@
             <h2 class="nav-drawer__title visually-hidden" id="nav-drawer-title">
               {{ 'navigation.menu' | t }}
             </h2>
-
+            {%- comment -%}
+              搜索图标（2026-10-13 刘工）：放头部、关闭按钮左侧。
+              点击叠加打开搜索抽屉，不关本抽屉（nav-drawer.js 的 _onSearch）。
+            {%- endcomment -%}
             <button
               type="button"
               class="nav-drawer__search"
@@ -508,6 +745,11 @@
             </button>
           </div>
 
+          {%- comment -%}
+            All series（移动端）：抽屉里不做手风琴 —— 桌面那个面板是"免跳转直接
+            挑系列"，手机一屏放不下，直接进 /collections（那页本身就是为窄屏做的
+            两列网格）。位置与桌面共用同一个设置。
+          {%- endcomment -%}
           {%- capture series_drawer_markup -%}
               <li class="nav-drawer__item">
                 <a
@@ -620,13 +862,27 @@
               {{- series_drawer_markup -}}
             {%- endif -%}
 
+            {%- comment -%}
+              All series（移动端，2026-11-14）：抽屉里不做手风琴 —— 桌面那个面板
+              是"免跳转直接挑系列"，手机上同样一屏放不下，直接进 /collections
+              列表页（那页本身就是为窄屏做的两列网格）。与桌面共用同一组设置。
+            {%- endcomment -%}
           </ul>
 
+          {%- comment -%}
+            #22 要求 <shopify-account> 移动端也可见。抽屉内容虽存于 <template>
+            （首次打开才实例化），组件本身仍在 DOM 中、可被平台脚本识别，
+            因此不违反"移动端可见"。复用 account-entry snippet，不复制组件。
+            2026-10-13：footer 改为与参考图一致的竖排行式（Account / Cart 各一行）。
+          {%- endcomment -%}
           <div class="nav-drawer__footer">
             {%- if shop.customer_accounts_enabled -%}
               {% render 'account-entry', class: 'account--in-drawer' %}
             {%- endif -%}
-
+            {%- comment -%}
+              cart 入口复用同一 snippet（本期为跳转链接，非按钮——见 T-1.6）；
+              show_label 参考图的行式布局：图标 + "Cart" 文字 + 计数徽标。
+            {%- endcomment -%}
             {% render 'compare-entry', class: 'compare-entry--in-drawer', show_label: true %}
             {% render 'cart-entry', class: 'cart-entry--in-drawer', show_label: true %}
           </div>
@@ -634,6 +890,8 @@
       </dialog>
     </bottom-sheet>
   </nav-drawer>
+
+  {%- comment -%} 【C】搜索抽屉 search-drawer（原文件 711–738） {%- endcomment -%}
 
   <search-drawer>
     <dialog class="search-drawer" data-search-drawer aria-labelledby="search-drawer-title">
@@ -666,6 +924,10 @@
 
 </nav>
 
+{%- comment -%}
+  页头吸顶状态检测（2026-10-29 刘工）。放在 <nav> 之外：它不属于导航内容，
+  也让 BUG-044 那个「<nav> 首子节点」判据不受影响（该 span 仍紧贴开标签）。
+{%- endcomment -%}
 <nav-sticky aria-hidden="true"></nav-sticky>
 
 <script src="{{ 'nav-pill.js' | asset_url }}" defer></script>
@@ -675,7 +937,9 @@
 <script src="{{ 'search-drawer.js' | asset_url }}" defer></script>
 
 {% stylesheet %}
-
+  /* BUG-044 防御修法（见 <nav> 首子节点注释）：唯一的非 ASCII 落点，
+     视觉 + 无障碍树双重隐藏，标准 visually-hidden 裁剪（非 display:none，
+     避免与判据的渲染盒要求相抵触）。 */
   .main-nav__bug044-guard {
     position: absolute;
     inline-size: 1px;
@@ -691,9 +955,16 @@
 
   .main-nav {
     position: relative;
-
+    /* 根节点带 full-width：整行通栏，背景铺满视口（BUG-032 sticky 配套）。
+       内容行不在这里加 padding——由 __inner 对齐页面内容列（见下）。 */
   }
 
+  /* 三段布局：logo / 菜单 / 工具。
+     grid 而非 flex——菜单长度随商家配置变化，flex 下工具区会被挤压。
+     white-space: nowrap（2026-10-10 刘工）：导航行内任何内容都不换行，
+     菜单项 / 品牌名超出时只压缩中间列宽度，不折行。
+     行宽对齐 .shopify-section 的内容列（--content-width 从包裹层继承），
+     与下方各 section 的文案同一列线。 */
   .main-nav__inner {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -702,9 +973,14 @@
     white-space: nowrap;
     max-inline-size: var(--content-width);
     margin-inline: auto;
-
+    /* 行的上下 padding 由 li 承担（BUG-034，见 .main-nav__item 注释），
+       inner 自身不加 padding-block——否则 trigger 与面板之间出现 hover 盲区 */
+    /* 注意：inner 不能创建 stacking context（position+z-index）——
+       mega 是 inner 的后代，一旦被兜进它的层叠上下文，"面板从行下
+       滑出"就永远做不出来（层级被 inner 整体抬走）。第五轮结论。 */
   }
 
+  /* Zone 0: logo + 品牌名。图标与文字并排一行，永不换行。 */
   .main-nav__logo {
     display: inline-flex;
     align-items: center;
@@ -714,7 +990,12 @@
   }
 
   .main-nav__logo-img {
-
+    /* 高度定死、宽度按图片自身比例算（2026-10-21）。
+       原来 inline/block 都写 2.5rem = 强制方形，把 160×152 的 demo logo
+       压成正方形（Lighthouse image-aspect-ratio 判失败），商家传横向
+       wordmark 会被压得更狠。inline-size: auto 会覆盖 img 的 width 属性，
+       按固有比例算出宽度；max-inline-size 兜住超宽 logo，防止撑开导航，
+       触发兜底时靠 object-fit 保比例、不拉伸。 */
     block-size: 2.5rem;
     inline-size: auto;
     max-inline-size: 6rem;
@@ -735,11 +1016,12 @@
     gap: 0.5rem;
   }
 
+  /* 搜索切换按钮：行上只放图标（2026-10-10 刘工），点击开抽屉 */
   .main-nav__search-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
-
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
     inline-size: 44px;
     block-size: 44px;
     padding: 0;
@@ -760,6 +1042,10 @@
     border-radius: 2px;
   }
 
+  /* 菜单列包裹层（<nav-pill>）：菜单在中间列内居中。
+     注意不能加 position: relative——它和 ul 的定位都会劫持 mega 面板的
+     包含块（面板会缩到菜单宽度而不是整行宽）；药丸定位用 JS 量测
+     getBoundingClientRect，不依赖 CSS 锚点（2026-10-12 第五轮）。 */
   .main-nav__list-wrap {
     display: flex;
     justify-content: center;
@@ -768,12 +1054,21 @@
   .main-nav__list {
     display: flex;
     align-items: center;
-
+    /* 不用 gap（2026-10-12 第三轮，刘工）：条目之间的空隙是 hover 盲区，
+       鼠标扫过时药丸会停在上一个目标上。间距改由链接自身水平 padding 提供，
+       相邻项 hover 区域无缝衔接，药丸滑动连贯。 */
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  /* BUG-034（2026-10-13 刘工）：行 padding 不能放在 inner 上——
+     li 只包住 trigger（44px），inner 的 padding-block 会在 trigger 与
+     mega 面板之间造出 16px"死亡区"（既不在 li 内也不在面板内），
+     鼠标穿过时 hover 链断掉、面板自动收起。padding 移到 li 自身：
+     li 高度覆盖整行，hover 链从 trigger 无缝延续到面板。 */
+  /* 注意：这里不能写 position: relative——mega 面板锚定在 .main-nav__desktop
+     上（整行宽），li 一旦创建定位上下文，面板就会缩回单项宽度。 */
   .main-nav__item {
     min-inline-size: 0;
     padding-block: 1rem;
@@ -782,22 +1077,26 @@
   .main-nav__link {
     display: flex;
     align-items: center;
-
+    /* 链接自身抬层（z-index 1）垫在药丸之上——ul/wrap 去定位后（第五轮，
+       为 mega 让出锚点），分层职责收拢到链接自身 */
     position: relative;
     z-index: 1;
-
+    /* 水平 padding 承担条目间距（2026-10-12 第三轮）：padding 计入 trigger 的
+       测量范围，药丸覆盖整宽，hover 区域与药丸完全重合 */
     padding-inline: 1.25rem;
-
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-height: 44px;
     padding-block: 0.5rem;
     color: var(--color-foreground);
     text-decoration: none;
     white-space: nowrap;
     cursor: pointer;
-
+    /* 反色随药丸滑动同步过渡 */
     transition: color 0.18s ease;
   }
 
+  /* 焦点态必须可见（SDD §8.2）。下拉靠 :focus-within 展开，但展开不等于
+     有可见指示——键盘用户需要知道自己在哪一项上。 */
   .main-nav__link:focus-visible,
   .main-nav__logo:focus-visible,
   .nav-drawer__link:focus-visible,
@@ -807,11 +1106,17 @@
     border-radius: 2px;
   }
 
+  /* 当前页（2026-10-12 第二轮）：品牌色文字。深色药丸改由滑动指示器承担
+     hover 反馈，但静态"你在哪"不能跟着悬浮态一起消失（SDD §8.2 / aria-current），
+     所以当前页降为文字色指示，不再用药丸底色。 */
   .main-nav__link--current,
   .main-nav__item--in-branch > .main-nav__link {
     color: var(--color-brand);
   }
 
+  /* ---- 滑动药丸指示器（2026-10-12 第二轮，配 assets/nav-pill.js） ----
+     品牌色（主题色）药丸滑动跟随 hover / 键盘焦点，鼠标离开整个导航区即隐藏还原。
+     JS（nav-pill--ready）接管时链接自身不出底色，文字反色由下方规则处理。 */
   .main-nav__pill {
     position: absolute;
     top: 0;
@@ -827,11 +1132,15 @@
     opacity: 1;
   }
 
+  /* JS 接管后：悬浮 / 焦点项文字反色（品牌色药丸垫底）。
+     文字反色到页面底色，覆盖在品牌色药丸之上。 */
   .nav-pill--ready .main-nav__item:hover > .main-nav__link,
   .nav-pill--ready .main-nav__item:focus-within > .main-nav__link {
     color: var(--color-background);
   }
 
+  /* 无 JS 降级：custom element 未升级时，hover/focus 项自身显品牌色药丸（无滑动），
+     mega 面板展开不受影响。 */
   .main-nav__list-wrap:not(.nav-pill--ready) .main-nav__item:hover > .main-nav__link,
   .main-nav__list-wrap:not(.nav-pill--ready) .main-nav__item:focus-within > .main-nav__link {
     color: var(--color-background);
@@ -850,19 +1159,32 @@
     }
   }
 
+  /* ---- Mega 面板（2026-10-12 第五轮）：通栏、整面板滑入滑出、层级行下面 ----
+     锚定 .main-nav__desktop（整行宽），内容区由 inner 对齐内容列。
+     "在导航层级之下滑入"用 clip-path 揭示实现：面板固定在行下方，
+     隐藏态从顶部裁到 0 高（裁切边缘贴着行底边），展开时向下揭示——
+     视觉上就是面板从导航行底下抽出，且不需要任何 z-index 层游戏
+     （层游戏做过一版被否：inner 抬层会创建层叠上下文把面板兜住）。
+     内容位移（inner 的 translate）叠加在揭示上，强化"滑"的动感。
+     展开纯 CSS：hover / focus-within，无 JS 依赖（T-1.3 底线不变）。 */
   .main-nav__mega {
     display: none;
     position: absolute;
     top: 100%;
     inset-inline: 0;
     z-index: 10;
-
+    /* 通栏实底：与导航行同色，底部圆角；阴影用 drop-shadow——
+       box-shadow 画在盒外，会被 clip-path 一并裁掉；drop-shadow
+       基于裁切后的形状绘制，静止与动画中都可见 */
     background-color: var(--color-background);
     border-radius: 0 0 12px 12px;
     filter: drop-shadow(0 18px 32px rgb(0 0 0 / 16%));
-
+    /* 面板紧贴导航行（无缝隙）；露出的行界靠细线分隔 */
     border-block-start: 1px solid rgb(0 0 0 / 8%);
-
+    /* 整面板滑入滑出：隐藏态 = 从底部裁掉 100%（只留贴行的一条缝），
+       展开态 = 完整。裁切边始终贴着行底边 → "从行下钻出"。
+       display 的显隐用 allow-discrete 延迟到动画播完再摘除；
+       旧浏览器不支持时忽略该单独声明——揭示动画保留（关闭瞬时） */
     clip-path: inset(0 0 100% 0);
     transition: clip-path 0.25s ease, display 0.25s;
     transition-behavior: allow-discrete;
@@ -870,7 +1192,7 @@
 
   .main-nav__item--group:hover > .main-nav__mega,
   .main-nav__item--group:focus-within > .main-nav__mega,
-
+  /* is-open：鼠标路径延迟关闭时由 JS 维持展开（飞越间隙保护，2026-10-27 刘工） */
   .main-nav__item--group.is-open > .main-nav__mega {
     display: block;
     clip-path: inset(0 0 -3rem 0);
@@ -883,6 +1205,10 @@
     }
   }
 
+  /* ---- 普通下拉（2026-10-28）：一级项的子项全是页面/博客等非集合链接时，
+     用它替代 mega 三栏面板。锚在 li 上——本主题里唯一给 li 加
+     position: relative 的一支（mega 项仍锚在 .main-nav__desktop，
+     见上方 BUG-034 注释），两者互不干扰：mega 项没有 dropdown 子元素。 ---- */
   .main-nav__item--dropdown {
     position: relative;
   }
@@ -898,12 +1224,14 @@
     background-color: var(--color-background);
     border-radius: 0 0 12px 12px;
     border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
-
+    /* 投影用 drop-shadow（与 mega 面板同款，"压商品图/投影"是颜色规范的合法例外） */
     filter: drop-shadow(0 18px 32px rgb(0 0 0 / 16%));
-
+    /* 导航行的 nowrap 约定不外溢到面板文字 */
     white-space: normal;
   }
 
+  /* 纯 CSS 开合：面板是 li 的后代，鼠标移进面板时 li 的 :hover 链不断，
+     所以不需要 mega 那套 JS 延迟关闭（is-open 拖尾）。 */
   .main-nav__item--dropdown:hover > .main-nav__dropdown,
   .main-nav__item--dropdown:focus-within > .main-nav__dropdown {
     display: block;
@@ -935,6 +1263,8 @@
     font-weight: 600;
   }
 
+  /* 内容区：只管对齐内容列，视觉（底色/投影/圆角）全在通栏面板上。
+     位移与面板揭示同步：从 -0.75rem 滑到 0，"抽出"的动感主要来自这里。 */
   .main-nav__mega-inner {
     max-inline-size: var(--content-width);
     margin-inline: auto;
@@ -944,7 +1274,8 @@
     padding: 2.25rem 2.5rem;
     translate: 0 -0.75rem;
     transition: translate 0.25s ease;
-
+    /* 导航行的不换行约定只属于行本身——面板里的产品名/价格必须可换行
+       （2026-10-13 刘工：卡内文字溢出）。左列分类名单独恢复 nowrap。 */
     white-space: normal;
   }
 
@@ -954,13 +1285,21 @@
     translate: 0 0;
   }
 
+  /* ---- 页面背景模糊遮罩（2026-10-12 第七轮，刘工，apple.com 风格） ----
+     mega 展开时行下方整屏"暗化 + backdrop blur"。
+     挂在 desktop::after 而非 mega——mega 有 clip-path，会把伪元素一起裁掉。
+     top:100% 从行底向下延伸一屏：不盖导航行（行文字保持清晰），
+     sticky 吸顶时随行走，始终覆盖可视页面区域。
+     显示条件与 mega 完全一致（hover / focus-within），用 :has() 上溯表达。
+     pointer-events: none：纯视觉层，不拦截页面交互；
+     面板关闭仍由"鼠标离开导航列表"驱动。 */
   .main-nav__desktop::after {
     content: '';
     position: absolute;
     top: 100%;
     inset-inline: 0;
     block-size: 100vh;
-
+    /* mega(10) 之下、页面内容之上 */
     z-index: 5;
     pointer-events: none;
     background-color: rgb(0 0 0 / 25%);
@@ -968,7 +1307,7 @@
     backdrop-filter: blur(8px);
     opacity: 0;
     visibility: hidden;
-
+    /* visibility 离散过渡：淡出播完才真正隐藏，避免残影闪断 */
     transition: opacity 0.25s ease, visibility 0.25s;
   }
 
@@ -979,13 +1318,14 @@
     visibility: visible;
   }
 
+  /* ---- 面板三段（2026-10-13 第八轮，参考 demo）：分类列 / 内容区 / 二级集合网格 ---- */
   .main-nav__mega-nav {
     flex: 0 0 12rem;
-
+    /* 左列纵向排布：分类列表在上，View all 出口压到底部 */
     display: flex;
     flex-direction: column;
     align-self: stretch;
-
+    /* 滑动药丸 .main-nav__mega-pill 的定位父级（2026-10-27） */
     position: relative;
   }
 
@@ -999,7 +1339,8 @@
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-
+    /* color: color-mix(in srgb, var(--color-foreground) 60%, transparent); */
+    /* 与搜索抽屉标题同款工业小标签风格；对比度 5.74:1（T-2.2 实测） */
   }
 
   .main-nav__mega-cats {
@@ -1017,10 +1358,11 @@
     gap: 0.625rem;
     width: 100%;
     min-height: 44px;
-
+    /* 文字层抬到滑动药丸之上（2026-10-27） */
     position: relative;
     z-index: 1;
-
+    /* hover 文字反色（背景由 .main-nav__mega-pill 滑动提供，与顶部导航同机制：
+       JS 接管后链接自身不出底色）；降级时自身出背景见下方 :not(.nav-mega-tabs--ready) */
     padding-inline: 0.75rem;
     border-radius: 999px;
     color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
@@ -1028,23 +1370,40 @@
     font-weight: 500;
     text-decoration: none;
     cursor: pointer;
-
+    /* 文字反色跟随药丸（--lit 由 JS 在药丸移动时同步设置），
+       color 时长对齐药丸 transform 0.25s，确保"文字变白"与"药丸滑到"同步，
+       不抢拍（修复 hover 文字先白、底色滞后 bug，2026-10-27） */
     transition: color 0.25s ease, background-color 0.15s ease;
-
+    /* 分类名短，不折行（面板整体已恢复 normal） */
     white-space: nowrap;
   }
 
+  /* 有 JS 接管：文字反色跟随药丸（--lit 由 nav-pill.js 在药丸移动时同步设置），
+     不靠 :hover 即时反色——否则文字会比滑动药丸抢拍变白（2026-10-27 修复 hover
+     文字先白、底色滞后 bug）。特异性高于 --current，确保当前页项被药丸垫底时
+     文字也反色、可读。 */
   .main-nav__mega-cats .main-nav__mega-cat-link--lit {
     color: var(--color-background);
     font-weight: 700;
   }
 
+  /* 无 JS 降级：custom element 未升级（无 nav-mega-tabs--ready）时，
+     hover / 焦点项自身显品牌色药丸（无滑动），功能不丢——与顶部导航
+     :not(.nav-pill--ready) 兜底同源。 */
   .main-nav__list-wrap:not(.nav-mega-tabs--ready) .main-nav__mega-cat-link:hover,
   .main-nav__list-wrap:not(.nav-mega-tabs--ready) .main-nav__mega-cat-link:focus-visible {
     color: var(--color-background);
     background-color: var(--color-brand);
   }
 
+  /* 左列激活项（JS 切换）：--active 仅作面板标记（_switchTabs 维护），
+     文字反色已改由 --lit（药丸所在项）驱动，避免与 hover 其他项时药丸移走冲突。
+     故此处不再设反色，避免"白字无底"。 */
+
+  /* mega 左列滑动药丸（2026-10-27，复用 nav-pill.js 测量/滑动算法，纵向套用）：
+     垫在分类项下方，hover 跟手滑动、松手停在激活项做常驻高亮；
+     文字反色由 .main-nav__cat-link 的 --lit 配合（药丸滑到该项即反色，与药丸同步）。
+     无 JS 时本元素不存在（由 JS 创建），无无效 DOM。 */
   .main-nav__mega-pill {
     position: absolute;
     top: 0;
@@ -1066,10 +1425,16 @@
     font-weight: 700;
   }
 
+  /* 面板切换：hidden 属性的 UA 默认 display:none 已生效，
+     这里显式兜底防未来 display 规则覆盖；无 JS（未升级）时不加 hidden，
+     全部组可见——底线不破 */
   .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group[hidden] {
     display: none;
   }
 
+  /* 切换过渡（2026-10-13 刘工：0.45s + 位移）：新组从下方 0.5rem 浮入 + 淡入。
+     只做单侧入场——两组都在文档流里，旧组若延迟消失会布局跳动。
+     @starting-style 不支持的浏览器降级瞬时显隐。 */
   .main-nav__list-wrap.nav-mega-tabs--ready .main-nav__mega-group {
     opacity: 1;
     translate: 0 0;
@@ -1083,6 +1448,7 @@
     }
   }
 
+  /* 中区：二级分组的集合卡组，纵向堆叠（无切换依赖，无 JS 可用） */
   .main-nav__mega-content {
     flex: 1 1 auto;
     min-inline-size: 0;
@@ -1103,11 +1469,25 @@
     padding: 0;
     list-style: none;
     display: grid;
-
+    /* 固定 3 列（2026-10-28 第三版，两次踩坑后的定论）。
+       ⚠️ 踩过的两个坑，别再绕回去：
+       ① repeat(auto-fill, minmax(12rem, 1fr)) 在中区 1088px 里算出 5 列，
+          3 张卡只坐满 3 列、右边空掉约 450px（这就是最初"面板太空"）。
+       ② repeat(auto-fit, minmax(12rem, 20rem)) 的 20rem 上限会把**列数**
+          也压掉：CSS Grid 规范里 max 是固定长度时轨道数按 max 算，
+          1130 视口算成 floor(802/344)=2 列 —— 想防卡太大，结果卡更大还换行。
+       所以列数只由下限决定，上限一律不写进 minmax。
+       这里直接写死 3 列：模板里每组卡固定 `limit: 3` 张，最多就是 3 张，
+       写死比让 auto-fit 去猜更可预期——**某组只有 2 张卡时（80V Battery）
+       不会把仅有的两张拉成 532px 大块**，右侧留白是数据决定的，不是布局错。
+       ⚠️ 若以后把模板的 `limit: 3` 改大，这里的 3 必须同步。
+       实测：990 → 3×197；1130 → 3×243；1440 → 3×347（图 323，接近 300 目标）。 */
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.5rem;
   }
 
+  /* 等高卡：li 是 grid item（默认 stretch 等行高），link 拉满列向，
+     价格/计数用 auto margin 沉底——内容差异不影响卡底色高度 */
   .main-nav__mega-card {
     display: flex;
   }
@@ -1117,7 +1497,7 @@
     flex-direction: column;
     width: 100%;
     text-decoration: none;
-
+    /* 视觉对齐集合页 product-card：实底背景 + 描边 + 圆角 + 内距同款 */
     background-color: var(--color-background);
     border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
     border-radius: 12px;
@@ -1127,10 +1507,11 @@
 
   .main-nav__mega-card-link:hover {
     border-color: color-mix(in srgb, var(--color-foreground) 20%, transparent);
-
+    /* 上浮量走全站卡签名（2026-10-30）：与商品卡 / 配件卡同一个 -2px */
     translate: 0 var(--card-hover-lift);
   }
 
+  /* 图在卡内上缘，跟随卡圆角内缩 */
   .main-nav__mega-card-media {
     display: block;
     aspect-ratio: 1;
@@ -1140,7 +1521,7 @@
   }
 
   .main-nav__mega-card-media--empty {
-
+    /* 集合无图占位：色块内嵌一圈极淡描边，读作"图位"而不是破图 */
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-foreground) 12%, transparent);
   }
 
@@ -1152,18 +1533,31 @@
     transition: transform 0.3s ease;
   }
 
+  /* 产品图 hover 动画：图片缩放 + 标题着色（2026-10-13 刘工） */
   .main-nav__mega-card-link:hover .main-nav__mega-card-img,
   .main-nav__mega-card-link:focus-visible .main-nav__mega-card-img {
     transform: scale(1.06);
   }
 
+  /* ===== hover 绿色渐变光晕（视觉对齐集合页 product-card 的 hover 反馈）=====
+     移植 product-card.css 的 ::before 光晕 + 品牌绿投影。光晕垫在图片下面、
+     只从图片透明区域透出（koutu alpha 图可见，不透明图自动隐没），产品像素零接触。
+     仅 hover:hover + pointer:fine 生效。
+
+     2026-10-29 刘工：浓度改走 --card-glow-1/2/3 与 --card-hover-shadow（定义在
+     snippets/css-variables.liquid，按内容区背景明暗分流）。原来这里写死 65%/32%/5%，
+     Noir 浅绿光晕在深底上会化成一块绿板——与产品列表两侧必须同源，改一处即同步。
+     注：mega 面板在页头组内，但 --card-glow-* / --card-hover-shadow 不在骨架映射表，
+     始终取 :root 那份；当前两个 preset 的内容区与骨架同明暗，结果一致。 */
   @media (hover: hover) and (pointer: fine) {
     .main-nav__mega-card-link {
-
+      /* 0.8s → 0.2s（2026-10-30）：投影换成全站卡签名后拍子必须同步，
+         否则同一组值在 mega 面板里慢四倍 */
       transition: border-color 0.15s ease, translate 0.15s ease, box-shadow 0.2s ease;
     }
     .main-nav__mega-card-link:hover {
-
+      /* 与 product-card:hover 同源（--card-hover-shadow / --card-hover-lift，
+         口径见 snippets/css-variables.liquid） */
       box-shadow: var(--card-hover-shadow);
     }
     .main-nav__mega-card-media {
@@ -1184,7 +1578,7 @@
       pointer-events: none;
     }
     .main-nav__mega-card-img {
-      position: relative;
+      position: relative; /* 压到 ::before 之上，光晕只在其透明区域可见 */
     }
     .main-nav__mega-card-link:hover .main-nav__mega-card-media::before {
       opacity: 1;
@@ -1194,7 +1588,7 @@
   .main-nav__mega-card-title {
     display: block;
     margin-block-start: 0.625rem;
-
+    /* 对齐 product-card 标题：weight 500 + line-height 1.35 */
     font-size: 0.92rem;
     font-weight: 500;
     line-height: 1.35;
@@ -1208,7 +1602,7 @@
 
   .main-nav__mega-card-count {
     display: block;
-
+    /* auto margin 沉底（等高卡，与 price 同机制） */
     margin-block-start: auto;
     padding-block-start: 0.375rem;
     font-size: 0.8125rem;
@@ -1219,6 +1613,8 @@
     color: var(--color-brand);
   }
 
+  /* 左列底部 View all 出口（2026-10-13 刘工）：/collections/all 官方路由。
+     箭头符合准则（View All 链接）。 */
   .main-nav__mega-viewall {
     display: flex;
     align-items: center;
@@ -1246,8 +1642,17 @@
     translate: 0.25rem 0;
   }
 
-  .main-nav__mega-cards--series {
+  /* ---- All series 面板（2026-11-14 第四版，刘工：6 列 + 不限条数）----
+     骨架仍是两栏（12rem 左轨 + 内容区），中区整套复用另两个面板的商品卡
+     .main-nav__mega-card（白底 / 1px 描边 / 12px 圆角 / 0.75rem 内距 /
+     hover 上浮 + 图片缩放），三个面板是同一套卡，只是数据不同。
+     只在 --series 修饰类里覆盖两件事：
+       ① 列数 6（商品卡是 3 列）：列多了行数才压得住 —— 集合不再限制条数，
+          "展示全部"只能靠列数消化，否则十几个集合就是 5 行、面板顶穿视口；
+       ② 图从 1:1 改 4:3：集合图多是横幅实景，1:1 会裁掉两侧；4:3 还省纵向空间。 */
 
+  .main-nav__mega-cards--series {
+    /* 1440 视口内容列 1088px → 单卡 ~165px（图 141×106），6 列三行能装 18 个集合 */
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 1rem 1.25rem;
   }
@@ -1256,23 +1661,30 @@
     aspect-ratio: 4 / 3;
   }
 
+  /* 990–1199：内容列只剩 672px，6 列每张 95px —— "Batteries & Chargers" 会被拆成
+     三四行，收回 4 列（每张 155px）。这一档行数会变多，超出由下面的高度兜底接管。 */
   @media (max-width: 1199px) {
     .main-nav__mega-cards--series {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
 
+  /* 高度兜底：集合多到装不下时卡片会顶出视口，而面板贴着吸顶行、页面本身滚不动 ——
+     底边被切掉就再也够不着。这一种面板限高 + 内部滚动，宁可有滚动条也不丢内容。 */
   .main-nav__mega:has(.main-nav__mega-cards--series) {
     max-block-size: calc(100dvh - 7rem);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
 
+  /* 组头：分类名（左）+ All 集合出口（右，View All 型链接，箭头合规） */
   .main-nav__mega-group-head {
     display: flex;
     align-items: baseline;
   }
 
+  /* 组头入口（一段式，2026-10-28）：同时是组标题与集合入口，
+     所以字号/字重取组标题规格，而不是原来右侧 All 链接的次级小字。 */
   .main-nav__mega-group-title-link {
     display: inline-flex;
     align-items: center;
@@ -1298,9 +1710,10 @@
     translate: 0.25rem 0;
   }
 
+  /* 产品卡：名称与价格（对齐 product-card 价格：weight 500） */
   .main-nav__mega-card-price {
     display: block;
-
+    /* auto margin 沉底（等高卡），0.375rem 是与标题的最小间距 */
     margin-block-start: auto;
     padding-block-start: 0.375rem;
     font-size: 0.875rem;
@@ -1322,6 +1735,7 @@
     margin-block-start: 0.25rem;
   }
 
+  /* 组底三级小链接行：产品卡阵列模式下三级入口不丢 */
   .main-nav__mega-sublinks {
     margin: 0.75rem 0 0;
     padding: 0;
@@ -1358,25 +1772,48 @@
     border-radius: 4px;
   }
 
+  /* 桌面区：默认显示（桌面优先），只在移动端隐藏。
+     必须有实底——否则吸顶时页面内容会透过菜单透出来。
+     position: relative 是 mega 面板的锚点（整行宽），不能移到 li / ul 上。
+
+     2026-10-28 刘工（两轮定稿）：页头与内容区原本同为纯白，没有任何分界。
+     现在底色与投影都由 snippets/css-variables.liquid 按骨架明暗算好：
+       浅色 → 底色 = 背景色（视觉上等于没底色）、不画分隔线，只留一层下投影；
+       深色 → 纯黑底 + 一道亮发丝线 + 更实的投影。
+     两个变量必须成对用，不要在这里写死其中一半——移动行同理。 */
   .main-nav__desktop {
     position: relative;
     background-color: var(--color-header-surface);
-
+    /* 阴影默认不给（2026-10-29 刘工）：页面停在顶部时，页头与内容区之间应当
+       毫无分界。只在**真的吸住**之后才由 <nav-sticky> 往包裹层打 is-stuck
+       浮起来（规则见下方 min-width: 990px 断点，与 sticky 同处一段）。
+       注意移动端行不受此约束——移动端没有 sticky，也就谈不上「触发」，
+       那一行的阴影保持常驻，否则手机上页头与内容区之间完全没有分界。 */
     box-shadow: none;
     transition: box-shadow 0.22s ease;
   }
 
+  /* 移动端抽屉相关：桌面隐藏汉堡与 dialog */
   .main-nav__mobile {
     display: none;
   }
 
+  /* ---- 抽屉：<dialog> + scroll-lock 锁背景（critical.css 已配套） ----
+     2026-10-13 刘工（参考效果图）：移动抽屉改为底部面板——全宽、满高，
+     点击汉堡后从屏幕底边往上滑入。滚动发生在列表内部（见 __list），
+     dialog 自身 overflow hidden。
+     2026-11-03：滑入 / 滑出移交 <bottom-sheet>（keyframes 在 critical.css），
+     这里只留几何。顶部两角改圆 + 抓手，与购物车抽屉 / 筛选面板同一副面孔。
+     高度仍是满屏：菜单展开后可能很长，收高度会让面板在每次展开时上下跳。 */
+  /* 自定义元素本身不生成盒子：里面只有 <bottom-sheet>（display:contents）
+     与 top layer 的 <dialog>，多一层 inline 盒只会在页头里留个空的基线缝。 */
   nav-drawer {
     display: contents;
   }
 
   .nav-drawer {
     inset: 0;
-
+    /* 由 showModal() 置于 top layer，无需 z-index */
     width: 100%;
     max-width: none;
     height: 100%;
@@ -1391,6 +1828,9 @@
     overflow: hidden;
   }
 
+  /* display 只在打开时给：作者样式 `.nav-drawer { display: flex }` 会压过
+     UA 的 `dialog:not([open]) { display: none }`——闭着的抽屉会整屏铺出来。
+     纵向 flex 链：抓手 / 头行 / 列表（滚动区）/ 底部行。 */
   .nav-drawer[open] {
     display: flex;
     flex-direction: column;
@@ -1400,10 +1840,14 @@
     background-color: rgb(0 0 0 / 45%);
   }
 
+  /* ---- 搜索抽屉：右侧滑出，桌面 + 移动共用（2026-10-10 刘工） ----
+     结构与 nav-drawer 同款（原生 <dialog> + showModal + template 惰性实例化），
+     差异只有宽度与内部排版。 */
   .search-drawer {
     inset-block: 0;
     inset-inline: auto 0;
-
+    /* 由 showModal() 置于 top layer，无需 z-index */
+    /* 宽度（2026-10-10 刘工：最小 600px）：窄屏用 92vw 兜底，≥600px 时锁 600 起 */
     width: max(600px, min(40rem, 92vw));
     max-width: none;
     height: 100%;
@@ -1418,6 +1862,7 @@
     overscroll-behavior: contain;
   }
 
+  /* 竖屏手机：全宽（600px 下限在手机上必然溢出） */
   @media screen and (max-width: 749px) {
     .search-drawer {
       width: 100vw;
@@ -1429,7 +1874,8 @@
   }
 
   .search-drawer__inner {
-
+    /* 纵向 flex：head 固定，body（含结果面板）吃满剩余高度。
+       结果多时滚动只发生在列表上，dialog 自身不再出滚动条。 */
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -1453,7 +1899,7 @@
 
   .search-drawer__title {
     margin: 0;
-
+    /* 工业小标签风格：与结果分组标题同款（uppercase + 大字距） */
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.14em;
@@ -1485,6 +1931,12 @@
     block-size: 1.25rem;
   }
 
+  /* ---- 抽屉滑入 / 滑出动画 ----
+     搜索抽屉仍用 @starting-style + allow-discrete（开 → 从右侧滑入；关 → 等滑动完再摘除），
+     旧浏览器不支持时降级为瞬时显隐，无功能损失（渐进增强）。
+     translate 是物理属性：本主题仅 en（LTR），100% 恒为屏外。
+     导航抽屉已改由 <bottom-sheet> 播 keyframes（2026-11-03）——dialog 从
+     display:none 打开的同一帧里 transition 没有起点，写在这里只会闪现。 */
   .search-drawer {
     translate: 100% 0;
     transition: translate 0.25s ease, display 0.25s allow-discrete, overlay 0.25s allow-discrete;
@@ -1503,11 +1955,14 @@
     }
   }
 
+  /* 遮罩同步淡入淡出 */
   .search-drawer::backdrop {
     opacity: 1;
     transition: opacity 0.25s ease;
   }
 
+  /* WCAG 2.1 / SDD §8.2：用户要求减少动效时全部关闭
+     （导航抽屉的滑入滑出由 <bottom-sheet> 自己判断 reduced-motion，不在这里） */
   @media (prefers-reduced-motion: reduce) {
     .search-drawer,
     .search-drawer::backdrop,
@@ -1517,26 +1972,37 @@
     }
   }
 
+  /* 抽屉宽度即输入框宽度（snippet 已无 32rem 上限，此规则留作宽度解耦的文档锚点） */
+
+  /* ---- 抓手横线（2026-11-03 刘工） ----
+     与购物车抽屉 / 集合页筛选面板完全同一套系数：视觉条 56×6、前景色 18%、
+     命中区 120×54。三个底部面板的手感必须一致，改一处要三处一起看。 */
   .nav-drawer__grabber {
     position: relative;
     flex: none;
     inline-size: 56px;
     block-size: 6px;
-
+    /* 离面板顶边 16px：既是与另外两个面板同值的间距，也是下面伪元素
+       向上扩的那一段不被 dialog 的 overflow:hidden 裁掉的余量 */
     margin: 1rem auto 0.25rem;
     border-radius: 999px;
     background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
-
+    /* 抓手要能被拖：touch-action:none 让浏览器不把手势抢给滚动 */
     touch-action: none;
     user-select: none;
   }
 
+  /* 只吃指针、不参与绘制：命中区 120×54（视觉条 56×6） */
   .nav-drawer__grabber::after {
     content: '';
     position: absolute;
     inset: -16px -32px -32px;
   }
 
+  /* ---- 手风琴（2026-11-03 刘工）：一级 / 二级在同一列表内就地展开 ----
+     动画走 grid-template-rows 0fr → 1fr：吃内容真实高度，不用猜 max-height 的
+     魔数；内层必须 overflow:hidden 才裁得干净（不然 1fr 也照样露出来）。
+     收起态的 inert 由 nav-drawer.js 同步打上——视觉裁切挡不住 Tab 焦点。 */
   .nav-drawer__sub {
     display: grid;
     grid-template-rows: 0fr;
@@ -1552,6 +2018,8 @@
     overflow: hidden;
   }
 
+  /* 二级列表：整块换一档底色，层级靠底色 + 缩进表达，不靠分割线
+     （菜单本身已有行间 hairline，再加线会成一堆横杠）。 */
   .nav-drawer__sublist {
     margin: 0;
     padding: 0;
@@ -1562,10 +2030,16 @@
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
   }
 
+  /* 二级项之间的发丝线：一级那次由 .nav-drawer__item 承担，这里同名类复用，
+     但二级列表已有底色分档，线只留极淡一条，免得两层线打架。
+     （二级行的字号 / 缩进写在 .nav-drawer__link--sub，位置必须在
+     .nav-drawer__link 之后，理由见那一条。） */
   .nav-drawer__item--sub {
     border-block-end-color: color-mix(in srgb, var(--color-foreground) 5%, transparent);
   }
 
+  /* 展开箭头（2026-11-03）：从"右箭头 = 进入下一屏"改成"下箭头 = 就地展开"，
+     展开后转 180°。旋转用 rotate 属性，和 translate 轴互不干扰。 */
   .nav-drawer__chevron {
     display: flex;
     flex: none;
@@ -1576,6 +2050,9 @@
     rotate: 180deg;
   }
 
+  /* 抽屉头部：品牌区（logo + 名称，参考图）+ 搜索 + 关闭。
+     2026-11-03 起子菜单走手风琴，不再有"返回 / 标题 / 关闭"那种子面板头行，
+     所以这里只有一种头。 */
   .nav-drawer__head {
     display: flex;
     align-items: center;
@@ -1589,7 +2066,8 @@
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-
+    /* 头部行也是拖拽热区（抓手只有 6px 高，手指按不准）；关闭 / 搜索按钮在
+       JS 里从热区排除，点它们不会开始拖拽 */
     touch-action: none;
     user-select: none;
   }
@@ -1611,7 +2089,7 @@
   }
 
   .nav-drawer__brand-img {
-
+    /* 同 .main-nav__logo-img：高度定死、宽度按比例，不写死方形 */
     block-size: 2rem;
     inline-size: auto;
     max-inline-size: 5rem;
@@ -1654,6 +2132,7 @@
     border-radius: 2px;
   }
 
+  /* 列表是面板内的滚动区：head / footer 固定，长菜单只滚列表 */
   .nav-drawer__list {
     flex: 1;
     min-height: 0;
@@ -1672,6 +2151,9 @@
     border-block-end: 0;
   }
 
+  /* 行：分组是 <button>（BUG-023：GROUP 无 url，绝不渲染成 <a>），
+     叶子是 <a>——两者共用行样式，button 侧补表单元素重置。
+     font-weight 600 贴参考图（2026-10-13）。 */
   .nav-drawer__link {
     display: flex;
     align-items: center;
@@ -1690,6 +2172,8 @@
     cursor: pointer;
   }
 
+  /* 箭头颜色从前景色派生（原先写死 rgb(0 0 0 / 45%)，Noir 深底上等于隐形的
+     黑色——BUG-059 同款问题） */
   .nav-drawer__link svg {
     flex: none;
     width: 1rem;
@@ -1702,6 +2186,9 @@
     outline-offset: -2px;
   }
 
+  /* 二级行（2026-11-03 手风琴）：字号降一档、去掉一级那种 600 的重感；
+     左缩进 2rem 让层级读得出来。**必须写在 .nav-drawer__link 之后**——
+     同一特异性下后写者胜，写在上面会被基础行的 padding/font 整个盖掉。 */
   .nav-drawer__link--sub {
     min-height: 44px;
     padding: 0.5rem 1rem 0.5rem 2rem;
@@ -1709,17 +2196,23 @@
     font-weight: 500;
   }
 
+  /* 三级再缩一档：左缩进与二级的文字起点错开半个字宽，字号再降 0.5px */
   .nav-drawer__sublist--deep .nav-drawer__link--sub {
     padding-inline-start: 2.75rem;
     font-size: 0.875rem;
   }
 
+  /* 当前路由（2026-11-03 刘工）：浅品牌底 + 品牌字。
+     底色从 --color-brand 派生（不写死浅绿）——Noir 预设下自动变成"深底上的一层浅绿"。
+     取 10% 而不是更淡：二级列表本身已有 4% 前景底，叠上去还要能一眼分辨。 */
   .nav-drawer__link--current {
     color: var(--color-brand);
     font-weight: 700;
     background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
   }
 
+  /* 抽屉底部固定区（2026-10-13 参考图）：Account / Cart 竖排两行，
+     行内边距与菜单行对齐，行间 hairline 同菜单列表 */
   .nav-drawer__footer {
     display: flex;
     flex-direction: column;
@@ -1729,15 +2222,19 @@
     border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
   }
 
+  /* 抽屉内账户组件的 sheet 从抽屉顶部弹出，与桌面端不同 */
   .account--in-drawer .account__component {
     --shopify-account-dialog-position-top: 0;
   }
 
+  /* 账户行：占满一行；触发器是平台组件（内部结构不可控），只对齐行距 */
   .account--in-drawer {
     padding: 0.5rem 1rem;
     border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
   }
 
+  /* 购物车行：图标 + "Cart" 文字 + 右上角计数徽标（snippet 传 show_label）。
+     徽标保持绝对定位——不占布局空间，cart-updated 同步不会推移布局（防 CLS）。 */
   .cart-entry--in-drawer .cart-entry__link {
     display: flex;
     align-items: center;
@@ -1753,6 +2250,7 @@
     flex: 1;
   }
 
+  /* ---- 断点：以下为移动端 ---- */
   @media screen and (max-width: 989px) {
     .main-nav__desktop {
       display: none;
@@ -1761,18 +2259,23 @@
     .main-nav__mobile {
       display: flex;
       align-items: center;
-
+      /* 移动导航行上下 16px，与桌面行一致（第六轮） */
       padding-block: 1rem;
-
+      /* 与桌面行同一套分层（2026-10-28）：底色 + 投影都取 css-variables 里算好的
+         那两个变量，见 .main-nav__desktop 的注释。
+         横向内边距一并补上——移动行原先只有 padding-block，汉堡贴死在视口
+         左缘；加了色带之后这个贴边会非常显眼，且与其余 section 的内容列不齐。 */
       padding-inline: var(--page-margin);
       background-color: var(--color-header-surface);
       box-shadow: var(--header-shadow);
     }
 
+    /* 汉堡居左，(搜索 + 购物车) 推到最右 */
     .main-nav__search-toggle--mobile {
       margin-inline-start: auto;
     }
 
+    /* 两个 44px 触摸目标相邻，留一点缝避免误触 */
     .main-nav__mobile .cart-entry {
       margin-inline-start: 0.35rem;
     }
@@ -1796,6 +2299,11 @@
     }
   }
 
+  /* ---- sticky：全断点（2026-11-02 刘工：移动端也要吸顶）----
+     BUG-032：sticky 不能挂在 .main-nav 上——它的父级是 Shopify 生成的
+     .shopify-section 包裹层，高度只有导航行自身，sticky 没有可黏的滚动余量。
+     必须挂在包裹层（schema "class": "main-nav-section"）上：包裹层是 body
+     （flex 列）的直接子项、纵贯整页，sticky 才有作用空间。 */
   .main-nav-section {
     position: sticky;
     top: 0;
@@ -1803,22 +2311,29 @@
   }
 
   @media screen and (min-width: 990px) {
-
+    /* 吸住才浮投影（2026-10-29 刘工）。is-stuck 由 assets/nav-sticky.js 打上，
+       判据与像素阈值无关，见该文件头部说明。
+       移动块自带常驻投影（见下方断点），不需要这层"吸住才亮"的状态。 */
     .main-nav-section.is-stuck .main-nav__desktop {
       box-shadow: var(--header-shadow);
     }
 
+    /* 桌面端汉堡与抽屉不出现；桌面区是唯一可见部分 */
     .main-nav__desktop {
       display: block;
     }
   }
+
+  /* ============ 账户与购物车（方案 A：与菜单同处吸顶行） ============
+     原 account.liquid / cart-entry.liquid 的样式随 section 合并至此——
+     那两个 section 已不再是独立节点（否则 sticky 只黏住菜单，图标会滑走）。 */
 
   .cart-entry__link {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-inline-size: 44px;
     min-block-size: 44px;
     color: var(--color-foreground);
@@ -1830,6 +2345,10 @@
     block-size: 1.5rem;
   }
 
+  /* 徽标：压在图标的右上角、脱离文档流（加购后计数刷新不推移布局），
+     尺寸固定，两位数自动横向撑开（border-radius 999px 不会破形）。
+     定位写在这里而不是加一层 :not()——PC 与移动端页头都吃这一条，
+     抽屉那一行再显式撤销（下面紧跟的一条），与 .compare-entry--in-drawer 同一路子。 */
   .cart-entry__count {
     position: absolute;
     inset-block-start: 2px;
@@ -1837,7 +2356,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-
+    /* 视觉小，但数字不被压缩 */
     min-inline-size: 1.125rem;
     block-size: 1.125rem;
     padding-inline: 0.25rem;
@@ -1848,6 +2367,9 @@
     border-radius: 999px;
   }
 
+  /* 抽屉里那枚回到文档流（2026-11-03 刘工）：这一行是「图标 + Cart 文字 + 数字」的行式，
+     数字排在行尾，压不到图标上。判定用修饰类而不是断点——同一个组件换个容器行为跟着变，
+     跟屏幕多宽无关。 */
   .cart-entry--in-drawer .cart-entry__count {
     position: static;
     inset: auto;
@@ -1858,14 +2380,21 @@
     outline-offset: 2px;
   }
 
+  /* ============ 对比入口（SDD §6.2.8，2026-10-22） ============
+     与购物车同规格：44×44 触摸目标、图标 1.5rem、角标绝对定位（不占流，避免 CLS）。
+     移动端不需要为它让位：入口只存在于桌面工具区（.main-nav__desktop），
+     ≤989px 整块 display: none，移动端要走 ☰ 抽屉里那行。 */
+
   compare-entry {
     display: inline-flex;
   }
 
+  /* 没有任何分组配置对比页 → snippet 输出 hidden，整个入口不占位 */
   compare-entry[hidden] {
     display: none;
   }
 
+  /* JS 接管前保留布局空间：图标稍后出现时不推动相邻元素（CLS） */
   compare-entry[data-pending] {
     visibility: hidden;
   }
@@ -1875,7 +2404,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-inline-size: 44px;
     min-block-size: 44px;
     color: var(--color-foreground);
@@ -1887,6 +2416,7 @@
     block-size: 1.5rem;
   }
 
+  /* 该组尚无对比页时 href 落空：视觉弱化且不可点，但仍占位（不引起页头跳动） */
   .compare-entry__link[aria-disabled='true'] {
     opacity: 0.4;
     pointer-events: none;
@@ -1918,6 +2448,7 @@
     outline-offset: 2px;
   }
 
+  /* 抽屉行式：图标 + 文字 + 角标靠右，与购物车那一行对齐 */
   .compare-entry--in-drawer {
     display: block;
   }
@@ -1937,11 +2468,21 @@
     flex: 1;
   }
 
+  /* 角标在行式里不悬浮，跟在文字后面 */
   .compare-entry--in-drawer .compare-entry__count {
     position: static;
     inset: auto;
   }
 
+  /* 没有选择时页头图标的处理（2026-11-15 刘工改，原为 display: none）。
+     2026-10-22 的判据是「清单为空时没有信息量」——那只在「图标 = 状态指示」
+     时成立。现在它同时是发现入口（悬停有 tooltip 讲怎么用），藏起来等于对新顾客
+     完全不可见，工具提示也就无从提示。
+
+     弱化用**颜色**不用 opacity：opacity 会把对比度一起乘下去——前景 #333 压白底
+     剩 0.45 时只有 ≈2.4:1，图标属非文本图形（AA 要 3:1），Lighthouse 会挂。
+     --color-foreground-muted 是 70% 前景（≈4.95:1），刚好「轻一档」且达标。
+     抽屉里那份不在此列——行式有文字标签，本来就要肉眼可辨。 */
   compare-entry[data-empty]:not(.compare-entry--in-drawer) .compare-entry__link {
     color: var(--color-foreground-muted);
   }
@@ -1952,6 +2493,9 @@
     }
   }
 
+  /* 对比入口整块没输出（一个分组都没配对比页 → snippet 输出 hidden）时，
+     外面的 tooltip 宿主也要退场：否则页头留下一个 0 宽的锚点，
+     悬停热区还在、却什么也点不到。 */
   ui-tooltip:has(> .compare-entry[hidden]) {
     display: none;
   }
@@ -1961,6 +2505,7 @@
     align-items: center;
   }
 
+  /* Only CSS variables and ::part() — never restructure the component (see header note). */
   .account__component {
     --shopify-account-avatar-size: 1.75rem;
     --shopify-account-radius-base: var(--style-border-radius-inputs);
@@ -1969,10 +2514,12 @@
     --shopify-account-color-text: var(--color-foreground);
     --shopify-account-font-body: var(--font-primary--family);
     --shopify-account-font-heading: var(--font-primary--family);
-
+    /* Sheet opens below the header, not at the very top of the viewport */
     --shopify-account-dialog-position-top: 3.5rem;
   }
 
+  /* 触摸目标 ≥ 44×44（AGENTS §8）：组件默认头像小于此，用伪元素把命中区扩到 44px。
+     负 50% 是相对自身尺寸的居中，与书写方向无关（inline-start 已是逻辑轴）。 */
   .account__component::part(signed-out-avatar) {
     position: relative;
   }
@@ -1993,7 +2540,7 @@
     justify-content: center;
     inline-size: 1.75rem;
     block-size: 1.75rem;
-
+    /* 图标随前景色走，不硬编码色值（AGENTS §6） */
     color: var(--color-foreground);
   }
 
@@ -2002,18 +2549,27 @@
     block-size: 100%;
   }
 
+  /* Follow on Shop 按钮保持组件自带配色，只调间距 */
   .account__follow {
     display: flex;
     align-items: center;
   }
 
+  /* ===== 预测搜索输入框（原 snippets/predictive-search-entry.liquid，2026-10-18 迁入）
+     该片段被下方 <search-drawer> 的 template 渲染。样式原先写在片段里，
+     导致一个 section 内出现两个样式块，编辑器装载 header 组时整组渲染失败。 ===== */
+  /* 视觉基调（2026-10-10 刘工：极简 / 高端 / 沉浸式 / 工业力量感）：
+     输入框去边框只留发丝底线，聚焦换品牌色；加载用一条细扫描线。
+     布局（2026-10-10 刘工）：抽屉是纵向 flex 链——结果面板作为
+     flex 子项吃满 dialog 剩余高度，滚动只发生在列表上。 */
   .predictive-search {
     position: relative;
     display: flex;
     flex-direction: column;
     inline-size: 100%;
     flex: 1;
-
+    /* 经典 flex 陷阱：子项默认 min-height:auto，不锁 0 就无法收缩，
+       溢出会把 dialog 撑出滚动而不是列表自己滚 */
     min-height: 0;
   }
 
@@ -2025,6 +2581,7 @@
     min-height: 0;
   }
 
+  /* 输入区：放大镜 / 输入框 / 清空按钮 / 扫描线的共同锚点 */
   .predictive-search__field {
     position: relative;
     flex: none;
@@ -2037,19 +2594,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
     inline-size: 44px;
     block-size: 44px;
     padding: 0;
-
+    /* 图标压在输入框左侧，输入框留出等宽内边距 */
     inset-block-start: 50%;
     translate: 0 -50%;
-
+    /* 2026-10-29：改从 foreground 派生（原 rgb(0 0 0 / 45%) 在深色骨架下不可见，BUG-059） */
     color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
     background: none;
     border: 0;
     cursor: pointer;
-    pointer-events: none;
+    pointer-events: none; /* 点击穿透到输入框：它只是视觉图标 */
   }
 
   .predictive-search__submit svg {
@@ -2059,12 +2616,12 @@
 
   .predictive-search__input {
     inline-size: 100%;
-
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
     min-block-size: 48px;
     padding: 0.625rem 2.75rem 0.625rem 2.75rem;
     color: var(--color-foreground);
     background-color: var(--color-background);
-
+    /* 极简线型：无框，只有发丝底线；聚焦换品牌色加粗 */
     border: 0;
     border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
     border-radius: 0;
@@ -2073,6 +2630,7 @@
     appearance: none;
   }
 
+  /* 原生 WebKit search 清除 X 无法定制，隐藏——用下方自定义清空按钮替代 */
   .predictive-search__input::-webkit-search-cancel-button,
   .predictive-search__input::-webkit-search-decoration {
     -webkit-appearance: none;
@@ -2083,12 +2641,18 @@
     color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
   }
 
+  /* 焦点指示：底线由灰转品牌色并加粗（可见变化，替代外框 outline）。
+     outline: none 是刻意的——线型输入框外框 outline 破坏极简基调，
+     且底线变化满足 WCAG 2.1「焦点位置可见」要求（SDD §8.2）。 */
   .predictive-search__input:focus {
     outline: none;
     border-block-end: 2px solid var(--color-brand-accent);
     padding-block-end: calc(0.625rem - 1px);
   }
 
+  /* ---- 加载扫描线：请求进行中，输入框下沿一条细线往返 ----
+     aria-busy 由 JS 在请求生命周期内驱动（过期的请求不会误关）。
+     锚在 field 上（form 的底边现在是面板底，不再是输入框下沿）。 */
   .predictive-search__field::after {
     content: '';
     position: absolute;
@@ -2126,6 +2690,10 @@
     }
   }
 
+  /* 结果面板：沉浸式——与抽屉同底色、无框无圆角，分区靠发丝线（见 section 样式） */
+  /* 清空按钮：与抽屉右上角关闭键（.search-drawer__close）同款。
+     垂直位置必须显式居中——form 改纵向 flex 后，绝对定位元素的
+     "静态位置"在输入框下方，不设 top 会被挤出去（BUG 2026-10-10）。 */
   .predictive-search__clear {
     position: absolute;
     inset-block-start: 50%;
@@ -2143,6 +2711,7 @@
     cursor: pointer;
   }
 
+  /* 无输入时隐藏（JS 用 hidden 属性控制，此处兜底初始态） */
   .predictive-search__clear[hidden] {
     display: none;
   }
@@ -2158,6 +2727,8 @@
     border-radius: 2px;
   }
 
+  /* 结果面板：不再是绝对定位浮层——form 纵向 flex 的最后一个子项，
+     flex:1 吃满 dialog 剩余高度，滚动条只出现在列表上 */
   .predictive-search__panel {
     flex: 1;
     min-height: 0;
@@ -2172,6 +2743,11 @@
     display: none;
   }
 
+  /* ---- 结果骨架屏（predictive-search.js 的 _queueSkeleton，2026-10-29） ----
+     只在"面板还是空的"这一刻出现：首次查询，或上一次查无结果。已有上一轮结果时
+     保持原样——边搜边换会把列表闪掉，比没有反馈更难受。
+     尺寸复刻真实结果行（112px 缩略图 + 两行文字 + 发丝线），换入结果时不跳。
+     底色一律从 foreground 派生：黑 alpha 硬编码在 Noir 深底上不可见（BUG-043 教训）。 */
   .predictive-search__skeleton {
     padding-block-end: 0.75rem;
   }
@@ -2183,6 +2759,7 @@
     animation: predictive-search-skeleton-pulse 1.4s ease-in-out infinite;
   }
 
+  /* 分组标签占位：对位真实 .predictive-search__heading 的 padding + 行高 */
   .predictive-search__skeleton-heading {
     inline-size: 5rem;
     block-size: 0.5rem;
@@ -2233,6 +2810,7 @@
     }
   }
 
+  /* 无障碍红线：脉冲关停，保留静态灰块（仍能读出"这里有内容要来"） */
   @media (prefers-reduced-motion: reduce) {
     .predictive-search__skeleton-heading,
     .predictive-search__skeleton-thumb,
