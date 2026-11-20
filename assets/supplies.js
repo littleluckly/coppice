@@ -1,17 +1,4 @@
-/**
- * supplies-bundle — 耗材区「Add all N items」（task-product T-2.3）。
- *
- * 一次 `POST /cart/add.js` 提交多行（`items: [{id, quantity}]`）。
- * 数量来自各卡片的隐藏 `[data-supply-qty]`，所以单卡上改过数量也能带上 —— 目前卡内
- * 不暴露数量输入（配件一口价一件），留这个读取口是为了将来加步进器时不用改本文件。
- *
- * **不做捆绑折扣**：只提交多行，价格与平台完全一致。买赠/捆绑定价是审核红线。
- *
- * 事件沿用 quick-add.js 契约：cart:added（点击即冒泡，飞入动画 + 抽屉开骨架）、
- * cart:updated（角标 + 抽屉收骨架刷新）、cart:add-failed（失败时让抽屉退出骨架等待）。
- * 无 JS：按钮不出现（`<supplies-bundle>` 由 Liquid 只在 N>1 时输出，且按钮本身不给表单
- * 提交兜底 —— 单卡各自可加购，功能不缺失）。
- */
+
 class SuppliesBundle extends HTMLElement {
   static REVERT_DELAY_MS = 2500;
 
@@ -74,7 +61,7 @@ class SuppliesBundle extends HTMLElement {
       this._syncCartCount();
     } catch (error) {
       if (error.name === 'AbortError') return;
-      /* 通知抽屉退出骨架等待（BUG-083：抽屉只等 cart:updated，失败时永远等不到） */
+
       document.dispatchEvent(new CustomEvent('cart:add-failed', { detail: { button: this._button } }));
       delete this._button.dataset.state;
       this._button.disabled = false;
