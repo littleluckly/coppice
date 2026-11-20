@@ -82,9 +82,28 @@ class ProductAnchorNav extends HTMLElement {
       this._observer.disconnect();
       this._observer = null;
     }
+    clearTimeout(this._scrollIdleTimer);
+    this._scrollIdleTimer = 0;
     cancelAnimationFrame(this._raf);
     this._raf = 0;
     this._started = false;
+  }
+
+  /* 滚动中展开条目名称，停下 300ms 后收起。
+     属性只在"从无到有"那一瞬写一次，滚动期间每帧重设属性会白白触发样式重算。 */
+  _onScroll() {
+    if (!this.hasAttribute('data-scrolling')) {
+      this.setAttribute('data-scrolling', '');
+    }
+    /* 连续滚动时反复 clearTimeout/setTimeout：一次滚动突发只留一个定时器，
+       代价可以忽略，比记时间戳自检好读得多。 */
+    clearTimeout(this._scrollIdleTimer);
+    this._scrollIdleTimer = setTimeout(() => {
+      this._scrollIdleTimer = 0;
+      this.removeAttribute('data-scrolling');
+    }, ProductAnchorNav.SCROLL_IDLE_MS);
+
+    this._queue();
   }
 
   /* 滚动 / 尺寸变化按帧合并：Safari 上一帧可能派发多次 scroll */
