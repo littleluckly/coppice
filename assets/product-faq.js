@@ -51,8 +51,24 @@ class ProductFaq extends HTMLElement {
     this._controller = new AbortController();
     const { signal } = this._controller;
 
+    /* 手动开合之后，那一条的倒计时必须**从头**计时（BUG-088）：
+       只靠"选择器重新匹配"是不够的 —— 真 Chrome 实测，关掉再打开的条目，
+       动画会带着上一次的 finished 状态回来（transform 直接是 1），进度条满格、
+       也不会再派 animationend，轮播就此停摆。所以这里显式重启一次。
+       原生 toggle 在 click 派发**之后**才生效，所以延后一拍再读展开态。 */
+    this.addEventListener(
+      'click',
+      (event) => {
+        if (!event.target.closest('summary')) return;
+        setTimeout(() => {
+          this._restartProgress(this._items.find((item) => item.open));
+        }, 0);
+      },
+      { signal }
+    );
+
     /* 动画结束冒泡到这里；只认进度条自己，别被将来加的别的动画带跑。
-       手动打开的新条目也会走到这里——它的进度条重启动画、跑完照常切下一条，
+       手动打开的新条目也会走到这里——它的进度条被重启后跑完，照常切下一条，
        所以这里不需要区分"是不是用户点的"。 */
     this.addEventListener(
       'animationend',
@@ -105,23 +121,26 @@ class ProductFaq extends HTMLElement {
 
   _advance() {
     const current = this._items.findIndex((item) => item.open);
-    /* 当前没有展开项（用户全关了，但已停播 ⇒ 走不到这里）也照常从第一条接上 */
+    /* current 为 -1（全都收起）时从第一条接上：正常流程里走不到这里
+       （没有展开项就没有进度条动画、没有 animationend），留着只为兜底 */
     const next = this._items[(current + 1) % this._items.length];
     /* 老浏览器不认 <details name>，这里显式关掉其余，行为与新浏览器一致 */
     this._items.forEach((item) => {
       item.open = item === next;
     });
+    this._restartProgress(next);
   }
 
-  _stopAutoplay() {
-    if (this.hasAttribute('data-stopped')) return;
-    this.setAttribute('data-stopped', '');
-    this.removeAttribute('data-playing');
-    this.removeAttribute('data-paused');
-    if (this._observer) {
-      this._observer.disconnect();
-      this._observer = null;
-    }
+  /* 把某一条的倒计时从 0 重启：先内联 animation: none 摘掉动画、强制一次重排
+     （把旧动画实例彻底丢掉），再撤掉内联值让样式表里的动画重新生效。
+     不这么做的话，同一个元素第二次"开始"时会沿用上次的 finished 状态。 */
+  _restartProgress(item) {
+    if (!item) return;
+    const bar = item.querySelector('.product-faq__progress-bar');
+    if (!bar) return;
+    bar.style.animation = 'none';
+    void bar.offsetWidth;
+    bar.style.animation = '';
   }
 }
 
