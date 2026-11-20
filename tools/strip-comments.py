@@ -27,7 +27,10 @@ import glob
 APPLY = '--apply' in sys.argv
 
 LIQUID = (glob.glob('sections/*.liquid') + glob.glob('snippets/*.liquid')
-          + glob.glob('blocks/*.liquid') + glob.glob('layout/*.liquid'))
+          + glob.glob('blocks/*.liquid') + glob.glob('layout/*.liquid')
+          # templates/ 下只有一个 gift_card.liquid，第一版漏了它，
+          # 包内残留 10 处注释（2026-11-20 复扫才发现）
+          + glob.glob('templates/*.liquid'))
 CSS = glob.glob('assets/*.css')
 JS = glob.glob('assets/*.js')
 JSON = glob.glob('templates/*.json') + glob.glob('config/*.json') + glob.glob('sections/*.json')
@@ -112,7 +115,17 @@ def main():
         print('  %-22s %5d 处  %7.1f KB' % (k, n, b / 1024))
     print('  合计移除 %.1f KB' % (sum(b for _, b in stat.values()) / 1024))
     if APPLY:
-        print('\n下一步：shopify theme check / node --check assets/*.js / git diff 核对')
+        # 自检：本脚本按扩展名清单扫，漏掉一类文件就会像 2026-11-20 那样
+        # 把 templates/gift_card.liquid 的注释带进包。打完包必须用下面的命令
+        # 对**整个包**再扫一遍，那才是权威判据。
+        print('\n下一步：')
+        print('  1) shopify theme check')
+        print('  2) node --check assets/*.js')
+        print('  3) git diff 核对删除行是否都是注释')
+        print('  4) 打包后全包扫描（必须为空）：')
+        print('     unzip -q -d /tmp/pkgchk Coppice-*.zip && \\')
+        print('     grep -rlE "\\{%-? *comment|/\\*" --include="*.liquid" '
+              '--include="*.css" --include="*.js" /tmp/pkgchk')
 
 
 if __name__ == '__main__':

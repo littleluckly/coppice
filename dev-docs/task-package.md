@@ -181,10 +181,17 @@ grep -rn "shopify://" sections templates config   # 必须为空（§1 §2 做�
    ```bash
    shopify theme package
    # CLI 4.9.4 不认 .shopifyignore 的文件级规则（BUG-080），必须手动清
-   zip -d Coppice-<version>.zip "*.DS_Store" "*.bak*" "AGENTS.md"
+   zip -d Coppice-<version>.zip "*.DS_Store" "*.bak*" "AGENTS.md" \
+          "README.md" "LICENSE.md" "CONTRIBUTING.md" "CODE_OF_CONDUCT.md"
    unzip -l Coppice-<version>.zip | grep -E "\.bak|DS_Store|\.md"   # 必须为空
    ```
-   > `AGENTS.md` 会被打进包、而 `README.md` / `LICENSE.md` 不会 —— CLI 对根目录 `.md` 有一份不公开的排除名单。**新增任何根目录文件后都要重新看 `unzip -l`**。
+   **再对整包扫一遍注释残留**——不要只信剥离脚本，它按扩展名清单扫描，漏一类文件就会带进包（2026-11-20 漏了 `templates/gift_card.liquid`，包内残留 10 处）：
+   ```bash
+   rm -rf /tmp/pkgchk && unzip -q -d /tmp/pkgchk Coppice-<version>.zip && \
+   grep -rlE "\{%-? *comment|/\*" --include="*.liquid" --include="*.css" \
+        --include="*.js" /tmp/pkgchk          # 必须为空
+   ```
+   > `AGENTS.md` 会被打进包、而 `README.md` / `LICENSE.md` 目前不会 —— CLI 对根目录 `.md` 有一份不公开的排除名单。**新增任何根目录文件后都要重新看 `unzip -l`**，`zip -d` 里那串 `.md` 是保险。
 
 6. **解压核对**：只应有 §4 那 7 个目录，没有 `res.json` / `dev-docs/` / `tools/`。（`dev-docs/lighthouse/`、`dev-docs/benchmark/` 都在 `dev-docs/` 下，一并排除。）
 
