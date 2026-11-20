@@ -1,11 +1,4 @@
-/**
- * wishlist-toggle — 商品卡收藏心的最小行为（localStorage 版）。
- *
- * v1.0 范围：点击切换 aria-pressed + 持久化到 localStorage `ib:wishlist:v1`
- * （存 handle 数组，本机持久、不跨设备同步——产品决策 2026-10-09）。
- * 页面加载时按存储恢复已收藏状态。
- * 跨设备同步需 app（customer metafield / app proxy），主题内不做。
- */
+
 (function () {
   var STORAGE_KEY = 'ib:wishlist:v1';
 
@@ -23,7 +16,7 @@
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     } catch (error) {
-      /* 隐私模式等场景写入失败：收藏仅在当前会话生效，静默降级 */
+
     }
   }
 

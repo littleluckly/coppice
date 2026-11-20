@@ -1,15 +1,4 @@
-{% doc %}
-  Renders a group of blocks with configurable layout direction, gap and
-  alignment.
 
-  All settings apply to only one dimension to reduce configuration complexity.
-
-  This component is a wrapper concerned only with rendering its children in
-  the specified layout direction with appropriate padding and alignment.
-
-  @example
-  {% content_for 'block', type: 'group', id: 'group' %}
-{% enddoc %}
 
 <div
   class="group {{ block.settings.layout_direction }}"
