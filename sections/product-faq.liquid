@@ -19,12 +19,14 @@
   就再也不动了。别再加那条分支（理由见 assets/product-faq.js 的文件头）。
 
   **为什么 `<details name=...>`**：原生互斥手风琴，键盘 / 屏幕阅读器 / 无 JS 全部
-  照常工作（无 JS 时首条默认展开，其余可点）；JS 只负责「播完切下一条」与
-  「用户动过就停」，不接管点击，也不重写 aria。`name` 在老浏览器被忽略时，
-  脚本切换前会显式关掉其余条目，行为一致。
+  照常工作（无 JS 时首条默认展开，其余可点）；JS 只负责「播完切下一条」和
+  「手动开合后重启该条倒计时」，不接管点击，也不重写 aria。`name` 在老浏览器被
+  忽略时，脚本切换前会显式关掉其余条目，行为一致。
 
   **挂起的三条路**（WCAG 2.2.2：超过 5 秒的自动变化必须可停）：
-    ① 鼠标悬停 / 焦点进入（CSS `:hover` / `:focus-within` 挂 animation-play-state）
+    ① 鼠标悬停 / **键盘**焦点进入（CSS `:hover` / `:has(:focus-visible)` 挂
+       animation-play-state；**不能写成 `:focus-within`**，鼠标点过之后焦点留在
+       summary 上会把倒计时永久挂起，见 BUG-088）
     ② 区块离开视口（IntersectionObserver 打 data-paused）
     ③ 标签页切到后台（visibilitychange）
   ②③ 由 assets/product-faq.js 处理，①是纯 CSS。①有个必须知道的副作用：点完手风琴
