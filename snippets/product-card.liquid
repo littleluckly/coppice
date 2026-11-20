@@ -24,9 +24,11 @@
   @param {boolean} show_weight - true → 规格行显示整机重量（经 spec-value 换算）
   @param {string} sizes - 图片 sizes 提示，**必传**（theme check 规则：@param 全部必传）。
     调用方按自己的列数估：首页 6 列 '15vw/30vw/45vw'，集合页桌面 3 列 '25vw/32vw/45vw'。
-  @param {boolean} quick_add - true → 单变体款渲染快速加购（2026-10-13 拍板：
-    仅单变体且 available 渲染；多变体卡不渲染任何 CTA；售罄置灰 disabled；
-    无 JS 降级为表单 POST /cart/add；交互由 assets/quick-add.js 的 quick-add 自定义元素接管）
+  @param {boolean} quick_add - true → 卡片 CTA（2026-11-20 三态，详见下方注释）：
+    单变体且 available → 快速加购（assets/quick-add.js 的 quick-add 元素接管，
+    无 JS 降级为表单 POST /cart/add）；单变体售罄 → 置灰 disabled；
+    多变体且有货 → 「Choose options」+ 快速查看弹窗（snippets/quick-view.liquid，
+    需要调用方同时引入 product-form.js）；多变体全售罄 → 置灰 disabled。
 {% enddoc %}
 
 {%- if product != blank -%}
@@ -295,31 +297,46 @@
       </compare-toggle>
     {%- endif -%}
 
-    {%- comment -%} 快速加购（T-1.1）：仅调用方传 quick_add 且单变体时渲染；多变体无 CTA；售罄置灰。
-        无 JS 时整表单 POST /cart/add（默认跳转购物车页），JS 由 quick-add 自定义元素拦截为 fetch。
-        2026-10-16 刘工：挪到卡内最末 + margin-top:auto，各卡文字行数不一时按钮仍统一贴卡底。 {%- endcomment -%}
-    {%- if quick_add and product.variants.size == 1 -%}
-      <quick-add class="product-card__quick-add">
-        <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">
-          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
-          <input type="hidden" name="quantity" value="1">
-          <button
-            type="submit"
-            class="product-card__add btn-solid"
-            {% unless product.available %}disabled{% endunless %}
-            data-added-label="{{ 'products.product_card.added' | t }}"
-            data-added-message="{{ 'products.product_card.added_message' | t: title: product.title }}"
-            data-error-message="{{ 'products.product_card.add_error' | t }}"
-          >
-            {%- if product.available -%}
-              {{ 'products.product_card.add_to_cart' | t }}
-            {%- else -%}
-              {{ 'products.product_card.sold_out' | t }}
-            {%- endif -%}
+    {%- comment -%} 卡片 CTA（T-1.1 / 2026-11-20 刘工）：
+        ① 单变体 → 快速加购（quick-add）：有货直接加，售罄置灰；
+        ② 多变体且有货 → 「Choose options」+ 快速查看弹窗（snippets/quick-view.liquid，
+           2026-11-20 新增：原先多变体卡不渲染任何 CTA，买家必须整页跳走才能挑规格）；
+        ③ 多变体但全部售罄 → 与单变体售罄同形：置灰 Sold out，不给弹窗
+           （弹进去也只能看到一排售罄选项）。
+        无 JS 时 ① 走表单 POST /cart/add，② 的入口本身就是产品页链接 —— 都不会变成死按钮。
+        2026-10-16 刘工：整块挪到卡内最末，各卡文字行数不一时按钮仍统一贴卡底。 {%- endcomment -%}
+    {%- if quick_add -%}
+      {%- if product.variants.size > 1 -%}
+        {%- if product.available -%}
+          {%- render 'quick-view', product: product -%}
+        {%- else -%}
+          <button type="button" class="product-card__add product-card__sold-out btn-solid" disabled>
+            {{- 'products.product_card.sold_out' | t -}}
           </button>
-        </form>
-        <p class="visually-hidden" role="status" data-quick-add-status></p>
-      </quick-add>
+        {%- endif -%}
+      {%- else -%}
+        <quick-add class="product-card__quick-add">
+          <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">
+            <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+            <input type="hidden" name="quantity" value="1">
+            <button
+              type="submit"
+              class="product-card__add btn-solid"
+              {% unless product.available %}disabled{% endunless %}
+              data-added-label="{{ 'products.product_card.added' | t }}"
+              data-added-message="{{ 'products.product_card.added_message' | t: title: product.title }}"
+              data-error-message="{{ 'products.product_card.add_error' | t }}"
+            >
+              {%- if product.available -%}
+                {{ 'products.product_card.add_to_cart' | t }}
+              {%- else -%}
+                {{ 'products.product_card.sold_out' | t }}
+              {%- endif -%}
+            </button>
+          </form>
+          <p class="visually-hidden" role="status" data-quick-add-status></p>
+        </quick-add>
+      {%- endif -%}
     {%- endif -%}
   </tilt-element>
 {%- endif -%}

@@ -245,11 +245,6 @@
          底部留一条突兀的空白。 */
       align-items: stretch;
     }
-    /* 图列被拉伸后不再吃 aspect-ratio：块轴尺寸已是确定值，比例失去意义 */
-    .product-faq__media {
-      aspect-ratio: auto;
-      block-size: 100%;
-    }
     /* 没有配图（且商品也没图）时退回单栏：否则手风琴只占左边半幅，
        右半幅空白 —— 那是"漏渲染"的样子，不是排版 */
     .product-faq__layout--solo {
@@ -415,6 +410,16 @@
     inline-size: 100%;
     block-size: 100%;
     object-fit: cover;
+  }
+  /* 桌面端图列不吃 3/2 比例，跟着手风琴的高度走（效果图里两者等高）。
+     ⚠️ 这条必须写在上面 .product-faq__media 基线**之后**：同为 0,1,0 特异性，
+     媒体查询不提高优先级，放前面会被基线里的 aspect-ratio 直接盖掉
+     （第一版就这么写的，图比问题列高出 70px，底部多一条空白）。 */
+  @media (min-width: 990px) {
+    .product-faq__media {
+      aspect-ratio: auto;
+      block-size: 100%;
+    }
   }
 
   .product-faq__cta {
