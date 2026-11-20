@@ -1,4 +1,42 @@
+{% comment %}
+  Custom Liquid —— 商家 / App 自助注码的插槽（2026-11-18，合规项 G-01）。
 
+  ## 为什么必须有这么个"空 section"
+  Theme Store 硬性条款原文：
+    "Themes must include a Custom Liquid section. The section needs to include a
+     setting of type `liquid`, and should be available on all templates that
+     support sections. The Custom Liquid section can act as an insertion point
+     for certain types of apps."
+  很多 App 的分发方式就是"把这段代码粘到主题里"——没有这个 section，商家无处可粘，
+  主题就缺一个 `must`。
+
+  ## 四条不能改的约定
+  1. **不写 `enabled_on`**。schema 里没有这个键 = 所有支持 section 的模板都能加；
+     一旦写了（哪怕写全）就变成"只在列出的模板里可用"，并随官方模板增删漂移。
+  2. **原样输出，不过滤、不套 `.rte`**。`{{ … }}` 直接吐结果：它是要执行的代码，
+     不是富文本。套一层 `.rte` 富文本容器会改写商家自己的排版；改成 `escape`
+     则把代码当文本印在页面上。两种都算坏。
+  3. **`presets` 必须有，且不带默认代码**。没有 presets，"添加分区"里根本选不到它；
+     带了示例代码，则等于往每家店里塞一段商家没写过的输出（官方禁占位内容）。
+  4. **不塞进任何 `templates/*.json` 的默认内容**。理由同上：商家打开编辑器会看到
+     一段来路不明的代码，而它本来只该在商家主动添加时出现。
+
+  ## 版式：只有一层壳，零样式
+  不加内边距、不加背景、不定义宽度。App 组件自带排版，主题再给 padding 就是双份；
+  宽度由 `.shopify-section` 的内容网格决定（页宽内居中），与其它 section 对齐，
+  所以这里也**不需要** stylesheet 标签。
+  · 外壳 div 不能省：shell 里如果没有元素节点，裸文本会成为 grid 匿名项，
+    可能被自动摆到左右留白列里。
+  · 宽内容（大表格、iframe）溢出页面由商家代码负责。主题侧**不**加
+    `overflow: clip` —— 那会连 App 自己的横向轮播一起切掉，比出现滚动条更糟。
+
+  ## 降级
+  · 代码为空 → 整段不渲染，不留空壳 div（AGENTS §6 空态总则）。
+  · 代码里的 Liquid 语法错误由平台在渲染期报给商家（编辑器内红色提示），
+    主题侧无法预判、也不该吞掉。
+  · 与 G-10（Custom Liquid **block**）是两件事：section 能独立加进任意模板，
+    block 只能活在宿主 section 里。两者都要有。
+{% endcomment %}
 
 {%- if section.settings.custom_liquid != blank -%}
   <div class="custom-liquid">{{ section.settings.custom_liquid }}</div>

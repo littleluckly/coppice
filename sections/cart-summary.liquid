@@ -1,4 +1,16 @@
+{% comment %}
+  订单摘要卡（pages-ui §10 · task-cart T-1.3）。
 
+  三条硬约束：
+  1. **本 section 绝不输出任何金额形式的运费或税费**。主题无权计算（SDD §6.4），
+     参考图里的「Shipping FREE」在本主题里属于伪造数据。只有一行静态文案。
+  2. 空车时整节不输出——挂着 $0.00 的摘要卡是主题商店最常见的扣分点。
+  3. 结账按钮靠 `form="cart-form"` 关联到 cart-lines 里的表单（跨 section，
+     无法共用 <form> 元素）。改 id 时两处同步。
+
+  加速结账（强制项 #3）：`content_for_additional_checkout_buttons` 输出的按钮
+  **不加任何颜色/圆角覆盖**——官方要求不得修改其品牌配色。
+{% endcomment %}
 
 {%- if cart.item_count > 0 -%}
   {%- liquid
@@ -31,7 +43,7 @@
           <dt>{{ 'cart.discount' | t }}</dt>
           <dd>−{{ cart.total_discount | money }}</dd>
         </div>
-
+        {%- comment -%} 整单折扣逐条列出（强制项 #2）：只列有实际分摊金额的条目 {%- endcomment -%}
         {%- for discount in cart.cart_level_discount_applications -%}
           {%- if discount.total_allocated_amount > 0 -%}
             <div class="cart-summary__row cart-summary__row--detail">
@@ -43,6 +55,10 @@
       {%- endif -%}
     </dl>
 
+    {%- comment -%}
+      这一行是**文案**，不是计算结果。商家可在设置里改写，但设置项说明里写明了
+      「不要填金额」——控制权交出去的同时把边界说清楚。
+    {%- endcomment -%}
     <p class="cart-summary__note">{{ summary_note }}</p>
 
     <div class="cart-summary__total">
@@ -50,6 +66,10 @@
       <span class="cart-summary__total-value">{{ cart.total_price | money }}</span>
     </div>
 
+    {%- comment -%}
+      价格变化的播报区（WCAG / SDD §8.2）。脚本在局部刷新后把新总价写进来，
+      文案模板由 Liquid 下发，前端不硬编码。
+    {%- endcomment -%}
     <p class="visually-hidden" role="status" data-cart-live></p>
 
     <div class="cart-summary__actions">
@@ -57,6 +77,10 @@
         {{- 'cart.checkout' | t -}}
       </button>
 
+      {%- comment -%}
+        加速结账默认启用、配色不动（强制项 #3）。平台在没有可用方式时输出空，
+        这里不判断、不兜底——判断反而容易在编辑器里与预览不一致。
+      {%- endcomment -%}
       <div class="cart-summary__accelerated">{{ content_for_additional_checkout_buttons }}</div>
 
       <a class="btn-solid btn-solid--quiet cart-summary__continue" href="{{ routes.all_products_collection_url }}">
@@ -147,7 +171,7 @@
     text-decoration: none;
     font-weight: 500;
   }
-
+  /* 加速结账按钮由平台渲染，这里只统一间距，不碰颜色/形状 */
   .cart-summary__accelerated:empty {
     display: none;
   }
@@ -166,6 +190,13 @@
     inline-size: auto;
   }
 
+  /* 桌面吸顶。两个前提缺一不可：
+     ① 外层 section 包装必须 stretch 到整行高度（见 critical.css）——容器不比
+        元素高，sticky 就没有移动空间；
+     ② 本卡片要 align-self: start 而不是被拉伸，否则它的高度等于容器高度，
+        同样粘不住。
+     5.5rem 与产品页锚点导航的落点（88px）同一口径，正好让开吸住的页头；
+     页头将来变高需要同步这个值。 */
   @media (min-width: 990px) {
     .cart-summary {
       position: sticky;

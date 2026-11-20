@@ -1,4 +1,20 @@
+{% comment %}
+  product-highlights — 产品页信息卡带（task-product T-2.2，合并 pages-ui §3 的 ①②③）。
 
+  **为什么合并成一个 section**：三张卡在桌面同排、Key Specifications 跨两列、需等高对齐；
+  跨 section 无法共享网格行（与 sections/collection.liquid 合并主体同一判断）。
+  职责由 block 类型区分，仍然满足 Sections Everywhere —— 商家可增删、可排序每张卡。
+
+  三种 block：
+    platform_compat   读 platform.battery_platform；**空值整卡不渲染**（汽油机不该出现
+                      "Compatible with 40V Platform"）。链接目标由 block 选一个集合。
+    logistics         按 logistics.shipping_class **只出一档**（字段是单值枚举，
+                      效果图把 Parcel 与 Freight 并排列出是错的）。四个字段全空 → 不渲染。
+                      时效文案走 block setting，商家可改；底部固定声明「以结账为准」。
+    spec_quickview    决策参数卡。**5 个槽位 + 字段下拉**，而不是无限嵌套 block：
+                      嵌套 block 在当前主题基线上没有先例、编辑器行为未验证，用槽位换取
+                      确定性（代价是槽位之间不能任意重排，记在 task-product T-2.2）。
+{% endcomment %}
 
 {%- liquid
   assign has_blocks = false
@@ -119,7 +135,10 @@
                 assign qv_heading = 'sections.product_highlights.quickview.default_heading' | t
               endif
             -%}
-
+            {%- comment -%}
+              先攒行、再决定要不要出卡：配件类商品所有参数都空，如果直接出卡就会得到
+              一张只有标题「Key specifications」的空卡（2026-10-28 实测抓到）。
+            {%- endcomment -%}
             {%- capture qv_rows -%}
               {%- for key in slot_keys -%}
                 {%- capture cell_text -%}
@@ -233,6 +252,7 @@
     margin-inline-start: 0.3rem;
   }
 
+  /* 规格速览：两列参数 */
   .spec-quickview {
     display: grid;
     grid-template-columns: minmax(0, 1fr);

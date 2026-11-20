@@ -1,4 +1,13 @@
+{% comment %}
+  大件物流汇总条（pages-ui §10 · task-cart T-1.4 · SDD §6.4）。
 
+  判定：遍历车内商品，任一 `logistics.shipping_class` 为 Oversized / Freight LTL 才出现。
+  纯小件购物车 → **整节不输出**（连包裹元素都不要：空的 section 包装会在栅格里
+  留出一行 1.5rem 的 gap，视觉上是一道莫名其妙的白缝）。
+
+  文案纪律（SDD §6.4 验收线）：只能描述"需要什么交付条件"，**不能出现任何运费金额**
+  或时效承诺；结尾的「最终运费与时效以结账为准」不可删。
+{% endcomment %}
 
 {%- liquid
   assign banner_has_freight = false

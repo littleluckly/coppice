@@ -1,4 +1,21 @@
+{% comment %}
+  product-supplies — 耗材复购区（task-product T-2.3，SDD §6.3）。
 
+  **只负责主机页的耗材**。2026-10-28 二次拍板后拆成两个 section：
+    · 本文件（耗材，数据来自 `acc.consumables`）→ 排在 Specifications **之后**
+    · `product-complementary.liquid`（互补整机，数据来自 S&D）→ 排在概览**之前**、紧跟买盒
+  两者**互斥**：有耗材的商品只出耗材区，没有耗材的（配件/电池）只出互补区，
+  不会出现同一页两块推荐打架。
+
+  **命名**：叫 Recommended Supplies 而不是效果图的 "Frequently Bought Together"。
+  FBT 是购买关联算法的语义，本主题没有订单关联数据，用了等于暗示一个不存在的能力。
+
+  · 适配说明读**配件自己的** `acc.fitment_note`（写在配件侧，主机不填）
+  · 单卡加购复用 `<quick-add>`（它读整张表单的 FormData，所以卡内数量自然随单卡提交）
+  · 底部 `Add all N items`：一次 POST /cart/add.js 多个 items（assets/supplies.js）
+  · **N ≤ 1 时不渲染该按钮**；**不做任何捆绑折扣**（红线：买赠/捆绑定价不实现）
+  · 无耗材 → **整个 section 不输出**（不留空壳，退化交给 product-complementary）
+{% endcomment %}
 
 {%- liquid
   assign consumables = product.metafields.acc.consumables.value
@@ -109,7 +126,7 @@
     padding: 0;
     list-style: none;
   }
-
+  /* 窄屏：横向卡退回单列竖排（图在上、文在下），避免 120px 图挤压文字 */
   @media (max-width: 749px) {
     .product-supplies__grid {
       grid-template-columns: minmax(0, 1fr);
@@ -120,14 +137,19 @@
     align-items: center;
     gap: 1.5rem;
     padding: 1.5rem;
-
+    /* 参考稿 supply-card：灰底圆角横向卡，hover 上浮 + 投影 */
     background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
     border-radius: calc(var(--style-border-radius-inputs) * 1.5);
     min-inline-size: 0;
     transition: translate 0.2s ease, box-shadow 0.2s ease;
   }
   .product-supplies__item:hover {
-
+    /* 2026-10-30：这套 hover 升格为「全站卡签名」，参数已收敛到
+       snippets/css-variables.liquid（--card-hover-lift / --card-hover-shadow），
+       商品卡与 mega 菜单产品卡同源消费。此处不再持有字面值，改一处即全站同步。
+       原始依据（2026-10-29 刘工）：与画廊右侧加购按钮同款形态（0 6px 20px / 30%），
+       色相取 --color-brand-light 而非品牌深绿——卡片是浅底，深绿投影会发灰，
+       浅绿才有「被点亮」的通透感。 */
     translate: 0 var(--card-hover-lift);
     box-shadow: var(--card-hover-shadow);
   }
@@ -139,7 +161,7 @@
     width: 120px;
     height: 80px;
     border-radius: var(--style-border-radius-inputs);
-
+    /* 参考稿 supply-img：白底小图 */
     background-color: var(--color-background);
     overflow: hidden;
   }
@@ -176,14 +198,15 @@
     margin: 0;
     font-size: 1rem;
     font-weight: 700;
-
+    /* 参考稿 supply-price：品牌绿 */
     color: var(--color-brand);
   }
   .product-supplies__add {
     margin-block-start: auto;
     padding-block-start: 0.5rem;
   }
-
+  /* 形状 / 配色 / 光晕 / 扫光 / 过渡 / 禁用态 / data-state 全部收敛到
+     assets/critical.css 的 .btn-solid（2026-10-29）；这里只留尺寸差异 */
   .product-supplies__button {
     width: auto;
     padding: 8px 1.5rem;
@@ -198,7 +221,8 @@
     gap: 0.75rem;
     margin-block-start: 1rem;
   }
-
+  /* 套装按钮原来漏了胶囊化与光晕（border-radius 还是输入框圆角），
+     收敛时一并跟上 .btn-solid */
   .product-supplies__bundle-button {
     padding: 10px 1.25rem;
     font: inherit;
