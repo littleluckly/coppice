@@ -62,8 +62,10 @@ class QuickView extends HTMLElement {
     document.addEventListener('cart:updated', this._onCartUpdated, { signal });
     document.addEventListener('cart:add-failed', this._onCartFailed, { signal });
 
-    /* 首次对齐：浏览器可能恢复了上次的 select 选中项 */
-    this._sync();
+    /* 首次对齐：浏览器可能恢复了上次的 select 选中项。
+       传 initial 让主图**不跟着换**——服务端渲染的主图是商品首图（与卡片一致），
+       一打开就跳成变体图会闪一下，而且缩略图里的首张会对不上。 */
+    this._sync({ initial: true });
   }
 
   disconnectedCallback() {
@@ -134,7 +136,7 @@ class QuickView extends HTMLElement {
   };
 
   /** 把选中变体的价格 / 划线价 / 折扣 / 单位价 / 按钮态 / 变体图同步到面板 */
-  _sync() {
+  _sync({ initial = false } = {}) {
     const option = this._select?.selectedOptions?.[0];
     if (!option) return;
     const data = option.dataset;
@@ -164,7 +166,7 @@ class QuickView extends HTMLElement {
     this._syncButton(data);
 
     /* 变体自带图才换；没有就保持当前图（不退回主图，避免选一下就跳回第一张） */
-    if (data.media) {
+    if (!initial && data.media) {
       this._setImage(data.media);
       this._setActiveThumb(null);
     }
