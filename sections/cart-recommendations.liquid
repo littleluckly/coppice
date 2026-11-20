@@ -1,18 +1,4 @@
-{% comment %}
-  购物车补充建议（pages-ui §10 · task-cart T-1.5 · SDD §6.3）。
 
-  两条路径（刘工 2026-11-02 定 D-4）：
-    A 服务端先渲染商家指定的集合——**这条必须永远能出结果**，它是无 JS 与
-      "未配置 complementary" 时的全部内容。
-    B 有 JS 且有车内商品时，向 /recommendations/products 要"与该商品互补"的推荐，
-      拿到就替换 A。拿不到（空 / 失败 / 未配置 Search & Discovery）→ 保持 A，不闪烁。
-
-  选品取向：默认指向**配件集合**。参考图那种"再卖一台割草机"与本主题
-  「主机 + 耗材」的客单价结构相悖——买完割草机的人下一次要的是刀片，不是第二台割草机。
-
-  排除逻辑：已在车内的商品不再推荐（服务端与 JS 替换后都生效，因为推荐接口
-  渲染同一个 section 时 `cart` 依然可用）。
-{% endcomment %}
 
 {%- liquid
   assign rec_collection = section.settings.collection
@@ -45,11 +31,7 @@
 -%}
 
 {%- if rec_collection != blank and rec_collection.products_count > 0 -%}
-  {%- comment -%}
-    先数一遍可输出的商品：集合里的东西可能已经全在车内（比如就 4 款配件、
-    顾客全买了），那样标题下面挂一个空网格比不显示更难看。
-    集合对象已在内存里，第二遍循环不产生额外请求。
-  {%- endcomment -%}
+
   {%- assign rec_available = 0 -%}
   {%- for rec_probe in rec_collection.products limit: rec_pool -%}
     {%- unless rec_cart_ids contains rec_probe.id -%}
@@ -58,7 +40,7 @@
   {%- endfor -%}
 
   {%- if rec_available > 0 -%}
-    {%- comment -%} product-card 的三个依赖：样式 + 收藏 + 快速加购 + 倾斜 {%- endcomment -%}
+
     {{ 'product-card.css' | asset_url | stylesheet_tag }}
     <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
     <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
@@ -128,7 +110,6 @@
     }
   }
 
-  /* 窄屏横滑：露出 1.2 张卡暗示还能滑，避免"只看到两张"的误解 */
   @media (max-width: 749px) {
     .cart-recommendations__grid {
       grid-template-columns: none;
@@ -144,7 +125,6 @@
     }
   }
 
-  /* 个性化结果替换的过渡：不做淡入淡出会闪一下（图片重新加载） */
   .cart-recommendations[data-personalizing] .cart-recommendations__grid {
     opacity: 0.35;
     transition: opacity 0.2s ease;

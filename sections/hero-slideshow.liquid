@@ -1,24 +1,4 @@
-{% comment %}
-  Hero slideshow — 首页首屏（task-index T-2.1，pages-ui §2；2026-10-20 改版）。
 
-  形态参考已验收效果图（Ardot「Coppice 首页 Hero 效果图」）+ 集合页 banner 语言：
-  左侧文字块（eyebrow / 大标题 / 副标题 / 主次 CTA）+ 右侧悬浮产品岛（alpha 抠图）
-  + 底图 + 弧形渐隐遮罩。slide 全屏纵向叠放，JS 编排「电影式」切换
-  （参考 dev-docs/local-assets/首页-hero图动画效果.html，节奏参数 1:1）：
-
-    t=0              产品图向上滑出并淡出（450ms，ease-in）
-    t=220ms          文字紧随其后逐行向上滑出（400ms，行间隔 90ms）
-    t=bgStart        最后一行结束后背景图上滑（550ms，opacity 止于 0.6 不淡透）
-    t=bgStart+290ms  背景未滑完，下一屏从底部顶入（700ms），两屏重叠、无缝无黑屏
-
-  bgStart = max(450, 220+400+(行数-1)×90) + 100。全程只用 transform/opacity。
-  动画的 transform 会整体覆写元素 transform，因此静态定位只允许 translateY
-  居中这一种，且动画 to 值里显式带 calc(-50% …)（tilt-element 同款教训）。
-
-  无 JS 退化：非首屏带 hidden，首屏文字与图片可直接索引。
-  LCP（SDD §8.1）：首屏背景图与产品图 eager + fetchpriority high。
-  首块标题为 h1（每页一个 h1，AGENTS.md §8）；其余块 h2。
-{% endcomment %}
 
 {%- if section.blocks.size > 0 -%}
   <hero-slideshow
@@ -46,24 +26,11 @@
           {% unless is_first %}hidden{% endunless %}
           {{ block.shopify_attributes }}
         >
-          {%- comment -%}
-            第 1 层：背景组（底图 + 弧形渐隐遮罩，作为一个整体卷动）。
-            包一层是必须的：遮罩高 120%、top -10%，如果让它各自跑同一个
-            translateY(-100%)，它会比底图多走 20%，卷动时边缘就露馅了。
-          {%- endcomment -%}
+
           <div class="hero-slideshow__bg">
             <div class="hero-slideshow__media">
               {%- if block.settings.image != blank -%}
-                {%- comment -%}
-                  底图是装饰图：同屏已有 h1 / 副标题 / CTA 承载信息，图片不额外承载语义
-                  （AGENTS §8：装饰性图片必须输出 alt=""，而不是不写 alt）。商家若在
-                  「内容 → 文件」里给这张图写了 alt（照片独有的信息），则原样输出。
 
-                  ⚠️ image_tag 在 alt 为空时会把 alt 属性**整条吞掉**（2026-10-21 实测：
-                  渲染出的 HTML 里根本没有 alt，不是 alt=""）。属性是否存在是硬要求，
-                  所以先 capture 再补一个空 alt。底下产品岛那处有一模一样的兜底，
-                  改的时候别只改一处。
-                {%- endcomment -%}
                 {%- capture hero_bg_img -%}
                   {{ block.settings.image
                     | image_url: width: 2400
@@ -81,13 +48,7 @@
                   {%- assign hero_bg_img = hero_bg_img | replace: '<img ', '<img alt="" ' -%}
                 {%- endunless -%}
                 {%- if block.settings.image_mobile != blank -%}
-                  {%- comment -%}
-                    --focal-m：移动图自己的焦点。必须写在 <picture> 上——<source> 不能
-                    承载 object-position，而 <img> 身上那条内联样式是 image_tag 按
-                    **桌面图**（block.settings.image）写的。≤749px 时浏览器改取本
-                    <source> 的 srcset（画 image_mobile 的像素），但 img 元素与它的
-                    内联焦点都没变。样式侧在 749 断点把它换回来，见下方 @media 块。
-                  {%- endcomment -%}
+
                   <picture style="--focal-m: {{ block.settings.image_mobile.presentation.focal_point | default: '50% 50%' }}">
                     <source
                       media="(max-width: 749px)"
@@ -106,28 +67,12 @@
               {%- endif -%}
             </div>
 
-            {%- comment -%}
-              第 2 层：弧形渐隐遮罩（集合页 banner 同语言：页面底色渐变 + 圆弧右缘，
-              只压底图、不碰产品岛与文字）。空 image 时也渲染，保证文字可读。
-            {%- endcomment -%}
             <div class="hero-slideshow__fade" aria-hidden="true"></div>
           </div>
 
-          {%- comment -%}
-            第 3 层：悬浮产品岛（alpha 抠图 + 投影，空则不渲染）。
-            分两层是有意的：外层 .hero-slideshow__product 只负责定位 + 切换时的
-            退出动画（transform），内层 img 只负责自主漂浮动画（transform）。
-            两层的 transform 互不覆写——合成一层会导致退出动画把漂浮状态吃掉，
-            或漂浮动画把退出位移吃掉（tilt-element 同款教训）。
-          {%- endcomment -%}
           {%- if block.settings.product_image != blank -%}
             <div class="hero-slideshow__product">
-              {%- comment -%}
-                产品岛的 alt 是**内容**，由商家在「内容 → 文件」逐张填（4 屏的标题是
-                同一句营销语，不具区分性，所以不能用标题兜底——那会得到 4 条一样的 alt）。
-                未填时退化为 alt=""（当装饰），退出的至少是合法语义而不是无属性。
-                兜底逻辑与上面底图相同，原因见那段注释。
-              {%- endcomment -%}
+
               {%- capture hero_island_img -%}
                 {{ block.settings.product_image
                   | image_url: width: 1200
@@ -146,12 +91,6 @@
                 {%- assign hero_island_img = hero_island_img | replace: '<img ', '<img alt="" ' -%}
               {%- endunless -%}
 
-              {%- comment -%}
-                移动端专用产品图（2026-10-25 加）。竖版 hero 里横放一张 16:9 抠图，
-                主体会被裁得只剩一半；给商家一个「手机用哪张」的入口，空则回落主图。
-                断点用 989px —— 与 .hero-slideshow 的移动端布局断点一致（不是底图的 749px：
-                底图按 749 切是因为平板竖屏仍用横图构图，产品岛则 989 以下就换竖排了）。
-              {%- endcomment -%}
               {%- if block.settings.product_image_mobile != blank -%}
                 <picture>
                   <source
@@ -169,10 +108,6 @@
             </div>
           {%- endif -%}
 
-          {%- comment -%}
-            第 4 层：左侧文字块。每行包一个 __line（带 --line-index 供逐行 stagger），
-            行数随商家填写条件增减，index 用 Liquid 计数保证与实际行序一致。
-          {%- endcomment -%}
           <div class="hero-slideshow__content">
             {%- assign line_index = 0 -%}
 
@@ -220,10 +155,6 @@
       {%- endfor -%}
     </div>
 
-    {%- comment -%}
-      切换控件（仅多张时）：一条居中的毛玻璃胶囊，箭头在左、圆点在右——
-      箭头与圆点同处一个视觉簇，比原先「圆点居中 + 箭头飘在右下角」更容易被看到。
-    {%- endcomment -%}
     {%- if section.blocks.size > 1 -%}
       <div class="hero-slideshow__controls">
         <button
@@ -258,7 +189,6 @@
       </div>
     {%- endif -%}
 
-    {%- comment -%} 切换播报（aria-live），模板经 locale，JS 只替换序号占位 {%- endcomment -%}
     <p class="hero-slideshow__status visually-hidden" aria-live="polite" data-hero-status>
       {{ 'sections.hero_slideshow.slide_status' | t: index: 1, count: section.blocks.size }}
     </p>
@@ -266,41 +196,31 @@
 {%- endif -%}
 
 {% stylesheet %}
-  /* ===== 节奏参数（改这里即改 JS 编排时长；JS 读不到时回落到同名默认值） =====
-     与动画参考稿 dev-docs/local-assets/首页-hero图动画效果.html 的差异：
-     ① 背景改为与文字/产品岛**同时**进行（只延迟 300ms 启动），参考稿是等
-        最后一行文字出完才启动背景，行数多时会白等近 1 秒；
-     ② 下一屏顶入与背景卷动严格等长等曲线，见下面的注释。 */
+
   .hero-slideshow {
     --hero-product-out-dur: 450ms;
     --hero-text-start-offset: 220ms;
     --hero-text-out-dur: 400ms;
     --hero-text-stagger: 90ms;
     --hero-bg-out-dur: 600ms;
-    /* 背景组相对**切换起点**的延迟。注意语义：不再是「等文字出完再等这么久」，
-       而是「切换开始后 300ms 就滚」。所以行数增减不会推迟背景。 */
+
     --hero-bg-out-delay: 300ms;
-    /* 下一屏顶入：**必须与背景卷动同长、同曲线、同时启动**，否则两条边对不齐。
-       早期版本是 700ms / 提前 260ms / ease-out（背景是 550ms ease-in），
-       曲线与时长都不同 → 中途一边快一边慢，观感就是两张背景图叠在一起。
-       三者相等时，滑出底边 ≡ 顶入顶边，全程严丝合缝（即真正的「胶片卷动」）。 */
+
     --hero-next-in-dur: 600ms;
     --hero-next-in-advance: 600ms;
     --hero-ease-in: cubic-bezier(0.6, 0, 0.8, 0.4);
     --hero-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
-    /* 卷动专用曲线：背景滑出与下一屏顶入共用这一条，是「无缝」的前提 */
+
     --hero-roll-ease: cubic-bezier(0.4, 0, 0.2, 1);
-    /* 入场延迟：下一屏顶入开始后多久，它的图文开始落位。
-       取 300ms 是因为此时整屏已走过约 6 成，图文刚从下沿进画，看得见动作。 */
+
     --hero-enter-offset: 300ms;
-    /* 产品图自主漂浮一轮的时长（越小越活泼、越大越沉稳） */
+
     --hero-float-dur: 11s;
 
     display: block;
     position: relative;
   }
 
-  /* ===== 视口与幻灯（全屏纵向叠放，底色即页面底色 → 滑出/顶入间不露黑） ===== */
   .hero-slideshow__viewport {
     position: relative;
     overflow: hidden;
@@ -315,9 +235,7 @@
   .hero-slideshow__slide[hidden] {
     display: none;
   }
-  /* 背景组：底图 + 弧形遮罩装在一起整体卷动。
-     高度必须严格等于视口高（inset:0），这样 translateY(±100%) 的距离
-     与「下一屏整屏位移」完全一致——无缝卷动的几何前提。 */
+
   .hero-slideshow__bg {
     position: absolute;
     inset: 0;
@@ -337,28 +255,12 @@
     object-fit: cover;
   }
 
-  /* 移动端底图的焦点归属（<picture> + <source>）。
-     先排除一个误解：这不是「运行时换图」——轮播是整屏切换（每屏各自一套
-     <picture>/<img>，JS 只翻 hidden 与 loading），没有任何代码改 img 的 src。
-     问题出在**媒体条件选源**：≤749px 时浏览器改取 <source> 的 srcset，画的是
-     image_mobile 的像素，但 <img> 元素和它身上 image_tag 写的内联 object-position
-     都没变——那是**桌面图**的焦点。于是商家给移动图设的焦点设了也不生效。
-     破法只能从样式侧：<picture> 上带 --focal-m，断点内改回移动图的焦点。
-     **!important 是必需的**——内联样式优先级高于任何选择器，没有它这条规则永不命中。
-     选择器刻意挂在 picture 后代上：没配移动图就没有 <picture>，这条不命中，
-     桌面图的焦点照旧由 image_tag 的内联样式生效。 */
   @media screen and (max-width: 749px) {
     .hero-slideshow__media picture img {
       object-position: var(--focal-m, 50% 50%) !important;
     }
   }
 
-  /* ===== 第 2 层：弧形渐隐遮罩（页面底色派生，Noir 自动翻转） =====
-     ⚠️ 尺寸必须严格落在 slide 内部（top 0 + height 100%），不能像早期那样
-     `top:-10%; height:120%`：这一层是跟着 .hero-slideshow__bg 一起卷动的，
-     底部多出来的那 10% 在卷出 100% 之后会停在视口最上沿 —— 就是「切换后顶部
-     残留一条白色遮罩约 0.5s」的真因（卷动时长 = 残留时长）。
-     现在底边正好等于 slide 底边，卷出后完全离开视口。 */
   .hero-slideshow__fade {
     position: absolute;
     top: 0;
@@ -376,11 +278,6 @@
     border-radius: 0 60% 50% 0 / 0 70% 50% 0;
   }
 
-  /* ===== 第 3 层：悬浮产品岛 =====
-     定位三件套由 section 级设置驱动（--hero-product-x / -y / -size 写在根元素 style 上）。
-     ⚠️ 居中一律用独立属性 `translate`，不能用 transform：本层的 transform 被切换时的
-     退出动画整块覆写，写进 transform 的居中会被吃掉（tilt-element 同款教训）。
-     投影永远用黑（配色纪律里的合法例外：压在商品图上的元素跟图不跟主题）。 */
   .hero-slideshow__product {
     position: absolute;
     left: var(--hero-product-x, 62%);
@@ -388,10 +285,8 @@
     translate: -50% -50%;
     z-index: 2;
     width: var(--hero-product-size, 46%);
-    /* 刻意不设 max-width：宽度已经是百分比设置，硬上限会让设置值在大屏上
-       被静默截断（实测 1440 视口下 46% 只渲染出 43.5%），等于给商家一个
-       转不动却没反应的旋钮。范围上限 80% 本身已经是护栏。 */
-    perspective: 1200px; /* 给内层 3D 倾斜提供透视 */
+
+    perspective: 1200px;
     will-change: transform, opacity;
   }
   .hero-slideshow__product-img {
@@ -407,8 +302,6 @@
     animation: none;
   }
 
-  /* 自主漂浮：无鼠标参与的「呼吸版 tilt」——缓慢的三维倾斜 + 轻微上下浮动。
-     挂在 img 上（transform），与外层的退出动画（也在 transform，但不同元素）互不干扰。 */
   @keyframes hero-product-float {
     0%,
     100% {
@@ -425,7 +318,6 @@
     }
   }
 
-  /* ===== 第 4 层：左侧文字块 ===== */
   .hero-slideshow__content {
     position: absolute;
     top: 50%;
@@ -467,10 +359,7 @@
     gap: 0.875rem;
     margin-block-start: 1.75rem;
   }
-  /* 主 CTA：形状 / 配色 / 光晕 / 扫光 / 过渡 / reduce 处理全部来自
-     assets/critical.css 的 .btn-solid（2026-10-29 收敛，此前是四份拷贝）。
-     这里只保留 hero 自己的尺寸与排版差异：padding 更大、字号略大、字重 600
-     —— hero 是页面级主行动，比卡内加购按钮重一档是刻意的。 */
+
   .hero-slideshow__cta {
     display: inline-flex;
     align-items: center;
@@ -486,14 +375,6 @@
     outline-offset: 2px;
   }
 
-  /* ===== 切换控件：去容器的极简指示器 =====
-     旧版是一条居中的白色毛玻璃胶囊（72% 底 + blur + 投影），里面塞两个箭头 + 一排圆点。
-     问题：压在照片上它就是一块实心亮斑，视觉重量与 CTA 按钮同级；窄屏上「按钮 + 白胶囊」
-     上下叠成两层白块，视线被拽向页面底边而不是首屏内容 —— 喧宾夺主。
-     现改为**不设容器**：无底色、无模糊、无阴影、无内边距，只剩「细点 + 活动短横」。
-     箭头仅在桌面显示（触屏上滑动手势已覆盖，箭头是重复能力）。
-     居中仍用独立属性 translate（不用 transform），与全站「动画会覆写 transform」的
-     约定一致：这层以后若加动效也不会被居中值绊住。 */
   .hero-slideshow__controls {
     position: absolute;
     bottom: 1.75rem;
@@ -509,8 +390,7 @@
     align-items: center;
     gap: 0.125rem;
   }
-  /* 圆点本体 7px，但按钮仍做 24px 见方保证可点中（视觉尺寸不变，热区不变）。
-     装饰圆点走 ::after —— 按钮宽度固定，所以激活短横左右扩展时相邻点不会位移。 */
+
   .hero-slideshow__dot {
     display: grid;
     place-items: center;
@@ -521,11 +401,7 @@
     background: none;
     cursor: pointer;
   }
-  /* 未激活点：前景色 72%。旧版是 32% —— 那时有白色胶囊垫底，淡也看得见；
-     去掉容器后点直接压在照片上（本主题移动端 hero 底部是草地，不是白底），
-     32% / 55% 实测在 390px 手机上几乎消失，最终定在 72%（#4D4D4D 一级），
-     对亮草绿约 3:1、对底部的白色渐隐层 8:1，两种背景都成立。
-     点径 7px（原 8px）：容器没了，单颗点就是全部视觉重量，再小认不出是分页。 */
+
   .hero-slideshow__dot::after {
     content: "";
     width: 0.4375rem;
@@ -536,9 +412,7 @@
       width 0.28s var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)),
       background-color 0.28s ease;
   }
-  /* 激活态拉成 18px 短横：用「长度」而不只是「深浅」表达当前页，
-     同时换成品牌色 —— 浅色 preset（深绿）与 Noir（亮 lime）两端都拉得开差距。
-     用 width 而非 scaleX：scaleX 会把 999px 圆角一起拉伸，端头会尖。 */
+
   .hero-slideshow__dot.is-active::after {
     width: 1.125rem;
     background-color: var(--color-brand);
@@ -557,9 +431,7 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    /* 桌面保留一枚很淡的圆底（55% 背景色），不是装饰而是可读性兜底：
-       箭头是深灰线性图标，压在深色照片上会糊掉。两个独立小圆不构成「盒子」，
-       所以不会把胶囊那层视觉重量带回来。移动端这一层整体 display:none。 */
+
     background-color: color-mix(in srgb, var(--color-background) 55%, transparent);
     color: var(--color-foreground);
     cursor: pointer;
@@ -567,8 +439,7 @@
   }
   .hero-slideshow__arrow:hover,
   .hero-slideshow__arrow:focus-visible {
-    /* hover 加深到 82% 而不是换成实心品牌色：实心块会重新长出一个「白/绿盒子」，
-       正是这次要去掉的东西。 */
+
     background-color: color-mix(in srgb, var(--color-background) 82%, transparent);
     color: var(--color-brand);
   }
@@ -586,16 +457,6 @@
     transform: rotate(90deg);
   }
 
-  /* ===== 切换动画（全程只用 transform / opacity） =====
-     ⚠️ 每个 var() 都必须带内联兜底值，且兜底值 = 上面的设计值。
-     原因（已实测）：animation 简写里只要有一个 var() 解析不到，整条声明会被判为
-     invalid at computed-value time —— 浏览器不报错、直接把 animation-name 变成 none，
-     动画整条消失，切换变成硬切。
-     ⚠️ 另外 CSS 里写的 `550ms` 会被 Shopify 压缩成 `.55s`，JS 读这个变量时必须
-     按单位换算（见 assets/hero-slideshow.js 的 toMs），否则会小 1000 倍。 */
-
-  /* 产品岛：向上滑出并淡出。居中由独立属性 translate 承担，
-     所以这里的 transform 是纯位移，不用再写 calc(-50% - …)。 */
   .hero-slideshow__product.is-out {
     animation: hero-product-out var(--hero-product-out-dur, 450ms)
       var(--hero-ease-in, cubic-bezier(0.6, 0, 0.8, 0.4)) forwards;
@@ -607,8 +468,6 @@
     }
   }
 
-  /* 文字逐行上滑淡出。启动时机由 JS 统一控制（--hero-text-start-offset），
-     CSS 只承担行间隔（--line-index × stagger）。 */
   .hero-slideshow__line.is-out {
     animation: hero-text-out var(--hero-text-out-dur, 400ms)
       var(--hero-ease-in, cubic-bezier(0.6, 0, 0.8, 0.4)) forwards;
@@ -621,11 +480,6 @@
     }
   }
 
-  /* 背景组卷出：整组上滑一个视口高。
-     **不淡透**——不是「淡到 0.6」那个意思，而是彻底不加 opacity。
-     原因：滑出层压在下一屏之上，一旦给它 opacity < 1，下面透出来的就是
-     已经在顶入的那张照片 → 两张图叠影，这正是「重叠很明显」的观感来源。
-     严丝合缝时不存在需要透出的空隙，保持 1 才干净。 */
   .hero-slideshow__bg.is-out {
     animation: hero-bg-out var(--hero-bg-out-dur, 600ms)
       var(--hero-roll-ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
@@ -636,8 +490,6 @@
     }
   }
 
-  /* 下一屏整屏顶入：位移距离 = 自身高度 = 视口高，与 .hero-slideshow__bg 的
-     -100% 完全等长；时长与曲线也与它一致 —— 两条边全程贴合，无重叠无缝隙。 */
   .hero-slideshow__slide.is-next-in {
     animation: hero-next-in var(--hero-next-in-dur, 600ms)
       var(--hero-roll-ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
@@ -651,12 +503,6 @@
     }
   }
 
-  /* ===== 入场（新屏的图文落位，与退场镜像） =====
-     ⚠️ fill-mode 必须是 **both**，不能是 forwards：
-     类是在「下一屏刚开始顶入」那一刻就挂上的，此时离动画真正开始还有
-     --hero-enter-offset 的延迟。用 backwards/both 才会在延迟期间把元素按
-     `from`（opacity 0）hold 住；只写 forwards 的话，延迟期间元素是正常可见的，
-     等延迟一过又会跳回 opacity 0 再淡入 —— 肉眼看就是文字先闪一下再消失。 */
   .hero-slideshow__line.is-in {
     animation: hero-text-in var(--hero-text-out-dur, 400ms)
       var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)) both;
@@ -675,8 +521,6 @@
     }
   }
 
-  /* 产品岛入场：外层 wrapper 的 transform 是空的（居中靠独立属性 translate），
-     所以这里可以放心用 transform，不会和静态定位打架。 */
   .hero-slideshow__product.is-in {
     animation: hero-product-in var(--hero-product-out-dur, 450ms)
       var(--hero-ease-out, cubic-bezier(0.4, 0, 0.2, 1)) both;
@@ -703,30 +547,18 @@
       animation-duration: 1ms !important;
       animation-delay: 0ms !important;
     }
-    /* 自住漂浮是无限循环动画，reduce 下必须整个关掉（压时长会变成高频抖动） */
+
     .hero-slideshow__product-img {
       animation: none !important;
     }
   }
 
-  /* ===== 移动端（<990px）：产品岛在上、文字沉底居中、遮罩转底部渐隐、切换改横向 ===== */
   @media screen and (max-width: 989px) {
-    /* 手机竖屏的高度给得太抠，产品图 + 三行文字 + 按钮挤不进 22rem，
-       结果就是「产品图被顶出画外」+「文字压成一团」。抬到 24rem。 */
+
     .hero-slideshow__viewport {
       min-height: 24rem;
     }
-    /* 移动端是「产品在上、文字在下」的竖排，水平居中固定 50%，
-       因此桌面端的自定义位置设置在这里不生效（设置项的 info 里已写明）。
-       ⚠️ 三处与旧版不同，都是为了让「整张产品图完整可见、且不压住文字」：
-       ① translate 的 Y 从 -50% 改成 0 —— 让 top 表达**顶边**而不是中心。
-          旧版 top:30% + 中心对齐，图片高过 60% 视口就直接溢出上沿（实测溢 20px+，
-          割草机手柄整段被裁掉）。
-       ② 容器改成**明确高度**（当前 75%，与宽度同值；极简版要让产品图占满主体）。
-          不能只写 max-height：父高是 auto 时百分比 max-height 在 img 上无法解析，
-          图片会按宽度撑开（实测容器 184 高、图片 313 高，照样压出界）。
-       ③ 产品图底部对齐（object-position: bottom）—— 抠图上方常有大片透明，
-          居中会让「看得见的机身」整体上浮，底边对不齐就很难控位置。 */
+
     .hero-slideshow__product {
       top: 0;
       left: 50%;
@@ -741,9 +573,7 @@
       object-fit: contain;
       object-position: center bottom;
     }
-    /* 只留一行标题后，内容块整体上移：旧位置（bottom 12%）会把它推进底部白色
-       渐隐里 —— 白字压白底等于没有字。28% 让标题落在产品图的主体区（机身那一带
-       是深色，白字最稳），两行时下行也还压在机身上，不至于掉进浅色草地。 */
+
     .hero-slideshow__content {
       top: auto;
       bottom: 18%;
@@ -751,48 +581,32 @@
       transform: translate(-50%, 0);
       text-align: center;
     }
-    /* 极简（刘工 2026-10-25 定）：移动端只留「标题 + 按钮」。
-       眉标与副标题不显示 —— 首屏要的是「一张图 + 一句话 + 一个入口」。
-       按钮**保留**（2026-10-25 二次确认）：它是首屏唯一的转化入口，
-       靠下方平台卡承接会让首屏变成纯装饰。
-       桌面端四件套照常，不受影响。 */
+
     .hero-slideshow__eyebrow,
     .hero-slideshow__subheading {
       display: none;
     }
-    /* 按钮组：与标题之间收得比桌面端紧（1rem vs 1.75rem），窄屏每一像素都算数。 */
+
     .hero-slideshow__cta-row {
       justify-content: center;
       margin-block-start: 1rem;
     }
-    /* 按钮压在照片上，必须自己「站得住」：品牌深绿实心一旦压在深绿机身上就没了边界
-       （投影是配色纪律里的合法例外，永远黑）。只加到移动端，桌面按钮在浅底上不需要。
-       2026-10-29：基础样式的品牌绿光晕保留，与这层黑投影叠在一起——
-       整条 box-shadow 会被覆盖，所以这两层必须一起写。 */
-    /* 选择器写成 `.hero-slideshow .hero-slideshow__cta`（0,2,0）而不是单类：
-       box-shadow 要盖掉 critical.css 里 .btn-solid 的那一条，靠源序不可靠
-       （section 样式与 critical.css 的注入先后由平台决定），靠特异性才稳。 */
+
     .hero-slideshow .hero-slideshow__cta {
       box-shadow:
         0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent),
         0 8px 20px rgb(0 0 0 / 22%);
     }
-    /* 标题改白。这是「压在照片上」的元素 —— 配色纪律里的合法硬编码例外，不跟
-       --color-foreground 走：变量在 Noir preset 下是浅灰、浅色 preset 下是深灰，
-       而照片不随 preset 变，用变量会在深色照片上变成黑字读不出来。
-       投影同为合法例外（永远黑）：白色大字压浅色草地时对比度只有约 2:1，
-       达不到大字 AA 的 3:1，一层很淡的投影把它抬回可读区间，且不产生"描边感"。 */
+
     .hero-slideshow__heading {
       color: #fff;
       text-shadow: 0 1px 14px rgb(0 0 0 / 32%);
     }
-    /* 底部渐隐收薄到 25%：原来 75% 会让大半张图蒙白，而产品图现在占 75%、标题又是
-       白字 —— 渐隐一旦盖到标题就是「白压白」。25% 只在最底部做
-       「图 → 页面白底」的过渡，标题区完全在它之上。 */
+
     .hero-slideshow__fade {
       top: auto;
       left: 0;
-      /* 底边贴 slide 底边（旧版 bottom:-10% 会在卷出后留 10% 白条在顶部） */
+
       bottom: 0;
       width: 100%;
       height: 25%;
@@ -804,12 +618,7 @@
         transparent 80%
       );
     }
-    /* 移动端控件仍居中，只是贴近底边。
-       底距取 0.5rem（而非原来的 0.875rem）：指示器去掉胶囊后整体只有 24px 高，
-       若仍停在 14px，它的顶边（38px）会顶到 CTA 底边（12% ≈ 42px）下方仅 4px 处；
-       下移到 8px 顶边变 32px，与按钮之间留出约 10px。
-       箭头在触屏上隐藏：滑动切屏 + 直接点圆点已覆盖，它是重复能力；
-       而且两个 34px 圆钮正是旧版胶囊被撑到近半屏宽的主因。 */
+
     .hero-slideshow__controls {
       bottom: 0.5rem;
       gap: 0;
@@ -818,13 +627,6 @@
       display: none;
     }
 
-    /* ===== 移动端切换改横向（2026-10-25）=====
-       手机上「手往左划、画面往上卷」两套方向语言，观感是割裂的；横向推拉与手势同向。
-       桌面保留纵向胶片卷动（那是这个 hero 的签名动作，且鼠标端没有横向手势预期）。
-       ⚠️ 无缝前提与纵向完全一致：卷出与顶入**同长、同曲线、同距离**（都是自身 100%）。
-       纵向那六组 keyframes 不动，这里只按媒体条件换 animation-name。
-       方向由 JS 写在根元素的 data-hero-dir 上（next / prev），
-       prev 用 -rev 一套镜像 —— 否则往回滑时画面会朝反方向走。 */
     .hero-slideshow__bg.is-out { animation-name: hero-bg-out-x; }
     .hero-slideshow__slide.is-next-in { animation-name: hero-next-in-x; }
     .hero-slideshow__product.is-out { animation-name: hero-product-out-x; }
@@ -839,15 +641,6 @@
     [data-hero-dir='prev'] .hero-slideshow__line.is-in { animation-name: hero-text-in-x-rev; }
     [data-hero-dir='prev'] .hero-slideshow__product.is-in { animation-name: hero-product-in-x-rev; }
 
-    /* ---- 底部遮罩必须「原地不动」----
-       .hero-slideshow__fade 在 bg / slide 内部，会跟着父级横向平移；而它的左右边缘
-       是同色硬边（垂直方向白→透明，水平方向没有过渡）。一旦平移，那条硬边就进画，
-       观感是一块白幕横扫过去 —— 实测截图里能直接看到。
-       这里让 fade 反向抵消父级位移：父 +100% ↔ 子 -100%，且两者共用同一条缓动、
-       同一时长，所以合成位移恒为 0，肉眼完全静止。
-       注意两处的起点不同：
-         · 旧屏的 fade 在 .is-out 的 bg 里，父从 0 → -100%，子要 0 → +100%；
-         · 新屏的 fade 在 .is-next-in 的 slide 里，父从 +100% → 0，子要 -100% → 0。 */
     .hero-slideshow__bg.is-out .hero-slideshow__fade {
       animation: hero-fade-hold-out var(--hero-bg-out-dur, 600ms)
         var(--hero-roll-ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
@@ -891,8 +684,7 @@
       from { transform: translateX(-100%); }
       to { transform: translateX(0); }
     }
-    /* 图文退场/入场：横向位移量取 48px（约等于一个字宽），比纵向的 60/80px 收敛，
-       因为横向位移在窄屏上更容易「晃眼」。 */
+
     @keyframes hero-product-out-x {
       to { transform: translateX(-56px); opacity: 0; }
     }

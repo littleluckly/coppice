@@ -1,28 +1,4 @@
-{% comment %}
-  Article page — 文章详情页主体（article 模板，路由 /blogs/<handle>/<article>）。
 
-  ## 版式（2026-11-15，与列表页同批改版）
-  - 页头带（full-width 淡品牌色）：眉标 = 博客名（回列表的入口）、h1、元信息
-    （阅读时长 / 发布日期 / 作者）；
-  - 内容区收在 64rem 居中块里：正文列 44.5rem 上限 + 右侧 16.5rem sticky 栏
-    （More guides）；没有侧栏时正文列居中，阅读宽度不变；
-  - 正文用 `.rte`（排版在 assets/critical.css，BUG-064 那次补的），
-    封面图 16:9 圆角，不压正文；
-  - 正文之后：标签行（真链接，回列表筛选）→ 上下篇（真实 `blog.previous_article`
-    / `next_article`）→ 评论区。
-
-  ## 几条判断
-  1. **封面图放在正文列里，不做通栏 hero**：通栏 21:9 图会把 1400 宽的内容列撑到
-     600px 高，第一屏全是图；44.5rem 的 16:9（≈400px）与阅读节奏更配。
-  2. **h1 不压照片**：文章标题长度不可控，压图要么裁字要么垫一层糊底。
-     页头带只做淡色，标题永远落在纯色背景上。
-  3. **"More guides" 不是"相关推荐"**：Liquid 无法按标签查文章（平台限制），
-     只能取博客里的其它文章。所以标题写 More guides，不写 Related。
-  4. **评论保持平台原生字段**：`form 'new_comment'` + `comment[author/email/body]`，
-     字段名错一位表单静默失效（前台像成功、后台没有评论、不报错）。
-  5. **阅读时长口径与列表页一致**：字符数 ÷ 1000 向上取整（≈200 词/分），
-     少于 200 字符不显示（`number_of_words` 不是 Shopify 过滤器）。
-{% endcomment %}
 
 {%- liquid
   assign chars = article.content | strip_html | size
@@ -74,11 +50,7 @@
     <div class="article__layout{% if has_aside %} article__layout--aside{% endif %}">
       <div class="article__body">
         {%- if show_cover and article.image != blank -%}
-          {%- comment -%}
-            alt 留空：h1 就在正上方，封面再念一遍标题是重复；装饰性图给空 alt 是
-            无障碍的常规做法。image_tag 在 alt 为空时会把属性整条吞掉（不是输出
-            alt=""），所以 capture 后补一次，否则 Lighthouse 判缺 alt。
-          {%- endcomment -%}
+
           {%- capture cover -%}
             {{
               article.image
@@ -99,11 +71,6 @@
           <div class="article__cover">{{ cover }}</div>
         {%- endif -%}
 
-        {%- comment -%}
-          `.rte` 是富文本排版的唯一入口（段落间距 / 标题层级 / 表格 / 引用 / 图片圆角
-          全在 critical.css）。裸输出 `{{ article.content }}` 会撞上主题的
-          `* { margin: 0 }` reset，正文挤成一坨 —— 这是 BUG-064。
-        {%- endcomment -%}
         <div class="rte article__content">{{ article.content }}</div>
 
         {%- if show_tags and article.tags.size > 0 -%}
@@ -122,11 +89,7 @@
         {%- endif -%}
 
         {%- if has_prev or has_next -%}
-          {%- comment -%}
-            blog.previous_article = **更新**的一篇，next_article = **更早**的一篇
-            （官方口径）。所以文案写 Newer / Older，不写 Previous / Next ——
-            后者会被读者按直觉理解成反的。
-          {%- endcomment -%}
+
           <nav class="article__pager" aria-label="{{ 'blog.article.pager_label' | t }}">
             {%- if has_prev -%}
               <a class="article__pager-link article__pager-link--prev" href="{{ blog.previous_article.url }}">
@@ -191,11 +154,6 @@
               {%- endif -%}
             {%- endpaginate -%}
 
-            {%- comment -%}
-              表单字段名是平台契约：form 'new_comment' + comment[author] / comment[email] /
-              comment[body]。无 JS 必须可提交 —— 这是真 <form>，不是 JS 组件。
-              提交按钮复用 .btn-solid（全站唯一实心按钮形状，见 critical.css）。
-            {%- endcomment -%}
             {%- form 'new_comment', article, class: 'article__comment-form' -%}
               <h3 class="article__form-title">{{ 'blog.comment_form_title' | t }}</h3>
 
@@ -249,10 +207,7 @@
       </div>
 
       {%- if has_aside -%}
-        {%- comment -%}
-          取博客里的其它文章，封顶 3 篇。Liquid 没有 break，所以用 shown 计数器 +
-          continue 截断（循环仍会跑完，最多 50 次，代价可忽略）。
-        {%- endcomment -%}
+
         {%- capture more_items -%}
           {%- assign shown = 0 -%}
           {%- for post in blog.articles -%}
@@ -287,10 +242,7 @@
 
         {%- assign more_trimmed = more_items | strip -%}
         {%- if more_trimmed != blank -%}
-          {%- comment -%}
-            侧栏在 ≥990 吸顶（4.75rem = 76px，与集合页筛选栏 --facets-sticky-top
-            同一口径）。面板内容很短，不做卡内滚动。
-          {%- endcomment -%}
+
           <aside class="article__aside">
             <div class="article__panel">
               <h2 class="article__panel-title">{{ 'blog.article.more' | t }}</h2>
@@ -306,19 +258,6 @@
 </article>
 
 {% stylesheet %}
-  /* ============================================================
-     文章详情页 /blogs/<handle>/<article>
-
-     与博客列表页同一套语言：淡品牌色页头带、14px 圆角、hover 上浮
-     --card-hover-lift / --card-hover-shadow、配色全部从 --color-* 派生，
-     Noir preset 自动翻转。区别：这里是阅读页 —— 正文列固定 44.5rem
-     （≈712px），1400 的内容列不再铺满，长行读起来才不飘。
-
-     对齐：页头带内层与 .article__layout 同为 64rem 居中块，
-     h1 与正文左边缘严格对齐。
-     ============================================================ */
-
-  /* ---------- 页头带 ---------- */
 
   .article__hero {
     background-color: color-mix(in srgb, var(--color-background) 94%, var(--color-brand) 6%);
@@ -331,8 +270,7 @@
     margin-inline: auto;
     padding-block: clamp(1.75rem, 3.6vw, 2.75rem) clamp(1.5rem, 3vw, 2.25rem);
   }
-  /* 关掉侧栏时正文列居中，页头带也要一起收到 42rem，
-     否则标题贴左、正文居中，两块的左边缘差出一百多像素。 */
+
   .article--narrow .article__hero-inner {
     max-inline-size: 42rem;
   }
@@ -377,8 +315,7 @@
     font-variant-numeric: tabular-nums;
     color: var(--color-foreground-muted);
   }
-  /* 分隔线画在「后一段」的左侧：只有它存在时才出现，不用空元素；
-     伪元素不产生文本节点，因此不受颜色对比度审计 */
+
   .article__meta > * + *::before {
     content: '';
     display: inline-block;
@@ -394,8 +331,6 @@
     gap: 0.3rem;
   }
 
-  /* ---------- 内容列 ---------- */
-
   .article__page {
     padding-block: clamp(1.5rem, 3vw, 2.25rem) clamp(3rem, 6vw, 5rem);
   }
@@ -410,28 +345,21 @@
     .article__layout--aside {
       grid-template-columns: minmax(0, 1fr) 16.5rem;
       gap: 3rem;
-      /* sticky 需要 item 不被 stretch 拉高，否则没有行程 */
+
       align-items: start;
     }
   }
   .article__body {
     min-inline-size: 0;
-    /* 42rem ≈ 672px：61.5rem 减去侧栏 16.5rem 与间距 3rem 正好是这个数，
-       有无侧栏时阅读宽度一致，切开关不会让正文换宽。
-       为什么不是更宽的 712px：17.6px 字号下 672px 约合 76 字符/行，
-       再宽就超出"长文可跟行"的经验区间（65–75）。 */
+
     max-inline-size: 42rem;
     inline-size: 100%;
   }
-  /* 没有侧栏时正文居中。inline-size: 100% 不能省 —— grid item 上同时有
-     margin-inline: auto 会让 justify-self: stretch 失效、宽度退化成
-     fit-content（BUG-063 的同一条通路）。 */
+
   .article__layout:not(.article__layout--aside) .article__body {
     margin-inline: auto;
   }
 
-  /* 封面：16:9 + 圆角。img 显式 aspect-ratio，压掉 image_tag 输出的
-     presentational height（否则比例被素材原生比例带跑）。 */
   .article__cover {
     margin-block-end: clamp(1.25rem, 2.5vw, 1.75rem);
     border-radius: 14px;
@@ -446,14 +374,11 @@
     object-fit: cover;
   }
 
-  /* 正文：段间距与标题层级归 .rte，这里只调阅读字号 */
   .article__content {
-    /* 17.6px / 1.7 —— 比 .rte 的兜底（16px/1.7）大一档，长文正文需要更松的行距 */
+
     font-size: 1.1rem;
     line-height: 1.7;
   }
-
-  /* ---------- 标签 ---------- */
 
   .article__tags {
     margin-block-start: 2.25rem;
@@ -492,8 +417,6 @@
     outline-offset: 2px;
   }
 
-  /* ---------- 上下篇 ---------- */
-
   .article__pager {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -517,7 +440,7 @@
     text-decoration: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, translate 0.2s ease;
   }
-  /* 只有一篇时占满整行 —— 半宽单卡夹在中间会被读成"另一个按钮" */
+
   .article__pager-link:only-child {
     grid-column: 1 / -1;
   }
@@ -552,8 +475,6 @@
     -webkit-line-clamp: 2;
     overflow: hidden;
   }
-
-  /* ---------- 评论 ---------- */
 
   .article__comments {
     margin-block-start: 3rem;
@@ -666,7 +587,7 @@
     resize: vertical;
     min-block-size: 7rem;
   }
-  /* 焦点环画在控件自身（带边框），不做外层套壳 —— 输入框是矩形不是胶囊 */
+
   .article__field :is(input, textarea):focus-visible {
     outline: none;
     border-color: var(--color-brand);
@@ -688,8 +609,7 @@
     margin: 0;
     padding-inline-start: 1.1rem;
   }
-  /* 提交按钮复用 .btn-solid（全站唯一实心按钮形状），这里只定尺寸：
-     靠自身宽度、不铺满整行 —— 表单只有三个字段，铺满会读成"下一步"。 */
+
   .article__form-submit {
     align-self: flex-start;
     padding-inline: 1.5rem;
@@ -697,12 +617,10 @@
     font-weight: 600;
   }
 
-  /* ---------- 侧栏 More guides ---------- */
-
   @media (min-width: 990px) {
     .article__aside {
       position: sticky;
-      /* 与集合页筛选栏 --facets-sticky-top 同一口径（76px） */
+
       top: 4.75rem;
     }
   }
@@ -744,7 +662,7 @@
     border-radius: 8px;
     background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
   }
-  /* 图脱离流：否则固有宽高比会参与行高，标题长短不同的条目会被拉得参差 */
+
   .article__more-media img,
   .article__more-placeholder {
     position: absolute;

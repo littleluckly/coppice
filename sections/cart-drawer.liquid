@@ -1,32 +1,7 @@
-{% comment %}
-  购物车抽屉（2026-11-02 刘工要求：点页头购物车图标打开）。
 
-  为什么是 layout 里的静态 section 而不是 snippet：
-  局部刷新要用 Section Rendering（`?sections=`），那需要 section 自己的 id；
-  snippet 拿不到。用 section 之后，抽屉能只刷新自己，不影响背后的页面。
-
-  为什么用 <dialog> + showModal()：
-  焦点锁定、背景 inert、Esc 关闭、::backdrop 全都由平台给（AGENTS.md §8 明确要求优先原生），
-  手写焦点陷阱只会和它打架。`scroll-lock` 属性配合 critical.css 里已有的
-  `html:has(dialog[scroll-lock][open]) { overflow: hidden }` 锁背景滚动。
-
-  渐进增强：页头入口本身仍是 <a href="/cart">，没有 JS 就跳页面 —— 抽屉永远只是增强。
-
-  内容区包在 `[data-cart-section]` 里：assets/cart-items.js 改数量后靠它整块替换，
-  连脚下的小计一起更新，不用手写「把这个数字改成那个数字」。
-  注意「谁包谁」：`<cart-items>` 在外、`[data-cart-section]` 在内 —— 反过来会让
-  替换动作把发出请求的元素自己也换掉（详见下面 <cart-items> 处的注释）。
-{% endcomment %}
 
 <script src="{{ 'cart-drawer.js' | asset_url }}" defer></script>
-{%- comment -%}
-  cart-items.js 必须在这里加载，不能只在购物车页（sections/cart-lines.liquid）加载：
-  抽屉是全站组件，商品页 / 集合页里根本没有 cart-lines 这个 section，
-  之前脚本只在购物车页出现 ⇒ 其它页面上的 <cart-items> 是个**没有行为的空壳**，
-  加减号点了没反应、输入框改完也不会提交（2026-11-03 修 PC 抽屉「改数量不生效」）。
-  抽屉挂在 layout 上、永远在页面里，所以这里是全站加载它的正确位置；
-  cart-lines 那边的同一行已删除，避免同一份脚本被塞两次。
-{%- endcomment -%}
+
 <script src="{{ 'cart-items.js' | asset_url }}" defer></script>
 {{ 'cart-line.css' | asset_url | stylesheet_tag }}
 
@@ -36,14 +11,10 @@
   data-cart-url="{{ routes.cart_url }}"
   data-root="{{ routes.root_url }}"
 >
-  {%- comment -%}
-    抽屉开合交给 <bottom-sheet>（2026-11-03 刘工）：滑入 / 滑出 / Esc 收口由组件
-    统一负责。移动端向下滑（组件默认 keyframes），桌面从右滑入、向右滑出
-    （本 section 的 @media (min-width: 990px) 覆盖动画名）；组件 display:contents，不占位。
-  {%- endcomment -%}
+
   <bottom-sheet>
   <dialog class="cart-drawer__dialog" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
-    {%- comment -%} 移动端底部抽屉的抓手横线（桌面隐藏）。纯装饰，不参与交互 {%- endcomment -%}
+
     <div class="cart-drawer__grabber" aria-hidden="true"></div>
     <div class="cart-drawer__panel">
       <div class="cart-drawer__header">
@@ -57,16 +28,6 @@
         </button>
       </div>
 
-      {%- comment -%}
-        <cart-items> 是**稳定外壳**，必须包住可刷新的 `[data-cart-section]`，
-        而不是被它包住（2026-11-03 修）。
-        改数量的请求由 cart-items 自己发出，回来时整块替换 `[data-cart-section]`；
-        若替换目标包含 cart-items 自身，元素会被断开重建——监听器、按行去重表、
-        正在飞的请求全跟着丢：连点两行时第二行的请求会被 disconnectedCallback
-        abort 掉，服务端没收到，界面却不动，表现为「改了数量没生效」。
-        外壳用 display:contents 退出布局，栅格与滚动仍由 .cart-drawer__content 承担。
-        空车时也渲染外壳：加购成功后只换内层，不必重新绑定。
-      {%- endcomment -%}
       <cart-items
         data-cart-change-url="{{ routes.cart_change_url }}.js"
         data-cart-update-url="{{ routes.cart_update_url }}.js"
@@ -79,13 +40,7 @@
               <div class="cart-drawer__empty">
                 <p class="cart-drawer__empty-heading">{{ 'cart.empty_heading' | t }}</p>
                 <p class="cart-drawer__empty-text">{{ 'cart.empty_text' | t }}</p>
-                {%- comment -%}
-                  必须带 cart-drawer__empty-cta：.btn-solid 只给形状与配色，
-                  display / 居中 / 内边距由用法方补（全站 13 处用法无一例外）。
-                  裸用会渲染成 min-height 44px 的 block，文字顶在上边缘、带链接下划线
-                  —— 2026-11-20 BUG-083 实测复现。
-                {%- endcomment -%}
-                <a class="btn-solid cart-drawer__empty-cta" href="{{ routes.all_products_collection_url }}">
+                <a class="btn-solid" href="{{ routes.all_products_collection_url }}">
                   {{- 'cart.continue_shopping' | t -}}
                 </a>
               </div>
@@ -98,34 +53,6 @@
             {%- endif -%}
           </div>
 
-          {%- comment -%}
-            刷新占位（2026-11-20，BUG-083）。加购那一刻服务端还没收到 /cart/add.js，
-            `?sections=` 只能取回**加购前**的购物车——空车时就渲染成「Your cart is empty」，
-            等第二次请求回来才换成商品行。所以等待期间要盖住真实内容，只露骨架。
-
-            为什么骨架写在 `[data-cart-section]` **内部**：它跟着这一块被整块替换，
-            服务端渲染的那一份也带着它（默认 display:none），结构与状态永远一致；
-            放在外面就得处理它被替换后悬空的 loading 属性。
-            显隐只看 `<cart-drawer data-cart-loading>`，由 cart-drawer.js 写。
-          {%- endcomment -%}
-          <div class="cart-drawer__skeleton" data-cart-skeleton aria-hidden="true">
-            <div class="cart-drawer__skeleton-row">
-              <span class="cart-drawer__skeleton-thumb"></span>
-              <span class="cart-drawer__skeleton-lines">
-                <span class="cart-drawer__skeleton-line"></span>
-                <span class="cart-drawer__skeleton-line cart-drawer__skeleton-line--short"></span>
-                <span class="cart-drawer__skeleton-line cart-drawer__skeleton-line--price"></span>
-              </span>
-            </div>
-            <div class="cart-drawer__skeleton-row">
-              <span class="cart-drawer__skeleton-thumb"></span>
-              <span class="cart-drawer__skeleton-lines">
-                <span class="cart-drawer__skeleton-line"></span>
-                <span class="cart-drawer__skeleton-line cart-drawer__skeleton-line--short"></span>
-              </span>
-            </div>
-          </div>
-
           {%- if cart.item_count > 0 -%}
             <div class="cart-drawer__footer">
               <div class="cart-drawer__subtotal">
@@ -135,10 +62,6 @@
               <p class="cart-drawer__note">{{ 'cart.shipping_note' | t }}</p>
               <p class="visually-hidden" role="status" data-cart-live></p>
 
-              {%- comment -%}
-                两个按钮都是普通链接/表单提交，不依赖 JS：
-                结账直接 POST name=checkout（Shopify 认这个字段，不需要带行项）。
-              {%- endcomment -%}
               <form action="{{ routes.cart_url }}" method="post" class="cart-drawer__actions">
                 <button type="submit" name="checkout" class="btn-solid cart-drawer__checkout">
                   {{- 'cart.checkout' | t -}}
@@ -161,43 +84,34 @@
     display: contents;
   }
 
-  /* 刷新外壳不参与布局：把 .cart-drawer__content 直接交给 .cart-drawer__panel 的栅格，
-     与重构前（content 是 panel 的直接子级）完全一致。 */
   .cart-drawer cart-items {
     display: contents;
   }
 
   .cart-drawer__dialog {
-    /* <dialog> 默认居中且带 margin；这里改成右侧抽屉。
-       宽高与定位都放在 ::backdrop 之上，showModal 后由 top layer 接管。 */
+
     position: fixed;
     inset-block: 0;
     inset-inline-end: 0;
     inset-inline-start: auto;
     inline-size: min(26rem, 100%);
     max-inline-size: 100%;
-    /* 用 dvh 而不是 100%：移动端 100% 会按 layout viewport 算（含地址栏的高度），
-       内容比可见区域高时 dialog 自己就溢出了，页面上会多出一根外层滚动条。 */
+
     block-size: 100dvh;
     max-block-size: 100dvh;
-    /* 兜住 dialog 自身的溢出：滚动只允许发生在 .cart-drawer__body 里，
-       否则就是"内层滚列表、外层滚整个面板"的两根滚动条。 */
+
     overflow: hidden;
     margin: 0;
     padding: 0;
     border: 0;
     background-color: var(--color-background);
     color: var(--color-foreground);
-    /* 开合动效不在这里写：由 <bottom-sheet> 组件加 .is-entering / .is-close-anim，
-       桌面方向在下方 @media 里覆盖成右滑。
-       原先这里是 translate + transition——播不出来：dialog 从 display:none
-       打开的同一帧里 transition 没有起点，视觉上就是闪现（2026-11-03 修）。 */
+
   }
   .cart-drawer__dialog::backdrop {
     background-color: rgb(0 0 0 / 40%);
   }
-  /* 桌面：从右滑入 / 向右滑出（组件默认是"下滑"，这里覆盖两个动画名）。
-     选择器比 critical.css 的 `bottom-sheet > dialog.is-*` 多一个类，压得住。 */
+
   @media (min-width: 990px) {
     .cart-drawer__dialog.is-entering {
       animation: cart-drawer-slide-in-end 0.28s ease-out;
@@ -276,7 +190,7 @@
   .cart-drawer__body {
     min-block-size: 0;
     overflow-y: auto;
-    /* 滚到底不把滚动传给背景页（移动端尤其明显：列表滑完接着整页跟着滑） */
+
     overscroll-behavior: contain;
     padding-inline: 1.25rem;
   }
@@ -334,111 +248,17 @@
   .cart-drawer__empty-text {
     color: var(--color-foreground-muted);
   }
-  /* 空态 CTA：.btn-solid 只给形状（见 critical.css 那段注释），
-     display / 居中 / 内边距一律由用法方补——与下面的 __checkout / __view 同一口径。
-     漏了这三行就是「文字顶在胶囊上边缘 + 带链接下划线」，2026-11-20 BUG-083。 */
-  .cart-drawer__empty-cta {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.625rem 1.5rem;
-  }
-
-  /* ---- 刷新占位（BUG-083）----
-     加购瞬间 `?sections=` 拿到的是加购前的购物车（空车），不盖住就会闪一下空态。
-     显隐只认 `<cart-drawer data-cart-loading>`，由 cart-drawer.js 在等待期间写。 */
-  .cart-drawer__skeleton {
-    display: none;
-    align-self: start;
-    /* 水平内边距不能省：骨架在 .cart-drawer__body 外面（要盖住它），
-       拿不到 body 那圈的 1.25rem，不补就整块贴到抽屉左边缘 */
-    padding: 1rem 1.25rem;
-  }
-  cart-drawer[data-cart-loading] .cart-drawer__skeleton {
-    display: grid;
-    gap: 1rem;
-  }
-  cart-drawer[data-cart-loading] .cart-drawer__body,
-  cart-drawer[data-cart-loading] .cart-drawer__footer {
-    display: none;
-  }
-  .cart-drawer__skeleton-row {
-    display: grid;
-    /* 与 .cart-line 同一套列宽（80px 图 + 剩余），骨架和真内容落在同一条竖线上 */
-    grid-template-columns: 80px minmax(0, 1fr);
-    gap: 0.45rem 0.75rem;
-    align-items: start;
-  }
-  .cart-drawer__skeleton-thumb {
-    inline-size: 80px;
-    block-size: 80px;
-    border-radius: 8px;
-    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
-  }
-  .cart-drawer__skeleton-lines {
-    display: grid;
-    align-content: start;
-    gap: 0.5rem;
-    padding-block-start: 0.25rem;
-  }
-  .cart-drawer__skeleton-line {
-    block-size: 0.75rem;
-    border-radius: 999px;
-    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
-  }
-  .cart-drawer__skeleton-line--short {
-    inline-size: 45%;
-  }
-  .cart-drawer__skeleton-line--price {
-    inline-size: 30%;
-  }
-  /* 呼吸只改透明度：便宜，且不会被误读成"真的有一行内容" */
-  cart-drawer[data-cart-loading] .cart-drawer__skeleton-thumb,
-  cart-drawer[data-cart-loading] .cart-drawer__skeleton-line {
-    animation: cart-drawer-skeleton-pulse 1.4s ease-in-out infinite;
-  }
-  @keyframes cart-drawer-skeleton-pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.45;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    cart-drawer[data-cart-loading] .cart-drawer__skeleton-thumb,
-    cart-drawer[data-cart-loading] .cart-drawer__skeleton-line {
-      animation: none;
-    }
-  }
-
-  /* reduce 下"直接出现"由 <bottom-sheet> 组件负责（不挂动效类），这里无需覆盖 */
 
   .cart-drawer__grabber {
     display: none;
   }
 
-  /* ---- 移动端：底部通栏上滑 ----
-     与集合页筛选面板同一套动效（sections/collection.liquid 的 .facets__dialog）：
-     通栏、顶部圆角、translateY(100%) 滑入、遮罩淡入、抓手横线。
-     两处用同一组参数，顾客在不同页面看到的是同一种"从底部拉起"的手感。
-
-     断点取 989.98px 而不是常见的 749px：集合页筛选面板与导航的移动形态都在
-     990px 换挡（见 collection.liquid 的 @media (max-width: 989.98px)、
-     main-nav.liquid 的 @media (max-width: 989px)）。抽屉若在 750–989px 仍从
-     右侧滑出，就会出现"页头是移动形态、抽屉却是桌面形态"的错位。
-
-     为什么用 animation 而不是 transition：dialog 关闭即 display:none，
-     transition 没有可过渡的起点（这正是桌面端曾经"闪现"的原因）；
-     animation 在类名挂上时从头播，方向与时长都由 CSS 给。 */
   @media (max-width: 989.98px) {
     .cart-drawer__dialog {
       inset-block: auto 0;
       inset-inline: 0;
       inline-size: 100vw;
-      /* max-inline-size 必须显式覆盖：UA 对 dialog:modal 默认
-         max-width: calc((100% - 6px) - 2em)，不覆盖时 width:100vw 会被钳窄 */
+
       max-inline-size: 100vw;
       block-size: auto;
       max-block-size: 85vh;
@@ -448,47 +268,36 @@
     .cart-drawer__dialog[open] {
       display: flex;
       flex-direction: column;
-      /* 开合动效由 <bottom-sheet> 组件（critical.css），这里只留布局 */
+
     }
 
-    /* flex 链：抓手 → 面板；滚动仍只发生在 .cart-drawer__body */
     .cart-drawer__panel {
       flex: 1 1 auto;
       min-block-size: 0;
       block-size: auto;
     }
 
-    /* 系数与集合页两个面板完全一致（2026-11-03 对齐）：
-       视觉条 56×6、前景色 18%、命中区 120×54。
-       此前这里是 40×5 且没有命中区扩展——手指抓不住，正是刘工在筛选面板上
-       提过的问题，只是改的时候漏了购物车这一份。 */
     .cart-drawer__grabber {
       display: block;
       flex-shrink: 0;
       position: relative;
       inline-size: 56px;
       block-size: 6px;
-      /* 上外边距 1rem：抓手离面板顶边 16px，与另外两个面板同值；
-         也正因为这 16px，下面伪元素向上扩的那一段才不会被 dialog 的
-         overflow:hidden 全部裁掉 */
+
       margin: 1rem auto 0.5rem;
       border-radius: 999px;
       background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
-      /* 抓手要能被拖：touch-action:none 让浏览器不把手势抢给滚动
-         （手势归属由初始触点决定），user-select 防鼠标拖拽时选中文字。 */
+
       touch-action: none;
       user-select: none;
     }
-    /* 只吃指针、不参与绘制：命中区 120×54（视觉条 56×6）。
-       横向 ±32px 容忍左右偏；纵向向上受 dialog 的 overflow:hidden 限制
-       （恰好扩满那 16px 内边距），向下补到 32px —— 下方就是头部行，
-       本来就是拖拽热区，多铺这一层不改变行为，也够不着右上角的关闭按钮。 */
+
     .cart-drawer__grabber::after {
       content: '';
       position: absolute;
       inset: -16px -32px -32px;
     }
-    /* 头部行也是拖拽热区（抓手只有 6px 高，手指按不准） */
+
     .cart-drawer__header {
       touch-action: none;
       user-select: none;
