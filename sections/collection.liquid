@@ -1,25 +1,4 @@
-{% comment %}
-  Collection — 集合页主体（task-collection T-2.1/T-2.2/T-2.3/T-2.4/T-3.1，pages-ui §4）。
 
-  结构（2026-10-20 两栏版；2026-11-03 移动端改为叠放）：
-  桌面 —— 左列（面包屑 + h1 + 描述 + 亮点 + 筛选卡）越界压住右侧横幅，横幅铺到右缘；
-  移动 —— 面包屑 + h1 + 描述 + 亮点整块叠在横幅上（底衬渐隐保可读性），
-          下方接工具条 + 网格。曲线全部 CSS：border-radius + 伪元素
-          radial-gradient 反向弧；图片不烤形状。
-
-  复用（搜索页将复用同组积木，task-collection §0）：
-  - snippets/faceted-filters.liquid（筛选组）/ active-facets.liquid（已选标签）
-  - snippets/product-card.liquid + assets/product-card.css（商品卡）
-  - assets/faceted-filters.js（`<collection-facets>`：拦截 GET 表单 → Section Rendering API
-    局部更新 + replaceState；移动端 <dialog> 抽屉承载同一份筛选 DOM；排序卡按断点
-    在「左列第一张卡 ↔ 工具条」之间搬移，pages-ui §4 的移动端 [筛选☰] [排序▾]）
-
-  红线对齐：数据与计数全部来自服务端重算（collection.filters / filter_value.count），
-  前端零筛选逻辑；无 JS 全功能可退化（整页 GET 提交）。
-
-  空态分支：products_count > 0 → 网格；有筛选器且已激活但 0 结果 → no-matches
-  （清筛选入口）；否则 → 真空集合空态（全部商品入口，pages-ui §4）。
-{% endcomment %}
 
 {%- liquid
   assign per_page = section.settings.products_per_page | default: 12
@@ -79,12 +58,7 @@
 <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
 <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
-{%- comment -%}
-  筛选 / 排序组件样式（2026-11-18 从本 section 的 stylesheet 标签里抽出）：
-  搜索页也要用同一套组件，而 stylesheet 标签按 section 聚合、只随渲染它的
-  section 加载 —— 留在原处搜索页就拿不到，只能复制一份，两套外观必然分叉。
-  条件与脚本一致：没有筛选器、也没开排序时不加载（无组件可样式化）。
-{%- endcomment -%}
+
 {%- if collection.filters.size > 0 or section.settings.show_sort -%}
   {{ 'facets.css' | asset_url | stylesheet_tag }}
 {%- endif -%}
@@ -116,38 +90,20 @@
     </header>
   {%- endcapture -%}
 
-  {%- comment -%}
-    两栏骨架（2026-10-20 刘工，参考稿「首页布局-左侧集合入侵 banner」）：
-    左列 = 标题卡（560px 越界压 banner）+ 筛选卡；右列 = banner + 产品区。
-    <collection-facets> 必须包住整个两栏：工具条与结果区在右列、筛选表单在左列，
-    局部更新（Section Rendering）替换的是本元素的全部子节点，缺任何一边就会
-    「筛选后网格不刷新」。代价：banner/标题随局部更新重渲染——图走缓存、带
-    width/height 属性，无 CLS。
-  {%- endcomment -%}
   <collection-facets class="collection__facets" data-section-id="{{ section.id }}">
     <div class="collection__layout" data-facets-layout>
 
-      {%- comment -%} ── 左列 ── {%- endcomment -%}
       <div class="collection__left">
         <div class="collection__intro">
           {{ intro_content }}
           {%- if has_mf_highlights -%}
-            {%- comment -%}
-              亮点只来自集合 metafield（2026-10-29 刘工：全空就不展示，不要默认值）。
-              原先的 banner_feature blocks 已整组删除——它是模板级、全站集合共用一份，
-              割草机的三条亮点会原样出现在配件页；留着当兜底等于"给了个错的默认值"。
-              三条全空 = 这段整个不输出（不留空 <ul>），标题卡自然上收。
-            {%- endcomment -%}
+
             <ul class="collection__features" role="list">
               {%- for fh in mf_highlights -%}
                 {%- if fh == blank -%}
                   {%- continue -%}
                 {%- endif -%}
-                {%- comment -%}
-                  「图标|文案」只按**第一根**竖线拆（slice + join 把余下的拼回去）：
-                  商家写「🔋|Runtime up to 60 | 90 min」时后半截不能丢。
-                  没有竖线 = 整条是文案、不渲染图标列；竖线在、图标位空 = 同理。
-                {%- endcomment -%}
+
                 {%- assign fh_pair = fh | split: '|' -%}
                 {%- if fh_pair.size > 1 -%}
                   {%- assign fh_icon = fh_pair[0] | strip -%}
@@ -172,15 +128,7 @@
         </div>
 
         {%- if collection.filters.size > 0 -%}
-          {%- comment -%}
-            筛选表单落在左列的归位槽（.facets__form-slot）：移动抽屉关闭后
-            JS 按槽归位（form 曾被整体移进 dialog），不能靠 layout.prepend
-            ——那会把表单顶到标题卡之前。
-            排序卡在这里 capture 后经 sort_card 参数交 faceted-filters 渲染在
-            筛选卡顶部（2026-10-20 刘工拍板）；移动端由 JS 搬进工具条。
-            select 恒带 form 属性：离开 form 子树后仍是表单成员（无 JS 的原生
-            GET 提交也照常带 sort_by）。
-          {%- endcomment -%}
+
           <div class="facets__form-slot" data-facets-form-slot>
             <form
               class="facets__form"
@@ -227,7 +175,6 @@
         {%- endif -%}
       </div>
 
-      {%- comment -%} ── 右列 ── {%- endcomment -%}
       <div class="collection__right">
         {%- if has_banner -%}
           {%- liquid
@@ -239,23 +186,7 @@
             assign island = island | default: section.settings.banner_product_image
             assign island_alt = island.alt | default: collection.title
           -%}
-          {%- comment -%}
-            横幅三层（2026-10-20，参数 1:1 对齐参考稿，勿改层级）：
-            ① 风景底图（LCP：eager + fetchpriority high；mask 向左渐显，
-               透明处透出页面色）→ ② 异形遮罩（页面色 + 圆弧边界，只压底图、
-               不碰产品岛）→ ③ 产品悬浮岛（alpha 抠图，仅岛图取值链有值时渲染）。
-            ④ 毛玻璃小卡已于 2026-10-29 整块下线（刘工拍板）：它写的是品类专属
-            文案（Popular Choice / Self-Propelled Mowers），却只能是模板级，
-            全站集合共用一份 → 配件页也挂割草机徽标。要么 metafield 化、要么删，
-            选了删：横幅信息由「集合名（h1 已在左列）+ 三条亮点」承担已足够。
-          {%- endcomment -%}
-          {%- comment -%}
-            根节点是 tilt-element（assets/tilt-element.js）：整块横幅 = 触发区
-            （鼠标不必压在岛上也跟随），产品岛 = 倾斜目标。幅度比商品卡收敛
-            （10°→6°、scale 1.08→1.02、perspective 700→1200）——岛宽 825px，
-            商品卡那套参数在大元素上会畸变夸张。无 JS / 触屏 / reduced-motion
-            下脚本根本不挂载，岛保持静态居中。
-          {%- endcomment -%}
+
           <tilt-element
             class="collection__banner"
             data-tilt-target=".collection__banner-island"
@@ -264,12 +195,7 @@
             data-tilt-scale="1.02"
             data-tilt-perspective="1200"
           >
-            {%- comment -%}
-              底图是纯装饰（图里没有文字没说的信息）⇒ alt 恒为空。但 image_tag
-              在 alt 为空时会把 alt 属性整条吞掉（不是输出 alt=""），Lighthouse
-              直接判「image elements do not have [alt] attributes」——所以捕获
-              后补一次。同一写法见 hero-slideshow.liquid。
-            {%- endcomment -%}
+
             {%- capture banner_bg_img -%}
               {{
                 banner_image
@@ -304,17 +230,7 @@
                   alt: island_alt
               }}
             {%- endif -%}
-            {%- comment -%}
-              底边波浪（2026-11-03 按参考图）。只在移动端显示（CSS 控制），
-              把横幅下缘切成浅波形、与下方内容区同色接住。
-              写法理由：
-              · 内联 SVG + currentColor，颜色由 CSS 交给 --collection-surface
-                ——Noir 深色预设下自动翻转，不烤进图片（商家换图不换形状）。
-              · 不用 clip-path：振幅只有 ~10px，clip-path 的抗锯齿在这种
-                浅角度曲线上会出锯齿；SVG 描边自带平滑。
-              · preserveAspectRatio="none"：横向拉满屏宽，纵向固定 24px。
-              · 装饰图形，不进无障碍树（aria-hidden + focusable="false"）。
-            {%- endcomment -%}
+
             <svg
               class="collection__banner-wave"
               viewBox="0 0 1200 62"
@@ -322,13 +238,7 @@
               aria-hidden="true"
               focusable="false"
             >
-              {%- comment -%}
-                两层浪（2026-11-03 刘工对照参考图）：上一条半透明、下一条实色。
-                「错位」不是把同一条曲线往下平移——那会变成一条等宽的半透明带，
-                看着像画了两条平行线。这里让上层走**反相**：实色浪往下兜的地方
-                （x≈190 / 960）上层正好抬起来，两层时近时远，才有前后两层的感觉。
-                改波形时两条要一起看，别只动一条。
-              {%- endcomment -%}
+
               <path
                 class="collection__banner-wave-ghost"
                 d="M0 16 C 120 30 260 33 380 30 C 500 25 620 17 760 14 C 900 17 1060 27 1200 23 L1200 62 L0 62 Z"
@@ -352,23 +262,11 @@
                 aria-controls="FacetsDialog-{{ section.id }}"
               >
                 {{ 'collections.filters.open' | t }}
-                {%- comment -%}
-                  2026-11-03 刘工：与右侧排序控件并排时一个有箭头一个没有，
-                  看起来像两个来源不同的控件。共用 icon-chevron-down.svg，
-                  尺寸与颜色由 CSS 统一（16px / 前景色 60%），
-                  与排序按钮里那个 JS 生成的 chevron 同一形状。
-                  箭头是装饰：按钮的可访问名来自文字「Filters」，图标不进 a11y 树。
-                {%- endcomment -%}
+
                 {{ 'icon-chevron-down.svg' | inline_asset_content }}
               </button>
             {%- endif -%}
 
-            {%- comment -%}
-              无筛选集合：没有左列，也就没有 form —— 排序常驻工具条行尾
-              （桌面与移动端同一处）。无 form 可提交 → 不带 form 属性；
-              JS 走 _onChange 的「无表单」独立局部更新分支。
-              与有筛选集合的排序卡复用同一套类名：工具条里有它自己的横排形态。
-            {%- endcomment -%}
             {%- if collection.filters.size == 0 and section.settings.show_sort -%}
               <div class="facets__sort-card">
                 <label class="facets__sort-card-label" for="SortBy-{{ section.id }}">
@@ -394,22 +292,10 @@
               </div>
             {%- endif -%}
 
-            {%- comment -%} 计数：桌面在已选标签右侧（CSS order 控制），移动端行尾 {%- endcomment -%}
             <p class="collection__count" aria-live="polite" data-facets-count>
               {{ 'navigation.products_count' | t: count: collection.products_count }}
             </p>
 
-            {%- comment -%}
-              视图切换（2026-11-03 刘工）：网格 ⇄ 列表。
-              位置由 CSS order 决定——移动端紧跟「排序」右侧、计数推到行尾；
-              桌面在工具条最右。
-              状态挂在 <html data-collection-view> 而不是本 section：筛选走
-              Section Rendering 会整块替换 <collection-facets> 的子节点，
-              状态放 section 里刷新一次就丢。首帧无闪烁由 theme.liquid 的
-              内联脚本负责（读 localStorage 先写属性），这里只做点击与同步。
-              单一按钮 = WAI-ARIA 的 toggle button：aria-pressed 表示「列表态是否开启」，
-              图标跟着 pressed 走（列表图标 = 列表态），标签恒定不随状态改词。
-            {%- endcomment -%}
             {%- if collection.products_count > 0 -%}
             <view-toggle class="view-toggle" data-view-toggle>
               <button
@@ -474,15 +360,7 @@
                 </ul>
 
                 {%- if paginate.pages > 1 -%}
-                  {%- comment -%}
-                    分页（视觉参考刘工 2026-10-16 截图：白圆按钮 + 箭头，当前页主题绿实心）。
-                    - 走 paginate.parts 自定义结构，不用 default_pagination（输出无法控形）；
-                      截断部分（非链接、非当前页）渲染为 … 间隔。
-                    - prev/next 不可用时渲染禁用占位——两端箭头恒在，行宽不跳。
-                    - 页码链接不带 aria-label 之外的 JS 行为：分页故意不做局部更新
-                      （faceted-filters.js 有意放行）——replaceState 不留历史，
-                      分页的前进后退语义需要整页导航。
-                  {%- endcomment -%}
+
                   <nav class="collection__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
                     {%- if paginate.previous -%}
                       <a class="collection__pagination-nav" href="{{ paginate.previous.url }}" aria-label="{{ 'collections.pagination_previous' | t }}">
@@ -516,7 +394,7 @@
                   </nav>
                 {%- endif -%}
               {%- elsif has_active_filters -%}
-                {%- comment -%} 筛选后无结果：有筛选器已激活但当前组合无商品 {%- endcomment -%}
+
                 <div class="collection__empty">
                   <p class="collection__empty-title">{{ 'collections.no_matches' | t }}</p>
                   <a class="collection__empty-link" href="{{ collection.url }}">
@@ -524,7 +402,7 @@
                   </a>
                 </div>
               {%- else -%}
-                {%- comment -%} 真空集合：空态 + 全部商品入口（pages-ui §4 状态要点） {%- endcomment -%}
+
                 <div class="collection__empty">
                   <p class="collection__empty-title">{{ 'collections.empty.title' | t }}</p>
                   <p class="collection__empty-body">{{ 'collections.empty.body' | t }}</p>
@@ -541,11 +419,7 @@
   </collection-facets>
 
   {%- if collection.filters.size > 0 -%}
-    {%- comment -%}
-      筛选抽屉交给 <bottom-sheet>（2026-11-03 刘工）：开合动效与 Esc 收口由组件
-      统一负责，本 section 只管面板外观（.facets__dialog 的宽度/圆角/flex 链）。
-      组件不生成盒子（display:contents），不会成为 .collection 这个 grid 的 item。
-    {%- endcomment -%}
+
     <bottom-sheet media="(max-width: 989.98px)">
       <dialog
         id="FacetsDialog-{{ section.id }}"
@@ -558,42 +432,19 @@
 </div>
 
 {% stylesheet %}
-  /* 包裹层退回 block：section 顶部的 script/link 标签不能成为 .shopify-section
-     grid 的 item（否则会在内容上方挤出空行）；通栏由根 div 的 full-width +
-     内部 grid 自行管理。 */
+
   .shopify-section.collection-section {
     display: block;
   }
 
-  /* ===================================================================
-     集合页骨架（2026-10-20 刘工拍板，参考稿「首页布局-左侧集合入侵 banner」）
-     左列 320px（标题卡 + 筛选卡）｜右列（横幅 + 产品区）自适应铺到右缘。
-     首列留页面边距，与主题其余 section 的内容起点对齐；整块 1920px 居中。
-
-     ⚠️ 沉浸页头已弃用（同日拍板）：左列是浅底黑字、透明页头叠上去必打架，
-     横幅不再钻到页头背后，导航行全程实底（critical.css 的沉浸组已删除）。
-     =================================================================== */
   .collection {
-    /* 内容区底色：横幅遮罩、mask 透明处、产品区共用——必须从令牌派生，
-       Noir 深色预设下自动翻转（禁止硬编码 #F7F7F5，配色纪律） */
+
     --collection-surface: color-mix(in srgb, var(--color-foreground) 3%, var(--color-background));
     --collection-left: 320px;
     --banner-h: 650px;
 
-    /* 吸顶偏移 = 吸顶导航行的高度：链接 min-height 44px（border-box，已含
-       自身 0.5rem 上下内边距）+ .main-nav__item 上下 1rem 内边距 × 2 = 76px。
-       announcement bar 不吸顶、随页滚走，不计入。改动导航行内边距后这里要
-       跟着核对（待实测校正： shopify theme dev 里量一下实际行高）。 */
     --facets-sticky-top: 4.75rem;
 
-    /* 工具条控件的共用外观（--facet-control-radius / -border）已随筛选组件
-       样式整体移到 assets/facets.css 的 :root（2026-11-18）——它属于组件，
-       不属于集合页布局。这里不要再定义第二份：同值重复定义会让「改了不生效」
-       变成最难查的那类问题。 */
-
-    /* 首列 = 页面边距（与其余 section 的内容起点对齐），第二列承载整个两栏。
-       列宽只在 .collection__layout 里定义一次（--collection-left），避免
-       「外层轨道 + 内层列」两处 320px 各写各的。 */
     display: grid;
     grid-template-columns: var(--page-margin) minmax(0, 1fr);
     width: 100%;
@@ -602,10 +453,7 @@
     align-items: start;
     background-color: var(--collection-surface);
   }
-  /* ⚠️ 落列位置必须给 <collection-facets> 本身，不能给 .collection__layout：
-     它是 facets 的子元素，grid-column 只对直接父网格生效——写到里面时
-     facets 作为 grid item 自动落到第 1 列（20px 边距列），右列被压成 0、
-     横幅宽度塌成 0（2026-10-20 实渲染验证抓到的真 bug）。 */
+
   .collection__facets {
     grid-column: 2;
     display: block;
@@ -618,7 +466,6 @@
     min-width: 0;
   }
 
-  /* ---- 左列：z-index 压在横幅上（侵入式构图的命门） ---- */
   .collection__left {
     position: relative;
     z-index: 10;
@@ -627,18 +474,13 @@
     min-width: 0;
     padding-left: 20px;
   }
-  /* 标题卡越界：560px > 320px 左列，向右侵入横幅 240px（参考稿同值）。
-     ⚠️ 不能加 max-width: 100%——那会把 560 钳回 276（左列内容宽），
-     侵入效果消失、h1 折行、亮点竖排（2026-10-20 实渲染抓到）。
-     移动端另有 width: 100% 的覆盖，小屏不会溢出。 */
+
   .collection__intro {
     width: 570px;
     padding-block-start: 10px;
     margin-block-end: 50px;
   }
-  /* 亮点行（2026-10-30 按设计稿改版）：白色圆底 + 线性图标 + 右侧两行深绿文案。
-     参数取自参考稿比例：圆 3.5rem、图标 1.5rem、字 0.95rem/600、圆与文字间距 14px。
-     投影用 brand 的 color-mix 而不是黑——这里没有"压照片"的需求，不必动黑色例外。 */
+
   .collection__features {
     display: flex;
     flex-wrap: wrap;
@@ -667,8 +509,7 @@
     box-shadow: 0 2px 10px color-mix(in srgb, var(--color-brand) 8%, transparent);
     color: var(--color-brand);
   }
-  /* 圆内图标 = 商家填的 emoji（2026-10-30 刘工定：纯 emoji，不引入 SVG 图标集）。
-     字号按圆直径的 ~44% 取，居中由父级 grid 的 place-items 负责。 */
+
   .collection__feature-emoji {
     font-size: 1.75rem;
     line-height: 1;
@@ -677,31 +518,20 @@
     display: block;
     max-inline-size: 9ch;
   }
-  /* 无横幅：标题卡不再越界（没有横幅可压，越界会盖到产品网格上） */
+
   .collection--no-banner .collection__intro {
     width: 100%;
     margin-block-end: 2rem;
   }
 
-  /* ---- 右列 ---- */
   .collection__right {
     display: flex;
     flex-direction: column;
     min-width: 0;
   }
 
-  /* ===================================================================
-     横幅三层（参数 1:1 对齐参考稿，勿改层级与取值——2026-10-20 第三轮）
-     ① 底图（mask 向左渐显，透明处透出 --collection-surface）
-     ② 异形遮罩（页面色 + 圆弧边界；只压底图，不碰产品岛——「光晕只能垫底」
-        那条纪律针对的是产品图，这里不适用）
-     ③ 产品悬浮岛（alpha 抠图，drop-shadow 是配色纪律的合法例外：永远黑）
-     ④ 毛玻璃小卡 2026-10-29 已整块下线（品类文案不能模板级共用），连同
-        其 CSS 一起删干净，不是 display:none。
-     =================================================================== */
   .collection__banner {
-    /* 根元素是 tilt-element 自定义元素（默认 display:inline，会塌掉宽高）——
-       必须显式给 block。 */
+
     display: block;
     position: relative;
     width: 100%;
@@ -725,12 +555,7 @@
     position: absolute;
     top: -10%;
     left: -5%;
-    /* 宽度随视口收缩（2026-10-20 刘工）：横幅右列是 minmax(0,1fr)，视口越窄它越窄，
-       而左列（320px）与侵入的标题卡（560px）是定值 → 窄屏时固定 55% 会把底图
-       盖掉一大半。改成「横幅宽 − 520px」（520 ≈ 左列 320 + 页边距 + 让出量），
-       中间值随横幅变窄而**更快**变小，两头用 30% / 55% 夹住：
-       横幅 ≥1156px → 55%；743–1156px → calc；≤743px → 30%（两段边界连续）。
-       移动端 <990px 走另一套纵向渐隐规则（width 100%），不受此处影响。 */
+
     width: clamp(30%, calc(100% - 520px), 55%);
     height: 120%;
     background: linear-gradient(
@@ -747,22 +572,18 @@
     position: absolute;
     top: 50%;
     left: 60%;
-    /* ⚠️ 居中偏移走 translate 属性，不要用 transform：tilt-element.js 会整块覆写
-       transform，写在这里的 translate(-50%, -45%) 会被吃掉、岛瞬间跳位。
-       独立变换属性与 transform 各占一个槽位，互不干扰（translate 先、transform 后）。 */
+
     translate: -50% -45%;
     width: 75%;
     max-width: 900px;
     z-index: 3;
     filter: drop-shadow(0 30px 40px rgb(0 0 0 / 25%));
   }
-  /* 底边波浪：默认不显示（桌面是圆角卡侵入版式，没有这条边），
-     只有移动端叠放版式才展开——见文件末尾的 <990px 媒体查询。 */
+
   .collection__banner-wave {
     display: none;
   }
-  /* 倾斜的平滑感由 CSS 承担（JS 只做 rAF 合帧）：商品卡同款极缓曲线。
-     只给 transform 加，投影不动——大图 filter 动画每帧重绘，性价比低。 */
+
   @media (hover: hover) and (pointer: fine) {
 
     .collection__banner-island {
@@ -776,20 +597,15 @@
     }
   }
 
-  /* 产品区：与横幅同底色，padding 参考稿 40px */
   .collection__content {
     padding: 40px;
     min-width: 0;
   }
 
-  /* 面包屑 */
   .collection__breadcrumb-list {
     display: flex;
     flex-wrap: wrap;
-    /* ⚠️ 必须 center（2026-10-20 修「面包屑错层」）：行内链接有 44px 触控高度
-       （min-height，项目统一约定），纯文本的当前项只有 ~16px 行高；stretch 下
-       li 被拉到同高、纯文本项贴顶 → 实测两项文字中心差 14px。居中后文字对齐，
-       44px 触控区上下溢出但不影响视觉。 */
+
     align-items: center;
     gap: 0.35rem;
     list-style: none;
@@ -813,8 +629,6 @@
     text-decoration: underline;
   }
 
-  /* 集合标题（参考稿 64px / 700）：左列是这一屏的视觉重心，
-     比原 41px 上限大得多，也因此才需要 320px 的列宽兜住长标题。 */
   .collection__title {
     font-size: clamp(2rem, 4.4vw, 4rem);
     font-weight: 700;
@@ -829,13 +643,11 @@
     line-height: 1.5;
     color: color-mix(in srgb, var(--color-foreground) 62%, transparent);
   }
-  /* form 归位槽：抽屉关闭后 JS 把 form 放回这里（不能 layout.prepend，
-     否则表单会顶到标题卡之前）。 */
+
   .facets__form-slot {
     min-width: 0;
   }
 
-  /* 工具条 */
   .collection__toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -843,15 +655,12 @@
     gap: 0.75rem;
     min-height: 44px;
   }
-  /* ---- 视图切换（网格 / 列表，2026-11-03 刘工）----
-     与 Filters / 排序控件同一套边框与圆角（--facet-control-*），图标 18px、
-     颜色与 Filters 的 chevron 同为前景色 60%，三个控件才像同一套东西。 */
+
   .view-toggle {
     display: flex;
     flex: none;
   }
-  /* 自定义元素未升级（无 JS / 脚本未到）：整块隐藏——留一个按不动的按钮
-     比不显示更糟；CSS 也就不用再依赖 .js 门控。 */
+
   view-toggle:not(:defined) {
     display: none;
   }
@@ -876,8 +685,7 @@
     stroke-width: 1.6;
     color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   }
-  /* 两个图标按 aria-pressed 二选一：未按下 = 网格态（显示网格图标），
-     按下 = 列表态（显示行图标）。脚本只改 aria-pressed，不碰 DOM。 */
+
   .view-toggle__icon {
     display: none;
   }
@@ -894,7 +702,6 @@
     white-space: nowrap;
   }
 
-  /* 网格 */
   .collection__results {
     position: relative;
     margin-block-start: 0.5rem;
@@ -919,8 +726,7 @@
       grid-template-columns: repeat(3, 1fr);
     }
   }
-  /* 4 列只在 ≥1280px 出现（2026-10-16 刘工：4 列保留，但断点 1100 → 1280，
-     1100–1279px 走 3 列，卡片不至于太窄） */
+
   @media (min-width: 1280px) {
 
     .collection__grid {
@@ -928,20 +734,12 @@
     }
   }
 
-  /* ===================================================================
-     列表视图（html[data-collection-view='list']）
-     卡片改成「图左 / 信息右」两列**网格**，不改 product-card 的标记——
-     那张卡被首页 featured-collection 与搜索页共用，加包裹层会波及它们。
-     子节点统一落在第 2 列，媒体盒用 span 6 撑起左列（缺项时该行高度为 0，
-     不留空隙）；行号不写死，靠自动流排，多一个少一个都不会错位。
-     =================================================================== */
   html[data-collection-view='list'] .collection__grid {
     grid-template-columns: 1fr;
   }
   html[data-collection-view='list'] .collection__grid .product-card {
     display: grid;
-    /* 图片列：手机 ~104px、桌面封顶 168px。用 clamp 而不是 minmax——
-       minmax 在窄格里会一直贴在 88px 上，图片小到看不清是什么机器。 */
+
     grid-template-columns: clamp(104px, 30%, 168px) minmax(0, 1fr);
     align-content: start;
     column-gap: 1rem;
@@ -950,10 +748,7 @@
   html[data-collection-view='list'] .collection__grid .product-card > * {
     grid-column: 2;
   }
-  /* 媒体盒必须 stretch + 图片改成「填满容器」：卡片图是 aspect-ratio: 1 的方图，
-     列表里右列内容比 168px 高/矮都不一定，方图会溢到卡片外面（桌面实测：
-     图比卡高 40px，直接越出圆角边框）。改成高度 100% + contain，
-     图跟着行高走，不再溢出也不被裁。 */
+
   html[data-collection-view='list'] .collection__grid .product-card__media-wrap {
     grid-column: 1;
     grid-row: 1 / span 6;
@@ -968,20 +763,16 @@
     aspect-ratio: auto;
     object-fit: contain;
   }
-  /* 这两处的基础规则靠 margin-top:auto 把按钮压到卡底（纵向卡），
-     横排时该行高度就是内容高度，auto 会把它顶开，这里清零。 */
+
   html[data-collection-view='list'] .collection__grid .product-card__compare,
   html[data-collection-view='list'] .collection__grid .product-card__quick-add {
     margin-block-start: 0;
   }
-  /* 加购按钮不再拉满整行：桌面信息列宽 700+px，一条全宽绿条会把整张卡压住 */
+
   html[data-collection-view='list'] .collection__grid .product-card__add {
     max-inline-size: min(100%, 240px);
   }
 
-  /* 分页：圆形按钮（参考截图 2026-10-16）——白圆 + 浅边框居中一排，
-     当前页主题绿实心（--color-brand，与截图深绿一致；换 --color-brand-accent
-     即改亮绿）。箭头恒在：不可用方向渲染禁用占位（opacity 降）不塌行宽。 */
   .collection__pagination {
     display: flex;
     flex-wrap: wrap;
@@ -1022,7 +813,6 @@
     color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
 
-  /* 空态 */
   .collection__empty {
     display: grid;
     justify-items: center;
@@ -1052,28 +842,14 @@
     text-decoration: none;
   }
 
-  /* 桌面两栏：纯 CSS 媒体查询，不依赖 JS（无 JS 也能筛选——应用按钮整页 GET 提交）。
-     data-facets-ready 只负责：隐藏应用按钮（change 即提交）+ 移动端 Filters 按钮/抽屉。 */
   @media (min-width: 990px) {
 
     .collection__layout {
-      /* 左列 320px（参考稿），右列 1fr 铺到右缘。
-         列间距 0：横幅与左列的实际间距由左列的 padding-inline-end（20px）
-         提供——参考稿同值，多给 gap 会把横幅推离左列。
-         卡面内边距占用 2.5rem，min-width 收缩链已放开（见 .facets__form）。 */
+
       grid-template-columns: var(--collection-left) minmax(0, 1fr);
       gap: 0;
     }
 
-    /* ---- 吸顶筛选卡（2026-10-29 刘工）：滚动时筛选卡钉在导航行下方 ----
-       两个前提缺一不可：
-       ① sticky 只在「父盒有富余高度」时有黏附空间（BUG-032 同构教训）——
-          .collection__layout 是 align-items: start，左列原本只有内容自身那么高，
-          必须先把左列拉到与右列等高（align-self: stretch），sticky 才有行程；
-       ② top 避开吸顶导航行（--facets-sticky-top = 76px）。
-       卡片高于视口时改为卡内滚动（max-height + overflow-y）：否则吸顶后
-       卡片底部伸到视口外，下面的筛选组永远够不着。max-height 只在
-       内容超高时才起作用，矮卡片视觉零变化。 */
     .collection__left {
       align-self: stretch;
     }
@@ -1085,9 +861,7 @@
       max-height: calc(100dvh - var(--facets-sticky-top) - 1.5rem);
       overflow-y: auto;
       overscroll-behavior: contain;
-      /* 卡内滚动条默认隐形：thumb 全透明（透明色不改变占位，布局稳定），
-         悬停卡片或键盘焦点进入筛选控件时浮现（focus-within 兜键盘用户，
-         纯 hover 显隐对 Tab 导航是死路）。占位 10px 仍在，卡片宽度不跳。 */
+
       scrollbar-width: thin;
       scrollbar-color: transparent transparent;
     }
@@ -1097,7 +871,6 @@
       scrollbar-color: color-mix(in srgb, var(--color-foreground) 30%, transparent) transparent;
     }
 
-    /* webkit 兜底同逻辑（全局滚动条的标准/私有分工在这里重演一遍） */
     .facets__form-slot::-webkit-scrollbar-thumb {
       background-color: transparent;
     }
@@ -1107,18 +880,11 @@
       background-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
     }
 
-    /* 悬停的是 thumb 本身时再加深一档（同全局 55%）；写在最后，
-       同特异性下覆盖上面的容器悬停规则 */
     .facets__form-slot::-webkit-scrollbar-thumb:hover {
       background-color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
     }
   }
-  /* ===================================================================
-     移动端（<990px）单列：横幅 + 叠在上面的标题块 → 工具条 → 网格。
-     横幅的渐隐方向从「向左」改成「向下」：下方就是产品区，两者同底色才能接住。
-     （参考稿的「650px → 500px、产品岛 90% 居中」已被 2026-11-03 的叠放改版
-       取代：文字占掉上半屏后，岛改为收窄贴右下沿，见下。）
-     =================================================================== */
+
   @media (max-width: 989.98px) {
 
     .collection {
@@ -1129,12 +895,6 @@
       grid-column: auto;
     }
 
-    /* ---- 标题块叠到横幅上（2026-11-03 刘工）----
-       左右两列在移动端退化成「分发器」：display: contents 让它们的孩子直接成为
-       .collection__layout 的网格项，横幅与标题块占同一格、上下叠放。
-       ⚠️ 别改成「标题块绝对定位」：它的高度随描述与亮点行变化，绝对定位会脱离
-       高度计算，长文案直接被横幅的 overflow: hidden 切掉；网格叠放时
-       行高 = max(横幅 min-height, 标题块高)，横幅跟着长高——文案再长也压得住。 */
     .collection__left,
     .collection__right {
       display: contents;
@@ -1151,25 +911,11 @@
       z-index: 10;
       align-self: start;
       width: 100%;
-      /* 底部 2.5rem 是给波浪让位的：文字若压到图案上，波峰会从字形中间穿过去
-         （实测 390px 下亮点标签正好落在波浪带里）。 */
+
       padding: 20px 20px 2.5rem;
       margin-block-end: 0;
     }
 
-    /* ---- 左侧白色遮罩（2026-11-03 第三版：与桌面同源）----
-       桌面是「页面色弧形渐隐」把标题卡从照片里托出来；移动端把同一条思路
-       转 90°：左缘页面色实色压住照片、向右渐隐，右缘留原图亮度给产品。
-       用 --collection-surface 而不是写死白：Noir 深色预设下自动变成
-       「深底 + 浅色字」，不需要第二套规则（黑色遮罩那版必须写死 #000，
-       是因为照片不跟预设翻转，两者性质不同）。
-       左缘不满格（88%）是刻意的：满格就是一块纯白，照片全被抹掉；
-       88% 还能透出纹理，字也照样立得住。
-       实测（隐藏文字后量描述框背景）：标题 8.2:1（最差）/ 10.4:1（中位）；
-       描述 3.3:1（最差）/ 3.6:1（中位）。描述卡在 3.3 不是遮罩的锅——
-       描述色本身是「前景 62%」，压在纯白上也只有 3.8:1；要上 AA 得改描述色
-       （全站级），不是改这里。深字压浅底的好处是**结果稳定**：
-       黑遮罩那版换个亮照片能从 4.8 掉到 1.2，这版最差也就 3.3。 */
     .collection:not(.collection--no-banner) .collection__intro::before {
       content: '';
       position: absolute;
@@ -1184,17 +930,11 @@
       );
     }
 
-    /* 文字不再翻白：遮罩是页面色，深字/浅字交给预设自己决定，
-       面包屑、标题、描述、亮点全部回到主题色，不再逐条覆盖。 */
     .collection:not(.collection--no-banner) .collection__description {
-      /* 文字列收在遮罩的实色区里（实色到 55%，文字最多 50%）。
-         用百分比不用 ch：ch 随字号漂，平板一档还得再写一条补丁。 */
+
       max-inline-size: 50%;
     }
 
-    /* 亮点行：沿用参考图的竖排形态（图标在上、两行标签在下），但配色回到主题：
-       白底圆 + 品牌色文字。三列等分是因为遮罩只有 55% 宽，三条要点要排得进
-       这条列（50% ≈ 195px / 3 = 65px 一列）。 */
     .collection:not(.collection--no-banner) .collection__feature {
       flex: 1 1 0;
       min-inline-size: 0;
@@ -1206,13 +946,10 @@
       line-height: 1.25;
     }
 
-    /* 基础规则给标签 max-inline-size: 9ch（横排形态用），三并列时按列宽走 */
     .collection:not(.collection--no-banner) .collection__feature-text {
       max-inline-size: 100%;
     }
 
-    /* 圆 36px、标签 12px：40px 圆 + 13px 字在 50% 的列里会掉成 2+1，
-       第三条孤零零一行，跟参考图的「三并排」不是一回事。 */
     .collection:not(.collection--no-banner) .collection__feature-badge {
       inline-size: 2.25rem;
       block-size: 2.25rem;
@@ -1222,9 +959,6 @@
       font-size: 1.125rem;
     }
 
-    /* 描述与亮点之间的短分割线（参考图），只在有亮点时出现。
-       宽度跟描述同一条列（50%）：跑出遮罩就压到原图上（实测 390px 下
-       第三条「Longer runtime」正好落在水面高光上），对比度会掉。 */
     .collection:not(.collection--no-banner) .collection__features {
       position: relative;
       max-inline-size: 50%;
@@ -1244,17 +978,10 @@
       background-color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
     }
 
-    /* 无横幅：标题块回到常规流，底边距仍由 .collection--no-banner 的 2rem 提供 */
     .collection--no-banner .collection__intro {
       padding-block-end: 0;
     }
 
-    /* 左列的内边距随 display: contents 一起没了：无 JS 时筛选面板在流内出现，
-       自己补页面边距。有 JS 时表单被搬进抽屉 / 隐藏，槽是空的，不能再撑出
-       20px 空隙（否则横幅与产品区之间多一道白条）。
-       门控同样用 `html.js` 而非 `[data-facets-ready]`：后者晚于首帧，槽会先
-       带着 20px 内边距渲染一次，就绪后再归零 —— 与 form 的位移叠在一起
-       （见 assets/facets.css 同名规则）。 */
     .facets__form-slot {
       padding: 0 20px 20px;
     }
@@ -1268,8 +995,6 @@
       letter-spacing: -0.01em;
     }
 
-    /* 亮点行收圆：390px 下 3.5rem 圆 + 两列文字的条宽 ≈160px，三条放不进 350px，
-       必然 wrap；缩到 3rem、gap 收紧，尽量让它是 2+1 而不是三条各占一行。 */
     .collection__features {
       gap: 20px 24px;
     }
@@ -1288,27 +1013,18 @@
       font-size: 1.375rem;
     }
 
-    /* 横幅高度：跟参考图比例（宽高比 ≈1.25:1 ⇒ 390px 视口约 312px），
-       用 82vw 夹在 300–360 之间；仍靠 stretch 跟着标题块长高——
-       文案变长时横幅变高，波浪固定在底边（不是被文字顶下去的固定值）。 */
     .collection__banner {
       align-self: stretch;
       height: auto;
       min-height: clamp(300px, 82vw, 360px);
     }
 
-    /* 底图不再纵向淡出（2026-11-03）：底边改由波浪硬切，
-       留着 mask 会在波峰处透出半透明照片、波浪看起来像画在雾上。 */
     .collection__banner-bg {
       object-position: center;
       -webkit-mask-image: none;
       mask-image: none;
     }
 
-    /* 底边波浪（移动端专属）。z-index 必须高过标题块（z10）——遮罩是标题块的
-       ::before，只压到 z2 的话，遮罩会盖在波浪上把它染成一条灰带
-       （实测：横幅底部 24px 出现从深到浅的灰条，就是这层叠加）。
-       文字块底部留了 2.5rem，波浪只有 24px，压不到字。 */
     .collection__banner-wave {
       display: block;
       position: absolute;
@@ -1321,26 +1037,14 @@
       pointer-events: none;
     }
 
-    /* 上层半透明浪：留出 8px 的「第二层」过渡带。
-       0.6 是实测的落点：0.75/0.88 时这条带子接近白色、跟下面的实色区糊成一片，
-       两层又变回「一条边」；0.45 则偏脏。0.6 正好卡在照片与实色之间，
-       上下两条边都读得出来。 */
     .collection__banner-wave-ghost {
       opacity: 0.6;
     }
 
-    /* 横幅自带的页面色渐隐在移动端整个下线（2026-11-03）：它原本是把图顶洗成
-       页面色、好和上方标题块接住；现在标题块压在图上，两层渐隐叠加会把照片洗白。
-       可读性改由标题块自己的黑色遮罩负责（见上），底图也不再纵向淡出
-       （底边是波浪硬切，见 .collection__banner-bg 的 mask: none）。 */
     .collection__banner-mask {
       display: none;
     }
 
-    /* 产品岛：横幅现在是「照片 + 文字块」，岛不能再居中——文字块占掉左侧 ~70%、
-       高度接近整条横幅，居中会从描述里穿过去（实测 390px 下割草机扶手正好压在
-       最后两行字上）。压到右下角、允许右侧被 overflow 裁掉一点，读作
-       「产品从右边入画」，也把未压暗区的亮度用起来。 */
     .collection__banner-island {
       width: 50%;
       left: 88%;
