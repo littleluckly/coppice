@@ -55,8 +55,10 @@
         "show_breadcrumb": true,
         "show_description": false,
         "description_words": 40,
+        "show_selling_plans": true,
         "show_accelerated_checkout": true,
-        "show_payment_terms": true
+        "show_payment_terms": true,
+        "show_gift_card_recipient": true
       }
     },
     "product-anchor-nav": {
@@ -128,7 +130,15 @@
     "product-faq": {
       "type": "product-faq",
       "settings": {
-        "blog": ""
+        "blog": "buying-guides",
+        "limit": 4,
+        "eyebrow": "FAQ",
+        "heading": "Frequently asked questions",
+        "subheading": "Quick answers to the questions we hear most about our machines, batteries, and support.",
+        "autoplay": true,
+        "autoplay_seconds": 6,
+        "button_label": "View more FAQs",
+        "button_link": ""
       }
     },
     "product-recommendations": {
