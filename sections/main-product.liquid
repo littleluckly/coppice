@@ -688,7 +688,7 @@
         （主循环里已 continue 跳过）。
       {%- endcomment -%}
       {%- comment -%}
-        BUG-084（2026-11-20 刘工截图）：容器**不能按「block 存在」判定**。spec_bullets
+        BUG-085（2026-11-20 刘工截图）：容器**不能按「block 存在」判定**。spec_bullets
         三条值全空、trust 项 warranty / text 为空时，片段自己整段不输出（SDD §5.7
         不留空壳），而原来的 `has_spec / has_trust` 只看 `block.type` ⇒ 容器照旧渲染，
         产品页出现「两条顶线夹一段空白」（配件类商品 metafield 全空时必现）。
