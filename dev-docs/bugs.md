@@ -846,6 +846,14 @@
 - **验证**：① 无头 Chrome 桩 fetch 跑时序：`cart:added` 后 150ms `loading=true / body=display:none / skeleton=grid` 且**零次 `?sections=` 请求**；`cart:updated` 后才出现请求，返回后 `loading=false / body=block / 骨架消失`；`cart:add-failed` 路径同样能退出骨架。② 空态按钮渲染实测：白字垂直居中、无下划线、左右 1.5rem 内边距。③ 骨架在 500px 视口量得 `left=20 right=480`（容器 500），不横向溢出。
 - **预防**：① **"刷新内容"必须挂在写操作完成的信号上，不能挂在"点击即发"的信号上**。本项目 `cart:added` 是乐观事件（喂飞入动画的），`cart:updated` 才是事实事件（带服务端回查的真实 `item_count`）——凡是"要根据新数据重渲染"的消费方，一律只听后者。判据：问一句"这个事件派发时，服务端的状态改了吗？"没改就不能拿它当刷新触发。② **`cart:added` 的消费方必须能"等"**：现在契约是 added → (updated | add-failed)，新增加购路径两条事件都要派，否则抽屉会卡骨架（有 12s 兜底，但那是遮丑不是修复）。③ `.btn-solid` **不是完整按钮**，新增用法必须自带排版类；改动它之后跑一次空态/次级态截图，别只看主流程。④ 记录这类"闪一下"的问题要附实测时序表（请求发在哪、事件派在哪），否则下次只能靠肉眼复现。
 
+### BUG-083 · 只抽一个文件就说"包内无注释"，漏掉 `templates/gift_card.liquid` 的 10 处
+
+- **日期**：2026-11-20 ｜ **状态**：Fixed
+- **现象**：刘工反馈"打包后的 `sections/collection.liquid` 还有注释"。核查后包内该文件确实是 0 注释（36,369 字节，与打包分支 md5 一致），但我顺着做**全包扫描**时发现 `templates/gift_card.liquid` 残留 10 处注释（3 个 `{% comment %}`、7 个 `/* */`、4 个 `{% # %}`）。上一轮我给出的结论是"包内 0 注释"——那个结论只基于 `collection.liquid` 一个文件的 `grep`。
+- **根因**：两层。① 剥离脚本 `tools/strip-comments.py` 的 `LIQUID` 清单写的是 `sections/ snippets/ blocks/ layout/`，**漏了 `templates/*.liquid`**（该目录下只有 `gift_card.liquid` 一个 `.liquid`，最容易在写 glob 时被忽略）。② 验证时用**样本代替全集**：查了一个文件就对整个包下结论。
+- **修复**：脚本补 `templates/*.liquid`；重新剥离后 `gift_card.liquid` 11279 → 8788 字节，全包 `grep -rlE "\{%-? *comment|/\*" --include=*.liquid --include=*.css --include=*.js` 输出为空。`task-package.md` §7 第 5 步加同一条整包扫描命令，脚本末尾提示同步改成四步。
+- **预防**：① 任何"整个包 / 整个仓库都 X"的结论，必须用**全量扫描**支撑（`grep -rl` 遍历目标扩展名全集），**不能用抽样结果外推**。② 写"处理某类文件"的脚本时，扩展名清单要对着 `find . -name "*.<ext>"` 的实际结果核对一遍，而不是凭印象列目录。③ 这是同族第三次：BUG-079（`grep` 字样 0 命中当成"平台未实现"）、BUG-082（正则长度上限导致假 0）、本次（扫描范围不全）——共同点是**验证手段自身的覆盖面没被检查**。今后凡是"没有 X"的断言，都要能回答"我是怎么遍历完的"。
+
 ---
 
 ## 记录模板（追加新 bug 用）
