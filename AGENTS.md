@@ -26,7 +26,9 @@ shopify theme pull         # 拉取线上主题
 
 python3 tools/check-locale-keys.py    # 校验 t: 翻译键在两个 locale 文件里都存在
 python3 tools/check-tag-balance.py   # 校验 HTML 标签配对（theme check 的本地补充）
-python3 tools/strip-comments.py      # 打包分支上剥离全部注释（预演；--apply 才写盘，且只允许在 release/* 分支）
+tools/package-theme.sh               # 一键出包：从 HEAD 取文件→剥注释→打包→整包校验（不碰工作区）
+tools/package-theme.sh --dry-run     # 只看会删多少注释
+python3 tools/verify-package.py <zip> # 单独校验一个包：七类注释残留 + 不该进包的文件
 python3 tools/check-focal-points.py  # 校验图片焦点（G-05）生效条件：cover 图必须走 image_tag、<picture> 要交代移动图焦点、禁止 image_url 传 crop
 python3 tools/split-facets-css.py    # 重抽筛选组件样式（改了 collection 里的 .facets__* 之后必跑）
 python3 tools/probe-facets-css.py    # 生成离线计算样式探针 + 无头 Chrome --dump-dom 读 getComputedStyle

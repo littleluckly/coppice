@@ -146,6 +146,25 @@ grep -rn "shopify://" sections templates config   # 必须为空（§1 §2 做�
 
 ## 7. 操作顺序（建议照抄）
 
+> ### 一键完成（推荐）
+>
+> ```bash
+> tools/package-theme.sh --dry-run   # 先看会删多少注释，不打包
+> tools/package-theme.sh             # 出包，落在项目根
+> ```
+>
+> 它做的事：`git archive HEAD` 把 7 个主题目录取到 `/tmp` 临时目录 → 剥注释（七类）→
+> `shopify theme package` → `zip -d` 清偶发文件 → `tools/verify-package.py` 整包七类扫描 →
+> 校验通过才复制到项目根。
+>
+> **不切分支、不碰工作区**：注释是主线上的项目记忆，脚本永远不会删到它们；`dev-docs/`
+> 也不会被检出到临时目录（`git archive` 只取指定目录），所以不存在"忘了清仓库文档"。
+>
+> 两个前提：① 包内容 = **HEAD 的代码**，工作区有未提交改动时脚本会警告那些改动不会进包；
+> ② 需要 `shopify` 与 `python3` 在 PATH 里（可用 `SHOPIFY_BIN=` / `PYTHON_BIN=` 覆盖）。
+>
+> 下面 9 步是它内部做的事，脚本出问题或想手工复核时按步排查。
+
 1. **在干净分支上打包，不要在当前工作区直接打**
    ```bash
    git status                     # 先确认没有未完成的合并（看 .git/MERGE_HEAD）

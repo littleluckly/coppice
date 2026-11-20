@@ -1,46 +1,67 @@
 #!/usr/bin/env python3
 """剥离主题代码注释，用于生成提交用的主题包。
 
-用法（必须在 release/* 分支上）：
-    python3 tools/strip-comments.py            # 预演，只统计
-    python3 tools/strip-comments.py --apply    # 写盘
+用法：
+    python3 tools/strip-comments.py                      # 预演，只统计
+    python3 tools/strip-comments.py --apply              # 写盘（限 release/* 分支）
+    python3 tools/strip-comments.py --root=/tmp/x --apply --force   # 在任意目录跑
 
-只动 7 个主题目录里的文件，不碰 dev-docs/ tools/。
+只在 7 个主题目录里动文件，不碰 dev-docs/ tools/ docs/。
+
+**覆盖的七类注释**（2026-11-20 逐次补齐，每类都是踩过才发现漏的）：
+  1. `{% comment %}…{% endcomment %}`
+  2. `{% # 行内标签 %}`
+  3. `{% liquid %}` 块内以 `#` 开头的行 —— **注意没有 endliquid，到第一个 `%}` 结束**
+  4. `{% doc %}…{% enddoc %}`（组件文档，不输出）
+  5. `/* … */`（Liquid 内嵌 / CSS / JS）
+  6. `<!-- … -->`（保留 IE 条件注释）
+  7. JS 里独占一整行的 `//`
 
 安全边界：
 - JS 的**行内** `//` 一律不删 —— 字符串里的 `'https://…'` 含 `//`，正则删除必出错。
-  只删块注释 `/* */` 与"独占一整行的 `//`"。
-- Liquid 的 `{% comment %}` 整块删除（含标签），块内内容本来就不输出。
-- 删除后压缩连续空行、去行尾空白；这三步都会改变行号，但不动代码语义。
+- 删除后压缩连续空行、去行尾空白；会改变行号，不动代码语义。
 
 删完必须验证（缺一不可）：
     shopify theme check
     node --check assets/*.js
-    git diff 逐行核对：删除行是否都是注释、新增行是否只是"代码去掉行尾注释"
-    真渲染一次（推送到测试店，看 console 错误与关键元素）
+    git diff 逐行核对：删除行是否都是注释
+    python3 tools/verify-package.py <zip>     ← 整包七类扫描，权威判据
 """
+import glob
+import os
 import re
 import subprocess
 import sys
-import glob
 
 APPLY = '--apply' in sys.argv
+FORCE = '--force' in sys.argv
+ROOT = '.'
+for _a in sys.argv:
+    if _a.startswith('--root='):
+        ROOT = _a.split('=', 1)[1]
+        break
 
-LIQUID = (glob.glob('sections/*.liquid') + glob.glob('snippets/*.liquid')
-          + glob.glob('blocks/*.liquid') + glob.glob('layout/*.liquid')
-          # templates/ 下只有一个 gift_card.liquid，第一版漏了它，
-          # 包内残留 10 处注释（2026-11-20 复扫才发现）
-          + glob.glob('templates/*.liquid'))
-CSS = glob.glob('assets/*.css')
-JS = glob.glob('assets/*.js')
-JSON = glob.glob('templates/*.json') + glob.glob('config/*.json') + glob.glob('sections/*.json')
+
+def collect(root):
+    """返回 (liquid, css, js, json) 四组文件路径。"""
+    def g(p):
+        return glob.glob(os.path.join(root, p))
+    return (
+        g('sections/*.liquid') + g('snippets/*.liquid')
+        + g('blocks/*.liquid') + g('layout/*.liquid')
+        # templates/ 下只有 gift_card.liquid，第一版漏了它
+        + g('templates/*.liquid'),
+        g('assets/*.css'),
+        g('assets/*.js'),
+        g('templates/*.json') + g('config/*.json') + g('sections/*.json'),
+    )
+
 
 RE_LIQ_BLOCK = re.compile(r'\{%-?\s*comment\s*-?%\}.*?\{%-?\s*endcomment\s*-?%\}', re.S)
 RE_LIQ_HASH = re.compile(r'\{%-?\s*#(?:[^%]|%(?!\}))*?-?%\}')
-# `{% liquid %}` 块内以 # 开头的行是注释（Liquid 官方语法）。
-# 注意它**没有 endliquid**，到第一个 %} 结束——第一版按 endliquid 写导致漏扫 87 行。
+# {% liquid %} 块内以 # 开头的行是注释（Liquid 官方语法）。
+# 它**没有 endliquid**，到第一个 %} 结束——按 endliquid 写会一条都匹配不上。
 RE_LIQ_TAG = re.compile(r'(\{%-?\s*liquid\b)(.*?)(-?%\})', re.S)
-# `{% doc %}…{% enddoc %}` 是组件文档，不输出，一并删
 RE_DOC_BLOCK = re.compile(r'\{%-?\s*doc\s*-?%\}.*?\{%-?\s*enddoc\s*-?%\}', re.S)
 RE_C_BLOCK = re.compile(r'/\*.*?\*/', re.S)
 RE_HTML = re.compile(r'<!--(?!\[if).*?-->', re.S)
@@ -74,7 +95,6 @@ def strip_liquid(s):
     s = RE_LIQ_BLOCK.sub(make_repl('liquid {% comment %}'), s)
     s = RE_LIQ_HASH.sub(make_repl('liquid {% # %}'), s)
 
-    # {% liquid %} 块内逐行删 # 注释（必须在 {% # %} 之后：前者是标签，后者是块内行）
     def hash_in_block(m):
         body = m.group(2)
         new = RE_HASH_LINE.sub('', body)
@@ -102,17 +122,29 @@ def strip_json(s):
     return tidy(RE_C_BLOCK.sub(make_repl('JSON /* */ 头'), s))
 
 
-def main():
-    branch = subprocess.run(['git', 'branch', '--show-current'],
-                            capture_output=True, text=True).stdout.strip()
-    if APPLY and not branch.startswith('release/'):
-        sys.exit(f'拒绝在分支 `{branch}` 上执行 --apply。'
-                 f'先 git checkout -b release/package，注释是主线上的项目记忆。')
+def current_branch(path):
+    try:
+        r = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                           capture_output=True, text=True, cwd=path)
+        return r.stdout.strip() if r.returncode == 0 else None
+    except OSError:
+        return None
 
-    targets = ([(f, strip_liquid) for f in LIQUID]
-               + [(f, strip_css) for f in CSS]
-               + [(f, strip_js) for f in JS]
-               + [(f, strip_json) for f in JSON])
+
+def main():
+    branch = current_branch(ROOT)
+    if APPLY and not FORCE and not (branch and branch.startswith('release/')):
+        sys.exit(
+            f'拒绝在 `{branch or "非 git 目录"}` 上执行 --apply。\n'
+            '注释是主线上的项目记忆：要么切到 release/* 分支，'
+            '要么显式加 --force（tools/package-theme.sh 会这么做，因为它操作的是临时副本）。'
+        )
+
+    liquid, css, js, json = collect(ROOT)
+    targets = ([(f, strip_liquid) for f in liquid]
+               + [(f, strip_css) for f in css]
+               + [(f, strip_js) for f in js]
+               + [(f, strip_json) for f in json])
 
     changed = 0
     for f, fn in targets:
@@ -127,23 +159,14 @@ def main():
             if APPLY:
                 open(f, 'w', encoding='utf-8').write(out)
 
-    print('模式:', 'APPLY' if APPLY else 'DRY-RUN', '| 分支:', branch or '(detached)')
+    print('模式:', 'APPLY' if APPLY else 'DRY-RUN', '| 根:', ROOT, '| 分支:', branch or '(非 git)')
     print('处理文件:', len(targets), '| 有变化:', changed)
     for k, (n, b) in sorted(stat.items(), key=lambda x: -x[1][1]):
         print('  %-22s %5d 处  %7.1f KB' % (k, n, b / 1024))
     print('  合计移除 %.1f KB' % (sum(b for _, b in stat.values()) / 1024))
     if APPLY:
-        # 自检：本脚本按扩展名清单扫，漏掉一类文件就会像 2026-11-20 那样
-        # 把 templates/gift_card.liquid 的注释带进包。打完包必须用下面的命令
-        # 对**整个包**再扫一遍，那才是权威判据。
-        print('\n下一步：')
-        print('  1) shopify theme check')
-        print('  2) node --check assets/*.js')
-        print('  3) git diff 核对删除行是否都是注释')
-        print('  4) 打包后全包扫描（必须为空）：')
-        print('     unzip -q -d /tmp/pkgchk Coppice-*.zip && \\')
-        print('     grep -rlE "\\{%-? *comment|/\\*" --include="*.liquid" '
-              '--include="*.css" --include="*.js" /tmp/pkgchk')
+        print('\n下一步：shopify theme check / node --check assets/*.js / '
+              '打包后 python3 tools/verify-package.py <zip>')
 
 
 if __name__ == '__main__':
