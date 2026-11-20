@@ -31,6 +31,9 @@
 
   图片：image_picker，留空回退**商品主图**（商品自己的图，不是假数据）。
   留空且商品也无图 → 单栏，手风琴吃满全宽。
+
+  底部按钮「View more FAQs」：没填链接就落到 `blog.url`（“还有更多问题”的下一个
+  落脚点就是内容源头），填了就以商家为准。
 {% endcomment %}
 
 {%- liquid
@@ -57,7 +60,6 @@
   assign cta_label = section.settings.button_label
   assign cta_url = section.settings.button_link
   if cta_url == blank
-    # 按钮语义是「还有更多问题」⇒ 没显式指定就落到内容源头（博客列表页）
     assign cta_url = blog_source.url
   endif
 -%}
