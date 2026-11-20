@@ -135,6 +135,7 @@
         "eyebrow": "FAQ",
         "heading": "Frequently asked questions",
         "subheading": "Quick answers to the questions we hear most about our machines, batteries, and support.",
+        "image": "shopify://shop_images/footer-bg.png",
         "autoplay": true,
         "autoplay_seconds": 6,
         "button_label": "View more FAQs",
