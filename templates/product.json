@@ -130,7 +130,7 @@
     "product-faq": {
       "type": "product-faq",
       "settings": {
-        "blog": "buying-guides",
+        "blog": "faq",
         "limit": 4,
         "eyebrow": "FAQ",
         "heading": "Frequently asked questions",
