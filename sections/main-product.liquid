@@ -659,9 +659,17 @@
             {%- endif -%}
 
           {%- when 'compare' -%}
-            <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>
+            {%- comment -%}
+              BUG-085 同族：`compare-button` 在 `spec.compare_group` 为空或该商品被
+              `compare_hidden` 时整块不输出，容器照旧渲染会白留 0.75rem 间隙
+              （无边框，比规格那处轻，但同属空壳）。同样按内容判定。
+            {%- endcomment -%}
+            {%- capture compare_html -%}
               {% render 'compare-button', product: product %}
-            </div>
+            {%- endcapture -%}
+            {%- if compare_html contains 'class="product-compare"' -%}
+              <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>{{ compare_html }}</div>
+            {%- endif -%}
 
           {%- when '@app' -%}
             {%- comment -%}
