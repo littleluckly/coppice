@@ -191,6 +191,7 @@ grep -rn "shopify://" sections templates config   # 必须为空（§1 §2 做�
    grep -rlE "\{%-? *comment|/\*" --include="*.liquid" --include="*.css" \
         --include="*.js" /tmp/pkgchk          # 必须为空
    ```
+   > **解压必须在项目外（`/tmp`）**。2026-11-20 在项目根解压了一个 `Coppice-0.1.0/` 目录，`theme check` 把这份副本也扫了进去，`85 files / 1 warning` 变成 **`170 files / 378 offenses`**，看起来像全主题崩了，实际是重复扫描。另外这堆副本还会让"包里有没有注释"的判断失去参照——看到的那份可能根本不是包里的。
    > `AGENTS.md` 会被打进包、而 `README.md` / `LICENSE.md` 目前不会 —— CLI 对根目录 `.md` 有一份不公开的排除名单。**新增任何根目录文件后都要重新看 `unzip -l`**，`zip -d` 里那串 `.md` 是保险。
 
 6. **解压核对**：只应有 §4 那 7 个目录，没有 `res.json` / `dev-docs/` / `tools/`。（`dev-docs/lighthouse/`、`dev-docs/benchmark/` 都在 `dev-docs/` 下，一并排除。）
