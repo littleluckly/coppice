@@ -1,35 +1,51 @@
 <!doctype html>
 <html lang="{{ request.locale.iso_code }}">
   <head>
-
+    {% # JS 就绪标记：CSS 渐进增强的门控（禁 JS → .js 不出现 → 沉浸页头等增强整段不命中） %}
     <script>
       document.documentElement.classList.add('js');
     </script>
 
+    {%- comment -%}
+      集合页视图偏好（网格 / 列表）：必须在首帧前写进 <html data-collection-view>，
+      否则列表态用户会先看到一屏网格再跳成列表。与 assets/view-toggle.js 共用
+      同一个 storage key；读不到 / 存储被禁就维持默认网格，不报错。
+    {%- endcomment -%}
     <script>
       try {
         if (localStorage.getItem('coppice:collection-view') === 'list') {
           document.documentElement.dataset.collectionView = 'list';
         }
       } catch (error) {
-
+        /* 隐私模式等场景：静默退回默认网格 */
       }
     </script>
 
+    {% # Inlined CSS Variables %}
     {% render 'css-variables' %}
 
+    {% comment %}
+      Font preloading:
+      1. Preconnect to font CDN for faster connection
+      2. Preload only the critical font variant (base weight)
+      3. Additional variants load on-demand via @font-face
+    {% endcomment %}
     {% unless settings.type_primary_font.system? %}
       <link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>
 
+      {% comment %} Preload the base font variant for initial page render {% endcomment %}
       {{ settings.type_primary_font | font_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
     {% endunless %}
 
+    {% # Load and preload the critical CSS %}
     {{ 'critical.css' | asset_url | stylesheet_tag: preload: true }}
-
+    {% # 对比冲突提示样式：不参与首屏，不 preload %}
     {{ 'compare.css' | asset_url | stylesheet_tag }}
 
+    {% # Social, title, etc. %}
     {% render 'meta-tags' %}
 
+    {% # G-03: favicon. 32px for browser tabs, 180px for mobile home screens. %}
     {%- if settings.favicon != blank -%}
       <link rel="icon" href="{{ settings.favicon | image_url: width: 32, height: 32, crop: 'center' }}" sizes="32x32">
       <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180, crop: 'center' }}">
@@ -38,37 +54,98 @@
     {{ content_for_header }}
   </head>
 
+  {%- comment -%}
+    body class：模板名（CSS 门控）。
+    2026-10-20：沉浸页头开关（settings.immersive_header）与 data-site-header
+    挂点一并移除——集合页改版后弃用沉浸（详见 assets/critical.css 的同名注释）。
+    body 保持无包裹属性：header-group 仍是 body 直接子级，编辑器画布才能管理它。
+  {%- endcomment -%}
   <body class="template-{{ template.name }}">
-
+    {% comment %}
+      Skip link first, before any landmark. It is the first thing keyboard focus
+      reaches, letting people bypass the header. Rendered from layout rather than
+      from a section so a merchant cannot delete it in the theme editor (SDD §8.2).
+    {% endcomment %}
     {% render 'skip-link' %}
 
     {% sections 'header-group' %}
 
+    {% comment %}
+      购物车角标同步 + 加购飞入动画（2026-10-16）。页头购物车入口全站共享，
+      故挂 layout 而非单个 section；defer = HTML 解析完成后执行，不阻塞首屏渲染。
+    {% endcomment %}
     <script src="{{ 'cart-badge.js' | asset_url }}" defer></script>
     <script src="{{ 'fly-to-cart.js' | asset_url }}" defer></script>
 
+    {% comment %}
+      产品对比（SDD §6.2）：状态层 + 三个自定义元素 + 飞入动画，单文件全局引入。
+      页头图标与底部确认条都是全站元素，故挂 layout；商品卡只负责输出 data-* 。
+    {% endcomment %}
     <script src="{{ 'compare.js' | asset_url }}" defer></script>
 
+    {% comment %}
+      滚动入场动画（首页 + 产品页区块）：多个 section 共用同一套状态机，挂在 layout 上只引一次；
+      各 section 只负责输出 `data-reveal`（卡片另输出 `--reveal-delay` 做依次入场）。
+      首屏 / hero 不挂，样式在 critical.css，见其中的注释说明。
+    {% endcomment %}
     <script src="{{ 'reveal-on-scroll.js' | asset_url }}" defer></script>
 
+    {% comment %}
+      底部抽屉的开合行为（2026-11-03）：筛选抽屉 / 排序面板 / 购物车抽屉共用，
+      只做滑入滑出、不封装内容。样式在 critical.css，见其中的 bottom-sheet 段。
+      三个消费方都按使用时刻才调方法（不等定义），故与它们的加载顺序无关。
+    {% endcomment %}
     <script src="{{ 'bottom-sheet.js' | asset_url }}" defer></script>
 
+    {% comment %}
+      回到顶部按钮（2026-10-30）：全站浮层，行为在脚本里、样式在 critical.css。
+    {% endcomment %}
     <script src="{{ 'back-to-top.js' | asset_url }}" defer></script>
 
+    {% comment %}
+      轻提示组件 <ui-tooltip>（2026-11-15）：通用件，样式在 critical.css。
+      当前唯一消费方是页头对比入口，但页头是全站元素、且后续筛选/规格行也会用，
+      故按 layout 引一次，不挂单个 section。
+    {% endcomment %}
     <script src="{{ 'tooltip.js' | asset_url }}" defer></script>
 
+    {% comment %}
+      Main landmark — the skip link target. The id here and the href in
+      snippets/skip-link.liquid must stay in sync.
+
+      tabindex="-1" lets the skip link move focus here. Without it the browser moves
+      the scroll position but not the focus, and the next Tab continues from the
+      header instead of from the content (SDD §8.2).
+    {% endcomment %}
     <main id="MainContent" class="main-content" role="main" tabindex="-1">
       {{ content_for_layout }}
     </main>
 
     {% sections 'footer-group' %}
 
+    {% comment %}
+      对比冲突提示（SDD §6.2.8）：全站浮层，挂 layout 而非某个 section ——
+      商品卡在首页 / 集合页 / 搜索结果都会出现，浮层不能跟着哪个 section 走。
+      它只承载「需要用户决定」的事（跨组 / 已满），成功的加入反馈由页头角标承担。
+    {% endcomment %}
     {% render 'compare-toast' %}
-
+    {% comment %}
+      加入成功的播报区（2026-11-16）：底部对比条删除后它接手 a11y 播报。
+      必须是 layout 级常驻的 visually-hidden 空节点，不能塞进 toast（那个是 display:none）。
+    {% endcomment %}
     {% render 'compare-announcer' %}
 
+    {% comment %}
+      回到顶部按钮（2026-10-30）：全站浮层，同上——不能跟着某个 section 走。
+      放在最后：浮层 DOM 靠后，无 JS 时它默认隐藏，不影响内容顺序。
+    {% endcomment %}
     {% render 'back-to-top' %}
 
+    {% comment %}
+      购物车抽屉（2026-11-02）：全站唯一，挂 layout 而非某个 section ——
+      页面里任何位置的加购都要能把它打开。静态 section 才有 section.id，
+      局部刷新（?sections=）需要它；snippet 拿不到。
+    {% endcomment %}
     {% section 'cart-drawer' %}
   </body>
 </html>

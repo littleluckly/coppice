@@ -1,10 +1,25 @@
-
+/**
+ * product-recommendations — 官方推荐区块的取数壳（task-product T-2.3 退化路径 + T-2.6）。
+ *
+ * 一个组件服务两种意图，靠元素的 `data-intent` 区分（related / complementary）：
+ * 拉取 `data-url`（Liquid 侧已拼好 section_id + product_id + limit + intent），
+ * 解析回包里的 `[data-recommendations-container]`，替换本地容器的 innerHTML。
+ *
+ * 为什么不在服务端直接渲染：产品页首次渲染时 `recommendations` 对象不存在，
+ * 官方要求走 `/recommendations/products` 这条独立请求（会重跑一次该 section）。
+ *
+ * **空结果整块隐藏**：容器替换后若没有卡片，把外层 section 一起隐藏 ——
+ * 否则页面上会留下一个"Similar Mowers"标题和一片空白（SDK 常见缺陷）。
+ *
+ * 失败静默：拿不到推荐只是少一个营销位，不该在购买主流程上报错。
+ */
 class ProductRecommendations extends HTMLElement {
   connectedCallback() {
     this._url = (this.dataset.url || '').trim();
     this._container = this.querySelector('[data-recommendations-container]');
     if (!this._url || !this._container) return;
 
+    // 服务端首帧已有内容（比如被缓存过）就不再重复请求
     if (this._container.querySelector('.product-card')) return;
 
     this._controller = new AbortController();
@@ -31,6 +46,8 @@ class ProductRecommendations extends HTMLElement {
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const fresh = doc.querySelector('[data-recommendations-container]');
       if (!fresh || !fresh.querySelector('.product-card')) {
+        // 空结果是"正常但看不见"的路径：商家以为配好了、顾客什么都没看到。
+        // 控制台留一条线索，排查时不用靠猜（页面本身仍安静隐藏，不打扰购买流程）。
         console.warn(
           '[product-recommendations] 接口返回 0 条推荐，本区块已隐藏。' +
             ' 常见原因：S&D 未配互补品 / 推荐商品缺货或未发布 / 价格 ≤ 0。url=',
@@ -41,6 +58,8 @@ class ProductRecommendations extends HTMLElement {
       }
 
       this._container.innerHTML = fresh.innerHTML;
+      // 新注入的卡片需要重新初始化交互组件（tilt / quick-add 在 DOM 插入后自动升级，
+      // 无需手动调用；但对比勾选的 aria-pressed 初始态由元素自身 connectedCallback 同步）
       this.dispatchEvent(new CustomEvent('recommendations:loaded', { bubbles: true }));
     } catch (error) {
       if (error.name === 'AbortError') return;

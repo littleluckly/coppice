@@ -1,4 +1,21 @@
+{% doc %}
+  compare-entry — 页头对比入口（SDD §6.2.8）。
 
+  · 持久状态入口：图标 + 角标（清单款数 1–4），点击跳当前组的对比页。
+  · URL 映射来自 `compare-page-urls`：**没有任何分组存在对比页时该 snippet 输出
+    `hidden`**，整个入口因此不可见 —— 不会出现指向 404 的链接（§6.2.1）。
+  · `data-pending` 让入口在 JS 接管前保持 visibility:hidden：保留布局空间，
+    避免图标突然出现推动相邻元素（CLS）；无 JS 时永久隐藏（「无 JS 优雅不出现」）。
+  · 移动端页头已被 ☰/logo/搜索/账号/购物车占满 → 仅角标 > 0 时显示，
+    由 `data-empty` + CSS 控制，不监听视口。
+  · 页面探测每页只跑一次（4 次 `pages[handle]`，实测 2.6 μs/次），不进商品循环。
+  · `data-tip-*`（2026-11-15）：页头那份外面包了 `<ui-tooltip>`，文案两态由
+    compare.js 在 sync() 里写进 tooltip 的 label 属性。抽屉那份不需要
+    （行式已有文字标签，悬停提示是重复信息），所以属性照常输出、无人消费。
+
+  @param {string} [class] - 追加到根元素的 class
+  @param {boolean} [show_label] - true → 行式（抽屉里用）：图标 + 文字 + 角标
+{% enddoc %}
 
 <compare-entry
   class="compare-entry{% if class != blank %} {{ class }}{% endif %}"

@@ -1,14 +1,31 @@
-
+/**
+ * fly-to-cart — 加购成功后商品图抛物线飞入页头购物车图标（2026-10-16 刘工）。
+ *
+ * 监听 quick-add.js 冒泡的 cart:added（detail.button = 触发加购的按钮）：
+ * 1. 来源 = 按钮所在 .product-card 内的商品图；无图（占位符卡片）→ 放弃动画；
+ * 2. 目标 = 页面上第一个可见的 [data-cart-entry]（DOM 顺序桌面页头在前，
+ *    移动抽屉的副本闭着抽屉时不可见，自动跳过）；
+ * 3. 克隆一张 56px 圆形缩略图 position:fixed 盖在原图上，Web Animations API
+ *    逐帧走二次贝塞尔曲线：x 线性插值、y 过"中点上方控制点"——合成抛物线，
+ *    同时缩到 0.3 倍并淡出；结束移除克隆节点。
+ *
+ * 纪律：
+ * - prefers-reduced-motion: reduce → 不做动画（只留 cart-badge 的角标同步）；
+ * - 纯视觉层：不碰购物车数据，cart:updated 失败也不影响本动画；
+ * - 加载：layout/theme.liquid 以 defer 引入——HTML 解析完才执行，不阻塞首屏
+ *   （刘工要求动画脚本在页面加载完成后加载，defer 即此语义且是全站既有惯例）。
+ */
 (() => {
   const DURATION_MS = 700;
   const SIZE = 56;
-  const ARC_LIFT_PX = 90;
+  const ARC_LIFT_PX = 90; /* 控制点在起点/终点较高者上方再抬高的距离，决定弧度 */
 
   function findSourceImage(button) {
     const card = button && button.closest('.product-card');
     return card ? card.querySelector('.product-card__media img') : null;
   }
 
+  /** 第一个可见的购物车入口里的图标（桌面页头优先于抽屉副本） */
   function findTarget() {
     for (const entry of document.querySelectorAll('[data-cart-entry]')) {
       const rect = entry.getBoundingClientRect();
@@ -40,6 +57,7 @@
     return clone;
   }
 
+  /** 二次贝塞尔抛物线：x 线性、y 过控制点，采样成 WAAPI 关键帧 */
   function buildKeyframes(from, to) {
     const half = SIZE / 2;
     const x1 = from.left + from.width / 2;
@@ -76,7 +94,7 @@
     const clone = spawnClone(sourceImg, from, to);
     const animation = clone.animate(buildKeyframes(from, to), {
       duration: DURATION_MS,
-      easing: 'linear',
+      easing: 'linear', /* 抛物线形状由关键帧保证，逐帧线性即可平滑 */
       fill: 'forwards',
     });
     animation.addEventListener('finish', () => clone.remove(), { once: true });
