@@ -40,7 +40,8 @@
               <div class="cart-drawer__empty">
                 <p class="cart-drawer__empty-heading">{{ 'cart.empty_heading' | t }}</p>
                 <p class="cart-drawer__empty-text">{{ 'cart.empty_text' | t }}</p>
-                <a class="btn-solid" href="{{ routes.all_products_collection_url }}">
+
+                <a class="btn-solid cart-drawer__empty-cta" href="{{ routes.all_products_collection_url }}">
                   {{- 'cart.continue_shopping' | t -}}
                 </a>
               </div>
@@ -51,6 +52,24 @@
                 {%- endfor -%}
               </ul>
             {%- endif -%}
+          </div>
+
+          <div class="cart-drawer__skeleton" data-cart-skeleton aria-hidden="true">
+            <div class="cart-drawer__skeleton-row">
+              <span class="cart-drawer__skeleton-thumb"></span>
+              <span class="cart-drawer__skeleton-lines">
+                <span class="cart-drawer__skeleton-line"></span>
+                <span class="cart-drawer__skeleton-line cart-drawer__skeleton-line--short"></span>
+                <span class="cart-drawer__skeleton-line cart-drawer__skeleton-line--price"></span>
+              </span>
+            </div>
+            <div class="cart-drawer__skeleton-row">
+              <span class="cart-drawer__skeleton-thumb"></span>
+              <span class="cart-drawer__skeleton-lines">
+                <span class="cart-drawer__skeleton-line"></span>
+                <span class="cart-drawer__skeleton-line cart-drawer__skeleton-line--short"></span>
+              </span>
+            </div>
           </div>
 
           {%- if cart.item_count > 0 -%}
@@ -247,6 +266,78 @@
   }
   .cart-drawer__empty-text {
     color: var(--color-foreground-muted);
+  }
+
+  .cart-drawer__empty-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.5rem;
+  }
+
+  .cart-drawer__skeleton {
+    display: none;
+    align-self: start;
+
+    padding: 1rem 1.25rem;
+  }
+  cart-drawer[data-cart-loading] .cart-drawer__skeleton {
+    display: grid;
+    gap: 1rem;
+  }
+  cart-drawer[data-cart-loading] .cart-drawer__body,
+  cart-drawer[data-cart-loading] .cart-drawer__footer {
+    display: none;
+  }
+  .cart-drawer__skeleton-row {
+    display: grid;
+
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 0.45rem 0.75rem;
+    align-items: start;
+  }
+  .cart-drawer__skeleton-thumb {
+    inline-size: 80px;
+    block-size: 80px;
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  .cart-drawer__skeleton-lines {
+    display: grid;
+    align-content: start;
+    gap: 0.5rem;
+    padding-block-start: 0.25rem;
+  }
+  .cart-drawer__skeleton-line {
+    block-size: 0.75rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  .cart-drawer__skeleton-line--short {
+    inline-size: 45%;
+  }
+  .cart-drawer__skeleton-line--price {
+    inline-size: 30%;
+  }
+
+  cart-drawer[data-cart-loading] .cart-drawer__skeleton-thumb,
+  cart-drawer[data-cart-loading] .cart-drawer__skeleton-line {
+    animation: cart-drawer-skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes cart-drawer-skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    cart-drawer[data-cart-loading] .cart-drawer__skeleton-thumb,
+    cart-drawer[data-cart-loading] .cart-drawer__skeleton-line {
+      animation: none;
+    }
   }
 
   .cart-drawer__grabber {

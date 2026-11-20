@@ -1,9 +1,13 @@
 
 class CartDrawer extends HTMLElement {
+
+  static PENDING_TIMEOUT_MS = 12000;
+
   connectedCallback() {
     this.dialog = this.querySelector('dialog');
     if (!this.dialog) return;
 
+    this._panel = this.querySelector('.cart-drawer__panel');
     this._ac = new AbortController();
     const { signal } = this._ac;
 
@@ -21,11 +25,13 @@ class CartDrawer extends HTMLElement {
     this.dialog.addEventListener('close', this._onClose, { signal });
 
     document.addEventListener('cart:added', this._onAdded, { signal });
+    document.addEventListener('cart:add-failed', this._onAddFailed, { signal });
     document.addEventListener('cart:updated', this._onCountChange, { signal });
   }
 
   disconnectedCallback() {
     this._ac.abort();
+    window.clearTimeout(this._pendingTimer);
   }
 
   _onOpen = (event) => {
@@ -35,13 +41,48 @@ class CartDrawer extends HTMLElement {
   };
 
   _onAdded = () => {
+    this._showPending();
+  };
 
-    this._show();
+  _onAddFailed = () => {
+    if (!this._isPending()) return;
+    this._refresh();
   };
 
   _show() {
     if (!this.dialog.open) this._openSheet();
+
+    if (this._isPending()) return;
     this._refresh();
+  }
+
+  _showPending() {
+    this._beginPending();
+    if (!this.dialog.open) this._openSheet();
+  }
+
+  _isPending() {
+    return this.dataset.cartLoading !== undefined;
+  }
+
+  _beginPending() {
+
+    window.clearTimeout(this._pendingTimer);
+    this._pendingTimer = window.setTimeout(() => {
+
+      this._refresh();
+    }, CartDrawer.PENDING_TIMEOUT_MS);
+
+    this.dataset.cartLoading = '';
+
+    if (this._panel) this._panel.setAttribute('aria-busy', 'true');
+  }
+
+  _endPending() {
+    window.clearTimeout(this._pendingTimer);
+    this._pendingTimer = null;
+    delete this.dataset.cartLoading;
+    if (this._panel) this._panel.removeAttribute('aria-busy');
   }
 
   get _sheet() {
@@ -67,8 +108,8 @@ class CartDrawer extends HTMLElement {
     const el = this.querySelector('[data-cart-drawer-count]');
     if (el && typeof count === 'number') el.textContent = `(${count})`;
 
-    const fromItems = detail.source === 'items';
-    if (!fromItems && this.dialog.open) this._refresh();
+    if (detail.source === 'items') return;
+    if (this._isPending() || this.dialog.open) this._refresh();
   };
 
   _onBackdropClick = (event) => {
@@ -137,6 +178,8 @@ class CartDrawer extends HTMLElement {
   _onClose = () => {
 
     delete document.documentElement.dataset.cartDrawerOpen;
+
+    this._endPending();
     if (this._lastTrigger && this._lastTrigger.isConnected) {
       this._lastTrigger.focus({ preventScroll: true });
     }
@@ -146,13 +189,19 @@ class CartDrawer extends HTMLElement {
     const id = this.dataset.sectionId;
     if (!id) return;
 
+    const seq = (this._refreshSeq = (this._refreshSeq || 0) + 1);
+
     try {
       const response = await fetch(`${window.location.pathname}?sections=${encodeURIComponent(id)}`, {
         cache: 'no-store',
       });
 
+      if (seq !== this._refreshSeq) return;
+
       const payload = response.ok ? await response.json() : null;
       const html = payload && payload[id];
+
+      if (seq !== this._refreshSeq) return;
 
       if (html) {
         const parsed = new DOMParser().parseFromString(html, 'text/html');
@@ -172,9 +221,11 @@ class CartDrawer extends HTMLElement {
           window.location.href = this.dataset.cartUrl;
         }
       }
-    } catch (error) {
+    } catch {
 
-      if (error.name !== 'AbortError') return;
+    } finally {
+
+      if (seq === this._refreshSeq) this._endPending();
     }
   }
 }
