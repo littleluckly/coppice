@@ -1,4 +1,11 @@
-
+/** Product card — shared component styles (首页 featured-collection / 集合页 / 搜索页共用)。
+ *  独立 CSS 的依据：AGENTS §6「跨 section 全局功能才拆独立 .css」——卡片被 3 个页面消费，
+ *  样式留在单个 section 内会让其他页面裸奔或制造多份拷贝。
+ *  加载方式：消费方 section 内 `{{ 'product-card.css' | asset_url | stylesheet_tag }}`。
+ *  配色纪律（2026-10-17 Noir 整页深色）：凡落在卡面/页面上的色一律从
+ *  --color-background / --color-foreground / --color-brand* 派生（color-mix 调 alpha），
+ *  禁止 rgb(0 0 0 / x) / rgb(255 255 255 / x) 硬编码——例外只有两种：
+ *  压在商品图上的元素（收藏白圆钮，跟图片走不跟主题走）和投影（永远用黑）。 */
 
 .product-card {
   display: flex;
@@ -21,7 +28,7 @@
   aspect-ratio: 1;
   object-fit: cover;
   border-radius: 8px;
-
+  /* 图片未加载时的占位底：从前景派生（深色主题下自动变浅灰） */
   background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
 }
 .product-card__placeholder {
@@ -40,11 +47,12 @@
   border: none;
   background-color: rgb(255 255 255 / 85%);
   border-radius: 50%;
-
+  /* 压在产品图上的白色圆钮：图标色用 alpha 黑跟随前景（原 #444 硬编码） */
   color: rgb(0 0 0 / 73%);
   cursor: pointer;
 }
-
+/* 收藏白圆钮是压在商品图上的（跟图片走，不跟页面主题走）：
+   白底 + 深图标在浅/深主题下都成立，是配置纪律注释里的合法例外。 */
 .product-card__wishlist[aria-pressed='true'] {
   color: #c0392b;
 }
@@ -60,11 +68,24 @@
   color: inherit;
   text-decoration: none;
 }
-
+/* 规格胶囊行（2026-10-16 刘工参考图；2026-10-29 与原来的文字规格行合并）：
+   全部参数以胶囊呈现，每个字段只出现一次。原先的 `.product-card__specs` /
+   `.product-card__spec`（小字 + `·` 分隔）已随合并删除，样式不再保留。 */
 .spec-value--card {
   font-size: inherit;
 }
-
+/* 价格三件套（2026-10-29 刘工：对齐产品详情页）——现价 / 划线原价 / 折扣胶囊。
+   现价与划线价是一组（`.product-card__price-main`），胶囊单独一个 flex 项；
+   空间不够时先在这里折行，再折到"价格块 / 胶囊"。
+   2026-11-18 修 BUG-078：这组原本是 nowrap，等于**不允许折行**——
+   四位数价格（`$3,428.55` + `$3,609.00`）实测 136.0px，比 375 视口的卡内容宽
+   （135.5–136px）还宽、320 视口（~108px）必然溢出 28px，并顺着 grid item 的
+   automatic minimum size 传导成整页横向滚动。
+   现在改成 `wrap`：塞得下时与原来逐像素相同（短价格仍是同一行），
+   塞不下时划线价自己落到第二行——**宁可分行，也不溢出、不裁切**。
+   这是对 2026-10-29「绝不把两个价格拆开」的一次有意识修改：那条决定的依据
+   是"106px 内容宽下合计 104.8px"，用的是短价格；价格位数一变就不成立。
+   实测：现价 136.0px / 划线 59.0px，卡内容宽 108–136px 区间全部无横向溢出。 */
 .product-card__price {
   display: flex;
   flex-wrap: wrap;
@@ -74,10 +95,11 @@
 }
 .product-card__price-main {
   display: inline-flex;
-
+  /* wrap 不是 nowrap：见上方 2026-11-18 注释。折行点只在「现价 / 划线价」之间，
+     现价自身永远不折（它是单行数字，没有空格可折）。 */
   flex-wrap: wrap;
   align-items: baseline;
-
+  /* 0.3rem 而非 0.4rem：短价格下这组是 104.8px，0.4rem 会到 106.4px（量出来的，不是估的） */
   gap: 0.3rem;
 }
 .product-card__price-current {
@@ -92,7 +114,7 @@
   font-variant-numeric: tabular-nums;
   color: var(--color-foreground-muted);
 }
-
+/* 折扣胶囊：与 PDP、搜索列表同一组令牌（--color-sale*），4.91:1（BUG-060） */
 .product-card__price-save {
   padding: 2px 6px;
   border-radius: 999px;
@@ -103,7 +125,14 @@
   line-height: 1.4;
   white-space: nowrap;
 }
-
+/* 单位价（合规 G-08：集合页也要支持单位计价；2026-11-18）。
+   位置在价格三件套之下、星级之上——它是价格的注解，不是独立信息块。
+   字号 0.72rem 与划线价（0.78rem）差半档，避免两个小数点在卡上抢注意力。
+   颜色只用 --color-foreground-muted（70% 前景 = 4.95:1，AA 达标；
+   60% 只有 3.69:1，不过，见配色纪律）。
+   不设 nowrap：手机两列卡内容宽只有 ~108px（320 视口）到 ~136px（375 视口，
+   实测），"$3,428.55 / 1000ml" 换行好过溢出；换行点落在 "/" 两侧的空格上，
+   不会把价格拆开。 */
 .product-card__unit-price {
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
@@ -124,6 +153,15 @@
   color: var(--color-foreground-muted);
 }
 
+/* 规格胶囊行（2026-10-16 刘工参考图）：胶囊标签，纯展示不可点（信息用 span 语义，
+   放 ul/li 里随读屏朗读）。缺值跳项由 Liquid 负责，这里只管形状。
+   2026-10-29 合并：原来的"文字规格行 + 胶囊行"并成这一行，字段变多（最多 6 颗），
+   所以整体再收一档：0.75rem/3px 10px → 0.7rem/2px 8px，gap 0.3 → 0.25rem。
+   实测（卡内容宽 171px，桌面三/四列）：4–5 颗从 3 行降到 2 行；
+   手机两列（内容宽 128–143px）4 颗 3 行，最宽的 "Rear-wheel drive" 102px
+   也不再溢出（旧版 0.75rem 时 112px > 106px 会冲出租胶囊 6px）。
+   2026-10-29 刘工：卡片 hover 时胶囊补品牌色底（参考稿 card-tag 的行为）——
+   静态是中性淡底，hover 才点亮，让整卡 hover 有一处「品牌色回应」。 */
 .product-card__tags {
   display: flex;
   flex-wrap: wrap;
@@ -141,7 +179,8 @@
   background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
   font-size: 0.7rem;
   color: var(--color-foreground-muted);
-
+  /* 单个值可能比卡还宽（320px 屏的两列卡内容宽仅 108px）：允许在空格/连字符处
+     折行，绝不冲出胶囊。用 normal 而非 nowrap——被钳住时 nowrap 会溢出边框。 */
   max-inline-size: 100%;
   text-align: center;
   transition:
@@ -155,15 +194,20 @@
   color: var(--color-brand);
 }
 
+/* 快速加购（T-1.1：仅单变体且 available 渲染；多变体无 CTA；售罄置灰）
+   静态态即品牌绿（2026-10-16 刘工）：绿色主题下按钮应为绿色，不再等 hover。
+   取 var(--color-brand) 而非硬编码色值，未来换 preset 自动跟随。 */
 .product-card__quick-add {
   display: block;
-
+  /* 不再自持 auto：由上方 .product-card__compare 吃掉剩余空间，把「Compare + 加购」
+     作为一组压到卡底。两者都写 auto 会平分剩余空间，Compare 就浮在中间了。 */
   margin-block-start: 0;
 }
 .product-card__quick-add form {
   display: block;
 }
-
+/* 形状 / 配色 / 光晕 / 扫光 / 过渡 / 禁用态 / data-state 全部收敛到
+   assets/critical.css 的 .btn-solid（2026-10-29）；这里只留卡片内的布局差异 */
 .product-card__add {
   display: flex;
   align-items: center;
@@ -175,13 +219,20 @@
   font-weight: 500;
 }
 
+/* 对比勾选（原 featured-collection 内样式随组件迁移）
+   margin-top:auto 仅在自己是卡内最后一个元素时生效（多变体卡没有加购区，
+   由它垫底）；与加购区同现时让位给加购区的 auto，避免平分剩余空间。
+   2026-10-29 刘工：改成与主产品区「Add to compare」同款结构——图标方盒
+   （.product-compare__box，含上下箭头 icon）+ 文字（.product-compare__label），
+   默认浅色描边方盒、选中深实心、hover 放大旋转 + 文字下划线。 */
 .product-card__compare {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-
+  /* 始终吃掉剩余空间，把自己连同下方的加购区一起压到卡底 ——
+     卡片文字行数不一时，Compare 与 Add to cart 的位置在各卡之间保持齐平。 */
   margin-block-start: auto;
-
+  /* 恒定内边距 + 负外边距：冲突时加底色不产生位移，视觉位置与常态一致 */
   padding: 10px 0.5rem;
   margin-inline: -0.5rem;
   min-height: 44px;
@@ -193,7 +244,7 @@
   font-weight: 600;
   cursor: pointer;
 }
-
+/* 图标方盒：与主产品区 .product-compare__box 同款（尺寸略小适配卡片） */
 .product-card .product-compare__box {
   display: grid;
   place-items: center;
@@ -227,9 +278,26 @@
   color: var(--color-brand-accent);
 }
 
+/* ===== 3D hover（2026-10-17，参考 dev-docs/local-assets/product-3d.html）=====
+   几何（倾斜/位移）由 assets/tilt-element.js 驱动（2026-10-20 泛化，商品卡与
+   集合页横幅岛共用）；这里只管静态态与 hover 反馈。
+   配色全部走主题令牌（不硬编码色值），换 preset 自动跟随。
+   与参考 demo 的三处有意差异：
+   1. demo 的图片是 contain 浮在底色上，落地椭圆阴影看得见；我们图片 cover 满幅，
+      阴影会被图片盖住 → 不做落地阴影，用卡片投影加深替代。
+   2. 光晕垫在图片下面（::before），只从图片透明区域透出（koutu alpha webp），
+      产品像素零接触；不透明照片下自动隐没。
+   3. 媒体盒 overflow:hidden + 底图 scale(1.08) 补边——倾斜/位移时图片不出框，
+      网格密排下不与邻卡重叠。
+   Noir 下的表现：品牌变 lime（#A3E635），--color-brand-light 随其色相变成亮 lime，
+   卡面深底上光晕/投影同样成立。仅 hover:hover + pointer:fine 生效。 */
 @media (hover: hover) and (pointer: fine) {
   .product-card {
-
+    /* 2026-10-30 刘工：卡级 hover 改用配件卡 product-supplies__item 那套
+       ——上浮 2px + 0 6px 20px 浅绿光晕，0.2s（原 0.8s 的 24px 大投影已撤，
+       两个值都收敛在 snippets/css-variables.liquid：--card-hover-lift /
+       --card-hover-shadow）。用 translate 而非 transform：3D 倾斜是
+       tilt-element 写在图片上的 inline transform，卡级不占 transform 互不覆盖。 */
     transition: translate 0.2s ease, box-shadow 0.2s ease;
   }
   .product-card:hover {
@@ -239,9 +307,16 @@
   .product-card__media {
     position: relative;
     overflow: hidden;
-    border-radius: 8px;
+    border-radius: 8px; /* 与图片圆角一致，overflow 裁切需要圆角落在盒上 */
   }
+  /* 光晕垫在图片下面（::before + img 提为定位元素压在其上）：
+     浅绿只从图片的透明区域透出（演示店商品图为 koutu alpha webp），
+     产品像素零接触；商家传不透明照片时被完全盖住，无副作用——即
+     demo 里"产品浮在光晕上"的结构，遮罩死路（2026-10-17 一二轮实测）。
 
+     浓度走 --card-glow-1/2/3（2026-10-29 刘工）：浅底/深底两套值定义在
+     snippets/css-variables.liquid。深底（Noir）必须大幅压低——亮 lime 65%
+     在深卡上会化成一整块绿板，产品图反而被埋在绿色里。 */
   .product-card__media::before {
     content: '';
     position: absolute;
@@ -253,18 +328,19 @@
       var(--card-glow-3) 100%
     );
     opacity: 0;
-
+    /* 0.2s 跟随卡级上浮的新节拍（原 0.8s）：光晕比卡慢四倍时，
+       hover 瞬间会出现"卡已抬起、绿还没上来"的错拍感。 */
     transition: opacity 0.2s ease;
     pointer-events: none;
   }
   .product-card__media img {
-    position: relative;
+    position: relative; /* 压到 ::before 之上，光晕只在其透明区域可见 */
   }
   .product-card:hover .product-card__media::before {
     opacity: 1;
   }
   .product-card__media img {
-    transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1); /* demo 同款极缓曲线 */
   }
 }
 
@@ -280,16 +356,29 @@
   }
 }
 
+/* ===== 对比入口外壳（2026-10-22，SDD §6.2.8）=====
+   <compare-toggle> 只是行为容器，display:contents 让它不生成盒子：
+   内部原生 button 仍直接参与卡片 flex 布局，原有 margin-top:auto 等规则不受影响。
+   颜色走令牌派生，不硬编码。 */
 compare-toggle {
   display: contents;
 }
 
+/* 无 JS 时按钮点了不会有任何反应 → 整块不渲染（SDD §6.2.5「勾选入口优雅不出现」）。
+   .js 由 layout/theme.liquid 的 head 内联脚本加在 <html> 上。 */
 html:not(.js) compare-toggle {
   display: none;
 }
 
-.product-card__compare.is-conflict {
+/* ===== 跨组冲突反馈（2026-10-25）=====
+   点了对比却加不上时，按钮底与勾选框一起转成警告黄并晃 0.5s，
+   把视线拉回「为什么没反应」——只闪一下，不残留告警态。
+   颜色走 --color-warning 令牌（不跟随品牌色，否则与品牌绿区分不开）；
+   **黄色只做底色，不做文字色**——白底上约 1.5:1，等于看不见。 */
 
+.product-card__compare.is-conflict {
+  /* 黄色**不用于文字**：白底上对比度约 1.5:1，等于看不见。
+     改成淡黄底 + 保持原文字色，既醒目又不牺牲可读性。 */
   background-color: color-mix(in srgb, var(--color-warning) 22%, transparent);
   animation: product-card-compare-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
@@ -322,6 +411,7 @@ html:not(.js) compare-toggle {
   }
 }
 
+/* 关掉动效时仍保留变色（只是不晃），并延长显示时间让人看清 */
 @media (prefers-reduced-motion: reduce) {
   .product-card__compare.is-conflict {
     animation: none;

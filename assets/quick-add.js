@@ -47,6 +47,8 @@ class QuickAdd extends HTMLElement {
       this._syncCartCount();
     } catch (error) {
       if (error.name === 'AbortError') return;
+
+      document.dispatchEvent(new CustomEvent('cart:add-failed', { detail: { button: this._button } }));
       this._button.dataset.state = '';
       this._announce(this._button.dataset.errorMessage || '');
       this._reset();

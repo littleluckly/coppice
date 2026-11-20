@@ -225,6 +225,8 @@ class ProductForm extends HTMLElement {
       this._syncCartCount();
     } catch (error) {
       if (error.name === 'AbortError') return;
+
+      document.dispatchEvent(new CustomEvent('cart:add-failed', { detail: { button: this._button } }));
       delete this._button.dataset.state;
       this._button.disabled = false;
       this._announce(this._button.dataset.errorMessage || '');
