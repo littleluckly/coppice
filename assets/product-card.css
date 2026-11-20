@@ -194,9 +194,11 @@
   color: var(--color-brand);
 }
 
-/* 快速加购（T-1.1：仅单变体且 available 渲染；多变体无 CTA；售罄置灰）
+/* 快速加购（T-1.1：仅单变体且 available 渲染；售罄置灰）
    静态态即品牌绿（2026-10-16 刘工）：绿色主题下按钮应为绿色，不再等 hover。
-   取 var(--color-brand) 而非硬编码色值，未来换 preset 自动跟随。 */
+   取 var(--color-brand) 而非硬编码色值，未来换 preset 自动跟随。
+   2026-11-20 起「多变体」不再等于「没有 CTA」：多变体有货走 <quick-view>
+   （下方 .quick-view 段），全售罄仍走置灰按钮。 */
 .product-card__quick-add {
   display: block;
   /* 不再自持 auto：由上方 .product-card__compare 吃掉剩余空间，把「Compare + 加购」

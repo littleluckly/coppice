@@ -131,9 +131,12 @@
                 <p class="product-faq__text">{{ article.content | strip_html | truncatewords: 26 }}</p>
               {%- endif -%}
 
+              {%- comment -%}
+                不带箭头：AGENTS §6 的箭头准则只放两种位置——View All 链接与行尾
+                导航元素。这条是卡内文字链接，加箭头会跟底部 CTA 抢注意力。
+              {%- endcomment -%}
               <a class="product-faq__more" href="{{ article.url }}">
                 {{- 'sections.product_faq.read_more' | t -}}
-                <span aria-hidden="true">→</span>
               </a>
             </div>
           </details>
