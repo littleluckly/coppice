@@ -19,6 +19,13 @@
   靠 `inset-inline-end` 贴视口右缘，不压住内容列的可点区域；标签文字默认
   `opacity: 0` 悬停/聚焦才浮出——`opacity` 不会把文字摘出无障碍树，链接始终有可读名称。
 
+  **滚动时额外展开条目名称**（2026-11-20 刘工）：滚动期间脚本给宿主打
+  `data-scrolling`，三条标签一起浮出（目的只有一个——手上还在滚的时候能看清
+  "我正要跳去哪一段"，不用先去悬停那 24px 宽的窄缝）；停止滚动 **300ms** 后
+  摘掉属性，标签淡回。判定只认 `scroll`，resize / ResizeObserver（图片加载、
+  推荐区异步撑高）不算"用户在滚"，不会让标签无故闪一下。悬停/聚焦的浮出
+  不受影响，两条路径互不覆盖。
+
   视觉：竖排三条短横（10×2px），当前分区与 hover/focus 变长到 20px 并转品牌色；
   不做背景色块，避免在浅底商品页多出一层浮起的"卡片"。
 {% endcomment %}
@@ -129,8 +136,12 @@
     transition: opacity 0.15s ease;
   }
 
+  /* 悬停/聚焦浮出（原有） + 滚动中整条展开（脚本打的 data-scrolling）。
+     标签本来就是绝对定位，显隐只动 opacity ⇒ 不参与布局、零 CLS；
+     选择器特异性 (0,2,1) 足够压过上面的 `opacity: 0` 基线，不需要 !important。 */
   .product-anchor-nav__link:hover .product-anchor-nav__label,
-  .product-anchor-nav__link:focus-visible .product-anchor-nav__label {
+  .product-anchor-nav__link:focus-visible .product-anchor-nav__label,
+  product-anchor-nav[data-scrolling] .product-anchor-nav__label {
     opacity: 1;
   }
 
