@@ -1,7 +1,7 @@
 /**
  * product-faq — 产品页 FAQ 手风琴的自动播放层（2026-11-20 刘工）。
  *
- * 展开 / 收起、键盘操作、互斥全部交给原生 `<details name>`，这里只做三件事：
+ * 展开 / 收起、键盘操作、互斥全部交给原生 `<details name>`，这里只做两件事：
  *
  *   1. **播完切下一条**：进度条动画跑完（`animationend`）→ 开下一条、关其余。
  *      刻意**不用 JS 计时器**：动画时长写在 CSS 里（`--product-faq-interval`），
@@ -9,16 +9,22 @@
  *      光靠计时器同步不回来。动画跑完事件天然只在"真的播完了"时触发；
  *      动画被 `prefers-reduced-motion` 摘掉时永远不触发，自动播放也就自然失效。
  *
- *   2. **用户动过就永久停**：点/键盘开过任意一条 ⇒ 摘掉 data-playing。
- *      用户接管之后又把画面抢回去，是最招人烦的一类自动播放；
- *      停下后进度条退回"整条填满"的静态态（样式在 section 里）。
- *
- *   3. **看不见就别播**：离开视口（IntersectionObserver）或标签页切到后台
+ *   2. **看不见就别播**：离开视口（IntersectionObserver）或标签页切到后台
  *      （visibilitychange）⇒ 打 data-paused，CSS 用 animation-play-state 挂起。
  *      挂起不重置进度，回来接着播。
  *
+ * **手动点击之后照常轮播**（2026-11-20 刘工退回"点过就停"的初版）：
+ * 用户点开某一条 ⇒ 那一条的进度条从 0 重新计时，到期继续开下一条。
+ * 这里**没有**任何"用户接管就停播"的分支——不需要：手动打开的新条目本来就会
+ * 因为 `[data-playing] > details[open]` 重新匹配而重启动画，轮播自己接得上。
+ * 唯一的"停"是用户把所有条目都收起（没有展开项 ⇒ 没有进度条 ⇒ 没有动画可跑），
+ * 再点开任意一条即恢复。这也是初版那条 `_stopAutoplay()` 被删掉的原因：
+ * 它一票否决了上面这套天然行为，用户点一下手风琴，整块就再也不动了。
+ *
  * 悬停 / 焦点暂停是纯 CSS（`:hover` / `:focus-within`），不在这里——那两种状态
- * 浏览器判得比脚本准，也不会和 pointer 事件顺序打架。
+ * 浏览器判得比脚本准，也不会和 pointer 事件顺序打架。注意它的副作用：
+ * 点完手风琴光标还停在卡片上时，倒计时是**暂停**的（这是"别在用户眼皮底下换内容"
+ * 的保护），移开光标即继续。
  *
  * 无 JS：首条 open，其余可点开，进度条恒为填满态。整块依然可用。
  */
@@ -45,17 +51,9 @@ class ProductFaq extends HTMLElement {
     this._controller = new AbortController();
     const { signal } = this._controller;
 
-    /* 手动开/关任意一条 ⇒ 永久停播。用 click 而不是 toggle：
-       toggle 也会被本组件自己的切换触发，会把自动播放误杀在第一轮 */
-    this.addEventListener(
-      'click',
-      (event) => {
-        if (event.target.closest('summary')) this._stopAutoplay();
-      },
-      { signal }
-    );
-
-    /* 动画结束冒泡到这里；只认进度条自己，别被将来加的别的动画带跑 */
+    /* 动画结束冒泡到这里；只认进度条自己，别被将来加的别的动画带跑。
+       手动打开的新条目也会走到这里——它的进度条重启动画、跑完照常切下一条，
+       所以这里不需要区分"是不是用户点的"。 */
     this.addEventListener(
       'animationend',
       (event) => {
