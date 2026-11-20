@@ -37,9 +37,15 @@ JSON = glob.glob('templates/*.json') + glob.glob('config/*.json') + glob.glob('s
 
 RE_LIQ_BLOCK = re.compile(r'\{%-?\s*comment\s*-?%\}.*?\{%-?\s*endcomment\s*-?%\}', re.S)
 RE_LIQ_HASH = re.compile(r'\{%-?\s*#(?:[^%]|%(?!\}))*?-?%\}')
+# `{% liquid %}` 块内以 # 开头的行是注释（Liquid 官方语法）。
+# 注意它**没有 endliquid**，到第一个 %} 结束——第一版按 endliquid 写导致漏扫 87 行。
+RE_LIQ_TAG = re.compile(r'(\{%-?\s*liquid\b)(.*?)(-?%\})', re.S)
+# `{% doc %}…{% enddoc %}` 是组件文档，不输出，一并删
+RE_DOC_BLOCK = re.compile(r'\{%-?\s*doc\s*-?%\}.*?\{%-?\s*enddoc\s*-?%\}', re.S)
 RE_C_BLOCK = re.compile(r'/\*.*?\*/', re.S)
 RE_HTML = re.compile(r'<!--(?!\[if).*?-->', re.S)
 RE_JS_LINE = re.compile(r'^[ \t]*//[^\n]*\n', re.M)
+RE_HASH_LINE = re.compile(r'^[ \t]*#[^\n]*\n?', re.M)
 
 stat = {}
 
@@ -64,8 +70,20 @@ def tidy(s):
 
 
 def strip_liquid(s):
+    s = RE_DOC_BLOCK.sub(make_repl('liquid {% doc %}'), s)
     s = RE_LIQ_BLOCK.sub(make_repl('liquid {% comment %}'), s)
     s = RE_LIQ_HASH.sub(make_repl('liquid {% # %}'), s)
+
+    # {% liquid %} 块内逐行删 # 注释（必须在 {% # %} 之后：前者是标签，后者是块内行）
+    def hash_in_block(m):
+        body = m.group(2)
+        new = RE_HASH_LINE.sub('', body)
+        if len(new) != len(body):
+            n, b = stat.get('liquid 块内 # 注释', (0, 0))
+            stat['liquid 块内 # 注释'] = (n + 1, b + len(body) - len(new))
+        return m.group(1) + new + m.group(3)
+    s = RE_LIQ_TAG.sub(hash_in_block, s)
+
     s = RE_C_BLOCK.sub(make_repl('liquid 内嵌 /* */'), s)
     s = RE_HTML.sub(make_repl('HTML <!-- -->'), s)
     return tidy(s)
