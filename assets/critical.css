@@ -449,6 +449,10 @@ body {
  *   <button class="btn-solid product-form__submit">Add to cart</button>
  *   <a class="btn-solid btn-solid--quiet hero-slideshow__cta">Learn more</a>
  *
+ * ⚠️ 这里**只给形状与配色**：display / 居中 / 内边距 / 字号由用法方补。
+ * 裸写 `class="btn-solid"` 会渲染成 block + min-height 44px + padding 0 的块，
+ * 文字顶在上边缘、左右贴边（2026-11-20 BUG-083，抽屉空态 CTA 踩的）。
+ *
  * ⚠️ 覆盖规则：局部类要改这里定义的东西（颜色 / 阴影），**别赌注入顺序**——
  * section 的 {% stylesheet %} 产物与 critical.css 谁先到由平台决定。
  * 用更高特异性（`.hero-slideshow .hero-slideshow__cta`，0,2,0）写覆盖，
@@ -467,6 +471,9 @@ body {
   /* 用背景色当前景色而非硬编码 #fff：Noir 下品牌色是亮 lime，
      白字压亮绿不达 AA；换成背景色后浅色底仍是白字、Noir 下自动变深字 */
   color: var(--color-background);
+  /* <a> 默认带下划线，被拿来当按钮时白字下划线会横穿胶囊底部。
+     这里统一清掉——此前 13 处用法各自写过一遍 text-decoration:none，漏一处就是 BUG-083。 */
+  text-decoration: none;
   cursor: pointer;
   /* 常驻光晕：品牌色投影（color-mix 派生，不硬编码色值） */
   box-shadow: 0 4px 15px color-mix(in srgb, var(--color-brand) 20%, transparent);

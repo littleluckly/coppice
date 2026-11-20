@@ -17,9 +17,10 @@
  * 强制订阅却没选计划就拦下。计划可用性、计划价、提示文案全在那一边，别在这重复实现。
  *
  * 事件约定沿用 quick-add.js（2026-10-16 起）：
- *   cart:added    点击即冒泡，detail.button —— fly-to-cart.js 飞入动画
- *   cart:updated  document，detail.count —— cart-badge.js 角标同步
- *   variant:change document，detail.{variantId, mediaId, available} —— product-gallery.js 切图
+ *   cart:added      点击即冒泡，detail.button —— fly-to-cart.js 飞入动画 + 抽屉开骨架
+ *   cart:updated    document，detail.count —— cart-badge.js 角标 + 抽屉收骨架刷新
+ *   cart:add-failed document（2026-11-20 BUG-083）—— 抽屉退出骨架等待
+ *   variant:change  document，detail.{variantId, mediaId, available} —— product-gallery.js 切图
  */
 class VariantPicker extends HTMLElement {
   connectedCallback() {
@@ -255,6 +256,8 @@ class ProductForm extends HTMLElement {
       this._syncCartCount();
     } catch (error) {
       if (error.name === 'AbortError') return;
+      /* 通知抽屉退出骨架等待（BUG-083：抽屉只等 cart:updated，失败时永远等不到） */
+      document.dispatchEvent(new CustomEvent('cart:add-failed', { detail: { button: this._button } }));
       delete this._button.dataset.state;
       this._button.disabled = false;
       this._announce(this._button.dataset.errorMessage || '');
