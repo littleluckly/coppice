@@ -82,7 +82,7 @@
       {%- endif -%}
     </header>
 
-    <div class="product-faq__layout">
+    <div class="product-faq__layout{% if faq_image == blank %} product-faq__layout--solo{% endif %}">
       {%- comment -%}
         --product-faq-interval 必须**带单位**输出（秒）：
         它同时喂给 CSS 的 animation-duration，裸数字在那里是非法值，
@@ -240,6 +240,20 @@
       /* 左列略宽于图片列：四行问题需要横向呼吸，图是配角 */
       grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
       gap: 2.5rem;
+      /* stretch 而不是 start：图列跟着手风琴的实际高度走（效果图里两者等高）。
+         start 会让图按自己的比例（3/2）算高度，条数少时图比问题列高出一大截，
+         底部留一条突兀的空白。 */
+      align-items: stretch;
+    }
+    /* 图列被拉伸后不再吃 aspect-ratio：块轴尺寸已是确定值，比例失去意义 */
+    .product-faq__media {
+      aspect-ratio: auto;
+      block-size: 100%;
+    }
+    /* 没有配图（且商品也没图）时退回单栏：否则手风琴只占左边半幅，
+       右半幅空白 —— 那是"漏渲染"的样子，不是排版 */
+    .product-faq__layout--solo {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 
