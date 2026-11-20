@@ -1,21 +1,4 @@
-{% comment %}
-  product-complementary — 互补整机推荐（task-product T-2.3/T-2.6，强制项 #14）。
 
-  **为什么单独一个 section**（2026-10-28 二次拍板）：耗材区与互补区服务的是两种商品——
-  主机有 `acc.consumables`，配件/电池没有。原先合成一个 section 用 if/else 二选一，
-  结果是"同一块位置"承担两种语义，标题还得跟着换。拆开之后：
-    · 本文件排在**概览之前**、紧跟买盒 —— 互补推荐是"买了这个还该买什么"，
-      趁顾客还在看价格时摆出来才有用（Dawn 也把它放产品信息区）。
-    · `product-supplies.liquid` 排在 Specifications **之后** —— 耗材是复购，
-      顾客得先确认规格对得上自己的机器。
-  两者**互斥**：有耗材 → 本文件整块不出；无耗材 → 本文件出、耗材区不出。
-
-  **数据来源**：Search & Discovery 配的 complementary products，
-  经 `/recommendations/products?intent=complementary` 取回（服务端首帧没有 `recommendations`
-  对象，必须由 JS 拉，见 assets/product-recommendations.js）。
-
-  空结果 → JS 把整块隐藏（含标题），不留空标题；失败也隐藏但会在控制台留 warn。
-{% endcomment %}
 
 {%- liquid
   assign consumables = product.metafields.acc.consumables.value

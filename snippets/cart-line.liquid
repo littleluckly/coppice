@@ -22,7 +22,7 @@
 {% enddoc %}
 
 {%- if item == blank -%}
-  {%- comment -%} 空行不渲染：调用方循环里不会传 blank，但抽屉侧可能条件渲染 {%- endcomment -%}
+
 {%- else -%}
   {%- liquid
     assign line_product = item.product
@@ -78,13 +78,7 @@
   -%}
 
   {%- capture line_meta -%}
-    {%- comment -%}
-      ① 选项值（官方硬项 options_with_values）。逐项输出 value，不拼 name——
-         顾客认的是 "21 in"，不是 "Size: 21 in"。
-      ② 动力源是品类级信息（Gasoline / Battery），选项里通常没有，补上。
-      ③ 尺寸只在**没有选项**时兜底：有选项时选项值本身就含尺寸，
-         再输出一遍就是同一件事说两次。
-    {%- endcomment -%}
+
     {%- for line_option in item.options_with_values -%}
       {%- if line_option.value != 'Default Title' -%}
         <li>{{ line_option.value | escape }}</li>
@@ -128,14 +122,12 @@
         <ul class="cart-line__meta" role="list">{{ line_meta }}</ul>
       {%- endif -%}
 
-      {%- comment -%} 订阅计划（强制项 #17）：有 allocation 才出现，不显示「无」 {%- endcomment -%}
       {%- if item.selling_plan_allocation != blank -%}
         <p class="cart-line__plan">
           {{- 'cart.selling_plan' | t: name: item.selling_plan_allocation.selling_plan.name -}}
         </p>
       {%- endif -%}
 
-      {%- comment -%} 物流行级提示（SDD §6.4）：未配置 metafield → 整块不渲染 {%- endcomment -%}
       {%- if line_is_oversized -%}
         <p class="cart-line__logistics">
           <span class="cart-line__logistics-tag">{{ line_shipping_class | escape }}</span>
@@ -148,25 +140,10 @@
         </p>
       {%- endif -%}
 
-      {%- comment -%}
-        库存状态：只在**真的还有货**时标注。
-        `variant.available` 单独用会误报——允许超卖（inventory_policy = continue）的变体
-        库存为 0 时它仍返回 true，于是清空的货架上也亮着 In stock。
-        多一个 `inventory_policy != 'continue'` 就把这类变体排除了，且不必依赖
-        `inventory_quantity`（那个值在 storefront 有缓存，且多 location 下是汇总数，
-        拿来判断"有货"不如这组组合可靠）。
-        本身已售罄的行不标任何东西——购物车里的售罄语义由结账拦截表达，
-        再在顾客车里喊一句「你买不了」没有帮助。
-      {%- endcomment -%}
       {%- if show_stock and item.variant.available and item.variant.inventory_policy != 'continue' -%}
         <p class="cart-line__stock">{{ 'cart.in_stock' | t }}</p>
       {%- endif -%}
 
-      {%- comment -%}
-        超卖提示：与 In stock 互斥（前者要求未开超卖，这里要求开了超卖），
-        所以一行里不会同时出现两个库存相关的标签。
-        inventory_quantity 为负（已经卖穿）时只说"补货后发货"，不报负数。
-      {%- endcomment -%}
       {%- if line_is_backorder -%}
         <p class="cart-line__backorder">
           {%- if line_backorder_available > 0 -%}
@@ -187,13 +164,6 @@
         </p>
       {%- endfor -%}
 
-      {%- comment -%}
-        移除放在信息区末尾：删掉一件商品是对"这件东西"的否定，不是对价格的操作，
-        靠商品本身比靠在数量旁边更合语义（2026-11-02 刘工）。
-        用 <a href="{{ item.url_to_remove }}">：无 JS 时 GET 直接生效（渐进增强底线），
-        有 JS 时由 cart-items 拦截改走 /cart/change.js。
-        可访问名带商品名——屏幕阅读器在列表里听到十几遍「Remove」无法定位是哪一行。
-      {%- endcomment -%}
       <a
         class="cart-line__remove"
         href="{{ item.url_to_remove }}"
@@ -214,7 +184,6 @@
         <span class="cart-line__price-current">{{ item.final_price | money }}</span>
       {%- endif -%}
 
-      {%- comment -%} 单位价（强制项 #19）：只在商品设置了单位价格时出现 {%- endcomment -%}
       {%- if item.unit_price_measurement != blank -%}
         {%- assign line_unit_price = item.unit_price | money -%}
         {%- assign line_unit_label = item.unit_price_measurement.reference_value

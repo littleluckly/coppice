@@ -1,24 +1,10 @@
-/**
- * compare — 对比功能的浮层样式（SDD §6.2.8）。
- *
- * 目前只剩全局冲突提示（<compare-toast>）。页头图标样式在
- * sections/main-nav.liquid 的 {% stylesheet %} 内（页头自有），
- * 商品卡冲突态在 assets/product-card.css。
- * 颜色全部由主题令牌派生，换 preset 自动跟随，不硬编码色值。
- */
 
-/* ===== 全局冲突提示（2026-10-25 改）=====
-   布局用 grid 而不是 flex：图标 / 文案 / 关闭钉成一行（关闭始终在右上角），
-   主按钮单独占第二行居中。flex + wrap 时窄屏会把图标和文案拆到两行（实测）。
-
-   放屏幕上方：底部右下角已被回到顶部按钮占用，移动端还常有底部面板，
-   叠上去会打架；而且这是「需要你决定」的提示，靠近视线顶端更不容易被忽略。 */
 
 compare-toast {
   position: fixed;
   inset-block-start: 0;
   inset-inline: 0;
-  z-index: 60; /* 高于页头(50) */
+  z-index: 60;
   display: flex;
   justify-content: center;
   padding: 0.9rem 1rem calc(0.9rem + env(safe-area-inset-top));
@@ -64,7 +50,6 @@ compare-toast[hidden] {
   }
 }
 
-/* 感叹号圆点：走品牌色令牌，不硬编码警告橙（AGENTS §4） */
 .compare-toast__icon {
   grid-area: icon;
   display: flex;
@@ -72,10 +57,10 @@ compare-toast[hidden] {
   justify-content: center;
   inline-size: 22px;
   block-size: 22px;
-  /* 与文案首行视觉对齐（文案 0.87rem / line-height 1.45 ≈ 20px 行盒） */
+
   margin-block-start: 1px;
   border-radius: 50%;
-  /* 亮黄底 + 同色系深黄棕字（5.92:1）；不用纯黑——互补跳色显得生硬 */
+
   background-color: var(--color-warning);
   color: var(--color-warning-on);
   font-size: 0.78rem;
@@ -85,7 +70,7 @@ compare-toast[hidden] {
 
 .compare-toast__message {
   grid-area: message;
-  /* minmax(0,1fr) + 这一条：长单词不允许把网格撑破 */
+
   min-inline-size: 0;
   margin: 0;
   font-size: 0.87rem;
@@ -116,7 +101,6 @@ compare-toast[hidden] {
   block-size: 1.2rem;
 }
 
-/* 主操作单独一行、居中（2026-10-25 刘工：PC 也这么放，两端一致） */
 .compare-toast__actions {
   grid-area: action;
   display: flex;
@@ -124,7 +108,6 @@ compare-toast[hidden] {
   padding-block-start: 0.15rem;
 }
 
-/* 没有主操作（如「已达上限」只有关闭）时整行塌陷 */
 .compare-toast__actions[hidden] {
   display: none;
 }
