@@ -85,6 +85,11 @@
   content="{{ og_description | escape }}"
 >
 
+{%- comment -%}
+  对比页的索引开关（SDD §6.2.3）：商家可在主题设置里一键切 noindex。
+  判定与 compare-page.liquid 同源——handle 以 `-compare` 结尾，集中在此处输出，
+  不由 JS 注入（AGENTS §4 红线）。
+{%- endcomment -%}
 {%- liquid
   assign compare_indexable = true
   if request.page_type == 'page'
