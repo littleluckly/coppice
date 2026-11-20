@@ -15,8 +15,8 @@
  *
  * 事件：
  *   - 入口 <a> 点击 → preventDefault → 开面板；面板不存在时什么都不做，链接照常跳转
- *   - 提交后等 cart:updated / cart:add-failed 再收面板（失败时保留面板，
- *     data-form-status 里的错误文案才看得见；购物车抽屉由它自己的监听退出骨架）
+ *   - 提交后按结果分流：cart:updated → 收面板；cart:add-failed → **不收**，
+ *     让 product-form 写进 data-form-status 的错误文案留在眼前（抽屉自己退出骨架）
  *
  * 重连幂等：监听全部挂在 AbortController 上，Section Rendering 换掉卡片后
  * 旧节点销毁、新节点重新 bind，不会叠加。
@@ -54,10 +54,13 @@ class QuickView extends HTMLElement {
     const form = this._dialog.querySelector('form');
     if (form) form.addEventListener('submit', this._onSubmit, { signal });
 
-    /* 两个终局信号都收面板：成功（有 count）与失败（抽屉退出骨架）——
-       失败时保留面板更合理，但抽屉已经在收，面板留着会挡住它，所以一起收。 */
-    document.addEventListener('cart:updated', this._onCartSettled, { signal });
-    document.addEventListener('cart:add-failed', this._onCartSettled, { signal });
+    /* 两个终局信号分开处理：
+       cart:updated    → 加购成功，收面板（购物车抽屉已经带着新数量开好了）
+       cart:add-failed → **不收**。product-form 把错误文案写进面板里的
+         [data-form-status]，收掉面板等于把唯一的失败提示藏起来；抽屉那边
+         自己会退出骨架（BUG-083），用户回到面板时能看到"试试重试"。 */
+    document.addEventListener('cart:updated', this._onCartUpdated, { signal });
+    document.addEventListener('cart:add-failed', this._onCartFailed, { signal });
 
     /* 首次对齐：浏览器可能恢复了上次的 select 选中项 */
     this._sync();
@@ -114,10 +117,16 @@ class QuickView extends HTMLElement {
     this._submitted = true;
   };
 
-  _onCartSettled = () => {
+  _onCartUpdated = () => {
     if (!this._submitted) return;
     this._submitted = false;
     this.close();
+  };
+
+  /** 失败：面板留着（错误文案在面板里），只把"等结果"的标记清掉，免得后续
+      别的 cart:updated（比如抽屉里改了数量）把面板顺手收走 */
+  _onCartFailed = () => {
+    this._submitted = false;
   };
 
   _onDialogClose = () => {
