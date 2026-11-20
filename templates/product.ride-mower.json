@@ -125,6 +125,12 @@
         "heading": "Supplies"
       }
     },
+    "product-faq": {
+      "type": "product-faq",
+      "settings": {
+        "blog": ""
+      }
+    },
     "product-recommendations": {
       "type": "product-recommendations",
       "settings": {
@@ -145,6 +151,7 @@
     "product-description",
     "product-spec-table",
     "product-supplies",
+    "product-faq",
     "product-recommendations",
     "compare-lookup"
   ]
