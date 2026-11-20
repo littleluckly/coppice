@@ -1,0 +1,325 @@
+{% doc %}
+  quick-view — 商品卡「Choose options」入口 + 快速查看弹窗（2026-11-20 刘工）。
+
+  **解决的问题**：多变体商品在卡上没有任何 CTA（2026-10-13 拍板 2：多变体卡不渲染
+  CTA，转化路径走产品页），买家想挑规格必须先整页跳走。现在卡上给一个
+  「Choose options」，点击就地弹出「画廊 + 买盒」，随时可跳详情页。
+
+  **交付形态：Liquid 直接渲染进卡片，不做 fetch 拉取。**
+  被否掉的另一条路是「备用模板（product.quick-view.json）+ 点击时 fetch 注入」，
+  它省页面字节，但有三处硬伤：① 注入的 HTML 带不来 section 的 `{% stylesheet %}`
+  产物（那段 CSS 只随渲染它的页面下发），要另存一份 assets 样式，等于同一套买盒
+  样式维护两遍；② innerHTML 注入的 `<script>` 不执行，得手动补脚本加载；
+  ③ 无 JS 时按钮彻底没反应，而现在的 `<a>` 天然可跳转。
+  代价（说清楚）：多变体卡各自多背一份面板 HTML，实测单卡 ~2.4 KB 原始 /
+  ~0.5 KB gzip（数字与量法见 dev-docs/task-collection.md「快速查看」）。
+  页面里多变体卡越多越明显——换来零请求、零注入、无 JS 也能用。
+  面板是 `<dialog>`，未打开时不显示、懒加载图片不下载，DOM 构建成本可忽略。
+
+  **渲染条件（逐层收紧，任何一层不满足就只留链接）**：
+  1. 单变体 → 整块不渲染（调用方走 quick-add，见 snippets/product-card.liquid）
+  2. `product.available == false`（全部变体售罄）→ 调用方渲染置灰 Sold out，不弹窗
+  3. `product.selling_plan_groups` 非空、或商品是礼品卡 → **面板不渲染**，只留链接：
+     订阅要先选计划、礼品卡要填收件人，这两块弹窗里没有，宁可不给入口，
+     也不给一个点进去会失败的入口（订阅的加购校验在 selling-plan-picker 里，
+     本面板不接它）。
+
+  **无 JS**：入口是 `<a href="{{ product.url }}">`（btn-solid 即按钮外观），照常跳转。
+
+  **买盒能力边界（与 PDP 的差异，有意）**：变体用原生 `<select>`——弹窗两列布局里
+  塞多行胶囊会把面板撑爆，而 `<select>` 本身就是键盘/读屏友好的原生控件；
+  不含纵向描述、参数行、信任行、对比、Shop Pay、订阅计划。数量步进与加购提交
+  **复用 product-form.js 的 `<quantity-input>` / `<product-form>`**（含 BUG-083 的
+  cart:add-failed 收口、cart:added / cart:updated 事件约定），不另写一套提交逻辑；
+  因此消费方 section 必须同时引入 product-form.js。
+
+  **金额一律由 Liquid 预格式化**（`money` filter）后经 data-* 下发，JS 只做替换
+  ——与 PDP 同口径，多货币/千分位不在前端拼。
+
+  @param {product} product - product 对象（必填，调用方保证 variants.size > 1）
+{% enddoc %}
+
+{%- if product != blank and product.variants.size > 1 -%}
+  {%- liquid
+    assign qv_variant = product.selected_or_first_available_variant
+
+    assign qv_has_discount = false
+    assign qv_save = 0
+    if qv_variant.compare_at_price > qv_variant.price
+      assign qv_has_discount = true
+      assign qv_diff = qv_variant.compare_at_price | minus: qv_variant.price
+      assign qv_save = qv_diff | times: 100.0 | divided_by: qv_variant.compare_at_price | round
+    endif
+
+    # 能不能弹窗：有货 + 无订阅计划 + 非礼品卡（理由见 @doc 第 3 层）
+    assign qv_can_open = true
+    if product.available == false
+      assign qv_can_open = false
+    endif
+    if product.selling_plan_groups.size > 0
+      assign qv_can_open = false
+    endif
+    if product.gift_card?
+      assign qv_can_open = false
+    endif
+
+    assign qv_main = product.featured_media.preview_image
+    assign qv_image_count = 0
+    for media in product.media
+      if media.preview_image
+        assign qv_image_count = qv_image_count | plus: 1
+      endif
+    endfor
+
+    assign qv_unit_template = 'products.product_card.unit_price' | t: price: '[price]', unit: '[unit]'
+    assign qv_save_template = 'products.product.save_percent' | t: percent: '[percent]'
+  -%}
+
+  {%- comment -%}
+    入口恒为 <a>：面板不渲染（订阅/礼品卡/售罄）或无 JS 时，它就是产品页链接。
+    class 复用 .product-card__add + .btn-solid，与单变体加购按钮逐像素一致。
+  {%- endcomment -%}
+  <quick-view class="product-card__quick-view">
+    <a
+      class="product-card__add btn-solid"
+      href="{{ product.url }}"
+      data-quick-view-open
+    >
+      {{- 'products.product_card.choose_options' | t -}}
+    </a>
+
+    {%- if qv_can_open -%}
+      {%- comment -%}
+        开合与 Esc 交给 <bottom-sheet>（与购物车抽屉/筛选面板同一套）：手机上滑入，
+        桌面端 media 不匹配 → 直开直关（居中弹窗不需要位移动效）。
+        它 display:contents，不会成为卡片这个 flex 列的第 N 个 item。
+      {%- endcomment -%}
+      <bottom-sheet media="(max-width: 749.98px)">
+        <dialog
+          class="quick-view"
+          scroll-lock
+          aria-labelledby="QuickViewTitle-{{ product.id }}"
+          data-save-template="{{ qv_save_template }}"
+          data-unit-template="{{ qv_unit_template }}"
+        >
+          <div class="quick-view__head">
+            <h2 class="quick-view__title" id="QuickViewTitle-{{ product.id }}">
+              {{- product.title | escape -}}
+            </h2>
+            <button
+              type="button"
+              class="quick-view__close"
+              data-quick-view-close
+              aria-label="{{ 'products.product_card.quick_view_close' | t }}"
+            >
+              {{- 'icon-close.svg' | inline_asset_content -}}
+            </button>
+          </div>
+
+          <div class="quick-view__body">
+            {%- comment -%}
+              画廊：主图 + 最多 5 张缩略图。只出 `preview_image`——视频与 3D 也有
+              封面帧（与 main-product 同一口径），弹窗里不接播放器，点缩略图只换静态图。
+              缩略图按钮带 aria-label（"N of M"），图自身是装饰性的 → alt 强制为空：
+              `image_tag` 在 alt 为空时会吞掉整条属性，所以 capture 后补一个 alt=""。
+            {%- endcomment -%}
+            <div class="quick-view__gallery">
+              <div class="quick-view__stage" data-quick-view-stage>
+                {%- if qv_main -%}
+                  {{
+                    qv_main
+                    | image_url: width: 900
+                    | image_tag:
+                      widths: '400, 600, 900',
+                      sizes: '(min-width: 750px) 380px, 88vw',
+                      width: qv_main.width,
+                      height: qv_main.height,
+                      loading: 'lazy',
+                      alt: qv_main.alt
+                  }}
+                {%- else -%}
+                  {{ 'product-1' | placeholder_svg_tag: 'quick-view__placeholder' }}
+                {%- endif -%}
+              </div>
+
+              {%- if qv_image_count > 1 -%}
+                <ul class="quick-view__thumbs" role="list">
+                  {%- for media in product.media limit: 5 -%}
+                    {%- if media.preview_image -%}
+                      {%- capture qv_thumb -%}
+                        {{
+                          media.preview_image
+                          | image_url: width: 120
+                          | image_tag: width: 60, height: 60, loading: 'lazy', class: 'quick-view__thumb-img'
+                        }}
+                      {%- endcapture -%}
+                      <li>
+                        <button
+                          type="button"
+                          class="quick-view__thumb{% if forloop.first %} is-active{% endif %}"
+                          data-quick-view-thumb
+                          data-media="{{ media.preview_image | image_url: width: 900 }}"
+                          aria-label="{{ 'products.product.media_slide' | t: index: forloop.index, total: qv_image_count }}"
+                          {% if forloop.first %}aria-current="true"{% endif %}
+                        >
+                          {{ qv_thumb | replace: '<img ', '<img alt="" ' }}
+                        </button>
+                      </li>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+            </div>
+
+            <div class="quick-view__info">
+              <div class="quick-view__price">
+                <span class="quick-view__price-current" data-quick-view-price>
+                  {{- qv_variant.price | money -}}
+                </span>
+                <s
+                  class="quick-view__price-compare"
+                  data-quick-view-compare
+                  {%- unless qv_has_discount %} hidden{% endunless %}
+                >
+                  {{- qv_variant.compare_at_price | money -}}
+                </s>
+                <span
+                  class="quick-view__price-save"
+                  data-quick-view-save
+                  {%- unless qv_has_discount %} hidden{% endunless %}
+                >
+                  {{- 'products.product.save_percent' | t: percent: qv_save -}}
+                </span>
+              </div>
+
+              {%- comment -%}
+                单位价（G-08 同一口径）：初始值与切换后都由 JS 用 data-unit-template
+                拼，模板里的 [price] / [unit] 是占位符。无单位价的变体整行 hidden。
+              {%- endcomment -%}
+              <p class="quick-view__unit" data-quick-view-unit {% unless qv_variant.unit_price_measurement %}hidden{% endunless %}>
+                {%- if qv_variant.unit_price_measurement -%}
+                  {%- assign qv_unit_ref = qv_variant.unit_price_measurement.reference_value
+                    | append: qv_variant.unit_price_measurement.reference_unit
+                  -%}
+                  {%- assign qv_unit_price = qv_variant.unit_price | money -%}
+                  {{- 'products.product_card.unit_price' | t: price: qv_unit_price, unit: qv_unit_ref -}}
+                {%- endif -%}
+              </p>
+
+              <product-form class="quick-view__form">
+                {%- form 'product', product, class: 'quick-view__form-inner', novalidate: 'novalidate' -%}
+                  {%- comment -%}
+                    变体用「一个原生 select 选变体」，不做逐维度胶囊：弹窗两列里
+                    每多一个维度就多一组按钮，面板会被撑高到必须滚动才能看到加购。
+                    select 的 option 直接承载价格/库存/变体图，JS 读 dataset 即可，
+                    不需要 variant JSON 数据岛（少一份数据、少一次解析）。
+                  {%- endcomment -%}
+                  <label class="quick-view__field">
+                    <span class="quick-view__label">
+                      {{- 'products.product_card.quick_view_options' | t -}}
+                    </span>
+                    <select class="quick-view__select" name="id" data-quick-view-variant>
+                      {%- for variant in product.variants -%}
+                        {%- liquid
+                          assign v_has_discount = false
+                          assign v_save = 0
+                          if variant.compare_at_price > variant.price
+                            assign v_has_discount = true
+                            assign v_diff = variant.compare_at_price | minus: variant.price
+                            assign v_save = v_diff | times: 100.0 | divided_by: variant.compare_at_price | round
+                          endif
+
+                          assign v_image = ''
+                          if variant.featured_media.preview_image
+                            assign v_image = variant.featured_media.preview_image | image_url: width: 900
+                          endif
+
+                          assign v_unit = ''
+                          assign v_unit_ref = ''
+                          if variant.unit_price_measurement
+                            assign v_unit = variant.unit_price | money
+                            assign v_unit_ref = variant.unit_price_measurement.reference_value
+                            assign v_unit_ref = v_unit_ref | append: variant.unit_price_measurement.reference_unit
+                          endif
+                        -%}
+                        <option
+                          value="{{ variant.id }}"
+                          data-price="{{ variant.price | money }}"
+                          data-compare="{% if v_has_discount %}{{ variant.compare_at_price | money }}{% endif %}"
+                          data-save="{{ v_save }}"
+                          data-available="{{ variant.available }}"
+                          data-media="{{ v_image }}"
+                          data-unit="{{ v_unit }}"
+                          data-unit-ref="{{ v_unit_ref }}"
+                          {% if variant.id == qv_variant.id %}selected{% endif %}
+                        >
+                          {{- variant.title | escape -}}
+                          {%- unless variant.available %} &middot; {{ 'products.product.sold_out' | t }}{% endunless -%}
+                        </option>
+                      {%- endfor -%}
+                    </select>
+                  </label>
+
+                  <div class="quick-view__buy">
+                    <quantity-input class="quick-view__qty">
+                      <button
+                        type="button"
+                        class="quick-view__qty-btn"
+                        data-quantity-minus
+                        aria-label="{{ 'products.product.decrease_quantity' | t }}"
+                      >
+                        <span aria-hidden="true">&minus;</span>
+                      </button>
+                      <input
+                        class="quick-view__qty-input"
+                        type="number"
+                        name="quantity"
+                        value="1"
+                        min="1"
+                        step="1"
+                        data-quantity-input
+                        aria-label="{{ 'products.product.quantity' | t }}"
+                      >
+                      <button
+                        type="button"
+                        class="quick-view__qty-btn"
+                        data-quantity-plus
+                        aria-label="{{ 'products.product.increase_quantity' | t }}"
+                      >
+                        <span aria-hidden="true">+</span>
+                      </button>
+                    </quantity-input>
+
+                    <button
+                      type="submit"
+                      class="quick-view__submit btn-solid"
+                      data-add-button
+                      data-added-label="{{ 'products.product.added' | t }}"
+                      data-added-message="{{ 'products.product.added_message' | t: title: product.title | escape }}"
+                      data-error-message="{{ 'products.product.add_error' | t }}"
+                      data-sold-out-label="{{ 'products.product.sold_out' | t }}"
+                      data-add-label="{{ 'products.product.add_to_cart' | t }}"
+                      {% unless qv_variant.available %}disabled{% endunless %}
+                    >
+                      {%- if qv_variant.available -%}
+                        {{ 'products.product.add_to_cart' | t }}
+                      {%- else -%}
+                        {{ 'products.product.sold_out' | t }}
+                      {%- endif -%}
+                    </button>
+                  </div>
+
+                  <p class="quick-view__status" data-form-status role="status" aria-live="polite"></p>
+                {%- endform -%}
+              </product-form>
+
+              <a class="quick-view__details" href="{{ product.url }}">
+                {{- 'products.product_card.quick_view_details' | t -}}
+              </a>
+            </div>
+          </div>
+        </dialog>
+      </bottom-sheet>
+    {%- endif -%}
+  </quick-view>
+{%- endif -%}
