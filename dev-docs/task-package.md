@@ -110,7 +110,7 @@ Shopify 后台编辑器里的每一次改动（菜单、文案、图片、社交
 | `dev-docs/` | 280 个文件（含 png/webp/mp4 与 4 份 `.bak-*`） | 排除，不进包 |
 | `docs/` | 5 份 md | 排除 |
 | `tools/` | 8 个 py | 排除 |
-| `AGENTS.md` / `README.md` / `CONTRIBUTING.md` / `CODE_OF_CONDUCT.md` / `LICENSE.md` | 仓库文档 | 排除 |
+| `AGENTS.md` / `README.md` / `CONTRIBUTING.md` / `CODE_OF_CONDUCT.md` / `LICENSE.md` | 仓库文档 | 排除。`AGENTS.md` 在打包分支上用 `git rm` 删掉（§7 第 2 步），比靠 `zip -d` 兜底可靠 |
 | `shopify.theme.toml` | CLI 本地环境配置（`theme = "coppice/main"`） | 排除（留在仓库里无害，但不进包） |
 
 > `dev-docs/*.bak-*` 是**有意保留**的历史备份（AGENTS §1），不要清理仓库，只是不进包。
@@ -149,10 +149,35 @@ grep -rn "shopify://" sections templates config   # 必须为空（§1 §2 做�
 1. **在干净分支上打包，不要在当前工作区直接打**
    ```bash
    git status                     # 先确认没有未完成的合并（看 .git/MERGE_HEAD）
-   git checkout -b release/1.0    # 或打 tag
+   git checkout -b release/package
    ```
-2. 按 §1 / §3 / §4 改完，**跑 §6 三条检查**
-3. 打包 + 清理 + 验证（三步缺一不可）
+   > ⚠️ **这个分支只用来出包，不要合并回 `main`。** 下一步会删掉全部注释，而注释里记着几乎所有的设计取舍与踩坑结论（"为什么不能改成绝对定位"、"为什么这里必须 `!important`"）——那些是项目的记忆，主线必须留着。
+
+2. **删仓库文档与备份**（这些不该进包）
+   ```bash
+   git rm AGENTS.md
+   find . \( -name "*.bak*" -o -name ".DS_Store" \) \
+        -not -path "./.git/*" -not -path "./dev-docs/*" -delete
+   ```
+
+3. **剥离注释**（可选，只减体积不改语义）
+   ```bash
+   python3 tools/strip-comments.py            # 预演，看会删多少
+   python3 tools/strip-comments.py --apply    # 写盘（脚本拒绝在非 release/* 分支执行）
+   ```
+   实测（2026-11-20）：**272.4 KB / 105 个文件**，包体积 823 KB → 547 KB。
+   脚本只删块注释与"独占整行的 `//`"；**行内 `//` 一律不碰**（字符串里的 `'https://…'` 含 `//`，正则删必出错）。删除后顺带压缩连续空行、去行尾空白。
+
+4. **按 §1 / §3 / §4 清演示店引用**，再跑 §6 检查。删注释后必须补跑这两条：
+   ```bash
+   node --check assets/*.js              # 33 个 JS 全部通过才算
+   git diff -U0 | grep "^-[^-]" | sed 's/^-//' | sed 's/^ *//' \
+     | grep -oE "^(//|/\*|\*|\{%-? *comment|-->)" | sort | uniq -c
+   ```
+   第二条是核对"删掉的每一行是不是注释"。预期输出只有 `*` / `/*` / `{%- comment` / `//` 这几类；**出现别的前缀立刻回滚**。
+   新增的非空行应当是"代码去掉了行尾注释"，例如 `-if (!x) return; /* 说明 */` → `+if (!x) return;`。
+
+5. **打包 + 清理 + 验证（三步缺一不可）**
    ```bash
    shopify theme package
    # CLI 4.9.4 不认 .shopifyignore 的文件级规则（BUG-080），必须手动清
@@ -160,10 +185,21 @@ grep -rn "shopify://" sections templates config   # 必须为空（§1 §2 做�
    unzip -l Coppice-<version>.zip | grep -E "\.bak|DS_Store|\.md"   # 必须为空
    ```
    > `AGENTS.md` 会被打进包、而 `README.md` / `LICENSE.md` 不会 —— CLI 对根目录 `.md` 有一份不公开的排除名单。**新增任何根目录文件后都要重新看 `unzip -l`**。
-4. **解压核对**：只应有 §4 那 7 个目录，没有 `res.json` / `dev-docs/` / `tools/`
-5. 用**空白测试店**装一次，逐页看坏图 / 空块（§2 的验收）
-6. 上传
-7. 记录演示店 URL（提交表单要填）
+
+6. **解压核对**：只应有 §4 那 7 个目录，没有 `res.json` / `dev-docs/` / `tools/`。（`dev-docs/lighthouse/`、`dev-docs/benchmark/` 都在 `dev-docs/` 下，一并排除。）
+
+7. **真渲染验证**（theme check 抓不到 CSS 语义与 JS 运行时错误，必须跑一次）。推到 benchmark 店但**排除模板与配置**，否则会把店里配好的图冲掉：
+   ```bash
+   shopify theme push -e benchmark \
+     --ignore "templates/*" --ignore "config/*" --ignore "sections/*.json" --allow-live
+   ```
+   然后看三件事：console 无报错（`/favicon.ico` 404 属正常，新店没传图标）、关键元素数量正常（hero 图、商品卡）、`getComputedStyle` 读到的布局值没退化（例：商品卡 `aspect-ratio: 1 / 1`）。
+
+8. **用空白测试店装一次**，逐页看坏图 / 空块（§2 的验收）。
+
+9. **上传**，记录演示店 URL（提交表单要填）。
+
+> 2026-11-20 实测走完全流程的耗时：删注释 + 验证约 20 分钟，其中真渲染那步最值得——静态检查全绿而 CSS 被删坏的情况是完全可能的（对比 BUG-065）。
 
 ---
 
