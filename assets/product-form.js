@@ -1,4 +1,27 @@
-
+/**
+ * product-form — 产品页买盒三件：变体选择、数量步进、加购提交（task-product T-2.1）。
+ *
+ * 三个 Custom Element 分居三职，互不越界：
+ *   <variant-picker>  选变体 → 解析 variant → 回写隐藏 id / 价格 / 按钮态 → 派发 variant:change
+ *   <quantity-input>  加减数量（下限 1，不写死上限：库存由平台在提交时判定）
+ *   <product-form>    拦截提交 → POST /cart/add → 按钮态 + aria-live 播报 + 购物车角标同步
+ *
+ * **价格不自己拼货币格式**：变体 JSON 里的价格串是 Liquid 侧 `money` 过滤器的产物，
+ * JS 只做替换。货币符号、千分位、小数点全由平台决定 —— 自己拼会在多货币市场露馅。
+ *
+ * 无 JS：变体是原生 radio（带 form 属性可随表单提交）、数量是原生 number、提交是真表单
+ * POST /cart/add（跳转购物车页）——渐进增强底线（SDD §6.3 同源原则）。
+ *
+ * 购买选项（G-12，2026-11-18）：订阅计划选择不在这里实现，归 `selling-plan-picker`
+ * （assets/selling-plan-picker.js）。本文件只做一件事——提交前调一次它的 `validate()`，
+ * 强制订阅却没选计划就拦下。计划可用性、计划价、提示文案全在那一边，别在这重复实现。
+ *
+ * 事件约定沿用 quick-add.js（2026-10-16 起）：
+ *   cart:added      点击即冒泡，detail.button —— fly-to-cart.js 飞入动画 + 抽屉开骨架
+ *   cart:updated    document，detail.count —— cart-badge.js 角标 + 抽屉收骨架刷新
+ *   cart:add-failed document（2026-11-20 BUG-083）—— 抽屉退出骨架等待
+ *   variant:change  document，detail.{variantId, mediaId, available} —— product-gallery.js 切图
+ */
 class VariantPicker extends HTMLElement {
   connectedCallback() {
     const dataEl = this.querySelector('[data-variant-json]');
@@ -25,6 +48,7 @@ class VariantPicker extends HTMLElement {
     this._controller = new AbortController();
     this.addEventListener('change', this._onChange, { signal: this._controller.signal });
 
+    // 首次进入按当前选中项对齐一次（浏览器可能恢复了上次的表单状态）
     this._apply(this._resolve());
   }
 
@@ -39,6 +63,7 @@ class VariantPicker extends HTMLElement {
     this._apply(this._resolve());
   };
 
+  /** 按 option 位置顺序取当前选中值，逐项与 variant.options 比对 */
   _resolve() {
     const inputs = Array.from(this.querySelectorAll('input[data-option-position]:checked'));
     if (inputs.length === 0) return null;
@@ -99,13 +124,15 @@ class VariantPicker extends HTMLElement {
           variantId: variant.id,
           mediaId: variant.mediaId,
           available: variant.available,
-
+          /* 带上所属 section：同页可能存在第二个产品块（编辑器里加了两个 main-product、
+             或快速查看预览），监听方据此丢弃别人的变体事件。2026-11-18 桩测发现。 */
           sectionId: this._section ? this._section.dataset.sectionId : null,
         },
       })
     );
   }
 
+  /** 单位计价：多变体价格时也要跟着变；原本没有这块就补一个，放在价格区后面 */
   _syncUnitPrice(variant) {
     let el = this._section.querySelector('[data-unit-price]');
     if (!variant.unitPrice) {
@@ -198,12 +225,16 @@ class ProductForm extends HTMLElement {
     if (this._button.disabled) return;
     if (this._button.dataset.state === 'pending') return;
 
+    /* 购买选项（G-12）：变体强制订阅却没选计划 → 就地拦住并提示。
+       按官方 UX 指南，这类错误**不要**用禁用按钮表达（那会让人以为商品不可买），
+       让按钮可点、点完说明原因。校验逻辑归 <selling-plan-picker>，这里只调用。 */
     const planPicker = this.querySelector('selling-plan-picker');
     if (planPicker && typeof planPicker.validate === 'function' && !planPicker.validate()) return;
 
     this._button.dataset.state = 'pending';
     this._button.disabled = true;
 
+    // 飞入动画不等接口（与 quick-add 同口径）：点击即飞，弱网下不迟滞
     this.dispatchEvent(
       new CustomEvent('cart:added', { bubbles: true, detail: { button: this._button } })
     );
@@ -225,6 +256,8 @@ class ProductForm extends HTMLElement {
       this._syncCartCount();
     } catch (error) {
       if (error.name === 'AbortError') return;
+      /* 通知抽屉退出骨架等待（BUG-083：抽屉只等 cart:updated，失败时永远等不到） */
+      document.dispatchEvent(new CustomEvent('cart:add-failed', { detail: { button: this._button } }));
       delete this._button.dataset.state;
       this._button.disabled = false;
       this._announce(this._button.dataset.errorMessage || '');
@@ -232,6 +265,7 @@ class ProductForm extends HTMLElement {
     }
   };
 
+  /** 按钮文字回到「加购」或「售罄」——售罄态由变体选择器维护，这里只恢复可用标签 */
   _reset() {
     delete this._button.dataset.state;
     if (!this._button.dataset.addLabel) {
@@ -255,7 +289,7 @@ class ProductForm extends HTMLElement {
       if (typeof cart.item_count !== 'number') return;
       document.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: cart.item_count } }));
     } catch (error) {
-      if (error.name !== 'AbortError') return;
+      if (error.name !== 'AbortError') return; /* 其他错误静默：主流程已完成 */
     }
   }
 }

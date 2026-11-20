@@ -1,4 +1,16 @@
+{% comment %}
+  product-recommendations — Similar Mowers（task-product T-2.6，强制项 #13 related）。
 
+  效果图把四张整机推荐也标成 "Frequently Bought Together"，与耗材区重名。
+  这里改成 Similar Mowers：整机与整机是「同类替代」，不是「买了还买」——
+  名称必须和推荐意图一致（related，不是 complementary）。
+
+  实现：`/recommendations/products?intent=related` + Section Rendering API。
+  首次服务端渲染时 `recommendations` 不存在 → 容器为空，由 JS 拉取后填充；
+  拉回仍为空 → JS 整块隐藏（含标题），不留空标题。无 JS → 本区块不出现（可接受的降级）。
+
+  卡片复用 snippets/product-card.liquid（对比勾选、快加逻辑随卡片一起继承）。
+{% endcomment %}
 
 {%- liquid
   assign heading = section.settings.heading

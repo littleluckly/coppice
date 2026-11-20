@@ -1,4 +1,17 @@
+{% comment %}
+  Reusable cart entry — link + server-rendered item count.
 
+  A snippet (not a section) so the mobile nav drawer can render the same entry
+  alongside the account component. Sections cannot be rendered from other files;
+  snippets can.
+
+  Scope (task-header.md O-3, revised 2026-10-09): static entry only. No drawer, no
+  <cart-toggle>, no count sync — those live in their own task list.
+
+  The accessible name is built with capture so the attribute holds one clean
+  string; putting Liquid control flow inside an attribute leaves stray whitespace
+  that screen readers announce.
+{% endcomment %}
 
 {%- if cart.item_count > 0 -%}
   {%- capture cart_label -%}
@@ -7,6 +20,16 @@
 {%- else -%}
   {%- capture cart_label -%}{{- 'cart.cart_empty' | t -}}{%- endcapture -%}
 {%- endif -%}
+
+{%- comment -%}
+  Parameters:
+    (none)     — icon-only link (desktop header tools)
+    show_label — also render the visible "Cart" text (mobile nav drawer row style)
+
+  cart-badge.js（2026-10-16）监听 cart:updated 后就地更新角标与 aria-label。
+  标签模板由 Liquid 在此渲染成 data 属性（复数形式由服务端定，JS 只替换
+  '[count]' 占位符）——前端不硬编码文案，未来加 locale 不用改脚本。
+{%- endcomment -%}
 
 <div class="cart-entry{% if class != blank %} {{ class }}{% endif %}" data-cart-entry>
   <a
@@ -25,6 +48,14 @@
       <span class="cart-entry__label">{{ 'cart.title' | t }}</span>
     {%- endif -%}
 
+    {%- comment -%}
+      Count badge. In the header entries (desktop and mobile alike) it is absolutely
+      positioned over the icon's top-right corner so it never occupies layout space —
+      the later cart-updated sync then can't shift the entry and cause CLS.
+      In the drawer the row has a visible label, so the badge stays in flow and sits
+      at the end of the row. The split lives on .cart-entry:not(.cart-entry--in-drawer)
+      in sections/main-nav.liquid.
+    {%- endcomment -%}
     {%- if cart.item_count > 0 -%}
       <span class="cart-entry__count" aria-hidden="true">{{ cart.item_count }}</span>
     {%- endif -%}
