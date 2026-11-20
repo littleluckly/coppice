@@ -1,5 +1,5 @@
 {% style %}
-  {% # Loads all font variantions with display: swap %}
+
   {{ settings.type_primary_font | font_face: font_display: 'swap' }}
   {{ settings.type_primary_font | font_modify: 'weight', 'bold' | font_face: font_display: 'swap' }}
   {{ settings.type_primary_font | font_modify: 'weight', 'bold' | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
@@ -16,71 +16,28 @@
     --color-brand: {{ settings.brand_color }};
     --color-brand-accent: {{ settings.brand_accent }};
 
-    /* 次级文字色（2026-10-21）：规格行 / 划线价 / 评论数这类"比正文轻一档"的小字。
-       定在 70% 是有依据的，不是随手取：本主题前景 #333 与白底按 60% 混出来是
-       #858585 = 3.69:1，**低于 WCAG AA 对小字的 4.5:1**；临界点约 68%，
-       70% 得到 ≈4.95:1，Noir 深底上 ≈8:1。调这个值之前先算对比度，
-       别再往 60% 以下走（Lighthouse color-contrast 会挂）。 */
     --color-foreground-muted: color-mix(in srgb, var(--color-foreground) 70%, transparent);
 
-    /* 语义色：警告。**不跟随 preset 品牌色** —— 警告必须与品牌绿区分开。
-       配色的两条硬约束：
-       1) 这组黄**不许配白字**：#FBBF24 + #FFF 约 1.9:1，连非文本图形的 3:1 都不到；
-       2) 压在上面的字**也不用纯黑**：黑与黄是互补跳色，观感生硬。
-          用同色系压暗的深黄棕 #5C3D00 —— 对比度 5.92:1，视觉连续。
-       固定值不跟 preset（深底 preset 下若取 background 会变成深色、反而贴同色调）。 */
     --color-warning: #FBBF24;
     --color-warning-on: #5C3D00;
 
-    /* 折扣色（2026-10-29）：降价徽标共用（PDP 价格行 + 搜索联想列表），
-       固定值、不跟 preset —— 降价必须与品牌绿区分，理由同上面的 --color-warning。
-       取值有对比度依据，不是眼挑选的：原实现 #d32f2f 压在 #ffebeb 上只有 **4.35:1**，
-       低于 WCAG AA 对正文小字的 4.5:1（徽标字号 0.6875–0.8rem，属正文）；
-       压到 #c62828 得 **4.91:1**，肉眼几乎无色差。
-       Noir 下刻意保持同一组值：浅粉底 + 深红字在深底上对比更高，
-       跟着翻成深红底反而会和暗背景糊在一起。 */
     --color-sale: #c62828;
     --color-sale-surface: #ffebeb;
 
-    /* 浅品牌绿（2026-10-17）：hover 光晕等场合用。oklch from 只取品牌色相，
-       亮度/饱和度独立定值——商家换任何深浅的品牌绿，算出来的浅绿都够亮
-       （当前 Coppice 品牌色下 ≈ #74C4A7；Noir 同色）。
-       两行同写是有意的：后一行是相对颜色语法（oklch from），不支持的旧浏览器
-       整行解析作废、落到前一行静态 fallback。调明暗改 0.76（0.68 深 → 0.80 浅）。 */
     --color-brand-light: #74C4A7;
     --color-brand-light: oklch(from {{ settings.brand_color | default: '#1E4B3C' }} 0.76 0.09 h);
 
-    /* 骨架（页头组 + 页脚）配色。留空 = 回落到上方全局色，即浅色骨架，
-       渲染结果与既有实现逐像素一致；填入深色值即得到深色骨架——
-       只有页头/页脚翻转，内容区不动（映射规则见 assets/critical.css）。
-       三个变量不写 defaults 是有意的：color 设置清空后返回 blank，
-       这里靠 default 过滤器回落，商家才能表达"跟随全局"。 */
     --color-skeleton-background: {{ settings.skeleton_background_color | default: settings.background_color }};
     --color-skeleton-foreground: {{ settings.skeleton_foreground_color | default: settings.foreground_color }};
     --color-skeleton-accent: {{ settings.skeleton_accent_color | default: settings.brand_color }};
 
-    /* 页头分层（2026-10-28 刘工，两轮定稿）：
-       浅色骨架 → 页头**不铺底色、不画分隔线**，只靠一层下投影浮起来；
-       深色骨架 → 纯黑页头 + 一道亮发丝线（黑底上的投影看不出来，只能靠明度差）。
-       判据是 color_brightness（0–255），128 为明暗中线；
-       Liquid 的 if 不支持过滤器，所以必须先 assign 亮度再比。
-       骨架色彩映射表在 assets/critical.css（页头组/页脚翻转 background/foreground/brand）；
-       --color-brand-light 不在映射表内，所以它始终取 :root 那份（从全局品牌色算）——
-       浅色骨架下它与骨架 accent 同源，视觉一致；深色分支的阴影不用它，无影响。 */
     {%- assign header_base = settings.skeleton_background_color | default: settings.background_color -%}
-    {%- comment -%} 兜底 255：色值取不到时按浅色处理，页头不会在浅底站点上突然变纯黑 {%- endcomment -%}
+
     {%- assign header_luma = header_base | color_brightness | default: 255 -%}
     {%- if header_luma > 128 -%}
-      {%- comment -%}
-        浅色：底色必须写成背景色而不是 transparent——页头吸顶时要在上方，
-        透明的行会让页面内容从底下透出来（critical 里那句"必须有实底"）。
-        写成 background 色 = 视觉上"没有底色"，同时保持不透明。
-      {%- endcomment -%}
+
       --color-header-surface: var(--color-background);
-      /* 浅绿投影（2026-10-29 刘工）：与画廊右侧加购按钮同源的浅绿光晕。
-         色相取 --color-brand-light 而非品牌深绿——白底页头下深绿投影发灰，
-         浅绿才有「浮起来一层光」的通透感。双层结构（近距细影 + 远距大扩散）
-         保持原样，只换颜色；浓度比原灰影（10%/26%）略高，因为浅绿本身更淡。 */
+
       --header-shadow:
         0 2px 6px -2px color-mix(in srgb, var(--color-brand-light) 20%, transparent),
         0 10px 20px -12px color-mix(in srgb, var(--color-brand-light) 30%, transparent);
@@ -91,18 +48,6 @@
         0 10px 20px -12px color-mix(in srgb, var(--color-foreground) 45%, transparent);
     {%- endif -%}
 
-    /* 商品卡图片 hover 光晕（2026-10-29 刘工，Noir 下修正）：
-       机制是「光晕垫在图片下方，只从 koutu 透明区透出」。浅底上浓一点才看得见，
-       但**深底上必须大幅压低**——--color-brand-light 在 Noir 下是从 lime 算出的
-       亮度 0.76 亮荧光绿，65% 铺在深卡上会化成一块刺眼的绿板（实测难看）。
-       判据用内容区 background_color 的亮度（不是骨架色，商品卡在内容区）。
-
-       卡片 hover 外投影 + 上浮量（2026-10-30 刘工：全站卡 hover 统一签名）：
-       口径 = 配件卡 product-supplies__item —— 上浮 2px + 0 6px 20px / 30% 浅绿光晕，
-       与 .btn-solid:hover（assets/critical.css）同一组参数。原 24px 大投影撤掉：
-       它在浅底上只是一圈灰，没有「被点亮」的绿色回应。
-       消费方三处：.product-card、.main-nav__mega-card-link、.product-supplies__item
-       （platform-cards 是分类大瓷砖，仍自持 24px 投影，不在此签名内）。 */
     --card-hover-lift: -2px;
     {%- assign content_luma = settings.background_color | color_brightness | default: 255 -%}
     {%- if content_luma > 128 -%}
@@ -111,12 +56,11 @@
       --card-glow-3: color-mix(in srgb, var(--color-brand-light) 5%, transparent);
       --card-hover-shadow: 0 6px 20px color-mix(in srgb, var(--color-brand-light) 30%, transparent);
     {%- else -%}
-      /* 深底：只留一层几乎贴地的微光，产品仍"浮"着，但不再是一片绿 */
+
       --card-glow-1: color-mix(in srgb, var(--color-brand-light) 14%, transparent);
       --card-glow-2: color-mix(in srgb, var(--color-brand-light) 7%, transparent);
       --card-glow-3: color-mix(in srgb, var(--color-brand-light) 2%, transparent);
-      /* 外投影同理：深底上 30% 的荧光绿是一圈霓虹边，压到 16%；
-         抬起的体感改由黑色层补（浅绿在白底是"光"，在近黑底上只剩色相） */
+
       --card-hover-shadow:
         0 6px 20px color-mix(in srgb, var(--color-brand-light) 16%, transparent),
         0 4px 10px -6px rgb(0 0 0 / 32%);

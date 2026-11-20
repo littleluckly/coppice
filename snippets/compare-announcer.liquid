@@ -1,20 +1,4 @@
-{% doc %}
-  compare-announcer — 加入对比成功后的屏幕阅读器播报区（SDD §6.2.8）。
 
-  **为什么是一个独立的常驻空节点**（2026-11-16 加）：
-  底部对比条删除后，加入成功的播报点跟着没了。剩下的两个候选都不可靠：
-  · `<compare-entry>`（页头角标）——未配置对比页时整块不渲染，移动端还要等
-    角标 > 0 才显示，第一次加入时正好不在；
-  · `<compare-toast>` ——默认 `hidden` ⇒ `display: none`，**live region 在
-    `display: none` 的子树里不会播报**。
-  所以必须是 layout 级、始终存在、用 `visually-hidden`（而不是 `display: none`）
-  收起来的空 `<p>`。
-
-  · 文案由 Liquid 下发到 `data-label-added`，脚本只替换 `[count]` 占位。
-  · **只播报「加入成功」**。跨组 / 已满由 toast 自己的 `role="status"` 承担，
-    两处职责不重叠，避免一次点击念两句。
-  · 空节点常驻不占空间，也不进 tab 序列。
-{% enddoc %}
 
 <p
   class="visually-hidden"
