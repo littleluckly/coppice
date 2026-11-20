@@ -346,6 +346,10 @@
       "sold_out": "Sold out",
       "rating_label": "Rated {{ rating }} out of 5",
       "unit_price": "{{ price }} / {{ unit }}",
+      "choose_options": "Choose options",
+      "quick_view_close": "Close",
+      "quick_view_options": "Options",
+      "quick_view_details": "View full details",
       "spec_cutting_width": "Cutting width",
       "spec_power_source": "Power source",
       "spec_weight": "Weight"
