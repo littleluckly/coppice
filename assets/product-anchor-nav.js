@@ -84,6 +84,9 @@ class ProductAnchorNav extends HTMLElement {
     }
     clearTimeout(this._scrollIdleTimer);
     this._scrollIdleTimer = 0;
+    /* 滚动中被重挂载（编辑器重渲染 section）时属性会留在宿主上 ⇒ 重新连上后
+       标签永久展开，直到下一次滚动才收。断开时一并摘掉。 */
+    this.removeAttribute('data-scrolling');
     cancelAnimationFrame(this._raf);
     this._raf = 0;
     this._started = false;
