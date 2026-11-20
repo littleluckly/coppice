@@ -24,9 +24,11 @@
   忽略时，脚本切换前会显式关掉其余条目，行为一致。
 
   **挂起的三条路**（WCAG 2.2.2：超过 5 秒的自动变化必须可停）：
-    ① 鼠标悬停 / **键盘**焦点进入（CSS `:hover` / `:has(:focus-visible)` 挂
+    ① 鼠标悬停在**当前展开的那一条**上 / **键盘**焦点进入区块（CSS
+       `.product-faq__item[open]:hover` / `:has(:focus-visible)` 挂
        animation-play-state；**不能写成 `:focus-within`**，鼠标点过之后焦点留在
-       summary 上会把倒计时永久挂起，见 BUG-088）
+       summary 上会把倒计时永久挂起，见 BUG-088。悬停故意不按整块判：鼠标停在
+       别的条目上时，正在展开的那条该继续走）
     ② 区块离开视口（IntersectionObserver 打 data-paused）
     ③ 标签页切到后台（visibilitychange）
   ②③ 由 assets/product-faq.js 处理，①是纯 CSS。①有个必须知道的副作用：点完手风琴
