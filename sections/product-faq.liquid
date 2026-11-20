@@ -372,11 +372,22 @@
   }
 
   /* 悬停 / 键盘焦点进入即暂停：倒计时与「正在读这一条」抢时间是最烦人的那种自动播放。
+     ⚠️ 悬停判定只认**当前展开的那一条**（2026-11-20 刘工）：选择器挂在
+     `.product-faq__item[open]:hover` 上，而不是整个 panel。整个 panel 判悬停的话，
+     鼠标只是在区块里路过、或者停在学习点第 5 条上，展开着的第 2 条就跟着停住 ——
+     明明是"在看另一条"，却把正在走的那条按下了。
      ⚠️ 焦点暂停只认 `:focus-visible`，**不能**用 `:focus-within`（BUG-088）：
      鼠标点开 <summary> 后焦点会留在它身上，而鼠标早已移开 ⇒ `:focus-within` 一直为真，
      倒计时被永久挂起，看上去就是"点一下自动播放就坏了"。`:focus-visible` 对鼠标
-     点击为 false、对键盘 Tab 为 true，正好只保留键盘用户需要的那一半。 */
-  .product-faq__panel:hover > .product-faq__item[open] .product-faq__progress-bar,
+     点击为 false、对键盘 Tab 为 true，正好只保留键盘用户需要的那一半。
+     焦点仍按整块判：键盘用户在区块内任何位置操作都该先把画面停住（WCAG 2.2.2 的
+     "可停"要有一条键盘够得着的路），这跟悬停的"只在正在读的那条上停"不冲突。
+     ⚠️ 悬停这条**必须带 `.product-faq__panel` 前缀**：上一条 animation 简写规则是
+     (0,5,0)，只写 `.product-faq__item[open]:hover …` 是 (0,4,0)，会被简写里的
+     `animation-play-state: running` 反压 ⇒ 悬停根本不暂停（BUG-086 同族：同属性
+     冲突看特异性，媒体查询和源序都救不了低特异性）。带上前缀后同为 (0,5,0)，
+     靠"写在后面"取胜。 */
+  .product-faq__panel > .product-faq__item[open]:hover .product-faq__progress-bar,
   .product-faq__panel:has(:focus-visible) > .product-faq__item[open] .product-faq__progress-bar,
   .product-faq__panel[data-paused] > .product-faq__item[open] .product-faq__progress-bar {
     animation-play-state: paused;
