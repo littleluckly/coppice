@@ -461,6 +461,9 @@
     "product_complementary": {
       "default_heading": "Pairs well with"
     },
+    "product_faq": {
+      "read_more": "Read the full guide"
+    },
     "footer": {
       "follow_us": "Follow us",
       "menu_label": "Footer menu",

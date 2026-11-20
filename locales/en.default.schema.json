@@ -435,6 +435,22 @@
       "default_heading": "Pairs well with",
       "limit": "Number of products"
     },
+    "product_faq": {
+      "name": "FAQ",
+      "defaults": {
+        "eyebrow": "FAQ",
+        "heading": "Frequently asked questions",
+        "subheading": "Quick answers to the questions we hear most about our machines, batteries, and support.",
+        "button": "View more FAQs"
+      },
+      "blog_info": "Each article's title becomes a question and its excerpt becomes the answer. Nothing is shown until a blog is selected.",
+      "image_info": "Shown on the right of the questions. Leave empty to use the product's featured image.",
+      "autoplay_header": "Auto-advance",
+      "autoplay": "Advance to the next question automatically",
+      "autoplay_info": "The progress bar under an open question is its countdown. It pauses on hover or focus, stops for good once a shopper opens a question, and never runs when the system asks for reduced motion.",
+      "autoplay_seconds": "Seconds per question",
+      "button_info": "Defaults to the selected blog when left empty."
+    },
     "cart_lines": {
       "name": "Cart items",
       "labels": {
