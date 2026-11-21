@@ -1257,6 +1257,14 @@ bottom-sheet > dialog.is-close-anim {
   --shopify-accelerated-checkout-button-box-shadow: inset 0 0 0 1.5px var(--color-brand);
 }
 .accelerated-checkout .shopify-payment-button__button--unbranded {
+  /* 旧版实现的按钮是普通 <button>，没有平台给的块级尺寸 —— 补上，才与
+     影子 DOM 版（width 100% / 44px 高）看起来是同一个东西。 */
+  inline-size: 100%;
+  min-block-size: 44px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
   border-radius: 999px;
   background-color: transparent;
   color: var(--color-brand);
