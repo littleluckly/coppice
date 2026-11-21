@@ -1137,3 +1137,50 @@ bottom-sheet > dialog.is-close-anim {
   padding-block-start: 2rem;
   border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
 }
+
+/* ===================================================================
+   变体选择器（<variant-picker>，2026-11-21 从 main-product 的样式块迁到全局）
+   为什么放全局：选择器现在被两处消费 —— 产品页买盒与商品卡快速查看弹窗。
+   `{% stylesheet %}` 只随渲染它的页面下发：弹窗出现在集合页 / 搜索页时拿不到
+   main-product 的那段样式，胶囊会退化成裸文字。
+   radio 现在**包在 label 里**（不再用 id/for 关联，理由见
+   snippets/variant-picker.liquid），所以选中/聚焦态从 `input:checked + label`
+   改成 `label:has(input:checked)`。
+   =================================================================== */
+.product-variant__group {
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+.product-variant__label {
+  padding: 0;
+  margin-block-end: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-foreground);
+}
+.product-variant__values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.product-variant__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+  border-radius: var(--style-border-radius-inputs);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.product-variant__pill:has(.product-variant__radio:checked) {
+  border-color: var(--color-brand);
+  box-shadow: inset 0 0 0 1px var(--color-brand);
+  color: var(--color-brand);
+  font-weight: 500;
+}
+.product-variant__pill:has(.product-variant__radio:focus-visible) {
+  outline: 2px solid var(--color-brand-accent);
+  outline-offset: 2px;
+}
