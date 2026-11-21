@@ -445,8 +445,7 @@
       "bundle_added": "Added all items"
     },
     "product_spec_table": {
-      "default_heading": "Specifications",
-      "variance_label": "Why specs can vary"
+      "default_heading": "Specifications"
     },
     "product_description": {
       "default_heading": "Overview"
