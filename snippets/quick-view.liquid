@@ -293,14 +293,51 @@
                   </div>
 
                   <p class="quick-view__status" data-form-status role="status" aria-live="polite"></p>
+
+                  {%- comment -%}
+                    加速结账与分期（2026-11-21 刘工：弹窗买盒向产品页看齐）。
+                    两者都是**平台能力**，不依赖 main-product 的 section 设置 ——
+                    所以卡片 snippet 里也能安全渲染；店铺没开通 / 商品不适用时
+                    平台回空串，这里用 `!= empty and != nil` 把空壳挡掉
+                    （空串在 Liquid 里为真，只写 `!= blank` 在桩里会漏）。
+                  {%- endcomment -%}
+                  {%- capture qv_accelerated -%}{{ form | payment_button }}{%- endcapture -%}
+                  {%- if qv_accelerated != empty and qv_accelerated != nil -%}
+                    <div class="quick-view__accelerated">{{ qv_accelerated }}</div>
+                  {%- endif -%}
+                  {%- capture qv_terms -%}{{ form | payment_terms }}{%- endcapture -%}
+                  {%- if qv_terms != empty and qv_terms != nil -%}
+                    <div class="quick-view__terms">{{ qv_terms }}</div>
+                  {%- endif -%}
                 {%- endform -%}
               </product-form>
 
-              <a class="quick-view__details" href="{{ product.url }}">
-                {{- 'products.product_card.quick_view_details' | t -}}
-              </a>
+              {%- comment -%}
+                三条决策参数：与产品页同一个 snippet、同一套样式（样式已随胶囊一起
+                迁到 critical.css）。按 BUG-085 的判据 —— **按片段根类名判有没有内容**，
+                不按"block 是否存在"：全空时整块不输出，不留一条空线。
+              {%- endcomment -%}
+              {%- capture qv_specs -%}{%- render 'spec-bullets', product: product -%}{%- endcapture -%}
+              {%- if qv_specs contains 'class="spec-bullets"' -%}
+                <div class="quick-view__specs">{{ qv_specs }}</div>
+              {%- endif -%}
+
             </div>
           </div>
+
+          {%- comment -%}
+            底部固定条（2026-11-21 刘工，参考稿：文字左 + 行尾箭头右，整条压毛玻璃）。
+            它在 body **之外**、dialog 的直接子节点上，用绝对定位贴底 ——
+            这样买盒内容再长、滚动条怎么滚，它都不动；滚动内容从它背后滑过，
+            `backdrop-filter` 才有东西可糊。body 的底部留了等高的 padding 防遮挡。
+            箭头按 AGENTS §6 的箭头准则用在"行尾导航元素"上（不是卡内文字链接）。
+          {%- endcomment -%}
+          <a class="quick-view__foot" href="{{ product.url }}">
+            <span class="quick-view__foot-text">
+              {{- 'products.product_card.quick_view_details' | t -}}
+            </span>
+            <span class="quick-view__foot-arrow" aria-hidden="true">&rarr;</span>
+          </a>
         </dialog>
       </bottom-sheet>
     {%- endif -%}
