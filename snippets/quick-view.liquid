@@ -13,8 +13,9 @@
   ③ 无 JS 时按钮彻底没反应，而现在的 `<a>` 天然可跳转。
   代价（说清楚，数字是桩测的）：多变体卡各自多背一份面板 HTML。
   `ruby tools/preview-quick-view.rb --measure` 实测（3 变体 / 4 图的一台割草机）：
-  单卡面板 **10.0 KB 原始 / 1.9 KB gzip**；因为面板结构逐卡重复、gzip 跨卡去重，
-  **24 张多变体卡的整页 gzip 增量只有 ~4.3 KB**（原始仍是 +240 KB 的 DOM，
+  单卡面板 **12.2 KB 原始 / 2.3 KB gzip**；因为面板结构逐卡重复、gzip 跨卡去重，
+  **24 张多变体卡的整页 gzip 增量 ~5.3 KB**（原始仍是 +290 KB 的 DOM，
+  ⚠️ 这个数是用**假的** Shop Pay 标记量的，真实包体更大，装店后要重量一次；
   未打开的 `<dialog>` 不参与布局、图是 lazy 不下载，成本在解析不在网络）。
   换来的是零请求、零注入、无 JS 也能用；面板是 `<dialog>`。
 
@@ -34,11 +35,23 @@
   与产品页（胶囊 + radio）两套实现、必然漂。现在两边共用一份，本文件只负责
   「变体自带图 → 主图」这一小段（弹窗的图库是一张主图 + 缩略图，不是 product-gallery）。
 
-  **买盒能力边界（与 PDP 的差异，有意）**：不含纵向描述、参数行、信任行、对比、
-  Shop Pay、订阅计划。数量步进与加购提交**复用 product-form.js 的
-  `<quantity-input>` / `<product-form>`**（含 BUG-083 的 cart:add-failed 收口、
-  cart:added / cart:updated 事件约定），不另写一套提交逻辑；
-  因此消费方 section 必须同时引入 product-form.js。
+  **买盒内容（2026-11-21 刘工：向产品页看齐，别再是"空壳"）**：
+  价格三件套 + 单位价 → 变体胶囊 → 数量 + 加购 → **加速结账**（Shop Pay）→
+  **分期**（Shop Pay Installments）→ **三条决策参数**（spec-bullets）。
+  后三项都是平台能力或产品级数据，不依赖 main-product 的 section 设置/blocks，
+  所以卡片 snippet 里也能安全渲染；空内容一律在 Liquid 侧挡掉（见下方判空注释）。
+
+  **仍然不含（有意，逐条说清原因）**：
+  - 纵向描述：刘工 2026-11-20 的口径是"详情不展示"，摘要属于详情那一屏；
+  - 信任行 / 对比入口：**是 section blocks / 卡片上已有的东西** —— 卡片 snippet
+    拿不到商家的 block 配置，硬写一段固定承诺文案等于伪造；
+  - 自提（Pickup Availability）：组件切变体时要靠 `/products/x?section_id=<产品页 section id>`
+    重取，而弹窗是从集合页的卡片渲染的，**拿不到那个 id**，初帧之后就会变陈旧；
+  - 订阅计划：有 selling plan 的商品干脆不给弹窗（见上方第 3 层条件）。
+
+  数量步进与加购提交**复用 product-form.js 的 `<quantity-input>` / `<product-form>`**
+  （含 BUG-083 的 cart:add-failed 收口、cart:added / cart:updated 事件约定），
+  不另写一套提交逻辑；因此消费方 section 必须同时引入 product-form.js。
 
   **金额一律由 Liquid 预格式化**（`money` filter）后经 data-* 下发，JS 只做替换
   ——与 PDP 同口径，多货币/千分位不在前端拼。
