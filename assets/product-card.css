@@ -703,6 +703,16 @@ quick-view {
   padding-block-start: 0.75rem;
   border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
 }
+/* 信任徽标容器（2026-11-21）：与产品页 .main-product__trust 同形 ——
+   顶线分隔 + 响应式两列（窄了退单列）。徽标本身的样式在 critical.css。 */
+.quick-view__trust {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.6rem 1rem;
+  margin-block-start: 0.75rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+}
 
 /* ===== 底部固定条：View full details（2026-11-21 刘工，参考稿）=====
    绝对定位贴在 dialog 底边、body 之外：买盒内容再长也不动它。

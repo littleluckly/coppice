@@ -1533,31 +1533,9 @@
     padding-block-start: 1.25rem;
     border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
   }
-  .trust-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.88rem;
-    color: var(--color-foreground-muted);
-    transition: color 0.2s ease;
-  }
-  .trust-item:hover {
-    color: var(--color-brand);
-  }
-  .trust-item__icon {
-    display: grid;
-    place-items: center;
-    flex: 0 0 auto;
-    color: var(--color-brand);
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-  .trust-item:hover .trust-item__icon {
-    transform: scale(1.25) rotate(5deg);
-  }
-  .trust-item__icon svg {
-    width: 20px;
-    height: 20px;
-  }
+  /* 信任项的样式（.trust-item*）在 assets/critical.css（2026-11-21 迁出）：
+     商品卡快速查看弹窗也用同一套徽标，而本 section 的样式块只随产品页下发。 */
+
   .pickup__heading {
     margin: 0 0 0.35rem;
     font-size: 0.88rem;

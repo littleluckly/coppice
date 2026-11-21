@@ -1265,3 +1265,35 @@ bottom-sheet > dialog.is-close-anim {
 .accelerated-checkout .shopify-payment-button__button--unbranded:hover:not([disabled]) {
   background-color: color-mix(in srgb, var(--color-brand) 7%, transparent);
 }
+
+/* ===================================================================
+   信任徽标（.trust-item，2026-11-21 从 main-product 的样式块迁到全局）
+   两处消费：产品页买盒（section blocks）与商品卡快速查看弹窗
+   （snippets/quick-view-trust.liquid）。容器各自定义（顶线分隔那套），
+   这里只放徽标本身。
+   =================================================================== */
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--color-foreground-muted);
+  transition: color 0.2s ease;
+}
+.trust-item:hover {
+  color: var(--color-brand);
+}
+.trust-item__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--color-brand);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.trust-item:hover .trust-item__icon {
+  transform: scale(1.25) rotate(5deg);
+}
+.trust-item__icon svg {
+  width: 20px;
+  height: 20px;
+}

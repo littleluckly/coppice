@@ -335,6 +335,16 @@
                 <div class="quick-view__specs">{{ qv_specs }}</div>
               {%- endif -%}
 
+              {%- comment -%}
+                信任徽标（2026-11-21 刘工）：保修来自产品 metafield（与产品页同源），
+                文本政策来自主题设置（产品页那些是 section blocks，卡片读不到）。
+                判空同样按片段的根类名 `class="trust-item"`。
+              {%- endcomment -%}
+              {%- capture qv_trust -%}{%- render 'quick-view-trust', product: product -%}{%- endcapture -%}
+              {%- if qv_trust contains 'class="trust-item"' -%}
+                <div class="quick-view__trust">{{ qv_trust }}</div>
+              {%- endif -%}
+
             </div>
           </div>
 
