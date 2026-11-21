@@ -340,7 +340,7 @@
                 文本政策来自主题设置（产品页那些是 section blocks，卡片读不到）。
                 判空同样按片段的根类名 `class="trust-item"`。
               {%- endcomment -%}
-              {%- capture qv_trust -%}{%- render 'quick-view-trust', product: product -%}{%- endcapture -%}
+              {%- capture qv_trust -%}{%- render 'quick-view-trust', product: product, settings: settings -%}{%- endcapture -%}
               {%- if qv_trust contains 'class="trust-item"' -%}
                 <div class="quick-view__trust">{{ qv_trust }}</div>
               {%- endif -%}
