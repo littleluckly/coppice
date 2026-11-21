@@ -9,14 +9,6 @@
  */
 {
   "current": {
-    "qv_show_specs": true,
-    "qv_show_trust": true,
-    "qv_trust_1_icon": "shipping",
-    "qv_trust_1_text": "Free shipping on orders over $99",
-    "qv_trust_2_icon": "returns",
-    "qv_trust_2_text": "30-day returns",
-    "qv_trust_3_icon": "warranty",
-    "qv_trust_3_text": "",
     "logo": "shopify://shop_images/logo3_rmbg_coppice.png",
     "logo_dark": "shopify://shop_images/logo3_green_rmbg.png",
     "type_primary_font": "work_sans_n4",
@@ -38,6 +30,14 @@
       "riding-mower-compare"
     ],
     "compare_page_indexing": true,
+    "qv_show_specs": true,
+    "qv_show_trust": true,
+    "qv_trust_1_icon": "warranty",
+    "qv_trust_1_text": "Free shipping on orders over $99",
+    "qv_trust_2_icon": "returns",
+    "qv_trust_2_text": "30-day returns",
+    "qv_trust_3_icon": "warranty",
+    "qv_trust_3_text": "",
     "sections": {
       "cart-drawer": {
         "type": "cart-drawer",
