@@ -846,13 +846,25 @@
 - **验证**：① 无头 Chrome 桩 fetch 跑时序：`cart:added` 后 150ms `loading=true / body=display:none / skeleton=grid` 且**零次 `?sections=` 请求**；`cart:updated` 后才出现请求，返回后 `loading=false / body=block / 骨架消失`；`cart:add-failed` 路径同样能退出骨架。② 空态按钮渲染实测：白字垂直居中、无下划线、左右 1.5rem 内边距。③ 骨架在 500px 视口量得 `left=20 right=480`（容器 500），不横向溢出。
 - **预防**：① **"刷新内容"必须挂在写操作完成的信号上，不能挂在"点击即发"的信号上**。本项目 `cart:added` 是乐观事件（喂飞入动画的），`cart:updated` 才是事实事件（带服务端回查的真实 `item_count`）——凡是"要根据新数据重渲染"的消费方，一律只听后者。判据：问一句"这个事件派发时，服务端的状态改了吗？"没改就不能拿它当刷新触发。② **`cart:added` 的消费方必须能"等"**：现在契约是 added → (updated | add-failed)，新增加购路径两条事件都要派，否则抽屉会卡骨架（有 12s 兜底，但那是遮丑不是修复）。③ `.btn-solid` **不是完整按钮**，新增用法必须自带排版类；改动它之后跑一次空态/次级态截图，别只看主流程。④ 记录这类"闪一下"的问题要附实测时序表（请求发在哪、事件派在哪），否则下次只能靠肉眼复现。
 
-### BUG-083 · 只抽一个文件就说"包内无注释"，漏掉 `templates/gift_card.liquid` 的 10 处
+### BUG-084 · 只抽一个文件就说"包内无注释"，漏掉 `templates/gift_card.liquid` 的 10 处
 
 - **日期**：2026-11-20 ｜ **状态**：Fixed
 - **现象**：刘工反馈"打包后的 `sections/collection.liquid` 还有注释"。核查后包内该文件确实是 0 注释（36,369 字节，与打包分支 md5 一致），但我顺着做**全包扫描**时发现 `templates/gift_card.liquid` 残留 10 处注释（3 个 `{% comment %}`、7 个 `/* */`、4 个 `{% # %}`）。上一轮我给出的结论是"包内 0 注释"——那个结论只基于 `collection.liquid` 一个文件的 `grep`。
 - **根因**：两层。① 剥离脚本 `tools/strip-comments.py` 的 `LIQUID` 清单写的是 `sections/ snippets/ blocks/ layout/`，**漏了 `templates/*.liquid`**（该目录下只有 `gift_card.liquid` 一个 `.liquid`，最容易在写 glob 时被忽略）。② 验证时用**样本代替全集**：查了一个文件就对整个包下结论。
 - **修复**：脚本补 `templates/*.liquid`；重新剥离后 `gift_card.liquid` 11279 → 8788 字节，全包 `grep -rlE "\{%-? *comment|/\*" --include=*.liquid --include=*.css --include=*.js` 输出为空。`task-package.md` §7 第 5 步加同一条整包扫描命令，脚本末尾提示同步改成四步。
 - **预防**：① 任何"整个包 / 整个仓库都 X"的结论，必须用**全量扫描**支撑（`grep -rl` 遍历目标扩展名全集），**不能用抽样结果外推**。② 写"处理某类文件"的脚本时，扩展名清单要对着 `find . -name "*.<ext>"` 的实际结果核对一遍，而不是凭印象列目录。③ 这是同族第三次：BUG-079（`grep` 字样 0 命中当成"平台未实现"）、BUG-082（正则长度上限导致假 0）、本次（扫描范围不全）——共同点是**验证手段自身的覆盖面没被检查**。今后凡是"没有 X"的断言，都要能回答"我是怎么遍历完的"。
+
+---
+
+### BUG-085 · 产品页规格全空时仍留一个带顶线的空壳：`main-product__specs` 夹出「两条横线 + 一段空白」
+
+- **日期**：2026-11-20 ｜ **状态**：Fixed
+- **现象**：刘工截图（Northbark 40V 4.0 Ah Lithium-Ion Battery，配件）。买盒里 Add to cart / Buy it now 下方**两条水平分隔线之间是一段空白**，中间什么都没有；信任行（Free shipping / 30-day returns）本身正常。凡商品 metafield 全空（配件、新上架未填规格）必现。
+- **根因**：`sections/main-product.liquid` 里容器判据写的是「有没有这个 block」，不是「这个 block 有没有渲染出东西」。`sections` 外层用 `has_spec / has_trust` 只扫 `block.type`；而里面 `snippets/spec-bullets.liquid` 在三条值（切割宽度/导板、动力、驱动方式）全空时按 SDD §5.7「不留空壳」**整段不输出**，`trust_warranty`（warranty 空/0）与 `trust_item`（text 空）同样如此。于是 `<div class="main-product__specs">` 里只剩一个空的 `<div shopify_attributes>`，它自带的 `border-block-start: 1px + margin 1.25rem + padding 1.25rem` 就变成两条线之间的 40px 空白。
+- **修复**：`sections/main-product.liquid` 两段都改成 **先 capture 出内容、再按内容判定**：`{% capture specs_html %}` 包住 spec_bullets 渲染，`{% if specs_html contains 'class="spec-bullets"' %}` 才输出 `.main-product__specs`；信任组同理判 `class="trust-item"`。删掉 `has_spec / has_trust` 的预扫描循环（顺带消掉 UnusedAssign 隐患），trust 段缩进一并修正。判据说明与耦合点写进了代码注释（改 snippet 根类名必须同步这两处）。
+- **验证**：`ruby` + liquid 5.3.0 桩渲染改动片段四例——A 规格全空+信任有值（截图场景：无 specs 容器、有 trust 容器）、B 都有（两个容器都出）、C 都空（两个都不出）、D 只有 spec block（都不出）；反向断言 B 用例三条 bullet 一条不少（`spec-bullets__item` × 3）。`shopify theme check`：0 error / 1 warning（`OrphanedSnippet` 对 `snippets/image.liquid`，属已知误报）。
+- **预防**：① **装饰容器的显隐信号只能是"内容真的产生了"**，不能是"商家配过 block"。判据：容器只要带 `border` / divider / 额外上下 padding，而内容由 snippet 条件输出，就必须 capture 后按内容判——按 block 存在判等于在赌内容一定非空。② **capture 判空的坑**：capture 里若留着一个空的 `<div shopify_attributes>`，capture 本身就非空白，`!= blank` 永远成立；正确信号是「片段自己的根类名是否出现」，或干脆把空壳 `<div>` 也一起放进 capture 内部的条件分支里。③ **桩渲染要校语义差**（本轮踩到）：liquid gem 里 `x == blank` 对 `nil` **不成立**（Shopify 成立），第一次跑仿真把"缺值"当"有值"，四个用例全红、差点据此判断"修复无效"。凡是拿 gem 当 Shopify 跑的桩，`blank` → `nil` 必须显式替换，且用例里的"空"一律用缺失键表达，别用 `''`。
+- **附带更正**：本文件此前出现两条 `### BUG-083`（「加购抽屉先闪空态」与「只抽一个文件就说包内无注释」），后者已就地更正为 **BUG-084**，编号接续。
 
 ---
 

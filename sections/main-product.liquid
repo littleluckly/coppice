@@ -659,9 +659,17 @@
             {%- endif -%}
 
           {%- when 'compare' -%}
-            <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>
+            {%- comment -%}
+              BUG-085 同族：`compare-button` 在 `spec.compare_group` 为空或该商品被
+              `compare_hidden` 时整块不输出，容器照旧渲染会白留 0.75rem 间隙
+              （无边框，比规格那处轻，但同属空壳）。同样按内容判定。
+            {%- endcomment -%}
+            {%- capture compare_html -%}
               {% render 'compare-button', product: product %}
-            </div>
+            {%- endcapture -%}
+            {%- if compare_html contains 'class="product-compare"' -%}
+              <div class="main-product__block main-product__block--compare" {{ block.shopify_attributes }}>{{ compare_html }}</div>
+            {%- endif -%}
 
           {%- when '@app' -%}
             {%- comment -%}
@@ -687,68 +695,70 @@
         购买区下半部）。spec_bullets 的 shopify_attributes 只在下面渲染一次
         （主循环里已 continue 跳过）。
       {%- endcomment -%}
-      {%- assign has_spec = false -%}
-      {%- assign has_trust = false -%}
-      {%- for block in section.blocks -%}
-        {%- if block.type == 'spec_bullets' -%}
-          {%- assign has_spec = true -%}
-        {%- elsif block.type == 'trust_warranty' or block.type == 'trust_item' -%}
-          {%- assign has_trust = true -%}
-        {%- endif -%}
-      {%- endfor -%}
+      {%- comment -%}
+        BUG-085（2026-11-20 刘工截图）：容器**不能按「block 存在」判定**。spec_bullets
+        三条值全空、trust 项 warranty / text 为空时，片段自己整段不输出（SDD §5.7
+        不留空壳），而原来的 `has_spec / has_trust` 只看 `block.type` ⇒ 容器照旧渲染，
+        产品页出现「两条顶线夹一段空白」（配件类商品 metafield 全空时必现）。
 
-      {%- if has_spec -%}
-        <div class="main-product__specs">
-          {%- for block in section.blocks -%}
-            {%- if block.type == 'spec_bullets' -%}
-              <div {{ block.shopify_attributes }}>
-                {% render 'spec-bullets', product: product %}
-              </div>
-            {%- endif -%}
-          {%- endfor -%}
-        </div>
+        改为先 capture 出内容、再按内容判定。判定信号用「输出里是否有片段自己的根类名」：
+        capture 里即便片段什么都没渲染，也还留着一个空的 `<div shopify_attributes>`，
+        所以不能拿 capture 本身非空当判据。
+        耦合点（改 snippet 时必同步）：`spec-bullets` 的根 `<ul class="spec-bullets">`
+        与信任项的 `<div class="trust-item">`。
+      {%- endcomment -%}
+      {%- capture specs_html -%}
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'spec_bullets' -%}
+            <div {{ block.shopify_attributes }}>{% render 'spec-bullets', product: product %}</div>
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endcapture -%}
+      {%- if specs_html contains 'class="spec-bullets"' -%}
+        <div class="main-product__specs">{{ specs_html }}</div>
       {%- endif -%}
 
-      {%- if has_trust -%}
-        <div class="main-product__trust">
-          {%- for block in section.blocks -%}
-            {%- if block.type == 'trust_warranty' -%}
-              {%- assign warranty = product.metafields.spec.warranty_months.value -%}
-              {%- if warranty != blank and warranty != 0 -%}
-                <div class="trust-item" {{ block.shopify_attributes }}>
-                  <span class="trust-item__icon" aria-hidden="true">
-                    {{- 'icon-warranty.svg' | inline_asset_content -}}
-                  </span>
-                  <span class="trust-item__text">
-                    {%- assign warranty_rest = warranty | modulo: 12 -%}
-                    {%- if warranty_rest == 0 -%}
-                      {%- assign warranty_years = warranty | divided_by: 12 -%}
-                      {{- 'products.product.warranty_years' | t: years: warranty_years -}}
-                    {%- else -%}
-                      {{- 'products.product.warranty_months' | t: months: warranty -}}
-                    {%- endif -%}
-                  </span>
-                </div>
-              {%- endif -%}
-            {%- elsif block.type == 'trust_item' -%}
-              {%- if block.settings.text != blank -%}
-                <div class="trust-item" {{ block.shopify_attributes }}>
-                  <span class="trust-item__icon" aria-hidden="true">
-                    {%- case block.settings.icon -%}
-                      {%- when 'shipping' -%}
-                        {{- 'icon-truck.svg' | inline_asset_content -}}
-                      {%- when 'returns' -%}
-                        {{- 'icon-return.svg' | inline_asset_content -}}
-                      {%- else -%}
-                        {{- 'icon-warranty.svg' | inline_asset_content -}}
-                    {%- endcase -%}
-                  </span>
-                  <span class="trust-item__text">{{ block.settings.text | escape }}</span>
-                </div>
-              {%- endif -%}
+      {%- capture trust_html -%}
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'trust_warranty' -%}
+            {%- assign warranty = product.metafields.spec.warranty_months.value -%}
+            {%- if warranty != blank and warranty != 0 -%}
+              <div class="trust-item" {{ block.shopify_attributes }}>
+                <span class="trust-item__icon" aria-hidden="true">
+                  {{- 'icon-warranty.svg' | inline_asset_content -}}
+                </span>
+                <span class="trust-item__text">
+                  {%- assign warranty_rest = warranty | modulo: 12 -%}
+                  {%- if warranty_rest == 0 -%}
+                    {%- assign warranty_years = warranty | divided_by: 12 -%}
+                    {{- 'products.product.warranty_years' | t: years: warranty_years -}}
+                  {%- else -%}
+                    {{- 'products.product.warranty_months' | t: months: warranty -}}
+                  {%- endif -%}
+                </span>
+              </div>
             {%- endif -%}
-          {%- endfor -%}
-        </div>
+          {%- elsif block.type == 'trust_item' -%}
+            {%- if block.settings.text != blank -%}
+              <div class="trust-item" {{ block.shopify_attributes }}>
+                <span class="trust-item__icon" aria-hidden="true">
+                  {%- case block.settings.icon -%}
+                    {%- when 'shipping' -%}
+                      {{- 'icon-truck.svg' | inline_asset_content -}}
+                    {%- when 'returns' -%}
+                      {{- 'icon-return.svg' | inline_asset_content -}}
+                    {%- else -%}
+                      {{- 'icon-warranty.svg' | inline_asset_content -}}
+                  {%- endcase -%}
+                </span>
+                <span class="trust-item__text">{{ block.settings.text | escape }}</span>
+              </div>
+            {%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endcapture -%}
+      {%- if trust_html contains 'class="trust-item"' -%}
+        <div class="main-product__trust">{{ trust_html }}</div>
       {%- endif -%}
     </div>
   </div>
