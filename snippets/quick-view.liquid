@@ -37,14 +37,23 @@
 
   **买盒内容（2026-11-21 刘工：向产品页看齐，别再是"空壳"）**：
   价格三件套 + 单位价 → 变体胶囊 → 数量 + 加购 → **加速结账**（Shop Pay）→
-  **分期**（Shop Pay Installments）→ **三条决策参数**（spec-bullets）。
-  后三项都是平台能力或产品级数据，不依赖 main-product 的 section 设置/blocks，
-  所以卡片 snippet 里也能安全渲染；空内容一律在 Liquid 侧挡掉（见下方判空注释）。
+  **分期**（Shop Pay Installments）→ **三条决策参数**（spec-bullets）→ **信任徽标**
+  （`snippets/quick-view-trust.liquid`：保修读 `spec.warranty_months`，两条政策文案
+  读主题设置 `settings.qv_trust_1..3`）。除政策文案外都是平台能力或产品级数据，
+  不依赖 main-product 的 section 设置/blocks，所以卡片 snippet 里也能安全渲染；
+  空内容一律在 Liquid 侧挡掉（见下方判空注释）。
+
+  **滚动归属（2026-11-21 刘工）**：**桌面只有右列滚** —— 画廊钉在原位，买盒长了
+  只出右列自己的滚动条；手机上整体一起滚（面板只有一列，拆开滚反而难用）。
+  实现见 product-card.css 的桌面媒体查询：body `overflow: hidden` +
+  `grid-template-rows: minmax(0, 1fr)` + `.quick-view__info { overflow-y: auto }`，
+  底部那 4.75rem 空白从 body 移交到两列各自身上（谁滚谁留），
+  否则滚动内容会停在固定条上方、毛玻璃背后没东西可糊。
 
   **仍然不含（有意，逐条说清原因）**：
   - 纵向描述：刘工 2026-11-20 的口径是"详情不展示"，摘要属于详情那一屏；
-  - 信任行 / 对比入口：**是 section blocks / 卡片上已有的东西** —— 卡片 snippet
-    拿不到商家的 block 配置，硬写一段固定承诺文案等于伪造；
+  - 对比入口：对比是**产品级**、且入口在卡片上已有；弹窗里刚选了变体再去点，
+    等于暗示"比的是这个变体"，是错误预期（详见 SDD §5.4）；
   - 自提（Pickup Availability）：组件切变体时要靠 `/products/x?section_id=<产品页 section id>`
     重取，而弹窗是从集合页的卡片渲染的，**拿不到那个 id**，初帧之后就会变陈旧；
   - 订阅计划：有 selling plan 的商品干脆不给弹窗（见上方第 3 层条件）。
