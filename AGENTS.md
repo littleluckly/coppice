@@ -28,6 +28,7 @@ python3 tools/check-locale-keys.py    # 校验 t: 翻译键在两个 locale 文�
 python3 tools/check-tag-balance.py   # 校验 HTML 标签配对（theme check 的本地补充）
 tools/package-theme.sh               # 一键出包：从 HEAD 取文件→剥注释→打包→整包校验（不碰工作区）
 tools/package-theme.sh --dry-run     # 只看会删多少注释
+tools/package-theme.sh --deploy      # 出包后把包内容推到 benchmark 店的 live 主题（保留店铺配置）
 python3 tools/verify-package.py <zip> # 单独校验一个包：七类注释残留 + 不该进包的文件
 python3 tools/check-focal-points.py  # 校验图片焦点（G-05）生效条件：cover 图必须走 image_tag、<picture> 要交代移动图焦点、禁止 image_url 传 crop
 python3 tools/split-facets-css.py    # 重抽筛选组件样式（改了 collection 里的 .facets__* 之后必跑）
