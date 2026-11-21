@@ -1,20 +1,24 @@
 /**
  * quick-view — 商品卡「Choose options」快速查看弹窗（2026-11-20 刘工）。
  *
- * 边界：本文件只管「开合 + 变体联动 + 缩略图切图 + 加购后收面板」，
- * **不实现加购提交**——提交归 product-form.js 的 <product-form>（含 BUG-083 的
- * cart:add-failed 收口、cart:added / cart:updated 事件约定）。所以消费卡片的
- * section 必须同时引入 product-form.js，否则表单会退化成原生 POST（不会坏，
- * 只是整页跳走）。
- *
- * 金额一律来自 Liquid 预格式化的 data-*（data-price / data-compare / data-unit），
- * 本文件只做替换，不拼货币符号与千分位——多货币市场由平台决定格式。
+ * 边界：本文件只管「开合 + 缩略图 / 变体图切换 + 加购后收面板」。
+ * **变体联动不在这里**——选项渲染由 snippets/variant-picker.liquid 出，
+ * 选中后改价格 / 划线价 / 折扣 / 单位价 / 按钮态 / 隐藏 id 全归 product-form.js
+ * 的 <variant-picker>（2026-11-21 抽取，与产品页共用一份）。本文件只接它的
+ * `variant:change` 事件，把「变体自带图」换成主图（弹窗的图库只有一张主图，
+ * 不是 product-gallery，所以这一小段仍归宿主）。
+ * 加购提交同理归 <product-form>（含 BUG-083 的 cart:add-failed 收口、
+ * cart:added / cart:updated 事件约定）。所以消费卡片的 section 必须同时引入
+ * product-form.js，否则表单会退化成原生 POST（不会坏，只是整页跳走）。
  *
  * 开合交给 <bottom-sheet>（与购物车抽屉同一套：Esc、遮罩、滑入滑出、焦点归还）。
  * 它没升级（脚本缺失 / 顺序意外）时退回原生 showModal()/close()，功能不丢。
  *
  * 事件：
  *   - 入口 <a> 点击 → preventDefault → 开面板；面板不存在时什么都不做，链接照常跳转
+ *   - 收到 variant:change（来自 <variant-picker>，document 级）→ 若实例令牌对得上，
+ *     按 mediaId 找对应缩略图并换图；面板没打开时一律忽略（否则首屏直出的主图
+ *     会被"首次对齐"那次事件换成变体图，闪一下）
  *   - 提交后按结果分流：cart:updated → 收面板；cart:add-failed → **不收**，
  *     让 product-form 写进 data-form-status 的错误文案留在眼前（抽屉自己退出骨架）
  *
@@ -37,19 +41,11 @@ class QuickView extends HTMLElement {
     if (!this._dialog) return;
 
     this._sheet = this.querySelector('bottom-sheet');
-    this._select = this._dialog.querySelector('[data-quick-view-variant]');
-    this._priceEl = this._dialog.querySelector('[data-quick-view-price]');
-    this._compareEl = this._dialog.querySelector('[data-quick-view-compare]');
-    this._saveEl = this._dialog.querySelector('[data-quick-view-save]');
-    this._unitEl = this._dialog.querySelector('[data-quick-view-unit]');
-    this._button = this._dialog.querySelector('[data-add-button]');
     this._stage = this._dialog.querySelector('[data-quick-view-stage]');
-    this._saveTemplate = this._dialog.dataset.saveTemplate || '';
-    this._unitTemplate = this._dialog.dataset.unitTemplate || '';
 
     this._dialog.addEventListener('click', this._onDialogClick, { signal });
-    this._dialog.addEventListener('change', this._onChange, { signal });
     this._dialog.addEventListener('close', this._onDialogClose, { signal });
+    document.addEventListener('variant:change', this._onVariantChange, { signal });
 
     const form = this._dialog.querySelector('form');
     if (form) form.addEventListener('submit', this._onSubmit, { signal });
