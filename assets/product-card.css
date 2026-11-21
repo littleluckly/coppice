@@ -527,8 +527,8 @@ quick-view {
   flex: 1 1 auto;
   min-block-size: 0;
   padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
-  /* 底部固定条是绝对定位、盖在 body 之上（毛玻璃要内容从它背后滑过），
-     所以这里必须留出等高的空白，否则最后一行内容永远被压在条下面。 */
+  /* 底部固定条是绝对定位、盖在 body 之上**且不透明**，
+     所以这里必须留出等高的空白，否则最后一行内容永远被压在条下面看不见。 */
   padding-block-end: calc(4.75rem + env(safe-area-inset-bottom));
   overflow-y: auto;
 }
@@ -723,9 +723,11 @@ quick-view {
 
 /* ===== 底部固定条：View full details（2026-11-21 刘工，参考稿）=====
    绝对定位贴在 dialog 底边、body 之外：买盒内容再长也不动它。
-   背景半透明 + backdrop-filter，滚动内容从它背后滑过被糊掉 ——
-   这就是"毛玻璃"成立的前提（条如果放在滚动容器里，背后没有内容可糊）。
-   不支持 backdrop-filter 的浏览器退化为实底（@supports 兜底），不出现半透明糊字。 */
+   **实底、无毛玻璃**（2026-11-21 刘工第二次口径，推翻先前的 backdrop-filter）：
+   半透明会把底下滚过的小字透成一层脏影，压着正文读起来更费力；
+   实底 + 一条顶线更干净，也和「固定条」这个角色的语义一致。
+   由于背景不透明，滚动内容滑到条下面就会被完全挡住 —— 所以滚动容器自己的
+   底部空白（4.75rem）是**必须**的，不是装饰（谁滚谁留，见桌面媒体查询）。 */
 .quick-view__foot {
   position: absolute;
   inset-inline: 0;
@@ -738,17 +740,11 @@ quick-view {
   min-block-size: 56px;
   padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
   border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
-  background-color: color-mix(in srgb, var(--color-background) 72%, transparent);
-  backdrop-filter: blur(14px) saturate(160%);
+  background-color: var(--color-background);
   color: var(--color-foreground);
   font-size: 0.95rem;
   font-weight: 600;
   text-decoration: none;
-}
-@supports not (backdrop-filter: blur(1px)) {
-  .quick-view__foot {
-    background-color: var(--color-background);
-  }
 }
 .quick-view__foot:hover {
   color: var(--color-brand);
@@ -783,8 +779,8 @@ quick-view {
      做法：外层不滚（overflow: hidden）+ 行高锁成 1fr（不然行会被
      max-content 撑开、item 就没有可滚的余地）+ 右列 min-block-size: 0。
      底部那 4.75rem 的空白从 body 移交到两列各自身上：footer 是 dialog 层的
-     绝对定位、横跨整宽，谁滚谁就得自己留出这块，内容才会从 footer 背后滑过
-     （毛玻璃成立的前提，见 .quick-view__foot）。 */
+     绝对定位、横跨整宽**且不透明**，谁滚谁就得自己留出这块，
+     否则滚到底时最后一行会被它整个吃掉（见 .quick-view__foot）。 */
   .quick-view__body {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
