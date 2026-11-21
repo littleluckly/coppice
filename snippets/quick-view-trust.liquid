@@ -9,6 +9,10 @@
     · 文本项（Free shipping / 30-day returns 这类店铺政策）→ **主题设置
       `settings.qv_trust_1..3`**（外观 → 快速查看）。空白即不渲染。
 
+  **条数（最容易误会的一点）**：弹窗最多 **4 条** = 1 条自动保修（metafield）
+  + 下面 3 行手填文本。设置面板里只有 3 个文本行，因为保修不在那 3 行里；
+  不想要自动保修就关 `settings.qv_show_warranty`。
+
   **代价（说清楚）**：店铺政策文案现在有两个填写入口（产品页 block + 主题设置）。
   想两边一致就得填两遍；不填的那边不显示。要单一数据源就得把产品页的 block 也改成
   读设置 —— 那会让"逐产品换信任项"的灵活度消失，没做。
@@ -24,7 +28,13 @@
   assign warranty = product.metafields.spec.warranty_months.value
 -%}
 
-{%- if warranty != blank and warranty != 0 -%}
+{%- comment -%}
+  保修徽标是**自动项**，不在 `qv_trust_1..3` 那三行里 —— 商家看到"设了 3 行却显示 4 条"
+  就是它（2026-11-21 刘工问过）。因此单独给了开关 `settings.qv_show_warranty`：
+  不想要自动项时关掉，弹窗里就只剩自己填的那几行。
+  数据仍来自产品 metafield（与产品页同源），关开关不会影响产品页。
+{%- endcomment -%}
+{%- if settings.qv_show_warranty and warranty != blank and warranty != 0 -%}
   <div class="trust-item">
     <span class="trust-item__icon" aria-hidden="true">
       {{- 'icon-warranty.svg' | inline_asset_content -}}

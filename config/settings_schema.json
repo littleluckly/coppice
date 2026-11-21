@@ -206,6 +206,7 @@
       { "type": "checkbox", "id": "qv_show_trust", "label": "t:general.quick_view_show_trust", "default": true },
       { "type": "header", "content": "t:general.quick_view_trust_header" },
       { "type": "paragraph", "content": "t:general.quick_view_trust_info" },
+      { "type": "checkbox", "id": "qv_show_warranty", "label": "t:general.quick_view_show_warranty", "default": true },
       {
         "type": "select",
         "id": "qv_trust_1_icon",
