@@ -168,6 +168,19 @@
 > · 原生 `<a href="#…">` + CSS `scroll-behavior` / `scroll-padding-top`（偏移由脚本实测页头写入），
 >   `aria-current="location"` 标当前分区；内容异步撑高由 ResizeObserver 重算
 > 落点 `id` 不变：`#product-overview` / `#product-specs` / `#product-supplies`。
+>
+> **2026-11-20 刘工：滚动时额外展开条目名称**。滚动期间脚本给宿主打 `data-scrolling`，
+> 三条标签一起浮出（不用先去悬停那 24px 宽的窄缝才知道"这条通向哪"）；停止滚动
+> **300ms** 后摘掉属性，标签淡回。三条口径：
+> · **只认 `scroll` 事件**——`resize` 与 `ResizeObserver`（图片加载完、推荐区异步撑高、
+>   编辑器改宽度）都不算"用户在滚"，否则标签会无故闪一下；
+> · 标签本来就常驻 DOM（默认 `opacity: 0`），只切属性、不碰 aria 与 DOM 结构 ⇒
+>   无障碍名称始终可读，也**零布局位移**（标签是绝对定位的浮层）；
+> · 悬停/聚焦的浮出不变，与新规则合并成一组成员选择器，两条路径互不覆盖。
+> 另修一处泄漏：滚动中被编辑器重挂载时 `data-scrolling` 会留在宿主上，重连后标签
+> 永久展开——`disconnectedCallback` 里连定时器一起清掉。
+> 核对：无头 Chrome 桩 9 条断言全过（展开/300ms 收起/连续滚动不中断/resize 不触发/
+> hover 规则仍在/零 CLS/scrollspy 未破/重挂载不残留）；`theme check` 0 error。
 
 #### T-1.3 `snippets/spec-bullets.liquid` — 买盒三条决策参数（拍板 10）🔄 代码完成 2026-10-28
 
@@ -422,6 +435,7 @@
 
 | 日期 | 版本 | 变更 |
 | --- | --- | --- |
+| 2026-11-20 | v1.15 | **右侧悬浮锚点导航：滚动时展开条目名称**（刘工）。`assets/product-anchor-nav.js` 新增 `_onScroll()`：滚动期间给宿主打 `data-scrolling`，停止滚动 **300ms**（`SCROLL_IDLE_MS`）后摘掉；`sections/product-anchor-nav.liquid` 把 `product-anchor-nav[data-scrolling] .product-anchor-nav__label` 并进既有的 `:hover`/`:focus-visible` 成员选择器。**只认 `scroll`**，resize / ResizeObserver 不触发（避免图片加载与推荐区撑高让标签闪一下）；只切属性、标签常驻 DOM，无障碍名称不受影响、零 CLS。顺手堵一处泄漏：滚动中被重挂载时属性会残留导致标签永久展开，`disconnectedCallback` 里随定时器一并清除。桩测 9 条断言全过，`theme check` 0 error / 1 既有 warning（`image.liquid` OrphanedSnippet） |
 | 2026-10-28 | v1.0 | 首版。基于产品页效果图 v2 + Grill Me 12 问裁定；按刘工要求**不含人日估算与累加链**。新增 §2 差异表、§3 强制项覆盖表、§5 风险表、§6 代价说明 |
 | 2026-10-28 | v1.1 | 补两条裁定：① 折扣 = MSRP × 0.95 **取整到整数美元**，21 款主机实算全部正好 5%（明细表进 T-0.2）；11 款配件取整后有 4 款显示 4%/6%/7% → **三选一待拍**（推荐 A：配件不打折）。② judge.me 已在后台卸载 → T-0.3 去掉"先卸载"前置，改为直接改文件 + 复核；风险 4 降级、新增风险 9（列名未经官方模板逐字校验）与风险 10（取整误差） |
 | 2026-10-28 | v1.2 | ① 配件定 A 方案（不打折），T-0.2 三选一结案。② 官方模板入仓 `dev-docs/mower-import/product_template.csv`，脚本 `TEMPLATE_PATH` 改指向它、逐字校验常态生效；列名确认 `Compare-at price`。③ 脚本已改并重生成 CSV（52 列 / 32 款 / 53 行 / 0 错 0 警），定价走 `Decimal + ROUND_HALF_UP`，`validate()` 三条断言经反向测试确认会拦。④ 风险 9/10 关闭，新增风险 11（重导覆盖库存与图片）。导入动作仍待刘工执行 |

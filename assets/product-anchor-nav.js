@@ -1,7 +1,7 @@
 /**
  * product-anchor-nav — 产品页右侧悬浮锚点导航的状态层（2026-11-02 刘工）。
  *
- * 只做三件事，点击与滚动都交给浏览器：
+ * 只做四件事，点击与滚动都交给浏览器：
  *   1. **目标不存在就摘链接**：商家删掉 Overview / Specifications / Supplies
  *      某个 section，或商品没有耗材导致耗材区不输出时，对应 anchor 没有落点。
  *      有效目标剩不到 2 项 → 整条导航不出现（一项的"导航"没有意义）。
@@ -10,6 +10,12 @@
  *      只在 connectedCallback 里量一次。
  *   3. **滚动时标当前分区**：给对应链接打 `aria-current="location"`（样式在
  *      section 的样式块里）。只在索引变化时写 DOM，避免每帧重设属性。
+ *   4. **滚动时展开条目名称**（2026-11-20）：滚动期间给宿主打 `data-scrolling`，
+ *      CSS 让三条标签一起浮出；停止滚动 300ms 后摘掉。**只认 scroll 事件**，
+ *      resize / ResizeObserver 不算——图片加载完、推荐区撑高、编辑器改宽度都会
+ *      触发重算，若把它们也算作"在滚"，标签会无缘无故闪一下。
+ *      标签本来就常驻 DOM（默认 `opacity: 0`），这里只切一个属性，
+ *      不动 aria、不动 DOM 结构，无障碍名称始终可读。
  *
  * 为什么不在脚本里接管点击：原生 `<a href="#id">` 自带 hash 更新、焦点移交和
  * 无 JS 降级；平滑滚动、吸顶页头避让分别由 CSS 的 `scroll-behavior` 与
@@ -21,6 +27,10 @@
  * 无需缓存位置，窗口缩放/字体加载后自动正确。
  */
 class ProductAnchorNav extends HTMLElement {
+  /* 停止滚动多久收起标签。300ms：短到不会一直糊在内容上，长到连续两三次
+     滚轮一停一顿也接得上（每顿至少间隔一个渲染帧以上）。 */
+  static SCROLL_IDLE_MS = 300;
+
   connectedCallback() {
     /* Section Rendering / 编辑器重挂载会再进一次：重复绑定会让滚动回调翻倍 */
     if (this._started) return;
@@ -45,11 +55,12 @@ class ProductAnchorNav extends HTMLElement {
 
     this._activeIndex = -1;
     this._offset = -1;
+    this._scrollIdleTimer = 0;
 
     this._controller = new AbortController();
     const { signal } = this._controller;
 
-    window.addEventListener('scroll', () => this._queue(), { passive: true, signal });
+    window.addEventListener('scroll', () => this._onScroll(), { passive: true, signal });
     window.addEventListener('resize', () => this._queue(), { passive: true, signal });
     window.addEventListener('load', () => this._queue(), { signal });
 
@@ -71,9 +82,31 @@ class ProductAnchorNav extends HTMLElement {
       this._observer.disconnect();
       this._observer = null;
     }
+    clearTimeout(this._scrollIdleTimer);
+    this._scrollIdleTimer = 0;
+    /* 滚动中被重挂载（编辑器重渲染 section）时属性会留在宿主上 ⇒ 重新连上后
+       标签永久展开，直到下一次滚动才收。断开时一并摘掉。 */
+    this.removeAttribute('data-scrolling');
     cancelAnimationFrame(this._raf);
     this._raf = 0;
     this._started = false;
+  }
+
+  /* 滚动中展开条目名称，停下 300ms 后收起。
+     属性只在"从无到有"那一瞬写一次，滚动期间每帧重设属性会白白触发样式重算。 */
+  _onScroll() {
+    if (!this.hasAttribute('data-scrolling')) {
+      this.setAttribute('data-scrolling', '');
+    }
+    /* 连续滚动时反复 clearTimeout/setTimeout：一次滚动突发只留一个定时器，
+       代价可以忽略，比记时间戳自检好读得多。 */
+    clearTimeout(this._scrollIdleTimer);
+    this._scrollIdleTimer = setTimeout(() => {
+      this._scrollIdleTimer = 0;
+      this.removeAttribute('data-scrolling');
+    }, ProductAnchorNav.SCROLL_IDLE_MS);
+
+    this._queue();
   }
 
   /* 滚动 / 尺寸变化按帧合并：Safari 上一帧可能派发多次 scroll */
