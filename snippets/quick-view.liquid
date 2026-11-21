@@ -109,6 +109,11 @@
 
     {%- if qv_can_open -%}
       {%- comment -%}
+        `settings` 是显式往下传的：信任徽标的文案来自主题设置（settings.qv_trust_*）。
+        平台侧 snippet 本来就能读到全局 settings，这里写明依赖是为了桩（liquid gem 的
+        render 是隔离作用域，不传就是 nil）——顺便让"这段依赖主题设置"变得可见。
+      {%- endcomment -%}
+      {%- comment -%}
         开合与 Esc 交给 <bottom-sheet>（与购物车抽屉/筛选面板同一套）：手机上滑入，
         桌面端 media 不匹配 → 直开直关（居中弹窗不需要位移动效）。
         它 display:contents，不会成为卡片这个 flex 列的第 N 个 item。

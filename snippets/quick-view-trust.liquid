@@ -44,7 +44,12 @@
   {%- assign icon_key = 'qv_trust_' | append: i | append: '_icon' -%}
   {%- assign text_key = 'qv_trust_' | append: i | append: '_text' -%}
   {%- assign trust_text = settings[text_key] -%}
-  {%- if trust_text != blank -%}
+  {%- comment -%}
+    判空用 `!= empty and != nil`：空串在 Liquid 里为真，只写 `!= blank` 时
+    "商家把第 3 条留空"会在平台上正确跳过、在桩里却渲染出一个空徽标
+    （same trap as BUG-092；平台与桩的 blank 语义不同）。
+  {%- endcomment -%}
+  {%- if trust_text != empty and trust_text != nil -%}
     <div class="trust-item">
       <span class="trust-item__icon" aria-hidden="true">
         {%- case settings[icon_key] -%}

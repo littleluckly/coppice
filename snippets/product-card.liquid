@@ -318,7 +318,7 @@
     {%- if quick_add -%}
       {%- if product.variants.size > 1 -%}
         {%- if product.available -%}
-          {%- render 'quick-view', product: product -%}
+          {%- render 'quick-view', product: product, settings: settings -%}
         {%- else -%}
           <button type="button" class="product-card__add btn-solid" disabled>
             {{- 'products.product_card.sold_out' | t -}}
