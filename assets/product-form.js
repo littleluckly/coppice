@@ -1,5 +1,10 @@
 /**
- * product-form — 产品页买盒三件：变体选择、数量步进、加购提交（task-product T-2.1）。
+ * product-form — 买盒三件：变体选择、数量步进、加购提交（task-product T-2.1）。
+ *
+ * **两个宿主**（2026-11-21 起）：产品页买盒（sections/main-product.liquid）与商品卡
+ * 快速查看弹窗（snippets/quick-view.liquid）。选择器标记在
+ * snippets/variant-picker.liquid；本文件靠 `closest('[data-variant-scope]')` 找作用域，
+ * 不认"哪个页面"——作用域里只要有那几个 data-* 钩子就工作（约定见 quick-view 的注释）。
  *
  * 三个 Custom Element 分居三职，互不越界：
  *   <variant-picker>  选变体 → 解析 variant → 回写隐藏 id / 价格 / 按钮态 → 派发 variant:change
