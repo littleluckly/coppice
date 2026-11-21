@@ -96,11 +96,19 @@
       相同（短价格仍同一行），塞不下才分行——宁可分行，不溢出、不裁切。
       折扣缺数据时只出现现价，不留空位、不显示 0%（AGENTS §6）。
       百分比与 PDP 同一算法（main-product.liquid 顶部同款），两处不会漂。
+
+      变体价差（2026-11-21，演示店开始有价差变体）：`product.price` 是**全变体最低价**，
+      而 `product.compare_at_price` 取的是首个变体 —— 两者不是同一个变体时，
+      相减算出来的百分比是假的（实测：基准款 5% 会被算成 13%）。
+      所以 `product.price_varies` 为真时：现价前加 "From"（口径同预测搜索），
+      **不渲染划线价与折扣胶囊** —— 对不上任何一个具体变体的百分比，宁可不出。
+      变体价差只在产品页/快速查看里逐变体精确显示。
     {%- endcomment -%}
     {%- liquid
+      assign card_price_varies = product.price_varies
       assign card_has_discount = false
       assign card_save_percent = 0
-      if product.compare_at_price > product.price
+      if card_price_varies != true and product.compare_at_price > product.price
         assign card_has_discount = true
         assign card_price_diff = product.compare_at_price | minus: product.price
         assign card_save_percent = card_price_diff | times: 100.0 | divided_by: product.compare_at_price | round
@@ -108,6 +116,9 @@
     -%}
     <p class="product-card__price">
       <span class="product-card__price-main">
+        {%- if card_price_varies -%}
+          <span class="product-card__price-from">{{ 'products.product.from_price_html' | t }}</span>
+        {%- endif -%}
         <span class="product-card__price-current">{{ product.price | money }}</span>
         {%- if card_has_discount -%}
           <s class="product-card__price-compare">{{ product.compare_at_price | money }}</s>

@@ -108,6 +108,15 @@
   color: var(--color-brand);
   font-variant-numeric: tabular-nums;
 }
+/* "From" 前缀（2026-11-21）：变体有价差时，卡面现价是全变体最低价，不加前缀
+   会被读成"这款就卖这个价"。字重与字号都压一档，只做限定词不抢价格。
+   颜色走 foreground-muted（70% = 4.95:1，AA 达标）。 */
+.product-card__price-from {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-foreground-muted);
+  white-space: nowrap;
+}
 .product-card__price-compare {
   font-weight: 400;
   font-size: 0.78rem;
