@@ -1235,3 +1235,33 @@ bottom-sheet > dialog.is-close-anim {
   color: var(--color-foreground);
   font-weight: 500;
 }
+
+/* ===================================================================
+   加速结账按钮（Buy it now，`accelerated-checkout`，2026-11-21 从 main-product
+   的样式块迁到全局）
+   为什么放全局：同一组按钮出现在两处 —— 产品页买盒（.product-form__accelerated）
+   与商品卡快速查看弹窗（.quick-view__accelerated）；两处容器都带
+   `accelerated-checkout` 类，样式只写这一份。
+
+   平台事实（shopify.dev / Accelerated checkout）：按钮渲染在自定义元素
+   `shopify-accelerated-checkout` 的 **closed shadow DOM** 里，针对内部类名与结构
+   的样式不生效。官方开放的只有高度 / 圆角 / 投影 / 骨架色 / 购物车布局，
+   **没有背景色、没有文字色** —— 那两项只能在主题设置 Colors 里改。
+   所以分两路：① 圆角 + 内描边走官方自定义属性（box-shadow 冒充 border）；
+   ② 去底色用旧版类名兜底，已升级 shadow DOM 的实现会静默忽略。
+   代价：平台若已升级，按钮仍是实心底，只有形状变胶囊。
+   =================================================================== */
+.accelerated-checkout shopify-accelerated-checkout {
+  --shopify-accelerated-checkout-button-border-radius: 999px;
+  --shopify-accelerated-checkout-button-block-size: 44px;
+  --shopify-accelerated-checkout-button-box-shadow: inset 0 0 0 1.5px var(--color-brand);
+}
+.accelerated-checkout .shopify-payment-button__button--unbranded {
+  border-radius: 999px;
+  background-color: transparent;
+  color: var(--color-brand);
+  box-shadow: inset 0 0 0 1.5px var(--color-brand);
+}
+.accelerated-checkout .shopify-payment-button__button--unbranded:hover:not([disabled]) {
+  background-color: color-mix(in srgb, var(--color-brand) 7%, transparent);
+}

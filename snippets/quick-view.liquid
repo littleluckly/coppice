@@ -316,7 +316,7 @@
                   {%- endcomment -%}
                   {%- capture qv_accelerated -%}{{ form | payment_button }}{%- endcapture -%}
                   {%- if qv_accelerated != empty and qv_accelerated != nil -%}
-                    <div class="quick-view__accelerated">{{ qv_accelerated }}</div>
+                    <div class="quick-view__accelerated accelerated-checkout">{{ qv_accelerated }}</div>
                   {%- endif -%}
                   {%- capture qv_terms -%}{{ form | payment_terms }}{%- endcapture -%}
                   {%- if qv_terms != empty and qv_terms != nil -%}
