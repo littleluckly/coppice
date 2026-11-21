@@ -35,15 +35,19 @@ class VariantPicker extends HTMLElement {
     }
     if (!Array.isArray(this._variants) || this._variants.length === 0) return;
 
-    this._section = this.closest('.main-product');
-    if (!this._section) return;
+    /* 作用域：产品页是 <section class="main-product" data-variant-scope>，
+       商品卡快速查看是 <dialog class="quick-view" data-variant-scope> ——
+       两处用同一套元素约定（2026-11-21 抽取时定的），所以本组件不认识"页面"，
+       只认识"最近的作用域"。找不到就退化为不工作，不猜。 */
+    this._scope = this.closest('[data-variant-scope]');
+    if (!this._scope) return;
 
-    this._formInput = this._section.querySelector('[data-variant-input]');
-    this._priceEl = this._section.querySelector('[data-price]');
-    this._compareEl = this._section.querySelector('[data-compare-price]');
-    this._saveEl = this._section.querySelector('[data-save-badge]');
-    this._saveTemplate = this._section.dataset.saveTemplate || '';
-    this._button = this._section.querySelector('[data-add-button]');
+    this._formInput = this._scope.querySelector('[data-variant-input]');
+    this._priceEl = this._scope.querySelector('[data-price]');
+    this._compareEl = this._scope.querySelector('[data-compare-price]');
+    this._saveEl = this._scope.querySelector('[data-save-badge]');
+    this._saveTemplate = this.dataset.saveTemplate || this._scope.dataset.saveTemplate || '';
+    this._button = this._scope.querySelector('[data-add-button]');
 
     this._controller = new AbortController();
     this.addEventListener('change', this._onChange, { signal: this._controller.signal });
@@ -124,26 +128,31 @@ class VariantPicker extends HTMLElement {
           variantId: variant.id,
           mediaId: variant.mediaId,
           available: variant.available,
-          /* 带上所属 section：同页可能存在第二个产品块（编辑器里加了两个 main-product、
-             或快速查看预览），监听方据此丢弃别人的变体事件。2026-11-18 桩测发现。 */
-          sectionId: this._section ? this._section.dataset.sectionId : null,
+          /* 带上所属作用域：同页可能存在第二个产品块（编辑器里加了两个 main-product）
+             或一堆快速查看弹窗，监听方据此丢弃别人的变体事件。2026-11-18 桩测发现。
+             值就是作用域元素上的 data-section-id —— 产品页是 section.id，
+             弹窗是 product.id，只当不透明令牌用。 */
+          sectionId: this._scope.dataset.sectionId || null,
         },
       })
     );
   }
 
-  /** 单位计价：多变体价格时也要跟着变；原本没有这块就补一个，放在价格区后面 */
+  /** 单位计价：多变体价格时也要跟着变；原本没有这块就补一个，放在价格区后面。
+      新建时的类名取作用域上的 data-unit-class（产品页默认 main-product__unit-price，
+      快速查看是 quick-view__unit）—— 否则弹窗里会冒出一个只有产品页才有的类名，
+      样式不生效，等于一行裸文本。 */
   _syncUnitPrice(variant) {
-    let el = this._section.querySelector('[data-unit-price]');
+    let el = this._scope.querySelector('[data-unit-price]');
     if (!variant.unitPrice) {
       if (el) el.remove();
       return;
     }
     if (!el) {
       el = document.createElement('p');
-      el.className = 'main-product__unit-price';
+      el.className = this._scope.dataset.unitClass || 'main-product__unit-price';
       el.dataset.unitPrice = '';
-      const priceBlock = this._section.querySelector('.main-product__price');
+      const priceBlock = this._scope.querySelector('[data-price-block]');
       if (priceBlock && priceBlock.parentNode) {
         priceBlock.parentNode.insertBefore(el, priceBlock.nextSibling);
       }
