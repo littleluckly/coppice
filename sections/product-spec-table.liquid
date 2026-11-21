@@ -11,8 +11,11 @@
   两张表迟早对不上（这是本文件最重要的约束）。
 
   缺值规则与对比表相反：**该行不出现**（对比表要显示 —，因为表格行是固定的）。
-  `spec.spec_variance_note` 非空 → 标题行右侧出「Why specs can vary」提示
-  （`<details>`，天然无 JS 可展开）；整表无行 → section 不输出。
+  `spec.spec_variance_note` 非空 → 表格下方出一行灰色脚注（2026-11-21 刘工：
+  原先做在标题右侧的 `<details>` 折叠提示，summary 是 `display:inline-flex`
+  ⇒ 默认三角标记被吃掉、只剩一段悬空的绿色小字，展开时说明还吊在表格右上角外，
+  既不像链接也不像脚注。改用静态脚注：脚注本就是表格的附属文字，不需要交互，
+  也不需要 44px 触摸区）。整表无行 → section 不输出。
 
   表格样式（2026-10-29 刘工参考图）：圆角外框 + 隔行浅灰（斑马线），
   左 label 加粗深色 / 右 value 常规灰。`border-collapse: separate` 是刻意的——
@@ -67,15 +70,6 @@
   <section class="product-spec-table" id="product-specs" data-reveal>
     <div class="product-spec-table__head">
       <h2 class="product-spec-table__heading">{{ heading }}</h2>
-
-      {%- if variance_note != blank -%}
-        <details class="product-spec-table__note">
-          <summary class="product-spec-table__note-summary">
-            {{- 'sections.product_spec_table.variance_label' | t -}}
-          </summary>
-          <p class="product-spec-table__note-text">{{ variance_note | escape }}</p>
-        </details>
-      {%- endif -%}
     </div>
 
     <table class="product-spec-table__table">
@@ -84,6 +78,10 @@
         {{ table_rows }}
       </tbody>
     </table>
+
+    {%- if variance_note != blank -%}
+      <p class="product-spec-table__note">{{ variance_note | escape }}</p>
+    {%- endif -%}
   </section>
 {%- endif -%}
 
@@ -105,21 +103,15 @@
     font-weight: 500;
     line-height: 1.3;
   }
+  /* 变体差异说明：表格附属文字，静态即可（无折叠、无触摸区）。
+     文案本身就是一句人话（"Engine displacement varies by variant: …"），
+     不再加"Why specs can vary"前缀——那是折叠按钮的标签，平铺成脚注后是冗余。 */
   .product-spec-table__note {
+    margin: 0.65rem 0 0;
+    max-width: 72ch;
     font-size: 0.85rem;
-  }
-  .product-spec-table__note-summary {
-    cursor: pointer;
-    color: var(--color-brand);
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-  }
-  .product-spec-table__note-text {
-    margin: 0.35rem 0 0;
-    max-width: 42ch;
-    color: var(--color-foreground-muted);
     line-height: 1.55;
+    color: var(--color-foreground-muted);
   }
   .product-spec-table__table {
     width: 100%;

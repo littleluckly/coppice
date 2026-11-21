@@ -102,6 +102,31 @@ class QuickView extends HTMLElement {
     }
   };
 
+  /* ---- 加购结果 ---- */
+  /* 提交事件冒到 dialog 才标记（product-form 在前台先跑，它拦下默认提交并发请求）。
+     这个标记只用来回答一件事：后面那个 cart:updated 是不是"我这次提交"引起的。 */
+  _onSubmit = () => {
+    this._submitted = true;
+  };
+
+  /** 成功：收面板（购物车抽屉已经带着新数量开好了） */
+  _onCartUpdated = () => {
+    if (!this._submitted) return;
+    this._submitted = false;
+    this.close();
+  };
+
+  /** 失败：面板留着（product-form 把错误文案写进面板里的 [data-form-status]），
+      只把"等结果"的标记清掉 —— 免得之后别的 cart:updated（比如在抽屉里改数量）
+      把面板顺手收走。抽屉那边自己会退出骨架（BUG-083）。 */
+  _onCartFailed = () => {
+    this._submitted = false;
+  };
+
+  _onDialogClose = () => {
+    this._submitted = false;
+  };
+
   /** 变体切换：只负责"变体自带图 → 主图"。
       价格 / 划线价 / 折扣 / 单位价 / 按钮态全在 <variant-picker> 那边改完了，
       这里再动一遍就是两套逻辑（原来 select 版本正是这么漂的）。
