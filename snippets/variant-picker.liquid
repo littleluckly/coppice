@@ -16,6 +16,13 @@
   **数据岛**：变体 JSON 里都是 Liquid 侧格式化好的价格串（`money`），JS 只做替换
   ——货币符号、千分位、多货币市场全由平台决定，前端不自己拼。
 
+  **radio 必须始终有 form owner**（2026-11-21 桩测踩到）：同名 radio 的互斥组按
+  "同一棵 DOM 树 + 同一 name + **同一 form owner**" 划分。一旦输出 `form=""`
+  （指向不存在的 id），radio 就变成"无 form owner"，页面上所有同名 radio 落进
+  同一个组 —— 第二个商品的弹窗渲染后会把第一个商品的选中项顶掉（属性还在、
+  `checked` 已经是 false）。所以：产品页靠显式 `form_id`，弹窗靠"选择器在
+  `<form>` 内部"这个祖先关系，两者都必须成立，不能出现空 `form` 属性。
+
   @param {product} product - product 对象（必填）
   @param {string} form_id - radio 的 `form` 属性：产品页的选择器在 `<form>` **之外**，
     必须靠它才能随表单提交；留空则不加该属性，用于"选择器就在表单内部"的场景
@@ -54,7 +61,7 @@
                 class="product-variant__radio visually-hidden"
                 name="options[{{ option.name | escape }}]"
                 value="{{ value | escape }}"
-                {% if form_id != blank %}form="{{ form_id }}"{% endif %}
+                {% if form_id and form_id != '' %}form="{{ form_id }}"{% endif %}
                 data-option-position="{{ option.position }}"
                 {% if option.selected_value == value %}
                   checked
