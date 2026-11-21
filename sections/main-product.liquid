@@ -94,8 +94,14 @@
   ></script>
 {%- endif -%}
 
+{%- comment -%}
+  变体选择器的作用域锚点（2026-11-21）：<variant-picker> 用
+  `closest('[data-variant-scope]')` 找价格 / 划线价 / 折扣 / 按钮 / 单位价 / 隐藏 id 输入。
+  商品卡快速查看的 dialog 上也有同名属性 —— 两边共用 product-form.js 的同一段逻辑。
+{%- endcomment -%}
 <section
   class="main-product"
+  data-variant-scope
   data-section-id="{{ section.id }}"
   data-save-template="{{ 'products.product.save_percent' | t: percent: '[percent]' }}"
 >
@@ -415,7 +421,7 @@
         <div class="main-product__badges">{{ badges }}</div>
       {%- endif -%}
 
-      <div class="main-product__price">
+      <div class="main-product__price" data-price-block>
         <span class="main-product__price-current" data-price>{{ displayed_price | money }}</span>
         <s
           class="main-product__price-compare"
