@@ -447,6 +447,10 @@ quick-view {
   display: block;
 }
 .quick-view {
+  /* 底部固定条用绝对定位贴在 dialog 上（见 .quick-view__foot），
+     所以这里必须是定位上下文；overflow 裁掉内容在圆角外的溢出。 */
+  position: relative;
+  overflow: hidden;
   /* 手机：底部抽屉（宽度满屏 + 只圆上角）。
      max-width 必须显式覆盖：UA 对 dialog:modal 默认
      `max-width: calc((100% - 6px) - 2em)`，不覆盖时 width:100vw 会被钳窄。 */
@@ -519,6 +523,9 @@ quick-view {
   flex: 1 1 auto;
   min-block-size: 0;
   padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  /* 底部固定条是绝对定位、盖在 body 之上（毛玻璃要内容从它背后滑过），
+     所以这里必须留出等高的空白，否则最后一行内容永远被压在条下面。 */
+  padding-block-end: calc(4.75rem + env(safe-area-inset-bottom));
   overflow-y: auto;
 }
 
@@ -680,13 +687,65 @@ quick-view {
 .quick-view__status:empty {
   display: none;
 }
-.quick-view__details {
-  align-self: flex-start;
-  font-size: 0.85rem;
-  font-weight: 500;
+/* 加速结账 / 分期 / 参数行（2026-11-21 补齐买盒）：
+   三个容器都只在"平台真给出了内容"时渲染（Liquid 侧判空），所以这里只管间距，
+   不要给它们加 border —— 空壳判断一旦退化成按元素存在与否，就会留下空框。 */
+.quick-view__accelerated {
+  margin-block-start: 0.6rem;
+}
+.quick-view__terms {
+  margin-block-start: 0.4rem;
+}
+.quick-view__specs {
+  margin-block-start: 0.25rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+}
+
+/* ===== 底部固定条：View full details（2026-11-21 刘工，参考稿）=====
+   绝对定位贴在 dialog 底边、body 之外：买盒内容再长也不动它。
+   背景半透明 + backdrop-filter，滚动内容从它背后滑过被糊掉 ——
+   这就是"毛玻璃"成立的前提（条如果放在滚动容器里，背后没有内容可糊）。
+   不支持 backdrop-filter 的浏览器退化为实底（@supports 兜底），不出现半透明糊字。 */
+.quick-view__foot {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-block-size: 56px;
+  padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  background-color: color-mix(in srgb, var(--color-background) 72%, transparent);
+  backdrop-filter: blur(14px) saturate(160%);
+  color: var(--color-foreground);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .quick-view__foot {
+    background-color: var(--color-background);
+  }
+}
+.quick-view__foot:hover {
   color: var(--color-brand);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+}
+.quick-view__foot-arrow {
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+.quick-view__foot:hover .quick-view__foot-arrow {
+  transform: translateX(3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .quick-view__foot-arrow {
+    transition: none;
+  }
 }
 
 /* 桌面：居中弹窗、画廊与买盒两列。
@@ -703,6 +762,6 @@ quick-view {
   .quick-view__body {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 1.5rem;
-    padding: 1.25rem 1.5rem calc(1.5rem);
+    padding: 1.25rem 1.5rem calc(4.75rem);
   }
 }

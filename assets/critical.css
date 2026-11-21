@@ -1184,3 +1184,54 @@ bottom-sheet > dialog.is-close-anim {
   outline: 2px solid var(--color-brand-accent);
   outline-offset: 2px;
 }
+
+/* ===================================================================
+   三条决策参数（spec-bullets snippet 的样式归属，2026-11-21 从 main-product
+   的样式块迁到全局）
+   为什么放全局：同一个 snippet 现在被产品页买盒与商品卡快速查看弹窗共用，
+   而 section 的样式块只随产品页下发 —— 放在那里，集合页上的弹窗会得到
+   "无图标、无两列、无 hover" 的裸列表。
+   =================================================================== */
+.spec-bullets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.spec-bullets__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--color-foreground-muted);
+  transition: color 0.2s ease;
+}
+.spec-bullets__item:hover {
+  color: var(--color-brand);
+}
+.spec-bullets__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--color-brand);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.spec-bullets__item:hover .spec-bullets__icon {
+  transform: scale(1.25) rotate(5deg);
+}
+.spec-bullets__icon svg {
+  width: 18px;
+  height: 18px;
+}
+.spec-bullets__text {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: baseline;
+}
+.spec-bullets__text .spec-value,
+.spec-bullets__value {
+  color: var(--color-foreground);
+  font-weight: 500;
+}
