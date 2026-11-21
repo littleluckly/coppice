@@ -611,32 +611,9 @@ quick-view {
   font-variant-numeric: tabular-nums;
 }
 
-.quick-view__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-.quick-view__label {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--color-foreground-muted);
-}
-.quick-view__select {
-  inline-size: 100%;
-  min-block-size: 44px;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--color-foreground) 22%, transparent);
-  border-radius: 8px;
-  background-color: var(--color-background);
-  color: inherit;
-  font: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-.quick-view__select:hover {
-  border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
-}
-
+/* 变体胶囊（.product-variant__*）的样式已统一到 assets/critical.css（2026-11-21）：
+   产品页与弹窗共用一套，`{% stylesheet %}` 只在产品页下发，集合页上的弹窗会裸奔。
+   这里不要再定义第二份。 */
 .quick-view__buy {
   display: flex;
   align-items: stretch;
