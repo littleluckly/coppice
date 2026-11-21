@@ -517,7 +517,9 @@ quick-view {
   block-size: 18px;
 }
 
-/* 滚动只发生在这一层：head 钉在顶部，内容过长时面板内滚 */
+/* 手机（单列）：滚动发生在这一层 —— head 钉在顶部，画廊与买盒一起滚。
+   桌面（≥750px）滚动改由**右列自己**承担，见文末的桌面媒体查询：
+   画廊常驻不动，只有买盒列表出滚动条（2026-11-21 刘工）。 */
 .quick-view__body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -586,6 +588,11 @@ quick-view {
   flex-direction: column;
   gap: 0.6rem;
   min-inline-size: 0;
+}
+/* 桌面右列是滚动容器（下文媒体查询），行高受限时 flex 子项默认 flex-shrink:1
+   会被压扁 —— 那是「内容挤在一起」而不是「滚动」。所以一律不收缩。 */
+.quick-view__info > * {
+  flex-shrink: 0;
 }
 .quick-view__price {
   display: flex;
@@ -771,9 +778,35 @@ quick-view {
     margin: auto;
     border-radius: 16px;
   }
+  /* 桌面：**只有右列滚**（2026-11-21 刘工）——
+     买盒内容再长也只出现右列的滚动条，画廊钉在原位不跟着走。
+     做法：外层不滚（overflow: hidden）+ 行高锁成 1fr（不然行会被
+     max-content 撑开、item 就没有可滚的余地）+ 右列 min-block-size: 0。
+     底部那 4.75rem 的空白从 body 移交到两列各自身上：footer 是 dialog 层的
+     绝对定位、横跨整宽，谁滚谁就得自己留出这块，内容才会从 footer 背后滑过
+     （毛玻璃成立的前提，见 .quick-view__foot）。 */
   .quick-view__body {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     gap: 1.5rem;
-    padding: 1.25rem 1.5rem calc(4.75rem);
+    padding: 1.25rem 1.5rem 0;
+    overflow: hidden;
+  }
+  .quick-view__info {
+    min-block-size: 0;
+    padding-block-end: calc(4.75rem);
+    overflow-y: auto;
+    /* 滚到底不要顺手把背后的页面或外层带起来 */
+    overscroll-behavior: contain;
+    /* 滚动条出没时内容不左右跳 */
+    scrollbar-gutter: stable;
+  }
+  /* 画廊原则上装得下（方图 + 一排缩略图 ≈ 480px），但视口极矮时也要能看全，
+     所以同样给一条自己的滚动条 —— 常态下它不出现，出滚动条的只有右列。 */
+  .quick-view__gallery {
+    min-block-size: 0;
+    padding-block-end: calc(4.75rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
