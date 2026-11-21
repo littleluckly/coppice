@@ -28,11 +28,16 @@
 
   **无 JS**：入口是 `<a href="{{ product.url }}">`（btn-solid 即按钮外观），照常跳转。
 
-  **买盒能力边界（与 PDP 的差异，有意）**：变体用原生 `<select>`——弹窗两列布局里
-  塞多行胶囊会把面板撑爆，而 `<select>` 本身就是键盘/读屏友好的原生控件；
-  不含纵向描述、参数行、信任行、对比、Shop Pay、订阅计划。数量步进与加购提交
-  **复用 product-form.js 的 `<quantity-input>` / `<product-form>`**（含 BUG-083 的
-  cart:add-failed 收口、cart:added / cart:updated 事件约定），不另写一套提交逻辑；
+  **变体选择器与产品页同一份**（2026-11-21 抽取）：标记来自
+  `snippets/variant-picker.liquid`，联动归 `assets/product-form.js` 的
+  `<variant-picker>` —— 早先这里是原生 `<select>` + 一套自己的价格联动，
+  与产品页（胶囊 + radio）两套实现、必然漂。现在两边共用一份，本文件只负责
+  「变体自带图 → 主图」这一小段（弹窗的图库是一张主图 + 缩略图，不是 product-gallery）。
+
+  **买盒能力边界（与 PDP 的差异，有意）**：不含纵向描述、参数行、信任行、对比、
+  Shop Pay、订阅计划。数量步进与加购提交**复用 product-form.js 的
+  `<quantity-input>` / `<product-form>`**（含 BUG-083 的 cart:add-failed 收口、
+  cart:added / cart:updated 事件约定），不另写一套提交逻辑；
   因此消费方 section 必须同时引入 product-form.js。
 
   **金额一律由 Liquid 预格式化**（`money` filter）后经 data-* 下发，JS 只做替换
@@ -168,6 +173,7 @@
                           type="button"
                           class="quick-view__thumb{% if forloop.first %} is-active{% endif %}"
                           data-quick-view-thumb
+                          data-media-id="{{ media.id }}"
                           data-media="{{ media.preview_image | image_url: width: 900 }}"
                           aria-label="{{ 'products.product.media_slide' | t: index: forloop.index, total: qv_image_count }}"
                           {% if forloop.first %}aria-current="true"{% endif %}

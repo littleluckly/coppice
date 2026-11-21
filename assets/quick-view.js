@@ -57,11 +57,6 @@ class QuickView extends HTMLElement {
          自己会退出骨架（BUG-083），用户回到面板时能看到"试试重试"。 */
     document.addEventListener('cart:updated', this._onCartUpdated, { signal });
     document.addEventListener('cart:add-failed', this._onCartFailed, { signal });
-
-    /* 首次对齐：浏览器可能恢复了上次的 select 选中项。
-       传 initial 让主图**不跟着换**——服务端渲染的主图是商品首图（与卡片一致），
-       一打开就跳成变体图会闪一下，而且缩略图里的首张会对不上。 */
-    this._sync({ initial: true });
   }
 
   disconnectedCallback() {
@@ -107,88 +102,23 @@ class QuickView extends HTMLElement {
     }
   };
 
-  _onChange = (event) => {
-    if (event.target === this._select) this._sync();
+  /** 变体切换：只负责"变体自带图 → 主图"。
+      价格 / 划线价 / 折扣 / 单位价 / 按钮态全在 <variant-picker> 那边改完了，
+      这里再动一遍就是两套逻辑（原来 select 版本正是这么漂的）。
+      面板没打开时忽略：首屏直出时 <variant-picker> 也会 dispatch 一次，
+      那次不该把服务端渲染的主图换掉（会闪一下）。 */
+  _onVariantChange = (event) => {
+    if (!this._dialog.open) return;
+    const token = this._dialog.dataset.sectionId;
+    if (token && event.detail?.sectionId !== token) return;
+
+    const mediaId = event.detail?.mediaId;
+    if (!mediaId) return;
+    const thumb = this._dialog.querySelector(`[data-quick-view-thumb][data-media-id="${mediaId}"]`);
+    if (!thumb) return; /* 变体图不在前 5 张缩略图里：保持当前图，不猜 */
+    this._setImage(thumb.dataset.media);
+    this._setActiveThumb(thumb);
   };
-
-  _onSubmit = () => {
-    this._submitted = true;
-  };
-
-  _onCartUpdated = () => {
-    if (!this._submitted) return;
-    this._submitted = false;
-    this.close();
-  };
-
-  /** 失败：面板留着（错误文案在面板里），只把"等结果"的标记清掉，免得后续
-      别的 cart:updated（比如抽屉里改了数量）把面板顺手收走 */
-  _onCartFailed = () => {
-    this._submitted = false;
-  };
-
-  _onDialogClose = () => {
-    this._submitted = false;
-  };
-
-  /** 把选中变体的价格 / 划线价 / 折扣 / 单位价 / 按钮态 / 变体图同步到面板 */
-  _sync({ initial = false } = {}) {
-    const option = this._select?.selectedOptions?.[0];
-    if (!option) return;
-    const data = option.dataset;
-
-    if (this._priceEl) this._priceEl.textContent = data.price || '';
-
-    if (this._compareEl) {
-      if (data.compare) {
-        this._compareEl.textContent = data.compare;
-        this._compareEl.removeAttribute('hidden');
-      } else {
-        this._compareEl.setAttribute('hidden', '');
-      }
-    }
-
-    if (this._saveEl) {
-      const percent = Number(data.save || 0);
-      if (data.compare && percent > 0 && this._saveTemplate) {
-        this._saveEl.textContent = this._saveTemplate.replace('[percent]', String(percent));
-        this._saveEl.removeAttribute('hidden');
-      } else {
-        this._saveEl.setAttribute('hidden', '');
-      }
-    }
-
-    this._syncUnit(data);
-    this._syncButton(data);
-
-    /* 变体自带图才换；没有就保持当前图（不退回主图，避免选一下就跳回第一张） */
-    if (!initial && data.media) {
-      this._setImage(data.media);
-      this._setActiveThumb(null);
-    }
-  }
-
-  _syncUnit(data) {
-    if (!this._unitEl) return;
-    if (data.unit && this._unitTemplate) {
-      this._unitEl.textContent = this._unitTemplate
-        .replace('[price]', data.unit)
-        .replace('[unit]', data.unitRef || '');
-      this._unitEl.removeAttribute('hidden');
-    } else {
-      this._unitEl.setAttribute('hidden', '');
-    }
-  }
-
-  _syncButton(data) {
-    if (!this._button) return;
-    const available = data.available === 'true';
-    this._button.disabled = !available;
-    this._button.textContent = available
-      ? this._button.dataset.addLabel || ''
-      : this._button.dataset.soldOutLabel || '';
-    delete this._button.dataset.state;
-  }
 
   /** 换主图：先摘掉 srcset/sizes，否则浏览器仍会按响应式候选挑回旧图 */
   _setImage(url) {
