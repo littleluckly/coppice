@@ -73,7 +73,6 @@
       endif
     endfor
 
-    assign qv_unit_template = 'products.product_card.unit_price' | t: price: '[price]', unit: '[unit]'
     assign qv_save_template = 'products.product.save_percent' | t: percent: '[percent]'
   -%}
 
@@ -97,12 +96,21 @@
         它 display:contents，不会成为卡片这个 flex 列的第 N 个 item。
       {%- endcomment -%}
       <bottom-sheet media="(max-width: 749.98px)">
+        {%- comment -%}
+          变体选择器的作用域锚点（2026-11-21）：与产品页买盒同一套元素约定，
+          所以 <variant-picker>（product-form.js）能在这里工作 ——
+          价格 / 划线价 / 折扣 / 按钮 / 单位价 / 隐藏 id 输入都在本 dialog 内。
+          data-section-id 只是"实例令牌"（值取 product.id）：variant:change 事件
+          冒到 document 后，本弹窗靠它区分"是不是我这一个"。
+        {%- endcomment -%}
         <dialog
           class="quick-view"
           scroll-lock
           aria-labelledby="QuickViewTitle-{{ product.id }}"
+          data-variant-scope
+          data-section-id="{{ product.id }}"
           data-save-template="{{ qv_save_template }}"
-          data-unit-template="{{ qv_unit_template }}"
+          data-unit-class="quick-view__unit"
         >
           <div class="quick-view__head">
             <h2 class="quick-view__title" id="QuickViewTitle-{{ product.id }}">
@@ -174,20 +182,25 @@
             </div>
 
             <div class="quick-view__info">
-              <div class="quick-view__price">
-                <span class="quick-view__price-current" data-quick-view-price>
+              {%- comment -%}
+                价格三件套的数据钩子（data-price / data-compare-price / data-save-badge）
+                与产品页买盒**同名**：VariantPicker 只认这些属性，不认类名，
+                所以两处共用一段联动逻辑，切换变体时价格 / 划线价 / 折扣自动跟。
+              {%- endcomment -%}
+              <div class="quick-view__price" data-price-block>
+                <span class="quick-view__price-current" data-price>
                   {{- qv_variant.price | money -}}
                 </span>
                 <s
                   class="quick-view__price-compare"
-                  data-quick-view-compare
+                  data-compare-price
                   {%- unless qv_has_discount %} hidden{% endunless %}
                 >
                   {{- qv_variant.compare_at_price | money -}}
                 </s>
                 <span
                   class="quick-view__price-save"
-                  data-quick-view-save
+                  data-save-badge
                   {%- unless qv_has_discount %} hidden{% endunless %}
                 >
                   {{- 'products.product.save_percent' | t: percent: qv_save -}}
@@ -195,10 +208,13 @@
               </div>
 
               {%- comment -%}
-                单位价（G-08 同一口径）：初始值与切换后都由 JS 用 data-unit-template
-                拼，模板里的 [price] / [unit] 是占位符。无单位价的变体整行 hidden。
+                单位价（G-08 同一口径）：增量更新归 VariantPicker（它按
+                `${unitPrice} / ${unitReference}` 写，与产品页同一段代码）；
+                这里的初始值只是首屏直出，JS 会在首次对齐时覆盖。
+                无单位价的变体整行 hidden（VariantPicker 的 create 分支用
+                data-unit-class 生成同款类名，弹窗里不会冒出产品页的类）。
               {%- endcomment -%}
-              <p class="quick-view__unit" data-quick-view-unit {% unless qv_variant.unit_price_measurement %}hidden{% endunless %}>
+              <p class="quick-view__unit" data-unit-price {% unless qv_variant.unit_price_measurement %}hidden{% endunless %}>
                 {%- if qv_variant.unit_price_measurement -%}
                   {%- assign qv_unit_ref = qv_variant.unit_price_measurement.reference_value
                     | append: qv_variant.unit_price_measurement.reference_unit
@@ -211,56 +227,15 @@
               <product-form class="quick-view__form">
                 {%- form 'product', product, class: 'quick-view__form-inner', novalidate: 'novalidate' -%}
                   {%- comment -%}
-                    变体用「一个原生 select 选变体」，不做逐维度胶囊：弹窗两列里
-                    每多一个维度就多一组按钮，面板会被撑高到必须滚动才能看到加购。
-                    select 的 option 直接承载价格/库存/变体图，JS 读 dataset 即可，
-                    不需要 variant JSON 数据岛（少一份数据、少一次解析）。
+                    变体选择器与产品页**同一份**（2026-11-21 抽取）：标记来自
+                    snippets/variant-picker.liquid，联动归 product-form.js 的
+                    <variant-picker>。选择器就在本 <form> 内部，所以 form_id 传空
+                    ——radio 不带 form 属性也能随表单提交。
+                    隐藏的 id 输入是提交值：VariantPicker 选中变体后把 variant.id 写进来
+                    （产品页同样写法，`[data-variant-input]`）。
                   {%- endcomment -%}
-                  <label class="quick-view__field">
-                    <span class="quick-view__label">
-                      {{- 'products.product_card.quick_view_options' | t -}}
-                    </span>
-                    <select class="quick-view__select" name="id" data-quick-view-variant>
-                      {%- for variant in product.variants -%}
-                        {%- liquid
-                          assign v_has_discount = false
-                          assign v_save = 0
-                          if variant.compare_at_price > variant.price
-                            assign v_has_discount = true
-                            assign v_diff = variant.compare_at_price | minus: variant.price
-                            assign v_save = v_diff | times: 100.0 | divided_by: variant.compare_at_price | round
-                          endif
-
-                          assign v_image = ''
-                          if variant.featured_media.preview_image
-                            assign v_image = variant.featured_media.preview_image | image_url: width: 900
-                          endif
-
-                          assign v_unit = ''
-                          assign v_unit_ref = ''
-                          if variant.unit_price_measurement
-                            assign v_unit = variant.unit_price | money
-                            assign v_unit_ref = variant.unit_price_measurement.reference_value
-                            assign v_unit_ref = v_unit_ref | append: variant.unit_price_measurement.reference_unit
-                          endif
-                        -%}
-                        <option
-                          value="{{ variant.id }}"
-                          data-price="{{ variant.price | money }}"
-                          data-compare="{% if v_has_discount %}{{ variant.compare_at_price | money }}{% endif %}"
-                          data-save="{{ v_save }}"
-                          data-available="{{ variant.available }}"
-                          data-media="{{ v_image }}"
-                          data-unit="{{ v_unit }}"
-                          data-unit-ref="{{ v_unit_ref }}"
-                          {% if variant.id == qv_variant.id %}selected{% endif %}
-                        >
-                          {{- variant.title | escape -}}
-                          {%- unless variant.available %} &middot; {{ 'products.product.sold_out' | t }}{% endunless -%}
-                        </option>
-                      {%- endfor -%}
-                    </select>
-                  </label>
+                  <input type="hidden" name="id" value="{{ qv_variant.id }}" data-variant-input>
+                  {%- render 'variant-picker', product: product, form_id: '' -%}
 
                   <div class="quick-view__buy">
                     <quantity-input class="quick-view__qty">
