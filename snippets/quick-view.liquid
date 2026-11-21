@@ -57,6 +57,9 @@
   ——与 PDP 同口径，多货币/千分位不在前端拼。
 
   @param {product} product - product 对象（必填，调用方保证 variants.size > 1）
+  @param {object} settings - 主题设置。只有信任徽标的文案用到（settings.qv_trust_*），
+    显式往下传是为了让"这段依赖主题设置"可见，也为了本地 liquid 桩（render 是隔离
+    作用域，不传就是 nil）。平台侧 snippet 本来就能读全局 settings，传的是同一个对象。
 {% enddoc %}
 
 {%- if product != blank and product.variants.size > 1 -%}
