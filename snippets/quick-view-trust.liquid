@@ -1,0 +1,62 @@
+{% doc %}
+  quick-view-trust — 快速查看弹窗里的信任徽标（2026-11-21 刘工："弹窗中信任项没有展示"）。
+
+  **为什么数据源和产品页不一样**：产品页的信任项是 **section blocks**（`trust_warranty`
+  + 任意条 `trust_item`），而弹窗是从**商品卡 snippet** 渲染的 —— Liquid 读不到另一个
+  模板里 section 的 blocks。所以：
+    · 保修项（`trust_warranty`）→ **产品级 metafield** `spec.warranty_months`，
+      与产品页同一段逻辑、同一个来源，天然一致；
+    · 文本项（Free shipping / 30-day returns 这类店铺政策）→ **主题设置
+      `settings.qv_trust_1..3`**（外观 → 快速查看）。空白即不渲染。
+
+  **代价（说清楚）**：店铺政策文案现在有两个填写入口（产品页 block + 主题设置）。
+  想两边一致就得填两遍；不填的那边不显示。要单一数据源就得把产品页的 block 也改成
+  读设置 —— 那会让"逐产品换信任项"的灵活度消失，没做。
+
+  图标三选一（shipping / returns / warranty），与产品页 block 的图标集合相同，
+  所以两处外观一致。样式（`.trust-item*`）在 assets/critical.css，产品页与弹窗共用。
+
+  @param {product} product - product 对象（必填）
+{% enddoc %}
+
+{%- liquid
+  assign warranty = product.metafields.spec.warranty_months.value
+-%}
+
+{%- if warranty != blank and warranty != 0 -%}
+  <div class="trust-item">
+    <span class="trust-item__icon" aria-hidden="true">
+      {{- 'icon-warranty.svg' | inline_asset_content -}}
+    </span>
+    <span class="trust-item__text">
+      {%- assign warranty_rest = warranty | modulo: 12 -%}
+      {%- if warranty_rest == 0 -%}
+        {%- assign warranty_years = warranty | divided_by: 12 -%}
+        {{- 'products.product.warranty_years' | t: years: warranty_years -}}
+      {%- else -%}
+        {{- 'products.product.warranty_months' | t: months: warranty -}}
+      {%- endif -%}
+    </span>
+  </div>
+{%- endif -%}
+
+{%- for i in (1..3) -%}
+  {%- assign icon_key = 'qv_trust_' | append: i | append: '_icon' -%}
+  {%- assign text_key = 'qv_trust_' | append: i | append: '_text' -%}
+  {%- assign trust_text = settings[text_key] -%}
+  {%- if trust_text != blank -%}
+    <div class="trust-item">
+      <span class="trust-item__icon" aria-hidden="true">
+        {%- case settings[icon_key] -%}
+          {%- when 'shipping' -%}
+            {{- 'icon-truck.svg' | inline_asset_content -}}
+          {%- when 'returns' -%}
+            {{- 'icon-return.svg' | inline_asset_content -}}
+          {%- else -%}
+            {{- 'icon-warranty.svg' | inline_asset_content -}}
+        {%- endcase -%}
+      </span>
+      <span class="trust-item__text">{{ trust_text | escape }}</span>
+    </div>
+  {%- endif -%}
+{%- endfor -%}

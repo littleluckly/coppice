@@ -9,6 +9,13 @@
  */
 {
   "general": {
+    "quick_view": "Quick view",
+    "quick_view_trust_header": "Trust badges in the quick view",
+    "quick_view_trust_info": "The quick view panel is rendered from a product card, so it can't read the product page's trust blocks — set them here instead. The warranty badge is generated from the product's warranty metafield and needs no setting.",
+    "quick_view_trust_icon": "Icon",
+    "quick_view_trust_1": "Line 1",
+    "quick_view_trust_2": "Line 2",
+    "quick_view_trust_3": "Line 3",
     "404": "Not found",
     "announcement_bar": "Announcement bar",
     "article": "Article",
