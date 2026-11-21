@@ -454,55 +454,11 @@
       {%- endif -%}
 
       {%- comment -%}
-        变体选择器：单变体（Default Title）整块不渲染；无 JS 时是原生 radio，可随表单提交。
-        变体数据以 JSON 下发（含格式化好的价格串），JS 不自己拼货币格式。
+        变体选择器（2026-11-21 抽成 snippets/variant-picker.liquid，与商品卡快速查看共用）：
+        单变体（Default Title）整块不渲染；无 JS 时是原生 radio（靠 `form` 属性随表单提交）。
+        `form_id` 必传 —— 选择器在 <form> 之外，没有它 radio 不会进 FormData。
       {%- endcomment -%}
-      {%- unless product.has_only_default_variant -%}
-        {%- capture variants_json -%}
-          [
-          {%- for variant in product.variants -%}
-            {
-              "id": {{ variant.id }},
-              "available": {{ variant.available }},
-              "options": {{ variant.options | json }},
-              "price": {{ variant.price | money | json }},
-              "compare": {% if variant.compare_at_price > variant.price %}{{ variant.compare_at_price | money | json }}{% else %}null{% endif %},
-              "save": {% if variant.compare_at_price > variant.price %}{{ variant.compare_at_price | minus: variant.price | times: 100.0 | divided_by: variant.compare_at_price | round }}{% else %}0{% endif %},
-              "unitPrice": {% if variant.unit_price_measurement %}{{ variant.unit_price | money | json }}{% else %}null{% endif %},
-              "unitReference": {% if variant.unit_price_measurement %}{{ variant.unit_price_measurement.reference_value }}{{ variant.unit_price_measurement.reference_unit }}{% else %}null{% endif %},
-              "mediaId": {{ variant.featured_media.id | default: 0 }}
-            }{%- unless forloop.last -%},{%- endunless -%}
-          {%- endfor -%}
-          ]
-        {%- endcapture -%}
-
-        <variant-picker class="product-variant">
-          <script type="application/json" data-variant-json>{{ variants_json | strip }}</script>
-          {%- for option in product.options_with_values -%}
-            <fieldset class="product-variant__group">
-              <legend class="product-variant__label">{{ option.name | escape }}</legend>
-              <div class="product-variant__values">
-                {%- for value in option.values -%}
-                  {%- assign input_id = 'option-' | append: section.id | append: '-' | append: option.position | append: '-' | append: forloop.index0 -%}
-                  <input
-                    type="radio"
-                    class="product-variant__radio visually-hidden"
-                    id="{{ input_id }}"
-                    name="options[{{ option.name | escape }}]"
-                    value="{{ value | escape }}"
-                    form="{{ form_id }}"
-                    data-option-position="{{ option.position }}"
-                    {% if option.selected_value == value %}
-                      checked
-                    {% endif %}
-                  >
-                  <label class="product-variant__pill" for="{{ input_id }}">{{ value | escape }}</label>
-                {%- endfor -%}
-              </div>
-            </fieldset>
-          {%- endfor -%}
-        </variant-picker>
-      {%- endunless -%}
+      {%- render 'variant-picker', product: product, form_id: form_id -%}
 
       <product-form class="product-form" data-section-id="{{ section.id }}">
         {%- form 'product', product, id: form_id, class: 'product-form__form', novalidate: 'novalidate' -%}
