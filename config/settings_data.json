@@ -9,6 +9,8 @@
  */
 {
   "current": {
+    "qv_show_specs": true,
+    "qv_show_trust": true,
     "qv_trust_1_icon": "shipping",
     "qv_trust_1_text": "Free shipping on orders over $99",
     "qv_trust_2_icon": "returns",

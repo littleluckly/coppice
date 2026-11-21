@@ -10,6 +10,10 @@
 {
   "general": {
     "quick_view": "Quick view",
+    "quick_view_content_header": "Quick view contents",
+    "quick_view_content_info": "The quick view panel is shared by every product card on the storefront, so these switches are store-wide — they apply to all products at once, unlike the product page where each block can differ per template.",
+    "quick_view_show_specs": "Show the three key specs",
+    "quick_view_show_trust": "Show trust badges",
     "quick_view_trust_header": "Trust badges in the quick view",
     "quick_view_trust_info": "The quick view panel is rendered from a product card, so it can't read the product page's trust blocks — set them here instead. The warranty badge is generated from the product's warranty metafield and needs no setting.",
     "quick_view_trust_icon": "Icon",

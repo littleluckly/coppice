@@ -200,6 +200,10 @@
   {
     "name": "t:general.quick_view",
     "settings": [
+      { "type": "header", "content": "t:general.quick_view_content_header" },
+      { "type": "paragraph", "content": "t:general.quick_view_content_info" },
+      { "type": "checkbox", "id": "qv_show_specs", "label": "t:general.quick_view_show_specs", "default": true },
+      { "type": "checkbox", "id": "qv_show_trust", "label": "t:general.quick_view_show_trust", "default": true },
       { "type": "header", "content": "t:general.quick_view_trust_header" },
       { "type": "paragraph", "content": "t:general.quick_view_trust_info" },
       {
