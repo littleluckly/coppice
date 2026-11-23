@@ -620,6 +620,56 @@
     return url + (url.includes('?') ? '&' : '?') + `width=${target}`;
   }
 
+  /* --------------------------------------------- 变体差异说明（§6.2.4）定位
+
+     数据岛里 note 只有一句话（metafield 是 single_line_text_field，没有结构化
+     的行键），而它说明的是「某一个参数」随变体变化 ⇒ 该落在「该商品 × 该参数」
+     那一格，不是产品标题下面。定位靠「note 里出现的数值 ↔ 该行显示值」：商家
+     写这句话时必然引用这个参数的取值（"166 cc or 150 cc"），而该列该行显示的
+     就是其中一个。命中唯一一行才落地；一个都对不上（没写数值）或对上两行
+     （说不清是哪行）一律不猜，退回产品列头——宁可含糊，不可指错行。 */
+
+  /** 文本里的数值片段（去千分位逗号、去结尾 .0，与 Liquid 侧同一口径） */
+  function numberTokens(text) {
+    const raw = String(text || '').match(/\d[\d,]*(?:\.\d+)?/g);
+    const tokens = new Set();
+    if (!raw) return tokens;
+    raw.forEach((token) => {
+      const value = token.replace(/,/g, '').replace(/\.0+$/, '');
+      if (value) tokens.add(value);
+    });
+    return tokens;
+  }
+
+  /** 该说明挂在哪一行：行下标；-1 = 说不清（调用方退回列头） */
+  function resolveNoteRow(note, values) {
+    const noteNumbers = numberTokens(note);
+    if (!noteNumbers.size || !Array.isArray(values)) return -1;
+    const hits = [];
+    values.forEach((value, index) => {
+      const numbers = numberTokens(value);
+      if ([...numbers].some((number) => noteNumbers.has(number))) hits.push(index);
+    });
+    return hits.length === 1 ? hits[0] : -1;
+  }
+
+  /** 差异说明本体（原生 details：自带展开态、键盘操作与 aria-expanded） */
+  function buildNote(text, label) {
+    const details = document.createElement('details');
+    details.className = 'compare-table__note';
+    const summary = document.createElement('summary');
+    if (label) summary.setAttribute('aria-label', label);
+    const mark = document.createElement('span');
+    mark.setAttribute('aria-hidden', 'true');
+    mark.textContent = 'i';
+    summary.appendChild(mark);
+    details.appendChild(summary);
+    const body = document.createElement('p');
+    body.textContent = text;
+    details.appendChild(body);
+    return details;
+  }
+
   /** 把补拉回来的值填进某一列（就地改单元格，不重建表格以免闪烁） */
   function fillColumn(tbody, index, values) {
     tbody.querySelectorAll('tr').forEach((tr, rowIndex) => {
@@ -805,7 +855,10 @@
     corner.className = 'compare-table__corner';
     headRow.appendChild(corner);
 
-    columns.forEach((col) => {
+    /* 每列的差异说明该落在哪一行（-1 = 说不清，退回列头） */
+    const noteRows = columns.map((col) => (col.n ? resolveNoteRow(col.n, col.v) : -1));
+
+    columns.forEach((col, columnIndex) => {
       const th = document.createElement('th');
       th.scope = 'col';
       th.className = 'compare-table__col';
@@ -865,20 +918,9 @@
       removeCol.textContent = '\u00d7';
       th.appendChild(removeCol);
 
-      if (col.n) {
-        const details = document.createElement('details');
-        details.className = 'compare-table__note';
-        const summary = document.createElement('summary');
-        summary.setAttribute('aria-label', dataEl.dataset.labelVariantNote || '');
-        const mark = document.createElement('span');
-        mark.setAttribute('aria-hidden', 'true');
-        mark.textContent = 'i';
-        summary.appendChild(mark);
-        details.appendChild(summary);
-        const noteText = document.createElement('p');
-        noteText.textContent = col.n;
-        details.appendChild(noteText);
-        th.appendChild(details);
+      /* 定位不到行时才挂在列头（含糊，但不丢信息） */
+      if (col.n && noteRows[columnIndex] < 0) {
+        th.appendChild(buildNote(col.n, dataEl.dataset.labelVariantNote || ''));
       }
 
       headRow.appendChild(th);
@@ -914,6 +956,10 @@
           span.textContent = '\u2014';
         }
         td.appendChild(span);
+        /* 差异说明跟着「该商品 × 该参数」这一格走，不是挂在产品标题下 */
+        if (columns[index] && noteRows[index] === rowIndex) {
+          td.appendChild(buildNote(columns[index].n, dataEl.dataset.labelVariantNote || ''));
+        }
         tr.appendChild(td);
       });
 
