@@ -476,13 +476,16 @@ html:not(.js) .compare-empty__js {
   cursor: pointer;
 }
 
-/* 变体差异提示：原生 details，自带展开状态与键盘支持（§6.2.4） */
+/* 变体差异提示：原生 details，自带展开状态与键盘支持（§6.2.4）。
+   默认挂在列头（说明里没写任何数值 ⇒ 定位不到具体行时的兜底）；
+   能定位到参数行时挂在那一格的 .compare-table__cell 里，见下方 cell 变体。 */
 .compare-table__note {
   margin-block-start: 0.35rem;
   font-size: 0.8rem;
 }
 
 .compare-table__note summary {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -494,6 +497,22 @@ html:not(.js) .compare-empty__js {
   list-style: none;
 }
 
+/* 视觉 20px，命中区外扩到 44×44（AGENTS §8） */
+.compare-table__note summary::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
+.compare-table__note summary:hover {
+  border-color: var(--color-foreground);
+}
+
+.compare-table__note summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 .compare-table__note summary::-webkit-details-marker {
   display: none;
 }
@@ -501,6 +520,14 @@ html:not(.js) .compare-empty__js {
 .compare-table__note p {
   margin: 0.4rem 0 0;
   color: var(--compare-muted);
+}
+
+/* 落在单元格里（紧随该参数的值）：details 用 inline ⇒ 徽标留在值那一行；
+   内部的 <p> 是块级，会被包成匿名块盒、宽度取单元格内容宽度 ⇒ 展开时说明
+   换到下一行铺满整格，**不会把单元格撑宽**（inline-block 就会）。 */
+.compare-table__cell .compare-table__note {
+  display: inline;
+  margin-inline-start: 0.4rem;
 }
 
 @media (max-width: 767px) {
