@@ -2697,8 +2697,8 @@
   /* ===== 预测搜索输入框（原 snippets/predictive-search-entry.liquid，2026-10-18 迁入）
      该片段被下方 <search-drawer> 的 template 渲染。样式原先写在片段里，
      导致一个 section 内出现两个样式块，编辑器装载 header 组时整组渲染失败。 ===== */
-  /* 视觉基调（2026-10-10 刘工：极简 / 高端 / 沉浸式 / 工业力量感）：
-     输入框去边框只留发丝底线，聚焦换品牌色；加载用一条细扫描线。
+  /* 视觉基调（2026-11-24 刘工参考图改版）：输入区变成 52px 胶囊，
+     底色从前景色派生 6%，聚焦时整条胶囊描一圈品牌色；加载仍是贴着底沿的扫描线。
      布局（2026-10-10 刘工）：抽屉是纵向 flex 链——结果面板作为
      flex 子项吃满 dialog 剩余高度，滚动只发生在列表上。 */
   .predictive-search {
@@ -2720,52 +2720,92 @@
     min-height: 0;
   }
 
-  /* 输入区：放大镜 / 输入框 / 清空按钮 / 扫描线的共同锚点 */
+  /* 输入区：胶囊容器。内部是 flex 行 [放大镜] [输入框] [清空] [提交]，
+     全部靠 padding 4px 把 44px 的子件衬成 52px 的胶囊——不用绝对定位，
+     清空键隐藏时输入框自动吃掉它的宽度。 */
   .predictive-search__field {
     position: relative;
+    display: flex;
+    align-items: center;
     flex: none;
+    min-block-size: 52px;
+    padding: 0.25rem;
+    border-radius: 999px;
+    /* 底色从 foreground 派生：浅色主题是淡灰、Noir 深底自动变淡白（BUG-043 教训） */
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, var(--color-background));
+    /* 扫描线要沿圆角内沿走，超出的部分裁掉 */
+    overflow: hidden;
   }
 
-  .predictive-search__submit {
-    position: absolute;
-    inset-inline-start: 0;
-    z-index: 1;
+  /* 焦点可见：整条胶囊描一圈（输入框自身 outline 已关）。
+     3:1 以上——品牌绿压浅底、深底都成立（SDD §8.2） */
+  .predictive-search__field:focus-within {
+    box-shadow: 0 0 0 2px var(--color-brand);
+  }
+
+  /* 放大镜：纯装饰（markup 里 aria-hidden），点击穿透到输入框 */
+  .predictive-search__icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    flex: none;
     inline-size: 44px;
     block-size: 44px;
-    padding: 0;
-    /* 图标压在输入框左侧，输入框留出等宽内边距 */
-    inset-block-start: 50%;
-    translate: 0 -50%;
-    /* 2026-10-29：改从 foreground 派生（原 rgb(0 0 0 / 45%) 在深色骨架下不可见，BUG-059） */
-    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
-    background: none;
-    border: 0;
-    cursor: pointer;
-    pointer-events: none; /* 点击穿透到输入框：它只是视觉图标 */
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+    pointer-events: none;
   }
 
-  .predictive-search__submit svg {
+  .predictive-search__icon svg {
     inline-size: 1.25rem;
     block-size: 1.25rem;
   }
 
-  .predictive-search__input {
-    inline-size: 100%;
+  /* 提交键：胶囊右端的圆形品牌色按钮（2026-11-24 参考图）。
+     图标色用 --color-background 而非硬编码白：Noir 下品牌色是亮 lime，
+     白箭头压在上面不达 AA（与 .btn-solid 同一套判断） */
+  .predictive-search__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
     /* 触摸目标 ≥ 44×44（AGENTS §8） */
-    min-block-size: 48px;
-    padding: 0.625rem 2.75rem 0.625rem 2.75rem;
-    color: var(--color-foreground);
-    background-color: var(--color-background);
-    /* 极简线型：无框，只有发丝底线；聚焦换品牌色加粗 */
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: var(--color-background);
+    background-color: var(--color-brand);
     border: 0;
-    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
-    border-radius: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .predictive-search__submit:hover {
+    background-color: var(--color-brand-accent);
+  }
+
+  .predictive-search__submit:focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 2px;
+  }
+
+  .predictive-search__submit svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .predictive-search__input {
+    flex: 1;
+    min-inline-size: 0;
+    /* 触摸目标 ≥ 44×44（AGENTS §8）；胶囊高度由 field 的 52px 决定 */
+    min-block-size: 44px;
+    padding: 0.25rem;
+    color: var(--color-foreground);
+    /* 底色在胶囊上，输入框自身全透明 */
+    background: none;
+    border: 0;
     font: inherit;
-    font-size: 1.0625rem;
+    font-size: 1rem;
     appearance: none;
   }
 
@@ -2777,16 +2817,13 @@
   }
 
   .predictive-search__input::placeholder {
-    color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
   }
 
-  /* 焦点指示：底线由灰转品牌色并加粗（可见变化，替代外框 outline）。
-     outline: none 是刻意的——线型输入框外框 outline 破坏极简基调，
-     且底线变化满足 WCAG 2.1「焦点位置可见」要求（SDD §8.2）。 */
+  /* 焦点态由胶囊的 :focus-within 统一承担（见上）——
+     这里关掉浏览器默认 outline，避免"胶囊描边 + 输入框方框"两层框 */
   .predictive-search__input:focus {
     outline: none;
-    border-block-end: 2px solid var(--color-brand-accent);
-    padding-block-end: calc(0.625rem - 1px);
   }
 
   /* ---- 加载扫描线：请求进行中，输入框下沿一条细线往返 ----
