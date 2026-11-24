@@ -54,15 +54,6 @@
     "search-drawer": {
       "type": "search-drawer",
       "blocks": {
-        "search_link_iN6AX3": {
-          "type": "search_link",
-          "settings": {
-            "icon": "icon-mower.svg",
-            "title": "Lawn mowers111",
-            "subtitle": "Explore our full range",
-            "link": "shopify://collections/accessories"
-          }
-        },
         "search_link_walk_behind": {
           "type": "search_link",
           "settings": {
@@ -101,7 +92,6 @@
         }
       },
       "block_order": [
-        "search_link_iN6AX3",
         "search_link_walk_behind",
         "search_link_riding",
         "search_link_chainsaw",
