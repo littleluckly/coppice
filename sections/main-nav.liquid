@@ -932,6 +932,8 @@
           {%- liquid
             assign popular_terms = section.settings.search_popular_terms | split: ','
             assign promo_image = section.settings.search_promo_image
+            assign promo_heading = section.settings.search_promo_heading
+            assign promo_text = section.settings.search_promo_text
           -%}
 
           <div class="search-discovery">
@@ -961,28 +963,31 @@
             {%- endif -%}
 
             {%- comment -%}
-              推荐卡：只在有图时出现（无图 = 未配置 = 整块不渲染，AGENTS §6）。
-              文字压在图左侧的渐变遮罩上——遮罩从 background 派生，
-              浅色主题是白雾、深色骨架是黑雾，两种情况字都读得清。
+              推荐卡：判据是**文案**不是图——文字是这张卡的主语，图只是背景。
+              两者都没有就整块不渲染（AGENTS §6）。
+              没有图时退成品牌色实底卡（.search-discovery__promo--text），
+              文字反色；演示店没传图也能看到完整效果。
               图走 image_tag（焦点裁剪由平台写在 style 上，G-05）。
             {%- endcomment -%}
-            {%- if promo_image != blank -%}
-              <div class="search-discovery__promo">
-                {{
-                  promo_image
-                  | image_url: width: 900
-                  | image_tag:
-                    widths: '450, 600, 900',
-                    sizes: '(min-width: 750px) 552px, calc(100vw - 48px)',
-                    loading: 'lazy',
-                    class: 'search-discovery__promo-image'
-                }}
+            {%- if promo_heading != blank or promo_text != blank -%}
+              <div class="search-discovery__promo{% if promo_image == blank %} search-discovery__promo--text{% endif %}">
+                {%- if promo_image != blank -%}
+                  {{
+                    promo_image
+                    | image_url: width: 900
+                    | image_tag:
+                      widths: '450, 600, 900',
+                      sizes: '(min-width: 750px) 552px, calc(100vw - 48px)',
+                      loading: 'lazy',
+                      class: 'search-discovery__promo-image'
+                  }}
+                {%- endif -%}
                 <div class="search-discovery__promo-body">
-                  <p class="search-discovery__promo-title">
-                    {{ section.settings.search_promo_heading }}
-                  </p>
-                  {%- if section.settings.search_promo_text != blank -%}
-                    <p class="search-discovery__promo-text">{{ section.settings.search_promo_text }}</p>
+                  {%- if promo_heading != blank -%}
+                    <p class="search-discovery__promo-title">{{ promo_heading }}</p>
+                  {%- endif -%}
+                  {%- if promo_text != blank -%}
+                    <p class="search-discovery__promo-text">{{ promo_text }}</p>
                   {%- endif -%}
                   {%- if section.settings.search_promo_cta_label != blank
                     and section.settings.search_promo_cta_link != blank
