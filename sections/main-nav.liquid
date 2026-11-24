@@ -3186,6 +3186,48 @@
     line-height: 1.2;
   }
 
+  /* ---- 没传图时的退路：品牌色实底 + 反色文字 ----
+     文字色用 --color-background 而非白：Noir 下品牌色是亮 lime，白字不达 AA。
+     按钮反成"背景色实底 + 品牌字"，否则绿底绿钮糊成一片。
+     覆盖 .btn-solid:hover 必须上到 0,4,0——critical.css 与本文件的注入顺序
+     由平台决定，同特异性赌源序会翻车（critical.css 头注的既有结论）。 */
+  .search-discovery__promo--text {
+    background-color: var(--color-brand);
+  }
+
+  .search-discovery__promo--text .search-discovery__promo-body {
+    /* 无图不需要雾面遮罩 */
+    background: none;
+  }
+
+  .search-discovery__promo--text .search-discovery__promo-title,
+  .search-discovery__promo--text .search-discovery__promo-text {
+    color: var(--color-background);
+  }
+
+  .search-discovery__promo--text .search-discovery__promo-cta {
+    background-color: var(--color-background);
+    border-color: var(--color-background);
+    color: var(--color-brand);
+    box-shadow: none;
+  }
+
+  /* 浅底上扫白光等于什么都没发生，换成品牌色淡染（同 .btn-solid--quiet） */
+  .search-discovery__promo--text .search-discovery__promo-cta::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-brand) 12%, transparent),
+      transparent
+    );
+  }
+
+  .search-discovery__promo.search-discovery__promo--text .search-discovery__promo-cta:hover:not(:disabled) {
+    background-color: var(--color-background);
+    border-color: var(--color-background);
+    color: var(--color-brand-accent);
+  }
+
   /* ---- 快速链接网格 ---- */
   .search-discovery__grid {
     display: grid;
