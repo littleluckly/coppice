@@ -833,13 +833,18 @@
      aspect-ratio 给宽屏定比例，min-block-size 兜窄屏（两者取较大值）；
      文字压在左侧雾面上，雾面从 background 派生——浅色主题白雾、深色骨架黑雾，
      两种情况正文都够 4.5:1。图走 image_tag，焦点裁剪由平台写在 style 上。 */
+  /* 整卡是 <a>（2026-11-24）：要显式变成块级、吃掉链接默认配色与下划线，
+     否则卡片里的文字会变浏览器默认蓝、还可能被画上下划线。 */
   .search-discovery__promo {
+    display: block;
     position: relative;
     aspect-ratio: 2.6 / 1;
     min-block-size: 13rem;
     border-radius: 14px;
     overflow: hidden;
     background-color: color-mix(in srgb, var(--color-foreground) 8%, var(--color-background));
+    color: inherit;
+    text-decoration: none;
   }
 
   .search-discovery__promo-image {
@@ -1041,6 +1046,40 @@
     color: var(--color-foreground-muted);
   }
 
+  /* ---- 悬停反馈：与产品卡同一套语言（2026-11-24 刘工）----
+     上浮 + 浅绿光晕，参数直接复用 --card-hover-lift / --card-hover-shadow
+     （snippets/css-variables.liquid 里浅底 / Noir 两套值，跟着 preset 走）。
+     三个可点元素统一：快速链接卡、推荐卡、热门搜索药丸。
+     只在 hover:hover + pointer:fine 下抬起——触摸屏没有 hover，抬起后会一直"悬"着。
+     **没有 href 的不抬起**：看着能点却点不动比没反馈更糟。 */
+  @media (hover: hover) and (pointer: fine) {
+    .search-discovery__card-link,
+    .search-discovery__promo,
+    .search-discovery__pill {
+      transition:
+        translate 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+    }
+
+    .search-discovery__card-link[href]:hover,
+    .search-discovery__promo[href]:hover,
+    .search-discovery__pill:hover {
+      translate: 0 var(--card-hover-lift);
+      box-shadow: var(--card-hover-shadow);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .search-discovery__card-link,
+    .search-discovery__promo,
+    .search-discovery__pill {
+      transition: none;
+    }
+  }
+
   /* ---- 帮助条 ----
      margin-block-start:auto 把它推到内容区底部（内容不足一屏时贴底，像参考图）；
      内容超一屏时它就是普通流内元素，跟着一起滚。 */
@@ -1128,7 +1167,7 @@
       "id": "search_popular_terms",
       "label": "t:sections.search_drawer.labels.popular_terms",
       "info": "t:sections.search_drawer.labels.popular_terms_info",
-      "default": "Lawn mower, Battery, Trimmer, Chainsaw, Parts"
+      "default": "Lawn mower, Battery, Trimmer, Chainsaw, Mower blade"
     },
     {
       "type": "image_picker",
