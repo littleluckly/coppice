@@ -187,8 +187,34 @@
                         {%- if block.settings.link != blank %} href="{{ block.settings.link }}"{% endif -%}
                       >
                         {%- if block.settings.icon != blank -%}
+                          {%- comment -%}
+                            图标必须走 case 分支（2026-11-24 实测）：把设置值当变量喂给
+                            inline_asset_content（`{{ block.settings.icon | inline_asset_content }}`）
+                            线上输出空字符串，span 是空的、卡片没图标。逐个写死文件名才可靠。
+                          {%- endcomment -%}
                           <span class="search-discovery__card-icon" aria-hidden="true">
-                            {{- block.settings.icon | inline_asset_content -}}
+                            {%- case block.settings.icon -%}
+                              {%- when 'icon-mower.svg' -%}
+                                {{- 'icon-mower.svg' | inline_asset_content -}}
+                              {%- when 'icon-trimmer.svg' -%}
+                                {{- 'icon-trimmer.svg' | inline_asset_content -}}
+                              {%- when 'icon-chainsaw.svg' -%}
+                                {{- 'icon-chainsaw.svg' | inline_asset_content -}}
+                              {%- when 'icon-parts.svg' -%}
+                                {{- 'icon-parts.svg' | inline_asset_content -}}
+                              {%- when 'icon-accessories.svg' -%}
+                                {{- 'icon-accessories.svg' | inline_asset_content -}}
+                              {%- when 'icon-battery.svg' -%}
+                                {{- 'icon-battery.svg' | inline_asset_content -}}
+                              {%- when 'icon-leaf.svg' -%}
+                                {{- 'icon-leaf.svg' | inline_asset_content -}}
+                              {%- when 'icon-truck.svg' -%}
+                                {{- 'icon-truck.svg' | inline_asset_content -}}
+                              {%- when 'icon-warranty.svg' -%}
+                                {{- 'icon-warranty.svg' | inline_asset_content -}}
+                              {%- when 'icon-support.svg' -%}
+                                {{- 'icon-support.svg' | inline_asset_content -}}
+                            {%- endcase -%}
                           </span>
                         {%- endif -%}
                         <span class="search-discovery__card-text">
