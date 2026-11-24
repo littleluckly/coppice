@@ -138,7 +138,7 @@
               </div>
             </div>
           {%- endif -%}
-
+去玩儿
           {%- comment -%}
             快速链接：block 驱动。先 capture 再判空，全部 block 都空时不留空壳（AGENTS §6）。
 
@@ -153,11 +153,15 @@
             {%- for block in section.blocks -%}
               {%- if block.type == 'search_link' and block.settings.title != blank -%}
                 <li class="search-discovery__card" {{ block.shopify_attributes }}>
-                  {%- if block.settings.link != blank -%}
-                    <a class="search-discovery__card-link" href="{{ block.settings.link }}">
-                  {%- else -%}
-                    <div class="search-discovery__card-link search-discovery__card-link--no-target">
-                  {%- endif -%}
+                  {%- comment -%}
+                    无链接时不写 href：这仍是 <a>，但没有 href 的元素既不可聚焦、也不被
+                    读屏当链接播报（role 退化为 generic），比塞个 href="" 诚实。
+                    样式侧用 :not([href]) 收掉 hover 与手型光标。
+                  {%- endcomment -%}
+                  <a
+                    class="search-discovery__card-link"
+                    {%- if block.settings.link != blank %} href="{{ block.settings.link }}"{% endif -%}
+                  >
                     {%- if block.settings.icon != blank -%}
                       <span class="search-discovery__card-icon" aria-hidden="true">
                         {{- block.settings.icon | inline_asset_content -}}
@@ -169,11 +173,7 @@
                         <span class="search-discovery__card-subtitle">{{ block.settings.subtitle }}</span>
                       {%- endif -%}
                     </span>
-                  {%- if block.settings.link != blank -%}
-                    </a>
-                  {%- else -%}
-                    </div>
-                  {%- endif -%}
+                  </a>
                 </li>
               {%- endif -%}
             {%- endfor -%}
@@ -944,14 +944,14 @@
     outline-offset: 2px;
   }
 
-  /* 没配链接的卡片（2026-11-24）：结构上不是链接，视觉上也要说明"不可点"——
-     不改光标、不画 hover 高亮。用 div 渲染，读屏也不会当成可跳转元素。 */
-  .search-discovery__card-link--no-target {
+  /* 没配链接的卡片（2026-11-24）：<a> 不带 href，视觉上也要说明"不可点"——
+     不改光标、不画 hover 高亮。:not([href]) 直接对应"这张卡没有目标"。 */
+  .search-discovery__card-link:not([href]) {
     cursor: default;
   }
 
-  .search-discovery__card-link--no-target:hover {
-    /* 盖回常态底色；特异性与上面 :hover 相同，靠源序取胜（同文件内顺序确定） */
+  .search-discovery__card-link:not([href]):hover {
+    /* 盖回常态底色；特异性高于上面那条 :hover，同文件内源序也确定 */
     background-color: color-mix(in srgb, var(--color-foreground) 5%, var(--color-background));
   }
 
