@@ -2016,7 +2016,8 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 0.5rem 1rem 1.5rem;
+    /* 2026-11-24 参考图：左右留白加大到 24px，底部交给内容自己收（0） */
+    padding: 1.25rem 1.5rem 0;
   }
 
   .search-drawer__body {
@@ -2028,26 +2029,27 @@
 
   .search-drawer__head {
     display: flex;
-    align-items: center;
+    align-items: start;
     justify-content: space-between;
     gap: 0.5rem;
-    margin-block-end: 0.5rem;
+    margin-block-end: 1.25rem;
   }
 
   .search-drawer__title {
     margin: 0;
-    /* 工业小标签风格：与结果分组标题同款（uppercase + 大字距） */
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgb(0 0 0 / 45%);
+    /* 2026-11-24 参考图：从 uppercase 小标签改成页面级大标题 */
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--color-foreground);
   }
 
   .search-drawer__close {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: none;
     inline-size: 44px;
     block-size: 44px;
     padding: 0;
