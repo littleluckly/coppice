@@ -41,6 +41,18 @@
     },
     "main-nav": {
       "type": "main-nav",
+      "settings": {
+        "brand_name": "Northbark",
+        "menu": "main-menu",
+        "show_all_series": true,
+        "all_series_label": "All series",
+        "all_series_position": "before_last",
+        "customer_account_menu": "customer-account-main-menu",
+        "show_follow_on_shop": false
+      }
+    },
+    "search-drawer": {
+      "type": "search-drawer",
       "blocks": {
         "search_link_walk_behind": {
           "type": "search_link",
@@ -86,19 +98,13 @@
         "search_link_trimmer"
       ],
       "settings": {
-        "brand_name": "Northbark",
-        "menu": "main-menu",
-        "show_all_series": true,
-        "all_series_label": "All series",
-        "all_series_position": "before_last",
-        "customer_account_menu": "customer-account-main-menu",
-        "show_follow_on_shop": false,
         "results_limit": 10
       }
     }
   },
   "order": [
     "announcement-bar",
-    "main-nav"
+    "main-nav",
+    "search-drawer"
   ]
 }

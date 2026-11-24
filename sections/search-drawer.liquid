@@ -1,0 +1,1210 @@
+{% comment %}
+  Search drawer — 搜索抽屉（2026-11-24 从 sections/main-nav.liquid 独立成 section）。
+
+  为什么独立：搜索面板的配置项和区块已经长到和导航无关了（热门搜索词 / 推荐卡 /
+  快速链接 block / 帮助条）。留在 main-nav 里时商家要打开「Main menu」才能改搜索，
+  主题编辑器的区块列表也跟着导航混在一起。独立后与 Cart drawer 同一组织方式：
+  页眉分组里单独一行，点开就是全部搜索配置。
+
+  与 main-nav 的唯一耦合是**谁触发它**：页头的搜索图标（桌面 + 移动）和导航抽屉里
+  那行搜索都带 aria-controls="search-drawer-dialog"，组件按这个属性找 opener——
+  不再依赖 DOM 祖先（原来靠 closest('nav')，独立后就够不到了）。
+
+  dialog 未打开时是 display:none，所以「搜索前内容区」直接渲染、不进 <template>：
+  区块要能被编辑器识别。搜索表单本身仍在 <template> 里惰性克隆（AGENTS §6）。
+
+  结果片段由 sections/predictive-search.liquid 提供（Section Rendering API 按
+  section 文件名重渲染），与本文件无关。
+{% endcomment %}
+
+<search-drawer id="search-drawer">
+  <dialog
+    class="search-drawer"
+    id="search-drawer-dialog"
+    data-search-drawer
+    aria-labelledby="search-drawer-title"
+  >
+    <div class="search-drawer__inner">
+      <div class="search-drawer__head">
+        <h2 class="search-drawer__title" id="search-drawer-title">
+          {{ 'search.title' | t }}
+        </h2>
+        <button
+          type="button"
+          class="search-drawer__close"
+          aria-label="{{ 'navigation.close' | t }}"
+          data-search-drawer-close
+        >
+          {{ 'icon-close.svg' | inline_asset_content }}
+        </button>
+      </div>
+
+      <div class="search-drawer__body">
+        {%- comment -%}
+          表单仍走 <template> 惰性实例化（AGENTS §6）：它不是商家可配置内容，
+          首屏不必带。克隆由 search-drawer.js 插回本 template 的**原位置**，
+          这样结果面板永远排在下面那块"搜索前内容区"之前。
+        {%- endcomment -%}
+        <template data-search-drawer-template>
+          {% render 'predictive-search-entry',
+            search_section_id: section.id,
+            results_limit: section.settings.results_limit
+          %}
+        </template>
+
+        {%- comment -%}
+          搜索前内容区（2026-11-24 刘工参考图：热门搜索 / 推荐卡 / 快速链接 / 帮助条）。
+          与表单相反，这块**直接渲染、不进 template**：它是 block 驱动的商家内容，
+          素材留在 <template> 里时主题编辑器点不中对应 block，商家改不了。
+          <dialog> 没打开时是 display:none，不参与布局，多出的节点成本可忽略。
+        {%- endcomment -%}
+        {%- liquid
+          assign popular_terms = section.settings.search_popular_terms | split: ','
+          assign promo_image = section.settings.search_promo_image
+          assign promo_heading = section.settings.search_promo_heading
+          assign promo_text = section.settings.search_promo_text
+        -%}
+
+        <div class="search-discovery">
+          {%- if popular_terms.size > 0 -%}
+            {%- comment -%}
+              热门搜索：药丸直连搜索结果页。词是商家数据不是界面文案，不走 t:。
+              空项（商家写了 ",," 或尾部逗号）单独跳过，不渲染空药丸。
+            {%- endcomment -%}
+            <div class="search-discovery__block">
+              <h3 class="search-discovery__label">{{ 'search.popular_searches' | t }}</h3>
+              <ul class="search-discovery__pills" role="list">
+                {%- for term in popular_terms -%}
+                  {%- assign cleaned_term = term | strip -%}
+                  {%- if cleaned_term != blank -%}
+                    <li>
+                      <a
+                        class="search-discovery__pill"
+                        href="{{ routes.search_url }}?q={{ cleaned_term | url_encode }}"
+                      >
+                        {{- cleaned_term -}}
+                      </a>
+                    </li>
+                  {%- endif -%}
+                {%- endfor -%}
+              </ul>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%}
+            推荐卡：判据是**文案**不是图——文字是这张卡的主语，图只是背景。
+            两者都没有就整块不渲染（AGENTS §6）。
+            没有图时退成品牌色实底卡（.search-discovery__promo--text），
+            文字反色；演示店没传图也能看到完整效果。
+            图走 image_tag（焦点裁剪由平台写在 style 上，G-05）。
+          {%- endcomment -%}
+          {%- if promo_heading != blank or promo_text != blank -%}
+            <div class="search-discovery__promo{% if promo_image == blank %} search-discovery__promo--text{% endif %}">
+              {%- if promo_image != blank -%}
+                {{
+                  promo_image
+                  | image_url: width: 900
+                  | image_tag:
+                    widths: '450, 600, 900',
+                    sizes: '(min-width: 750px) 552px, calc(100vw - 48px)',
+                    loading: 'lazy',
+                    class: 'search-discovery__promo-image'
+                }}
+              {%- else -%}
+                {%- comment -%}
+                  无图兜底（2026-11-24 刘工）：叶子图标**当底图**，占的就是照片那个位置
+                  （卡片右半、垂直居中），半透明压在品牌色实底上当纹理。
+                  左侧仍留白给文字，构图与"左字右图"一致。
+                {%- endcomment -%}
+                <span class="search-discovery__promo-mark" aria-hidden="true">
+                  {{- 'icon-leaf.svg' | inline_asset_content -}}
+                </span>
+              {%- endif -%}
+              <div class="search-discovery__promo-body">
+                {%- if promo_heading != blank -%}
+                  <p class="search-discovery__promo-title">{{ promo_heading }}</p>
+                {%- endif -%}
+                {%- if promo_text != blank -%}
+                  <p class="search-discovery__promo-text">{{ promo_text }}</p>
+                {%- endif -%}
+                {%- if section.settings.search_promo_cta_label != blank
+                  and section.settings.search_promo_cta_link != blank
+                -%}
+                  <a class="btn-solid search-discovery__promo-cta" href="{{ section.settings.search_promo_cta_link }}">
+                    {{- section.settings.search_promo_cta_label -}}
+                    <span aria-hidden="true">→</span>
+                  </a>
+                {%- endif -%}
+              </div>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%}
+            快速链接：block 驱动。先 capture 再判空——全部 block 都没填链接时
+            不能留一个"有标题没卡片"的空壳（AGENTS §6 的容器判据）。
+          {%- endcomment -%}
+          {%- capture quick_links_html -%}
+            {%- for block in section.blocks -%}
+              {%- if block.type == 'search_link'
+                and block.settings.link != blank
+                and block.settings.title != blank
+              -%}
+                <li class="search-discovery__card" {{ block.shopify_attributes }}>
+                  <a class="search-discovery__card-link" href="{{ block.settings.link }}">
+                    {%- if block.settings.icon != blank -%}
+                      <span class="search-discovery__card-icon" aria-hidden="true">
+                        {{- block.settings.icon | inline_asset_content -}}
+                      </span>
+                    {%- endif -%}
+                    <span class="search-discovery__card-text">
+                      <span class="search-discovery__card-title">{{ block.settings.title }}</span>
+                      {%- if block.settings.subtitle != blank -%}
+                        <span class="search-discovery__card-subtitle">{{ block.settings.subtitle }}</span>
+                      {%- endif -%}
+                    </span>
+                  </a>
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endcapture -%}
+
+          {%- if quick_links_html != blank -%}
+            <div class="search-discovery__block">
+              <div class="search-discovery__block-head">
+                <h3 class="search-discovery__label">{{ 'search.quick_links' | t }}</h3>
+                <a class="search-discovery__more" href="{{ routes.collections_url }}">
+                  {{- 'search.view_all_link' | t -}}
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
+              <ul class="search-discovery__grid" role="list">
+                {{ quick_links_html }}
+              </ul>
+            </div>
+          {%- endif -%}
+
+          <div class="search-discovery__help">
+            <span class="search-discovery__help-icon" aria-hidden="true">
+              {{ 'icon-support.svg' | inline_asset_content }}
+            </span>
+            <span class="search-discovery__help-text">
+              <span class="search-discovery__help-title">{{ 'search.need_help' | t }}</span>
+              <span class="search-discovery__help-note">{{ 'search.help_note' | t }}</span>
+            </span>
+            <a class="btn-solid btn-solid--quiet search-discovery__help-cta" href="{{ routes.contact_url }}">
+              {{- 'search.contact_us' | t -}}
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+</search-drawer>
+
+<script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
+<script src="{{ 'search-drawer.js' | asset_url }}" defer></script>
+
+{% stylesheet %}
+  /* ---- 搜索抽屉：右侧滑出，桌面 + 移动共用（2026-10-10 刘工） ----
+     结构与 nav-drawer 同款（原生 <dialog> + showModal + template 惰性实例化），
+     差异只有宽度与内部排版。 */
+  .search-drawer {
+    inset-block: 0;
+    inset-inline: auto 0;
+    /* 由 showModal() 置于 top layer，无需 z-index */
+    /* 宽度（2026-10-10 刘工：最小 600px）：窄屏用 92vw 兜底，≥600px 时锁 600 起 */
+    width: max(600px, min(40rem, 92vw));
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-inline-end: 1px solid rgb(0 0 0 / 12%);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* 竖屏手机：全宽（600px 下限在手机上必然溢出） */
+  @media screen and (max-width: 749px) {
+    .search-drawer {
+      width: 100vw;
+    }
+  }
+
+  .search-drawer::backdrop {
+    background-color: rgb(0 0 0 / 45%);
+  }
+
+  .search-drawer__inner {
+    /* 纵向 flex：head 固定，body（含结果面板）吃满剩余高度。
+       结果多时滚动只发生在列表上，dialog 自身不再出滚动条。 */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    /* 2026-11-24 参考图：左右留白加大到 24px，底部交给内容自己收（0） */
+    padding: 1.25rem 1.5rem 0;
+  }
+
+  .search-drawer__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .search-drawer__head {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-end: 1.25rem;
+  }
+
+  .search-drawer__title {
+    margin: 0;
+    /* 2026-11-24 参考图：从 uppercase 小标签改成页面级大标题 */
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--color-foreground);
+  }
+
+  .search-drawer__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .search-drawer__close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .search-drawer__close svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* ---- 抽屉滑入 / 滑出动画 ----
+     搜索抽屉仍用 @starting-style + allow-discrete（开 → 从右侧滑入；关 → 等滑动完再摘除），
+     旧浏览器不支持时降级为瞬时显隐，无功能损失（渐进增强）。
+     translate 是物理属性：本主题仅 en（LTR），100% 恒为屏外。
+     导航抽屉已改由 <bottom-sheet> 播 keyframes（2026-11-03）——dialog 从
+     display:none 打开的同一帧里 transition 没有起点，写在这里只会闪现。 */
+  .search-drawer {
+    translate: 100% 0;
+    transition: translate 0.25s ease, display 0.25s allow-discrete, overlay 0.25s allow-discrete;
+  }
+
+  .search-drawer[open] {
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .search-drawer[open] {
+      translate: 100% 0;
+    }
+    .search-drawer[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* 遮罩同步淡入淡出 */
+  .search-drawer::backdrop {
+    opacity: 1;
+    transition: opacity 0.25s ease;
+  }
+
+  /* WCAG 2.1 / SDD §8.2：用户要求减少动效时全部关闭
+     （导航抽屉的滑入滑出由 <bottom-sheet> 自己判断 reduced-motion，不在这里） */
+  @media (prefers-reduced-motion: reduce) {
+    .search-drawer,
+    .search-drawer::backdrop {
+      transition: none;
+    }
+  }
+
+  /* 抽屉宽度即输入框宽度（snippet 已无 32rem 上限，此规则留作宽度解耦的文档锚点） */
+
+  /* ===== 预测搜索输入框 =====
+     2026-11-24：整段随搜索抽屉从 sections/main-nav.liquid 迁到本 section
+     （抽屉独立成 section，对齐 Cart drawer 的组织方式）。
+     边框/底线那套极简线型的旧视觉已被胶囊版本取代，见下面的 field 规则。 ===== */
+  /* 视觉基调（2026-11-24 刘工参考图改版）：输入区变成 52px 胶囊，
+     底色从前景色派生 6%，聚焦时整条胶囊描一圈品牌色；加载仍是贴着底沿的扫描线。
+     布局（2026-10-10 刘工）：抽屉是纵向 flex 链——结果面板作为
+     flex 子项吃满 dialog 剩余高度，滚动只发生在列表上。 */
+  .predictive-search {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    inline-size: 100%;
+    flex: 1;
+    /* 经典 flex 陷阱：子项默认 min-height:auto，不锁 0 就无法收缩，
+       溢出会把 dialog 撑出滚动而不是列表自己滚 */
+    min-height: 0;
+  }
+
+  .predictive-search__form {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* 输入区：胶囊容器。内部是 flex 行 [放大镜] [输入框] [清空] [提交]，
+     全部靠 padding 4px 把 44px 的子件衬成 52px 的胶囊——不用绝对定位，
+     清空键隐藏时输入框自动吃掉它的宽度。 */
+  .predictive-search__field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: none;
+    min-block-size: 52px;
+    padding: 0.25rem;
+    border-radius: 999px;
+    /* 底色从 foreground 派生：浅色主题是淡灰、Noir 深底自动变淡白（BUG-043 教训） */
+    background-color: color-mix(in srgb, var(--color-foreground) 6%, var(--color-background));
+    /* 扫描线要沿圆角内沿走，超出的部分裁掉 */
+    overflow: hidden;
+  }
+
+  /* 焦点可见：整条胶囊描一圈（输入框自身 outline 已关）。
+     3:1 以上——品牌绿压浅底、深底都成立（SDD §8.2） */
+  .predictive-search__field:focus-within {
+    box-shadow: 0 0 0 2px var(--color-brand);
+  }
+
+  /* 放大镜：纯装饰（markup 里 aria-hidden），点击穿透到输入框 */
+  .predictive-search__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: 44px;
+    block-size: 44px;
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+    pointer-events: none;
+  }
+
+  .predictive-search__icon svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+
+  /* 提交键：胶囊右端的圆形品牌色按钮（2026-11-24 参考图）。
+     图标色用 --color-background 而非硬编码白：Noir 下品牌色是亮 lime，
+     白箭头压在上面不达 AA（与 .btn-solid 同一套判断） */
+  .predictive-search__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    /* 触摸目标 ≥ 44×44（AGENTS §8） */
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: var(--color-background);
+    background-color: var(--color-brand);
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .predictive-search__submit:hover {
+    background-color: var(--color-brand-accent);
+  }
+
+  .predictive-search__submit:focus-visible {
+    outline: 2px solid var(--color-brand-accent);
+    outline-offset: 2px;
+  }
+
+  .predictive-search__submit svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .predictive-search__input {
+    flex: 1;
+    min-inline-size: 0;
+    /* 触摸目标 ≥ 44×44（AGENTS §8）；胶囊高度由 field 的 52px 决定 */
+    min-block-size: 44px;
+    padding: 0.25rem;
+    color: var(--color-foreground);
+    /* 底色在胶囊上，输入框自身全透明 */
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: 1rem;
+    /* 窄屏（375）放不下完整 placeholder：截断用省略号，而不是硬切半个词 */
+    text-overflow: ellipsis;
+    appearance: none;
+  }
+
+  /* 原生 WebKit search 清除 X 无法定制，隐藏——用下方自定义清空按钮替代 */
+  .predictive-search__input::-webkit-search-cancel-button,
+  .predictive-search__input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .predictive-search__input::placeholder {
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+  }
+
+  /* 焦点态由胶囊的 :focus-within 统一承担（见上）——
+     这里关掉浏览器默认 outline，避免"胶囊描边 + 输入框方框"两层框 */
+  .predictive-search__input:focus {
+    outline: none;
+  }
+
+  /* ---- 加载扫描线：请求进行中，输入框下沿一条细线往返 ----
+     aria-busy 由 JS 在请求生命周期内驱动（过期的请求不会误关）。
+     锚在 field 上（form 的底边现在是面板底，不再是输入框下沿）。 */
+  .predictive-search__field::after {
+    content: '';
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    inline-size: 35%;
+    block-size: 2px;
+    background-color: var(--color-brand-accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .predictive-search[aria-busy='true'] .predictive-search__field::after {
+    opacity: 1;
+    animation: predictive-search-sweep 0.9s ease-in-out infinite;
+  }
+
+  @keyframes predictive-search-sweep {
+    0% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 186% 0;
+    }
+    100% {
+      translate: 0 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .predictive-search[aria-busy='true'] .predictive-search__field::after {
+      animation: none;
+      inline-size: 100%;
+      opacity: 0.4;
+    }
+  }
+
+  /* 结果面板：沉浸式——与抽屉同底色、无框无圆角，分区靠发丝线（见 section 样式） */
+  /* 清空按钮（2026-11-24）：胶囊内的小号叉，退到圆形提交键左侧。
+     原来是绝对定位——现在是 flex 行的普通子项，隐藏时输入框自动补位。
+     命中区仍要 44×44（AGENTS §8），靠自身尺寸撑，不用伪元素。 */
+  .predictive-search__clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+    background: none;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+
+  .predictive-search__clear:hover {
+    color: var(--color-foreground);
+  }
+
+  /* 无输入时隐藏（JS 用 hidden 属性控制，此处兜底初始态） */
+  .predictive-search__clear[hidden] {
+    display: none;
+  }
+
+  .predictive-search__clear svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  .predictive-search__clear:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: -2px;
+    border-radius: 50%;
+  }
+
+  /* 结果面板：不再是绝对定位浮层——form 纵向 flex 的最后一个子项，
+     flex:1 吃满 dialog 剩余高度，滚动条只出现在列表上 */
+  .predictive-search__panel {
+    flex: 1;
+    min-height: 0;
+    margin-block-start: 0.75rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    background-color: var(--color-background);
+  }
+
+  .predictive-search__panel[hidden] {
+    display: none;
+  }
+
+  /* ---- 结果骨架屏（predictive-search.js 的 _queueSkeleton，2026-10-29） ----
+     只在"面板还是空的"这一刻出现：首次查询，或上一次查无结果。已有上一轮结果时
+     保持原样——边搜边换会把列表闪掉，比没有反馈更难受。
+     尺寸复刻真实结果行（112px 缩略图 + 两行文字 + 发丝线），换入结果时不跳。
+     底色一律从 foreground 派生：黑 alpha 硬编码在 Noir 深底上不可见（BUG-043 教训）。 */
+  .predictive-search__skeleton {
+    padding-block-end: 0.75rem;
+  }
+
+  .predictive-search__skeleton-heading,
+  .predictive-search__skeleton-thumb,
+  .predictive-search__skeleton-line {
+    background-color: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+    animation: predictive-search-skeleton-pulse 1.4s ease-in-out infinite;
+  }
+
+  /* 分组标签占位：对位真实 .predictive-search__heading 的 padding + 行高 */
+  .predictive-search__skeleton-heading {
+    inline-size: 5rem;
+    block-size: 0.5rem;
+    margin: 1.5rem 1.5rem 0.75rem;
+    border-radius: 3px;
+  }
+
+  .predictive-search__skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.75rem 1.5rem;
+    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 7%, transparent);
+  }
+
+  .predictive-search__skeleton-thumb {
+    flex: 0 0 auto;
+    inline-size: 112px;
+    block-size: 112px;
+  }
+
+  .predictive-search__skeleton-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-inline-size: 0;
+  }
+
+  .predictive-search__skeleton-line {
+    block-size: 0.625rem;
+    inline-size: 70%;
+    border-radius: 3px;
+  }
+
+  .predictive-search__skeleton-line--short {
+    block-size: 0.5rem;
+    inline-size: 30%;
+  }
+
+  @keyframes predictive-search-skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  /* 无障碍红线：脉冲关停，保留静态灰块（仍能读出"这里有内容要来"） */
+  @media (prefers-reduced-motion: reduce) {
+    .predictive-search__skeleton-heading,
+    .predictive-search__skeleton-thumb,
+    .predictive-search__skeleton-line {
+      animation: none;
+    }
+  }
+
+  /* ===== 搜索前内容区（2026-11-24 刘工参考图）=====
+     四段：热门搜索药丸 / 推荐卡 / 快速链接网格 / 帮助条。
+     与结果面板互斥，用 :has() 判面板的 hidden 属性（零 JS）：
+       · 内容区在场 → 表单只占输入行，剩余高度归内容区滚动
+       · 面板现身（含骨架屏）→ 表单吃满全部高度，内容区退场
+     :has() 不支持时两条规则都不生效，退化成"输入行 + 内容区"同屏堆叠，
+     结果面板会出现在下方——仍可用，只是不如参考图紧凑。 */
+  .search-drawer__body:has(.search-discovery) .predictive-search {
+    flex: 0 0 auto;
+  }
+
+  .search-drawer__body:has(.predictive-search__panel:not([hidden])) .predictive-search {
+    flex: 1;
+  }
+
+  .search-drawer__body:has(.predictive-search__panel:not([hidden])) .search-discovery {
+    display: none;
+  }
+
+  .search-discovery {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    flex: 1;
+    min-height: 0;
+    margin-block-start: 1.25rem;
+    padding-block: 1.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    /* 顶部发丝线：参考图里搜索框与下方内容之间那道分隔 */
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+
+  .search-discovery__block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .search-discovery__label {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-foreground);
+  }
+
+  .search-discovery__block-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* View all：行尾链接（AGENTS §6 箭头准则允许的两类位置之一） */
+  .search-discovery__more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-foreground);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .search-discovery__more:hover {
+    color: var(--color-brand);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .search-discovery__more:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* ---- 热门搜索药丸 ---- */
+  .search-discovery__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .search-discovery__pill {
+    display: inline-flex;
+    align-items: center;
+    /* 触摸目标 ≥ 44（AGENTS §8）：靠 min-block-size 撑，不靠字号 */
+    min-block-size: 44px;
+    padding: 0.5rem 1.125rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    color: var(--color-foreground);
+    font-size: 0.875rem;
+    line-height: 1.2;
+    text-decoration: none;
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .search-discovery__pill:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
+
+  .search-discovery__pill:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* ---- 推荐卡 ----
+     aspect-ratio 给宽屏定比例，min-block-size 兜窄屏（两者取较大值）；
+     文字压在左侧雾面上，雾面从 background 派生——浅色主题白雾、深色骨架黑雾，
+     两种情况正文都够 4.5:1。图走 image_tag，焦点裁剪由平台写在 style 上。 */
+  .search-discovery__promo {
+    position: relative;
+    aspect-ratio: 2.6 / 1;
+    min-block-size: 13rem;
+    border-radius: 14px;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, var(--color-background));
+  }
+
+  .search-discovery__promo-image {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .search-discovery__promo-body {
+    position: absolute;
+    inset: 0;
+    /* 文字层压在底图（照片 / 叶子标记）之上 */
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(
+      90deg,
+      var(--color-background) 0%,
+      color-mix(in srgb, var(--color-background) 90%, transparent) 58%,
+      transparent 88%
+    );
+  }
+
+  /* 无图兜底（2026-11-24 刘工：叶子当底图）——
+     占的是照片那一格（右侧、垂直居中），半透明压在品牌色实底上当纹理；
+     左侧留给文字，构图与"左字右图"一致。z-index 压在 body 之下，
+     body 在无图分支是透明底，不会挡它（DOM 顺序上 body 在后，故显式降层）。 */
+  .search-discovery__promo-mark {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 7%;
+    z-index: 0;
+    translate: 0 -50%;
+    inline-size: 40%;
+    aspect-ratio: 1;
+    color: color-mix(in srgb, var(--color-background) 16%, transparent);
+    pointer-events: none;
+  }
+
+  .search-discovery__promo-mark svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .search-discovery__promo-title {
+    max-inline-size: 62%;
+    margin: 0;
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--color-foreground);
+  }
+
+  .search-discovery__promo-text {
+    max-inline-size: 60%;
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--color-foreground-muted);
+  }
+
+  /* .btn-solid 只给形状与配色（见 critical.css 头注），内边距与字号归本地 */
+  .search-discovery__promo-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-block-start: 0.625rem;
+    padding: 0.5rem 1.125rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  /* ---- 没传图时的退路：品牌色实底 + 反色文字 ----
+     文字色用 --color-background 而非白：Noir 下品牌色是亮 lime，白字不达 AA。
+     按钮反成"背景色实底 + 品牌字"，否则绿底绿钮糊成一片。
+     覆盖 .btn-solid:hover 必须上到 0,4,0——critical.css 与本文件的注入顺序
+     由平台决定，同特异性赌源序会翻车（critical.css 头注的既有结论）。 */
+  .search-discovery__promo--text {
+    background-color: var(--color-brand);
+  }
+
+  .search-discovery__promo--text .search-discovery__promo-body {
+    /* 无图不需要雾面遮罩 */
+    background: none;
+  }
+
+  .search-discovery__promo--text .search-discovery__promo-title,
+  .search-discovery__promo--text .search-discovery__promo-text {
+    color: var(--color-background);
+  }
+
+  .search-discovery__promo--text .search-discovery__promo-cta {
+    background-color: var(--color-background);
+    border-color: var(--color-background);
+    color: var(--color-brand);
+    box-shadow: none;
+  }
+
+  /* 浅底上扫白光等于什么都没发生，换成品牌色淡染（同 .btn-solid--quiet） */
+  .search-discovery__promo--text .search-discovery__promo-cta::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-brand) 12%, transparent),
+      transparent
+    );
+  }
+
+  .search-discovery__promo.search-discovery__promo--text .search-discovery__promo-cta:hover:not(:disabled) {
+    background-color: var(--color-background);
+    border-color: var(--color-background);
+    color: var(--color-brand-accent);
+  }
+
+  /* ---- 快速链接网格 ---- */
+  .search-discovery__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* 网格项自己锁 min-inline-size，否则长标题会把列顶宽（BUG-063 同源） */
+  .search-discovery__card {
+    min-inline-size: 0;
+  }
+
+  .search-discovery__card-link {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    block-size: 100%;
+    padding: 0.875rem;
+    border-radius: 12px;
+    background-color: color-mix(in srgb, var(--color-foreground) 5%, var(--color-background));
+    color: var(--color-foreground);
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+  }
+
+  .search-discovery__card-link:hover {
+    background-color: color-mix(in srgb, var(--color-brand) 12%, var(--color-background));
+  }
+
+  .search-discovery__card-link:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  .search-discovery__card-icon {
+    display: flex;
+    flex: none;
+    color: var(--color-foreground);
+  }
+
+  .search-discovery__card-icon svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  .search-discovery__card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-inline-size: 0;
+  }
+
+  .search-discovery__card-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .search-discovery__card-subtitle {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    color: var(--color-foreground-muted);
+  }
+
+  /* ---- 帮助条 ----
+     margin-block-start:auto 把它推到内容区底部（内容不足一屏时贴底，像参考图）；
+     内容超一屏时它就是普通流内元素，跟着一起滚。 */
+  .search-discovery__help {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-block-start: auto;
+    padding-block-start: 1.25rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+
+  .search-discovery__help-icon {
+    display: flex;
+    flex: none;
+    color: var(--color-foreground);
+  }
+
+  .search-discovery__help-icon svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  .search-discovery__help-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  .search-discovery__help-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .search-discovery__help-note {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    color: var(--color-foreground-muted);
+  }
+
+  .search-discovery__help-cta {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    gap: 0.4rem;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  /* 窄屏（375 上下）：两列卡片里的标题会被压成两行，退成一列；
+     推荐卡的文字占比同时放宽，否则一行只剩几个字 */
+  @media screen and (max-width: 449px) {
+    .search-discovery__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .search-discovery__promo-title,
+    .search-discovery__promo-text {
+      max-inline-size: 72%;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.search_drawer.name",
+  "settings": [
+    {
+      "type": "range",
+      "id": "results_limit",
+      "label": "t:labels.results_limit",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "default": 10
+    },
+    {
+      "type": "text",
+      "id": "search_popular_terms",
+      "label": "t:sections.search_drawer.labels.popular_terms",
+      "info": "t:sections.search_drawer.labels.popular_terms_info",
+      "default": "Lawn mower, Battery, Trimmer, Chainsaw, Parts"
+    },
+    {
+      "type": "image_picker",
+      "id": "search_promo_image",
+      "label": "t:sections.search_drawer.labels.promo_image",
+      "info": "t:sections.search_drawer.labels.promo_image_info"
+    },
+    {
+      "type": "text",
+      "id": "search_promo_heading",
+      "label": "t:sections.search_drawer.labels.promo_heading",
+      "default": "Find the right equipment"
+    },
+    {
+      "type": "text",
+      "id": "search_promo_text",
+      "label": "t:sections.search_drawer.labels.promo_text",
+      "default": "Get personalized recommendations for your yard."
+    },
+    {
+      "type": "text",
+      "id": "search_promo_cta_label",
+      "label": "t:sections.search_drawer.labels.promo_cta_label",
+      "default": "Take the quiz"
+    },
+    {
+      "type": "url",
+      "id": "search_promo_cta_link",
+      "label": "t:sections.search_drawer.labels.promo_cta_link",
+      "info": "t:sections.search_drawer.labels.promo_cta_link_info"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "search_link",
+      "name": "t:sections.search_drawer.blocks.search_link.name",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "t:sections.search_drawer.blocks.search_link.labels.icon",
+          "options": [
+            {
+              "value": "icon-mower.svg",
+              "label": "t:sections.search_drawer.options.search_icon.mower"
+            },
+            {
+              "value": "icon-trimmer.svg",
+              "label": "t:sections.search_drawer.options.search_icon.trimmer"
+            },
+            {
+              "value": "icon-chainsaw.svg",
+              "label": "t:sections.search_drawer.options.search_icon.chainsaw"
+            },
+            {
+              "value": "icon-parts.svg",
+              "label": "t:sections.search_drawer.options.search_icon.parts"
+            },
+            {
+              "value": "icon-accessories.svg",
+              "label": "t:sections.search_drawer.options.search_icon.accessories"
+            },
+            {
+              "value": "icon-battery.svg",
+              "label": "t:sections.search_drawer.options.search_icon.battery"
+            },
+            {
+              "value": "icon-leaf.svg",
+              "label": "t:sections.search_drawer.options.search_icon.leaf"
+            },
+            {
+              "value": "icon-truck.svg",
+              "label": "t:sections.search_drawer.options.search_icon.truck"
+            },
+            {
+              "value": "icon-warranty.svg",
+              "label": "t:sections.search_drawer.options.search_icon.warranty"
+            },
+            {
+              "value": "icon-support.svg",
+              "label": "t:sections.search_drawer.options.search_icon.support"
+            }
+          ],
+          "default": "icon-mower.svg"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "t:sections.search_drawer.blocks.search_link.labels.title",
+          "default": "Lawn mowers"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "label": "t:sections.search_drawer.blocks.search_link.labels.subtitle",
+          "default": "Explore our full range"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:sections.search_drawer.blocks.search_link.labels.link",
+          "info": "t:sections.search_drawer.blocks.search_link.labels.link_info"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 8,
+  "presets": [
+    {
+      "name": "t:sections.search_drawer.name",
+      "blocks": {
+        "search_link_walk_behind": {
+          "type": "search_link",
+          "settings": {
+            "icon": "icon-mower.svg",
+            "title": "Walk-behind mowers",
+            "subtitle": "Explore our full range",
+            "link": "shopify://collections/walk-behind"
+          }
+        },
+        "search_link_riding": {
+          "type": "search_link",
+          "settings": {
+            "icon": "icon-mower.svg",
+            "title": "Riding mowers",
+            "subtitle": "Cover more ground",
+            "link": "shopify://collections/riding"
+          }
+        },
+        "search_link_chainsaw": {
+          "type": "search_link",
+          "settings": {
+            "icon": "icon-chainsaw.svg",
+            "title": "Chainsaws",
+            "subtitle": "Power through timber",
+            "link": "shopify://collections/chainsaw"
+          }
+        },
+        "search_link_trimmer": {
+          "type": "search_link",
+          "settings": {
+            "icon": "icon-trimmer.svg",
+            "title": "String trimmers",
+            "subtitle": "Keep edges clean",
+            "link": "shopify://collections/string-trimmer"
+          }
+        }
+      }
+    }
+  ],
+  "enabled_on": {
+    "groups": [
+      "header"
+    ]
+  }
+}
+{% endschema %}

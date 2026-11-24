@@ -10,8 +10,9 @@
  *   `html:has(dialog[scroll-lock][open]) { overflow: hidden }` 锁背景滚动。
  *
  * 与 nav-drawer 的两处差异：
- *   1. openers 是复数——桌面 tools 区 + 移动端行右各一枚按钮，共用同一抽屉；
- *      关闭时焦点回到「最近使用的那枚」。
+ *   1. openers 是复数且**跨 section**——桌面 tools 区、移动端行右各一枚按钮，
+ *      外加 ☰ 导航抽屉里的搜索行（那枚由 nav-drawer 直接调本组件的 open()）。
+ *      共用同一抽屉，关闭时焦点回到「最近使用的那枚」。
  *   2. 打开后焦点进输入框（显式移焦，不用 autofocus——AGENTS §8）。
  *
  * Esc 分层：抽屉内联想面板未开时 Esc 由 <dialog> 原生处理（关抽屉）；
@@ -47,9 +48,22 @@ class SearchDrawer extends HTMLElement {
     // showModal 下 ::backdrop 不接收事件，靠"目标是否为 dialog 自身"判定点了遮罩
     this._dialog.addEventListener('click', this._onDialogClick, { signal });
 
-    const openers = this.closest('nav')?.querySelectorAll('[data-search-drawer-open]');
-    openers?.forEach((opener) => {
-      opener.addEventListener('click', () => this.open(opener), { signal });
+    // 2026-11-24：抽屉独立成 section 后，触发按钮（页头图标 ×2、导航抽屉里的搜索行）
+    // 与它不再是 DOM 祖先/兄弟关系，按 aria-controls 认领。
+    // 这不是「全局事件委托」：只做一次性的元素查询 + 逐元素绑定，事件仍由各按钮
+    // 自己的 listener 处理，AbortController 负责在 section 重渲染时一次拆干净。
+    const openers = document.querySelectorAll('[aria-controls="search-drawer-dialog"]');
+    openers.forEach((opener) => {
+      // opener 是 <a href="/search">（没有本 section 时它就只是个链接），
+      // 这里把它拦下来改成开抽屉——preventDefault 不能省，否则点了会跳走。
+      opener.addEventListener(
+        'click',
+        (event) => {
+          event.preventDefault();
+          this.open(opener);
+        },
+        { signal }
+      );
     });
 
     this._closeButton = this._dialog.querySelector('[data-search-drawer-close]');

@@ -183,9 +183,18 @@ class NavDrawer extends HTMLElement {
    * 关掉搜索后回到菜单层级，与参考图"搜索就在菜单里"的动线一致）。
    * search-drawer 的 opener 绑定发生在页面加载时，够不到此时才
    * 实例化的本抽屉内容，所以这里直接调它的公开 open()。
+   *
+   * 2026-11-24：搜索抽屉独立成 section 后，它与本 section 不再是 DOM 邻居，
+   * closest('nav') 够不到 —— 改按宿主元素的 id 取，再调公开方法。
+   * 那个 section 被商家从页眉分组删掉时返回 null，可选链兜住。
    */
-  _onSearch = (button) => {
-    this.closest('nav')?.querySelector('search-drawer')?.open(button);
+  _onSearch = (link) => {
+    const drawer = document.getElementById('search-drawer');
+    // 返回 false = 没接管，调用方不要 preventDefault，让链接照常跳 /search。
+    // 搜索抽屉是独立 section，商家可能从页眉分组里删掉它。
+    if (!drawer) return false;
+    drawer.open(link);
+    return true;
   };
 
   /**
@@ -313,8 +322,14 @@ class NavDrawer extends HTMLElement {
       button.addEventListener('click', () => this._onToggle(button), { signal });
     });
 
-    this._dialog.querySelectorAll('[data-nav-search]').forEach((button) => {
-      button.addEventListener('click', () => this._onSearch(button), { signal });
+    this._dialog.querySelectorAll('[data-nav-search]').forEach((link) => {
+      link.addEventListener(
+        'click',
+        (event) => {
+          if (this._onSearch(link)) event.preventDefault();
+        },
+        { signal }
+      );
     });
   }
 }
