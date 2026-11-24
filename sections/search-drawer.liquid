@@ -98,8 +98,17 @@
             文字反色；演示店没传图也能看到完整效果。
             图走 image_tag（焦点裁剪由平台写在 style 上，G-05）。
           {%- endcomment -%}
+          {%- comment -%}
+            2026-11-24 刘工：推荐卡整张可点，hover 与产品卡同款（上浮 + 光晕）。
+            所以容器本身就是 <a>——内层那个 CTA 只能降级成 <span>（视觉按钮），
+            否则就是 <a> 套 <a>。没有链接时 <a> 不写 href，退化成普通块。
+          {%- endcomment -%}
+          {%- assign promo_link = section.settings.search_promo_cta_link -%}
           {%- if promo_heading != blank or promo_text != blank -%}
-            <div class="search-discovery__promo{% if promo_image == blank %} search-discovery__promo--text{% endif %}">
+            <a
+              class="search-discovery__promo{% if promo_image == blank %} search-discovery__promo--text{% endif %}"
+              {%- if promo_link != blank %} href="{{ promo_link }}"{% endif -%}
+            >
               {%- if promo_image != blank -%}
                 {{
                   promo_image
@@ -128,15 +137,16 @@
                   <p class="search-discovery__promo-text">{{ promo_text }}</p>
                 {%- endif -%}
                 {%- if section.settings.search_promo_cta_label != blank
-                  and section.settings.search_promo_cta_link != blank
+                  and promo_link != blank
                 -%}
-                  <a class="btn-solid search-discovery__promo-cta" href="{{ section.settings.search_promo_cta_link }}">
+                  {%- comment -%} 视觉按钮：整卡才是链接，这里不能再用 <a> {%- endcomment -%}
+                  <span class="btn-solid search-discovery__promo-cta">
                     {{- section.settings.search_promo_cta_label -}}
                     <span aria-hidden="true">→</span>
-                  </a>
+                  </span>
                 {%- endif -%}
               </div>
-            </div>
+            </a>
           {%- endif -%}
 
           {%- comment -%}
