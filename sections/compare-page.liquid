@@ -80,6 +80,22 @@
 -%}
 
 {%- comment -%}
+  面包屑（2026-11-24 补）：页面级导航，**四个状态都输出**。
+  集合缺失 / 分组未配这些状态页面照样能到（外链、旧书签、手输 URL），
+  导航不能因为数据问题就消失——那种页面恰好最需要一个回得去的出口。
+  文案复用 general.home / general.breadcrumb（与产品页同一对键，不新增翻译键）；
+  末项是纯文本 + aria-current，不给自己链自己。
+{%- endcomment -%}
+{%- capture compare_breadcrumb -%}
+  <nav class="compare-page__breadcrumb" aria-label="{{ 'general.breadcrumb' | t }}">
+    <ol class="compare-page__breadcrumb-list" role="list">
+      <li><a href="{{ routes.root_url }}">{{ 'general.home' | t }}</a></li>
+      <li><span aria-current="page">{{ compare_heading | escape }}</span></li>
+    </ol>
+  </nav>
+{%- endcapture -%}
+
+{%- comment -%}
   对比页标记：底部确认条据此判断「我自己就在对比页」，从而不显示
   —— 在对比页上再给一个「查看对比」是多余的。
 {%- endcomment -%}
@@ -88,12 +104,14 @@
 {%- if compare_group == blank -%}
 
   <div class="compare-page__notice">
+    {{ compare_breadcrumb }}
     <p>{{ 'compare.page.group_missing' | t }}</p>
   </div>
 
 {%- elsif compare_collection == blank -%}
 
   <div class="compare-page__notice">
+    {{ compare_breadcrumb }}
     <p>{{ 'compare.page.collection_missing' | t }}</p>
     <a class="compare-page__back" href="{{ routes.all_products_collection_url }}">
       {{- 'compare.page.back' | t -}}
@@ -103,6 +121,7 @@
 {%- elsif compare_total < 2 -%}
 
   <div class="compare-page__notice">
+    {{ compare_breadcrumb }}
     <p>{{ 'compare.page.empty_group' | t }}</p>
     <a class="compare-page__back" href="{{ routes.all_products_collection_url }}">
       {{- 'compare.page.back' | t -}}
@@ -112,6 +131,8 @@
 {%- else -%}
 
   <section class="compare-page" data-compare-page data-compare-group="{{ compare_group }}">
+    {{ compare_breadcrumb }}
+
     <header class="compare-page__header">
       <h1 class="compare-page__title">
         {{ compare_heading }}
