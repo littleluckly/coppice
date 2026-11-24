@@ -373,7 +373,7 @@
     "label": "Search",
     "start_prompt": "Start with a search above, or pick a category.",
     "suggested_label": "Suggested searches",
-    "need_help": "Need Help?",
+    "need_help": "Need help?",
     "no_results_html": "No results found for {{ terms }}",
     "page_number": "Page {{ number }}",
     "pages": "Pages",
