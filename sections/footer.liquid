@@ -917,13 +917,20 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     border: 1px solid var(--footer-hairline);
-    border-radius: 999px;
+    border-radius: var(--input-radius, 999px);
     font-size: 0.8125rem;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
   }
 
+  /* 2026-11-24 全站统一：聚焦 = 主题色边框 + 1px 同色外环。
+     原来这里是 outline currentColor（跟文字色走，四个页面里唯一不是主题色的）；
+     footer-hairline 与文本同向派生，品牌色在这层底上对比与全站一致。 */
   .footer__newsletter-input:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 1px var(--color-brand);
   }
 
   /* 占位文字只是「补充提示」，真标签是那个 visually-hidden 的 <label>。

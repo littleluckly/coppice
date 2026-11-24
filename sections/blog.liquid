@@ -649,13 +649,17 @@
     gap: 0.35rem;
     padding: 0.22rem 0.22rem 0.22rem 0.85rem;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
-    border-radius: 999px;
+    border-radius: var(--input-radius, 999px);
     background-color: var(--color-background);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
   }
-  /* 焦点环画在外壳上：输入框本身无边框，单独给它 outline 会切进圆角里 */
+  /* 焦点环画在外壳上：输入框本身无边框，单独给它 outline 会切进圆角里。
+     2026-11-24 全站统一成 1px 实环（原先是 3px 18% 的光晕）。 */
   .blog-index__newsletter-field:focus-within {
     border-color: var(--color-brand);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 18%, transparent);
+    box-shadow: 0 0 0 1px var(--color-brand);
   }
   .blog-index__newsletter-input {
     flex: 1;

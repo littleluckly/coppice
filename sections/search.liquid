@@ -847,14 +847,18 @@
     gap: 0.6rem;
     padding: 0.35rem 0.35rem 0.35rem 1rem;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
-    border-radius: 999px;
+    border-radius: var(--input-radius, 999px);
     background-color: var(--color-background);
     box-shadow: 0 10px 30px -18px color-mix(in srgb, var(--color-foreground) 45%, transparent);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
+  /* 2026-11-24 全站统一成 1px 实环（原先是 3px 18% 光晕）。
+     悬浮投影必须跟着重写一遍——box-shadow 是整条替换，漏写就"聚焦时框掉地上"。 */
   .search-hero__field:focus-within {
     border-color: var(--color-brand);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 18%, transparent);
+    box-shadow:
+      0 0 0 1px var(--color-brand),
+      0 10px 30px -18px color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
   .search-hero__icon {
     display: grid;
