@@ -98,7 +98,13 @@
         "search_link_trimmer"
       ],
       "settings": {
-        "results_limit": 10
+        "results_limit": 10,
+        "search_popular_terms": "Lawn mower, Battery, Trimmer, Chainsaw, Parts",
+        "search_promo_image": "shopify://shop_images/lawn-mower-small-yard-card.webp",
+        "search_promo_heading": "Find the right equipment",
+        "search_promo_text": "Get personalized recommendations for your yard.",
+        "search_promo_cta_label": "Take the quiz",
+        "search_promo_cta_link": "shopify://blogs/buying-guides"
       }
     }
   },
