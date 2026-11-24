@@ -895,30 +895,167 @@
 
   <search-drawer>
     <dialog class="search-drawer" data-search-drawer aria-labelledby="search-drawer-title">
-      <template data-search-drawer-template>
-        <div class="search-drawer__inner">
-          <div class="search-drawer__head">
-            <h2 class="search-drawer__title" id="search-drawer-title">
-              {{ 'search.label' | t }}
-            </h2>
-            <button
-              type="button"
-              class="search-drawer__close"
-              aria-label="{{ 'navigation.close' | t }}"
-              data-search-drawer-close
-            >
-              {{ 'icon-close.svg' | inline_asset_content }}
-            </button>
-          </div>
+      <div class="search-drawer__inner">
+        <div class="search-drawer__head">
+          <h2 class="search-drawer__title" id="search-drawer-title">
+            {{ 'search.title' | t }}
+          </h2>
+          <button
+            type="button"
+            class="search-drawer__close"
+            aria-label="{{ 'navigation.close' | t }}"
+            data-search-drawer-close
+          >
+            {{ 'icon-close.svg' | inline_asset_content }}
+          </button>
+        </div>
 
-          <div class="search-drawer__body">
+        <div class="search-drawer__body">
+          {%- comment -%}
+            表单仍走 <template> 惰性实例化（AGENTS §6）：它不是商家可配置内容，
+            首屏不必带。克隆由 search-drawer.js 插回本 template 的**原位置**，
+            这样结果面板永远排在下面那块"搜索前内容区"之前。
+          {%- endcomment -%}
+          <template data-search-drawer-template>
             {% render 'predictive-search-entry',
               search_section_id: section.id,
               results_limit: section.settings.results_limit
             %}
+          </template>
+
+          {%- comment -%}
+            搜索前内容区（2026-11-24 刘工参考图：热门搜索 / 推荐卡 / 快速链接 / 帮助条）。
+            与表单相反，这块**直接渲染、不进 template**：它是 block 驱动的商家内容，
+            素材留在 <template> 里时主题编辑器点不中对应 block，商家改不了。
+            <dialog> 没打开时是 display:none，不参与布局，多出的节点成本可忽略。
+          {%- endcomment -%}
+          {%- liquid
+            assign popular_terms = section.settings.search_popular_terms | split: ','
+            assign promo_image = section.settings.search_promo_image
+          -%}
+
+          <div class="search-discovery">
+            {%- if popular_terms.size > 0 -%}
+              {%- comment -%}
+                热门搜索：药丸直连搜索结果页。词是商家数据不是界面文案，不走 t:。
+                空项（商家写了 ",," 或尾部逗号）单独跳过，不渲染空药丸。
+              {%- endcomment -%}
+              <div class="search-discovery__block">
+                <h3 class="search-discovery__label">{{ 'search.popular_searches' | t }}</h3>
+                <ul class="search-discovery__pills" role="list">
+                  {%- for term in popular_terms -%}
+                    {%- assign cleaned_term = term | strip -%}
+                    {%- if cleaned_term != blank -%}
+                      <li>
+                        <a
+                          class="search-discovery__pill"
+                          href="{{ routes.search_url }}?q={{ cleaned_term | url_encode }}"
+                        >
+                          {{- cleaned_term -}}
+                        </a>
+                      </li>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </ul>
+              </div>
+            {%- endif -%}
+
+            {%- comment -%}
+              推荐卡：只在有图时出现（无图 = 未配置 = 整块不渲染，AGENTS §6）。
+              文字压在图左侧的渐变遮罩上——遮罩从 background 派生，
+              浅色主题是白雾、深色骨架是黑雾，两种情况字都读得清。
+              图走 image_tag（焦点裁剪由平台写在 style 上，G-05）。
+            {%- endcomment -%}
+            {%- if promo_image != blank -%}
+              <div class="search-discovery__promo">
+                {{
+                  promo_image
+                  | image_url: width: 900
+                  | image_tag:
+                    widths: '450, 600, 900',
+                    sizes: '(min-width: 750px) 552px, calc(100vw - 48px)',
+                    loading: 'lazy',
+                    class: 'search-discovery__promo-image'
+                }}
+                <div class="search-discovery__promo-body">
+                  <p class="search-discovery__promo-title">
+                    {{ section.settings.search_promo_heading }}
+                  </p>
+                  {%- if section.settings.search_promo_text != blank -%}
+                    <p class="search-discovery__promo-text">{{ section.settings.search_promo_text }}</p>
+                  {%- endif -%}
+                  {%- if section.settings.search_promo_cta_label != blank
+                    and section.settings.search_promo_cta_link != blank
+                  -%}
+                    <a class="btn-solid search-discovery__promo-cta" href="{{ section.settings.search_promo_cta_link }}">
+                      {{- section.settings.search_promo_cta_label -}}
+                      <span aria-hidden="true">→</span>
+                    </a>
+                  {%- endif -%}
+                </div>
+              </div>
+            {%- endif -%}
+
+            {%- comment -%}
+              快速链接：block 驱动。先 capture 再判空——全部 block 都没填链接时
+              不能留一个"有标题没卡片"的空壳（AGENTS §6 的容器判据）。
+            {%- endcomment -%}
+            {%- capture quick_links_html -%}
+              {%- for block in section.blocks -%}
+                {%- if block.type == 'search_link'
+                  and block.settings.link != blank
+                  and block.settings.title != blank
+                -%}
+                  <li class="search-discovery__card" {{ block.shopify_attributes }}>
+                    <a class="search-discovery__card-link" href="{{ block.settings.link }}">
+                      {%- if block.settings.icon != blank -%}
+                        <span class="search-discovery__card-icon" aria-hidden="true">
+                          {{- block.settings.icon | inline_asset_content -}}
+                        </span>
+                      {%- endif -%}
+                      <span class="search-discovery__card-text">
+                        <span class="search-discovery__card-title">{{ block.settings.title }}</span>
+                        {%- if block.settings.subtitle != blank -%}
+                          <span class="search-discovery__card-subtitle">{{ block.settings.subtitle }}</span>
+                        {%- endif -%}
+                      </span>
+                    </a>
+                  </li>
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endcapture -%}
+
+            {%- if quick_links_html != blank -%}
+              <div class="search-discovery__block">
+                <div class="search-discovery__block-head">
+                  <h3 class="search-discovery__label">{{ 'search.quick_links' | t }}</h3>
+                  <a class="search-discovery__more" href="{{ routes.collections_url }}">
+                    {{- 'search.view_all_link' | t -}}
+                    <span aria-hidden="true">→</span>
+                  </a>
+                </div>
+                <ul class="search-discovery__grid" role="list">
+                  {{ quick_links_html }}
+                </ul>
+              </div>
+            {%- endif -%}
+
+            <div class="search-discovery__help">
+              <span class="search-discovery__help-icon" aria-hidden="true">
+                {{ 'icon-support.svg' | inline_asset_content }}
+              </span>
+              <span class="search-discovery__help-text">
+                <span class="search-discovery__help-title">{{ 'search.need_help' | t }}</span>
+                <span class="search-discovery__help-note">{{ 'search.help_note' | t }}</span>
+              </span>
+              <a class="btn-solid btn-solid--quiet search-discovery__help-cta" href="{{ routes.contact_url }}">
+                {{- 'search.contact_us' | t -}}
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
           </div>
         </div>
-      </template>
+      </div>
     </dialog>
   </search-drawer>
 
