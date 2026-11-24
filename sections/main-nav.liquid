@@ -981,17 +981,17 @@
                       loading: 'lazy',
                       class: 'search-discovery__promo-image'
                   }}
+                {%- else -%}
+                  {%- comment -%}
+                    无图兜底（2026-11-24 刘工）：叶子图标**当底图**，占的就是照片那个位置
+                    （卡片右半、垂直居中），半透明压在品牌色实底上当纹理。
+                    左侧仍留白给文字，构图与"左字右图"一致。
+                  {%- endcomment -%}
+                  <span class="search-discovery__promo-mark" aria-hidden="true">
+                    {{- 'icon-leaf.svg' | inline_asset_content -}}
+                  </span>
                 {%- endif -%}
                 <div class="search-discovery__promo-body">
-                  {%- comment -%}
-                    无图兜底标记（2026-11-24 刘工）：没传商品图时，标题上方垫一枚
-                    leaf 图标顶替参考图那个小图标——有图时图本身是视觉主体，不加。
-                  {%- endcomment -%}
-                  {%- if promo_image == blank -%}
-                    <span class="search-discovery__promo-mark" aria-hidden="true">
-                      {{- 'icon-leaf.svg' | inline_asset_content -}}
-                    </span>
-                  {%- endif -%}
                   {%- if promo_heading != blank -%}
                     <p class="search-discovery__promo-title">{{ promo_heading }}</p>
                   {%- endif -%}
@@ -3167,18 +3167,31 @@
     );
   }
 
-  /* 无图兜底标记（2026-11-24 刘工：用 assets/icon-leaf.svg 顶替）——
-     只在没有商品图时出现，压品牌色实底，所以取反色；
-     尺寸与快速链接卡片的图标一致（1.75rem）。 */
+  /* 无图兜底（2026-11-24 刘工：叶子当底图）——
+     占的是照片那一格（右侧、垂直居中），半透明压在品牌色实底上当纹理；
+     左侧留给文字，构图与"左字右图"一致。z-index 压在 body 之下，
+     body 在无图分支是透明底，不会挡它（DOM 顺序上 body 在后，故显式降层）。 */
   .search-discovery__promo-mark {
-    display: flex;
-    margin-block-end: 0.375rem;
-    color: var(--color-background);
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 7%;
+    z-index: 0;
+    translate: 0 -50%;
+    inline-size: 40%;
+    aspect-ratio: 1;
+    color: color-mix(in srgb, var(--color-background) 16%, transparent);
+    pointer-events: none;
   }
 
   .search-discovery__promo-mark svg {
-    inline-size: 1.75rem;
-    block-size: 1.75rem;
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  /* 文字层显式上浮，避免被底图标记盖住 */
+  .search-discovery__promo-body {
+    z-index: 1;
   }
 
   .search-discovery__promo-title {
