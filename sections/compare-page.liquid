@@ -249,6 +249,51 @@
   min-inline-size: 0;
 }
 
+/* ===== 面包屑（2026-11-24 补）=====
+   与集合页 / 产品页同构：Home / 页面标题，分隔符走伪元素，末项不上链。
+   两个易错点，抄这条时别删：
+   ① `align-items: center` 必须写（集合页 2026-10-20 那条教训）：链接按全局约定
+      撑到 44px 触控高度、纯文本末项只有行高，stretch 下两项文字中心会差十几像素；
+   ② `text-align: start` 必须写：本列表在空状态里落在 `.compare-page__notice`
+      （text-align: center）内部，居中会被子项继承下去。
+   下边距只给 0.5rem：链接的 44px 触控盒本身已经吃掉了一大截视觉间距
+   （与集合页同一组参数，那边实测过）。 */
+.compare-page__breadcrumb-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  text-align: start;
+  font-size: 0.82rem;
+  color: var(--color-foreground-muted);
+}
+
+.compare-page__breadcrumb-list li + li::before {
+  content: '/';
+  margin-inline-end: 0.35rem;
+  opacity: 0.6;
+}
+
+.compare-page__breadcrumb-list a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.compare-page__breadcrumb-list a:hover {
+  color: var(--color-foreground);
+  text-decoration: underline;
+}
+
+.compare-page__breadcrumb-list [aria-current='page'] {
+  color: var(--color-foreground);
+}
+
 /* ===== 表格渐显（2026-10-22）=====
    对比页有两版内容：服务端默认表（3 列）→ JS 按访客清单重建（N 列）。
    两版之间会「突变」，肉眼像闪一下。这里让表格在 JS 执行窗口内先不可见，
