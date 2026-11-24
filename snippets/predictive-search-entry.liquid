@@ -44,21 +44,14 @@
     {%- endcomment -%}
     <div class="predictive-search__field">
       {%- comment -%}
-        放大镜：纯视觉图标（aria-hidden + tabindex="-1"），可访问入口是输入框
+        放大镜：纯视觉图标，不参与无障碍树也不接收点击——可访问入口是输入框
         本身（combobox 语义）。
-        清空按钮恢复（2026-10-10 刘工）：type=search 的原生 WebKit 清除 X
-        无法定制样式，隐藏之，用与抽屉右上角关闭键同款的自定义按钮替代。
+        2026-11-24 参考图改版：输入区变成胶囊 + 右侧圆形提交键，放大镜从
+        "可点按钮"退成纯装饰（提交职责交给右侧圆形按钮，那是真的 submit）。
       {%- endcomment -%}
-      <button
-        type="button"
-        class="predictive-search__submit"
-        data-predictive-search-submit
-        aria-hidden="true"
-        tabindex="-1"
-      >
+      <span class="predictive-search__icon" aria-hidden="true">
         {{ 'icon-search.svg' | inline_asset_content }}
-        <span class="visually-hidden">{{ 'search.submit' | t }}</span>
-      </button>
+      </span>
 
       <input
         id="search-input-{{ search_section_id }}"
@@ -80,7 +73,8 @@
 
       {%- comment -%}
         清空输入：显隐由 JS 用 hidden 属性驱动（无输入时彻底离开无障碍树）。
-        样式与抽屉右上角关闭键同款（2026-10-10 刘工）。
+        2026-11-24：改成胶囊内的小号叉，让位给右侧圆形提交键——两个都在右端，
+        提交键在最外侧（参考图），清空键退到它左侧。
       {%- endcomment -%}
       <button
         type="button"
@@ -91,11 +85,22 @@
       >
         {{ 'icon-close.svg' | inline_asset_content }}
       </button>
-    </div>
 
-    <button type="submit" class="visually-hidden">
-      {{ 'search.submit' | t }}
-    </button>
+      {%- comment -%}
+        提交键（2026-11-24 参考图）：胶囊右端的圆形品牌色按钮。
+        它是真的 submit——无 JS 时表单靠它提交；JS 版照样走 <form action>，
+        联想只是增强。原先那个 visually-hidden 的 submit 已删除：
+        两个 submit 会在 tab 序里出现两次同一个动作。
+      {%- endcomment -%}
+      <button
+        type="submit"
+        class="predictive-search__submit"
+        data-predictive-search-submit
+        aria-label="{{ 'search.submit' | t }}"
+      >
+        {{ 'icon-arrow-right.svg' | inline_asset_content }}
+      </button>
+    </div>
 
     {%- comment -%}
       说明键盘操作方式。无结果时也保留——它解释的是控件行为，不是结果内容。
