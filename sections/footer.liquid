@@ -913,7 +913,9 @@
     min-inline-size: 0;
     min-block-size: 2.75rem;
     padding-block: 0.5rem;
-    padding-inline: 2.5rem 0.875rem;
+    /* 右侧 1.125rem：2.75rem 高的胶囊半径是 1.375rem，旧的 0.875rem 让
+       末尾文字贴住弧线（左侧 2.5rem 是留给绝对定位的邮件图标） */
+    padding-inline: 2.5rem 1.125rem;
     background-color: var(--color-background);
     color: var(--color-foreground);
     border: 1px solid var(--footer-hairline);
