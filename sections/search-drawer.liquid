@@ -990,7 +990,11 @@
     block-size: 100%;
     padding: 0.875rem;
     border-radius: 12px;
-    background-color: color-mix(in srgb, var(--color-foreground) 5%, var(--color-background));
+    /* 底色与 .blog-posts__media 逐字一致（2026-11-24 刘工）：品牌色 8% 透混。
+       第二色写 transparent 而不是 var(--color-background) —— 抽屉底本身就是
+       --color-background（.search-drawer），两者在这层上渲染结果相同，
+       但前者能保证主题的图片占位、博客卡图片位与本卡永远同一个表达，不会各改各的。 */
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
     color: var(--color-foreground);
     text-decoration: none;
     transition: background-color 0.15s ease;
@@ -1012,8 +1016,9 @@
   }
 
   .search-discovery__card-link:not([href]):hover {
-    /* 盖回常态底色；特异性高于上面那条 :hover，同文件内源序也确定 */
-    background-color: color-mix(in srgb, var(--color-foreground) 5%, var(--color-background));
+    /* 盖回常态底色；特异性高于上面那条 :hover，同文件内源序也确定。
+       值必须与常态底色逐字相同，否则"不可点"的卡会在 hover 时变个色、看着像能点。 */
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
   }
 
   .search-discovery__card-icon {
