@@ -174,10 +174,7 @@
   border-color: var(--color-brand);
   box-shadow: 0 0 0 1px var(--color-brand);
 }
-.cart-line__qty-btn:focus-visible,
-.cart-line__qty-input:focus-visible {
-  outline: none;
-}
+/* 探针反向验证：临时注释掉 */
 .cart-line__qty-btn {
   /* 触摸目标 44×44（AGENTS.md §8 / SDD §8.2） */
   inline-size: 44px;
