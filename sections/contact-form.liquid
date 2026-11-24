@@ -404,13 +404,15 @@
   .contact__input {
     inline-size: 100%;
     min-block-size: 3rem;
-    padding: 0.75rem 0.875rem;
+    /* 胶囊的左右内边距要跟着半径走：3rem 高的胶囊半径 1.5rem，
+       旧的 0.875rem 会让首字母坐进圆弧里 */
+    padding: 0.75rem 1.25rem;
     font: inherit;
     line-height: 1.5;
     color: var(--color-foreground);
     background-color: var(--color-background);
     border: 1px solid color-mix(in srgb, var(--color-foreground) 22%, transparent);
-    border-radius: var(--style-border-radius-inputs);
+    border-radius: var(--input-radius, 999px);
     appearance: none;
     transition:
       border-color 0.15s ease,
@@ -421,20 +423,29 @@
     color: var(--color-foreground-muted);
   }
 
-  /* 焦点必须自带描边：只改 border-color 在浅色底上肉眼几乎看不出来，
-     键盘用户会丢失焦点位置。品牌色描边在浅/深两套 preset 下都 ≥3:1。 */
+  /* 焦点：边框转主题色 + 外侧 1px 同色，合起来是 2px 实环 ——
+     与搜索抽屉的 box-shadow 0 0 0 2px 等粗同色（2026-11-24 全站统一）。
+     不再叠 outline：胶囊上 outline 与边框之间会留一道缝，看着像画了两道。 */
   .contact__input:focus-visible {
-    outline: 2px solid var(--color-brand);
-    outline-offset: 1px;
+    outline: none;
     border-color: var(--color-brand);
+    box-shadow: 0 0 0 1px var(--color-brand);
   }
 
   .contact__input[aria-invalid='true'] {
     border-color: var(--color-sale);
   }
 
+  /* 错误后再聚焦：环跟边一起转红，否则是「绿环套红框」两种信号打架 */
+  .contact__input[aria-invalid='true']:focus-visible {
+    border-color: var(--color-sale);
+    box-shadow: 0 0 0 1px var(--color-sale);
+  }
+
   .contact__textarea {
     min-block-size: 10rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--input-radius-multiline, 1rem);
     resize: vertical;
     line-height: 1.6;
   }

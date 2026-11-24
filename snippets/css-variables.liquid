@@ -123,5 +123,13 @@
     {%- endif -%}
 
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
+
+    /* 输入框形状（2026-11-24 刘工：全站向搜索抽屉看齐）。
+       单行 = 胶囊；多行 = 软圆角 —— 999px 落在多行高度上会变成左右半圆，
+       首行与末行的文字被弧线裁掉，所以 textarea 单独一档。
+       这两条是输入框形状的唯一出口，改这里全站跟着变。
+       引用点必须带同值兜底（gift_card 等独立模板未必走到这里）。 */
+    --input-radius: 999px;
+    --input-radius-multiline: 1rem;
   }
 {% endstyle %}
