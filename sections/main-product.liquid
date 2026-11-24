@@ -1486,23 +1486,29 @@
   .gift-recipient__input {
     inline-size: 100%;
     min-block-size: 44px;
-    padding: 0.55rem 0.75rem;
+    padding: 0.55rem 1.25rem;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 20%, transparent);
-    border-radius: var(--style-border-radius-inputs);
+    border-radius: var(--input-radius, 999px);
     background-color: var(--color-background);
     color: var(--color-foreground);
     font: inherit;
     font-size: 0.9rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .gift-recipient__input::placeholder {
     color: var(--color-foreground-muted);
     opacity: 1;
   }
+  /* 2026-11-24 全站统一：边框转主题色 + 1px 同色外环（原先只有 outline，
+     边框本身不变色，与其它页面不是一套） */
   .gift-recipient__input:focus-visible {
-    outline: 2px solid var(--color-brand);
-    outline-offset: 1px;
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 1px var(--color-brand);
   }
   .gift-recipient__textarea {
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--input-radius-multiline, 1rem);
     min-block-size: 4.5rem;
     resize: vertical;
   }
