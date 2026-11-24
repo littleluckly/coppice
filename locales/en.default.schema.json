@@ -116,7 +116,7 @@
             "title": "Title",
             "subtitle": "Subtitle",
             "link": "Link",
-            "link_info": "A card needs a title to appear. Without a link it still shows, but cannot be clicked. A link that points to a deleted resource reads as empty here."
+            "link_info": "A card needs a title to appear. Without a valid link it still shows, but cannot be clicked."
           }
         }
       },
