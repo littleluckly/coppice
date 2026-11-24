@@ -2867,24 +2867,27 @@
   }
 
   /* 结果面板：沉浸式——与抽屉同底色、无框无圆角，分区靠发丝线（见 section 样式） */
-  /* 清空按钮：与抽屉右上角关闭键（.search-drawer__close）同款。
-     垂直位置必须显式居中——form 改纵向 flex 后，绝对定位元素的
-     "静态位置"在输入框下方，不设 top 会被挤出去（BUG 2026-10-10）。 */
+  /* 清空按钮（2026-11-24）：胶囊内的小号叉，退到圆形提交键左侧。
+     原来是绝对定位——现在是 flex 行的普通子项，隐藏时输入框自动补位。
+     命中区仍要 44×44（AGENTS §8），靠自身尺寸撑，不用伪元素。 */
   .predictive-search__clear {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-end: 0;
-    translate: 0 -50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: none;
     inline-size: 44px;
     block-size: 44px;
     padding: 0;
-    color: inherit;
+    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
     background: none;
     border: 0;
+    border-radius: 50%;
     cursor: pointer;
+    transition: color 0.15s ease;
+  }
+
+  .predictive-search__clear:hover {
+    color: var(--color-foreground);
   }
 
   /* 无输入时隐藏（JS 用 hidden 属性控制，此处兜底初始态） */
@@ -2893,14 +2896,14 @@
   }
 
   .predictive-search__clear svg {
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
   }
 
   .predictive-search__clear:focus-visible {
-    outline: 2px solid currentColor;
+    outline: 2px solid var(--color-brand);
     outline-offset: -2px;
-    border-radius: 2px;
+    border-radius: 50%;
   }
 
   /* 结果面板：不再是绝对定位浮层——form 纵向 flex 的最后一个子项，
@@ -2992,6 +2995,324 @@
     .predictive-search__skeleton-thumb,
     .predictive-search__skeleton-line {
       animation: none;
+    }
+  }
+
+  /* ===== 搜索前内容区（2026-11-24 刘工参考图）=====
+     四段：热门搜索药丸 / 推荐卡 / 快速链接网格 / 帮助条。
+     与结果面板互斥，用 :has() 判面板的 hidden 属性（零 JS）：
+       · 内容区在场 → 表单只占输入行，剩余高度归内容区滚动
+       · 面板现身（含骨架屏）→ 表单吃满全部高度，内容区退场
+     :has() 不支持时两条规则都不生效，退化成"输入行 + 内容区"同屏堆叠，
+     结果面板会出现在下方——仍可用，只是不如参考图紧凑。 */
+  .search-drawer__body:has(.search-discovery) .predictive-search {
+    flex: 0 0 auto;
+  }
+
+  .search-drawer__body:has(.predictive-search__panel:not([hidden])) .predictive-search {
+    flex: 1;
+  }
+
+  .search-drawer__body:has(.predictive-search__panel:not([hidden])) .search-discovery {
+    display: none;
+  }
+
+  .search-discovery {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    flex: 1;
+    min-height: 0;
+    margin-block-start: 1.5rem;
+    padding-block: 1.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    /* 顶部发丝线：参考图里搜索框与下方内容之间那道分隔 */
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+
+  .search-discovery__block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .search-discovery__label {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-foreground);
+  }
+
+  .search-discovery__block-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* View all：行尾链接（AGENTS §6 箭头准则允许的两类位置之一） */
+  .search-discovery__more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-foreground);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .search-discovery__more:hover {
+    color: var(--color-brand);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .search-discovery__more:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* ---- 热门搜索药丸 ---- */
+  .search-discovery__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .search-discovery__pill {
+    display: inline-flex;
+    align-items: center;
+    /* 触摸目标 ≥ 44（AGENTS §8）：靠 min-block-size 撑，不靠字号 */
+    min-block-size: 44px;
+    padding: 0.5rem 1.125rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    color: var(--color-foreground);
+    font-size: 0.875rem;
+    line-height: 1.2;
+    text-decoration: none;
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .search-discovery__pill:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
+
+  .search-discovery__pill:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* ---- 推荐卡 ----
+     aspect-ratio 给宽屏定比例，min-block-size 兜窄屏（两者取较大值）；
+     文字压在左侧雾面上，雾面从 background 派生——浅色主题白雾、深色骨架黑雾，
+     两种情况正文都够 4.5:1。图走 image_tag，焦点裁剪由平台写在 style 上。 */
+  .search-discovery__promo {
+    position: relative;
+    aspect-ratio: 2.2 / 1;
+    min-block-size: 15rem;
+    border-radius: 14px;
+    overflow: hidden;
+    background-color: color-mix(in srgb, var(--color-foreground) 8%, var(--color-background));
+  }
+
+  .search-discovery__promo-image {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .search-discovery__promo-body {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(
+      90deg,
+      var(--color-background) 0%,
+      color-mix(in srgb, var(--color-background) 82%, transparent) 52%,
+      transparent 88%
+    );
+  }
+
+  .search-discovery__promo-title {
+    max-inline-size: 62%;
+    margin: 0;
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--color-foreground);
+  }
+
+  .search-discovery__promo-text {
+    max-inline-size: 60%;
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--color-foreground-muted);
+  }
+
+  /* .btn-solid 只给形状与配色（见 critical.css 头注），内边距与字号归本地 */
+  .search-discovery__promo-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-block-start: 0.625rem;
+    padding: 0.5rem 1.125rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  /* ---- 快速链接网格 ---- */
+  .search-discovery__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* 网格项自己锁 min-inline-size，否则长标题会把列顶宽（BUG-063 同源） */
+  .search-discovery__card {
+    min-inline-size: 0;
+  }
+
+  .search-discovery__card-link {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    block-size: 100%;
+    padding: 1rem;
+    border-radius: 12px;
+    background-color: color-mix(in srgb, var(--color-foreground) 5%, var(--color-background));
+    color: var(--color-foreground);
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+  }
+
+  .search-discovery__card-link:hover {
+    background-color: color-mix(in srgb, var(--color-brand) 12%, var(--color-background));
+  }
+
+  .search-discovery__card-link:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  .search-discovery__card-icon {
+    display: flex;
+    flex: none;
+    color: var(--color-foreground);
+  }
+
+  .search-discovery__card-icon svg {
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+  }
+
+  .search-discovery__card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-inline-size: 0;
+  }
+
+  .search-discovery__card-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .search-discovery__card-subtitle {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    color: var(--color-foreground-muted);
+  }
+
+  /* ---- 帮助条 ----
+     margin-block-start:auto 把它推到内容区底部（内容不足一屏时贴底，像参考图）；
+     内容超一屏时它就是普通流内元素，跟着一起滚。 */
+  .search-discovery__help {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-block-start: auto;
+    padding-block-start: 1.25rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  }
+
+  .search-discovery__help-icon {
+    display: flex;
+    flex: none;
+    color: var(--color-foreground);
+  }
+
+  .search-discovery__help-icon svg {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+
+  .search-discovery__help-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-inline-size: 0;
+  }
+
+  .search-discovery__help-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .search-discovery__help-note {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    color: var(--color-foreground-muted);
+  }
+
+  .search-discovery__help-cta {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    gap: 0.4rem;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  /* 窄屏（375 上下）：两列卡片里的标题会被压成两行，退成一列；
+     推荐卡的文字占比同时放宽，否则一行只剩几个字 */
+  @media screen and (max-width: 449px) {
+    .search-discovery__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .search-discovery__promo-title,
+    .search-discovery__promo-text {
+      max-inline-size: 72%;
     }
   }
 {% endstylesheet %}
