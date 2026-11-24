@@ -3388,11 +3388,134 @@
       "max": 10,
       "step": 1,
       "default": 10
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main_nav.groups.search"
+    },
+    {
+      "type": "text",
+      "id": "search_popular_terms",
+      "label": "t:sections.main_nav.labels.search_popular_terms",
+      "info": "t:sections.main_nav.labels.search_popular_terms_info",
+      "default": "Walk-behind mowers, Battery, Riding mowers, Chainsaws, Parts"
+    },
+    {
+      "type": "image_picker",
+      "id": "search_promo_image",
+      "label": "t:sections.main_nav.labels.search_promo_image"
+    },
+    {
+      "type": "text",
+      "id": "search_promo_heading",
+      "label": "t:sections.main_nav.labels.search_promo_heading",
+      "default": "Find the right equipment"
+    },
+    {
+      "type": "text",
+      "id": "search_promo_text",
+      "label": "t:sections.main_nav.labels.search_promo_text",
+      "default": "Get personalized recommendations for your yard."
+    },
+    {
+      "type": "text",
+      "id": "search_promo_cta_label",
+      "label": "t:sections.main_nav.labels.search_promo_cta_label",
+      "default": "Take the quiz"
+    },
+    {
+      "type": "url",
+      "id": "search_promo_cta_link",
+      "label": "t:sections.main_nav.labels.search_promo_cta_link",
+      "info": "t:sections.main_nav.labels.search_promo_cta_link_info"
     }
   ],
+  "blocks": [
+    {
+      "type": "search_link",
+      "name": "t:sections.main_nav.blocks.search_link.name",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "t:sections.main_nav.blocks.search_link.labels.icon",
+          "options": [
+            { "value": "icon-mower.svg", "label": "t:sections.main_nav.options.search_icon.mower" },
+            { "value": "icon-trimmer.svg", "label": "t:sections.main_nav.options.search_icon.trimmer" },
+            { "value": "icon-chainsaw.svg", "label": "t:sections.main_nav.options.search_icon.chainsaw" },
+            { "value": "icon-parts.svg", "label": "t:sections.main_nav.options.search_icon.parts" },
+            { "value": "icon-accessories.svg", "label": "t:sections.main_nav.options.search_icon.accessories" },
+            { "value": "icon-battery.svg", "label": "t:sections.main_nav.options.search_icon.battery" },
+            { "value": "icon-leaf.svg", "label": "t:sections.main_nav.options.search_icon.leaf" },
+            { "value": "icon-truck.svg", "label": "t:sections.main_nav.options.search_icon.truck" },
+            { "value": "icon-warranty.svg", "label": "t:sections.main_nav.options.search_icon.warranty" },
+            { "value": "icon-support.svg", "label": "t:sections.main_nav.options.search_icon.support" }
+          ],
+          "default": "icon-mower.svg"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "t:sections.main_nav.blocks.search_link.labels.title",
+          "default": "Lawn mowers"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "label": "t:sections.main_nav.blocks.search_link.labels.subtitle",
+          "default": "Explore our full range"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:sections.main_nav.blocks.search_link.labels.link",
+          "info": "t:sections.main_nav.blocks.search_link.labels.link_info"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 8,
   "presets": [
     {
-      "name": "t:general.main_nav"
+      "name": "t:general.main_nav",
+      "blocks": {
+        "search_link_walk_behind": {
+          "type": "search_link",
+          "settings": {
+            "icon": "icon-mower.svg",
+            "title": "Walk-behind mowers",
+            "subtitle": "Explore our full range",
+            "link": "shopify://collections/walk-behind"
+          }
+        },
+        "search_link_riding": {
+          "type": "search_link",
+          "settings": {
+            "icon": "icon-mower.svg",
+            "title": "Riding mowers",
+            "subtitle": "Cover more ground",
+            "link": "shopify://collections/riding"
+          }
+        },
+        "search_link_chainsaw": {
+          "type": "search_link",
+          "settings": {
+            "icon": "icon-chainsaw.svg",
+            "title": "Chainsaws",
+            "subtitle": "Power through timber",
+            "link": "shopify://collections/chainsaw"
+          }
+        },
+        "search_link_trimmer": {
+          "type": "search_link",
+          "settings": {
+            "icon": "icon-trimmer.svg",
+            "title": "String trimmers",
+            "subtitle": "Keep edges clean",
+            "link": "shopify://collections/string-trimmer"
+          }
+        }
+      }
     }
   ],
   "enabled_on": {
