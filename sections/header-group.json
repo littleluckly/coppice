@@ -104,7 +104,8 @@
         "search_promo_heading": "Find the right equipment",
         "search_promo_text": "Get personalized recommendations for your yard.",
         "search_promo_cta_label": "Take the quiz",
-        "search_promo_cta_link": "shopify://blogs/buying-guides"
+        "search_promo_cta_link": "shopify://blogs/buying-guides",
+        "search_help_link": "shopify://pages/contact"
       }
     }
   },
