@@ -64,18 +64,23 @@ class SearchDrawer extends HTMLElement {
    * <template> 惰性实例化：首次打开才进 DOM（AGENTS §6）。
    * 收益是首屏 HTML 不含搜索表单与结果容器；克隆落文档后
    * predictive-search 自定义元素自动升级、自行接管联想行为。
+   *
+   * 2026-11-24 参考图改版：抽屉外壳（标题 / 关闭键 / "搜索前内容区"）改为
+   * 直接渲染——它是 block 驱动的商家内容，藏在 <template> 里主题编辑器点不中。
+   * 惰性化的只剩下搜索表单这一个 template，克隆必须插回**它的原位置**
+   * （replaceWith），不能 append 到 dialog 末尾：结果面板要排在内容区之前。
    */
   _build() {
     this._dialog = this.querySelector('dialog[data-search-drawer]');
     if (!this._dialog) return;
 
-    const template = this._dialog.querySelector('template[data-search-drawer-template]');
-    if (!template) return;
-
     // open 状态下重渲染会再次 connected，此时不重复克隆
     if (this._dialog.dataset.built === 'true') return;
 
-    this._dialog.append(template.content.cloneNode(true));
+    const template = this._dialog.querySelector('template[data-search-drawer-template]');
+    if (!template) return;
+
+    template.replaceWith(template.content.cloneNode(true));
     this._dialog.dataset.built = 'true';
 
     // 锁背景滚动：属性驱动，样式在 critical.css

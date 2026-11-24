@@ -80,18 +80,54 @@
       }
     },
     "main_nav": {
+      "groups": {
+        "search": "Search drawer"
+      },
       "labels": {
         "show_all_series": "Show \"All series\" entry",
         "show_all_series_info": "Adds a last item to the menu that opens every collection in a panel. On mobile it links straight to the collections page. The list comes from your collections, not from the menu — nothing to maintain.",
         "all_series_label": "Entry label",
         "all_series_position": "Menu position",
-        "all_series_position_info": "Where the entry sits among your menu links. \"Before last link\" keeps support or contact links at the end."
+        "all_series_position_info": "Where the entry sits among your menu links. \"Before last link\" keeps support or contact links at the end.",
+        "search_popular_terms": "Popular searches",
+        "search_popular_terms_info": "Comma-separated words shown as pills under the search field. Each pill opens the search results page for that word. Leave empty to hide the row.",
+        "search_promo_image": "Promo image",
+        "search_promo_image_info": "Landscape photo for the promo card. Without an image the whole card stays hidden.",
+        "search_promo_heading": "Promo heading",
+        "search_promo_text": "Promo text",
+        "search_promo_cta_label": "Promo button label",
+        "search_promo_cta_link": "Promo button link",
+        "search_promo_cta_link_info": "The button only appears when both a label and a link are filled in."
+      },
+      "blocks": {
+        "search_link": {
+          "name": "Quick link",
+          "labels": {
+            "icon": "Icon",
+            "title": "Title",
+            "subtitle": "Subtitle",
+            "link": "Link",
+            "link_info": "Cards without a link or a title are not shown on the storefront."
+          }
+        }
       },
       "options": {
         "all_series_position": {
           "first": "First",
           "before_last": "Before last link",
           "last": "Last"
+        },
+        "search_icon": {
+          "mower": "Lawn mower",
+          "trimmer": "String trimmer",
+          "chainsaw": "Chainsaw",
+          "parts": "Parts",
+          "accessories": "Accessories",
+          "battery": "Battery",
+          "leaf": "Leaf",
+          "truck": "Delivery",
+          "warranty": "Warranty",
+          "support": "Support"
         }
       }
     },
