@@ -431,11 +431,14 @@
     flex: none;
     min-block-size: 52px;
     padding: 0.25rem;
-    border-radius: 999px;
+    /* 形状令牌的唯一出处（2026-11-24）：这里就是全站输入框要对齐的样板，
+       所以它自己也读令牌，而不是留一份写死的 999px */
+    border-radius: var(--input-radius, 999px);
     /* 底色从 foreground 派生：浅色主题是淡灰、Noir 深底自动变淡白（BUG-043 教训） */
     background-color: color-mix(in srgb, var(--color-foreground) 6%, var(--color-background));
     /* 扫描线要沿圆角内沿走，超出的部分裁掉 */
     overflow: hidden;
+    transition: box-shadow 0.15s ease;
   }
 
   /* 焦点可见：整条胶囊描一圈（输入框自身 outline 已关）。
