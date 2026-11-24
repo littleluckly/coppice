@@ -645,6 +645,17 @@ quick-view {
   border: 1px solid color-mix(in srgb, var(--color-foreground) 22%, transparent);
   border-radius: 999px;
   overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* 焦点环画在容器上（2026-11-24）：默认焦点框会套在中间那格外面，
+   溢出胶囊上下沿。步进器算一个控件，与搜索抽屉 / 价格区间同口径。 */
+.quick-view__qty:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 1px var(--color-brand);
+}
+.quick-view__qty-btn:focus-visible,
+.quick-view__qty-input:focus-visible {
+  outline: none;
 }
 .quick-view__qty-btn {
   inline-size: 40px;
