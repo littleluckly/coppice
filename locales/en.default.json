@@ -362,12 +362,12 @@
     "category_link_label": "Browse {{ title }}",
     "clear": "Clear search",
     "collections": "Collections",
-    "contact_us": "Contact Us",
+    "contact_us": "Contact us",
     "content_heading": "Articles & pages",
     "empty_body": "We couldn't find a match. Try one of these before searching again.",
     "help_note": "Our support team is here to help.",
     "hero_subtitle": "Find the perfect solution for your outdoor space.",
-    "hero_title": "Search Results",
+    "hero_title": "Search results",
     "instructions": "Use the up and down arrow keys to review results, and press Enter to open one.",
     "intro": "Find the right tool, part, or guide — search the whole catalogue.",
     "label": "Search",
@@ -384,7 +384,7 @@
     "popular_heading": "Or start with a category",
     "popular_searches": "Popular searches",
     "products": "Products",
-    "quick_links": "Quick Links",
+    "quick_links": "Quick links",
     "results_count": {
       "one": "{{ count }} result for",
       "other": "{{ count }} results for"
