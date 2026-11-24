@@ -116,7 +116,7 @@
             "title": "Title",
             "subtitle": "Subtitle",
             "link": "Link",
-            "link_info": "Cards without a link or a title are not shown on the storefront."
+            "link_info": "A card needs a title to appear. Without a link it still shows, but cannot be clicked. A link that points to a deleted resource reads as empty here."
           }
         }
       },

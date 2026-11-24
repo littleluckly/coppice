@@ -943,6 +943,17 @@
     outline-offset: 2px;
   }
 
+  /* 没配链接的卡片（2026-11-24）：结构上不是链接，视觉上也要说明"不可点"——
+     不改光标、不画 hover 高亮。用 div 渲染，读屏也不会当成可跳转元素。 */
+  .search-discovery__card-link--no-target {
+    cursor: default;
+  }
+
+  .search-discovery__card-link--no-target:hover {
+    /* 盖回常态底色；特异性与上面 :hover 相同，靠源序取胜（同文件内顺序确定） */
+    background-color: color-mix(in srgb, var(--color-foreground) 5%, var(--color-background));
+  }
+
   .search-discovery__card-icon {
     display: flex;
     flex: none;
