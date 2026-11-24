@@ -1612,14 +1612,15 @@
     overflow-wrap: break-word;
   }
 
-  /* 窄栏：搜索条改圆角矩形，给按钮和输入留足空间，胶囊不会挤成球 */
+  /* 窄栏只收紧内边距：形状仍是胶囊（2026-11-24 全站统一输入框形状，
+     不再在 480 以下退回方角——同一个控件在手机上换形状，是全站最显眼的不一致） */
   @media (max-width: 480px) {
     .search-hero__inner {
       padding-inline: var(--page-margin);
     }
     .search-hero__field {
-      padding-inline-start: 0.75rem;
-      border-radius: var(--style-border-radius-inputs);
+      padding-inline-start: 1rem;
+      border-radius: var(--input-radius, 999px);
     }
     .search-hero__subtitle {
       margin-block-end: 1rem;
