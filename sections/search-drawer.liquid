@@ -138,48 +138,27 @@
               </div>
             </div>
           {%- endif -%}
-去玩儿
+
           {%- comment -%}
-            快速链接：block 驱动。先 capture 再判空，全部 block 都空时不留空壳（AGENTS §6）。
+            快速链接：block 驱动。
 
-            **判据是标题，不是链接**（2026-11-24 修）。原来的写法要求链接也非空，
-            于是只要链接被读成空（编辑器里那个字段标红通常就是这个意思），
-            四张卡就整块静默消失，商家在编辑器里完全看不出原因——这是典型的
-            "配置看着没问题、前台什么都没有"。
-            现在：有标题就渲染；链接为空的那张退化成不可点的卡（<div>），
-            既不假装能点，也不会让整块内容凭空不见。
+            判据是**标题**，不是链接（2026-11-24）：链接被读成空时（编辑器里那格标红
+            多半就是这个），旧写法会让四张卡整块静默消失，商家看不出原因。
+            现在有标题就渲染；没有链接的那张退化成不可点的卡（<a> 不写 href）。
+
+            2026-11-24 二次修：原先用 {% capture %} 收集再输出，线上出现
+            "标题行在、卡片一张都没有"。capture 是这条链上唯一的字符串中转站，
+            已整个拆掉 —— 改成先数一遍（只判标题）再直接 for 输出。两遍循环最多
+            8 个 block，代价可忽略，换掉的是"内容被中间字符串搞坏"这个隐患。
           {%- endcomment -%}
-          {%- capture quick_links_html -%}
-            {%- for block in section.blocks -%}
-              {%- if block.type == 'search_link' and block.settings.title != blank -%}
-                <li class="search-discovery__card" {{ block.shopify_attributes }}>
-                  {%- comment -%}
-                    无链接时不写 href：这仍是 <a>，但没有 href 的元素既不可聚焦、也不被
-                    读屏当链接播报（role 退化为 generic），比塞个 href="" 诚实。
-                    样式侧用 :not([href]) 收掉 hover 与手型光标。
-                  {%- endcomment -%}
-                  <a
-                    class="search-discovery__card-link"
-                    {%- if block.settings.link != blank %} href="{{ block.settings.link }}"{% endif -%}
-                  >
-                    {%- if block.settings.icon != blank -%}
-                      <span class="search-discovery__card-icon" aria-hidden="true">
-                        {{- block.settings.icon | inline_asset_content -}}
-                      </span>
-                    {%- endif -%}
-                    <span class="search-discovery__card-text">
-                      <span class="search-discovery__card-title">{{ block.settings.title }}</span>
-                      {%- if block.settings.subtitle != blank -%}
-                        <span class="search-discovery__card-subtitle">{{ block.settings.subtitle }}</span>
-                      {%- endif -%}
-                    </span>
-                  </a>
-                </li>
-              {%- endif -%}
-            {%- endfor -%}
-          {%- endcapture -%}
+          {%- assign quick_link_count = 0 -%}
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'search_link' and block.settings.title != blank -%}
+              {%- assign quick_link_count = quick_link_count | plus: 1 -%}
+            {%- endif -%}
+          {%- endfor -%}
 
-          {%- if quick_links_html != blank -%}
+          {%- if quick_link_count > 0 -%}
             <div class="search-discovery__block">
               <div class="search-discovery__block-head">
                 <h3 class="search-discovery__label">{{ 'search.quick_links' | t }}</h3>
@@ -188,8 +167,39 @@
                   <span aria-hidden="true">→</span>
                 </a>
               </div>
-              <ul class="search-discovery__grid" role="list">
-                {{ quick_links_html }}
+              {%- comment -%}
+                data-blocks / data-rendered 是排查期临时标记（2026-11-24）：
+                打开 F12 一眼看出"进到 section 几个 block / 条件过了几个 /
+                循环里实际吐了几个 li"。线上确认正常后删掉这两个属性。
+              {%- endcomment -%}
+              <ul
+                class="search-discovery__grid"
+                role="list"
+                data-blocks="{{ section.blocks.size }}"
+                data-rendered="{{ quick_link_count }}"
+              >
+                {%- for block in section.blocks -%}
+                  {%- if block.type == 'search_link' and block.settings.title != blank -%}
+                    <li class="search-discovery__card" {{ block.shopify_attributes }}>
+                      <a
+                        class="search-discovery__card-link"
+                        {%- if block.settings.link != blank %} href="{{ block.settings.link }}"{% endif -%}
+                      >
+                        {%- if block.settings.icon != blank -%}
+                          <span class="search-discovery__card-icon" aria-hidden="true">
+                            {{- block.settings.icon | inline_asset_content -}}
+                          </span>
+                        {%- endif -%}
+                        <span class="search-discovery__card-text">
+                          <span class="search-discovery__card-title">{{ block.settings.title }}</span>
+                          {%- if block.settings.subtitle != blank -%}
+                            <span class="search-discovery__card-subtitle">{{ block.settings.subtitle }}</span>
+                          {%- endif -%}
+                        </span>
+                      </a>
+                    </li>
+                  {%- endif -%}
+                {%- endfor -%}
               </ul>
             </div>
           {%- endif -%}
