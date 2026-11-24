@@ -106,7 +106,9 @@
         "promo_text": "Promo text",
         "promo_cta_label": "Promo button label",
         "promo_cta_link": "Promo button link",
-        "promo_cta_link_info": "The button only appears when both a label and a link are filled in."
+        "promo_cta_link_info": "The button only appears when both a label and a link are filled in.",
+        "help_link": "Help button link",
+        "help_link_info": "Where the Contact Us button at the bottom goes. Leave empty to use your store's built-in contact page."
       },
       "blocks": {
         "search_link": {

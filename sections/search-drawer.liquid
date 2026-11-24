@@ -231,6 +231,12 @@
             </div>
           {%- endif -%}
 
+          {%- comment -%}
+            帮助条（2026-11-24）：文案走 t:（界面用语，多语言店铺要能翻译），
+            **只有链接可配**——商家可能用 /pages/contact-us、第三方工单系统或 FAQ。
+            没填时回落到平台自带的客服页 routes.contact_url，不留死链。
+          {%- endcomment -%}
+          {%- assign help_link = section.settings.search_help_link | default: routes.contact_url -%}
           <div class="search-discovery__help">
             <span class="search-discovery__help-icon" aria-hidden="true">
               {{ 'icon-support.svg' | inline_asset_content }}
@@ -239,7 +245,7 @@
               <span class="search-discovery__help-title">{{ 'search.need_help' | t }}</span>
               <span class="search-discovery__help-note">{{ 'search.help_note' | t }}</span>
             </span>
-            <a class="btn-solid btn-solid--quiet search-discovery__help-cta" href="{{ routes.contact_url }}">
+            <a class="btn-solid btn-solid--quiet search-discovery__help-cta" href="{{ help_link }}">
               {{- 'search.contact_us' | t -}}
               <span aria-hidden="true">→</span>
             </a>
@@ -1140,6 +1146,12 @@
       "id": "search_promo_cta_link",
       "label": "t:sections.search_drawer.labels.promo_cta_link",
       "info": "t:sections.search_drawer.labels.promo_cta_link_info"
+    },
+    {
+      "type": "url",
+      "id": "search_help_link",
+      "label": "t:sections.search_drawer.labels.help_link",
+      "info": "t:sections.search_drawer.labels.help_link_info"
     }
   ],
   "blocks": [
