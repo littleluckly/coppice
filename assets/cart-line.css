@@ -164,6 +164,19 @@
   border: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
   border-radius: 999px;
   background-color: var(--color-background);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* 焦点环画在容器上，不画在中间那格（2026-11-24 刘工截图：默认焦点框
+   在 40px 宽的数字格外面又套一个方框，还溢出胶囊上下沿）。
+   步进器是**一个**控件，与搜索抽屉 / 价格区间同一套口径：
+   边框转主题色 + 1px 同色外环。 */
+.cart-line__qty:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 1px var(--color-brand);
+}
+.cart-line__qty-btn:focus-visible,
+.cart-line__qty-input:focus-visible {
+  outline: none;
 }
 .cart-line__qty-btn {
   /* 触摸目标 44×44（AGENTS.md §8 / SDD §8.2） */

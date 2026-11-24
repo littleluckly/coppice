@@ -1340,11 +1340,22 @@
     border-radius: 999px;
     overflow: hidden;
     flex: 0 0 auto;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.15s ease;
   }
   /* hover 边框转品牌色（2026-10-29 刘工，参考稿 qty-selector） */
   .quantity:hover {
     border-color: var(--color-brand);
+  }
+  /* 焦点环画在容器上，端口里的两键与数字格自身不画 outline。
+     2026-11-24（购物车页截图）：默认焦点框会套在中间那格外面，
+     比输入框还大一圈、溢出胶囊上下沿。步进器算一个控件，与搜索抽屉同口径。 */
+  .quantity:focus-within {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 1px var(--color-brand);
+  }
+  .quantity__button:focus-visible,
+  .quantity__input:focus-visible {
+    outline: none;
   }
   .quantity__button {
     width: 44px;
