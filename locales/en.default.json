@@ -9,10 +9,10 @@
  */
 {
   "404": {
-    "title": "Oops! Page Not Found",
+    "title": "Oops! Page not found",
     "not_found": "The page you're looking for might have been removed, had its name changed, or is temporarily unavailable.",
-    "back_to_home": "Back to Home",
-    "browse_products": "Browse Products"
+    "back_to_home": "Back to home",
+    "browse_products": "Browse products"
   },
   "accessibility": {
     "refresh_page": "Choosing a selection results in a full page refresh.",
