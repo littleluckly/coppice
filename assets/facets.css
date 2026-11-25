@@ -424,8 +424,9 @@
   min-width: 0;
   min-height: 44px;
   padding: 6px 1rem;
-  border-radius: 999px;
+  border-radius: var(--input-radius, 999px);
   background-color: color-mix(in srgb, var(--color-foreground) 5%, transparent);
+  transition: box-shadow 0.15s ease;
 }
 .facets__price-currency {
   font-size: 0.9rem;
@@ -461,9 +462,11 @@
 .facets__price-field input:focus {
   outline: none;
 }
+/* 焦点在这一格上没有边框可染色（填充式输入框），所以整格描一圈主题色。
+   2026-11-24 全站统一：原先是 --color-brand-accent + offset 1px，
+   与搜索抽屉的「2px 实心主题色」不是一套。 */
 .facets__price-field:focus-within {
-  outline: 2px solid var(--color-brand-accent);
-  outline-offset: 1px;
+  box-shadow: 0 0 0 2px var(--color-brand);
 }
 .facets__apply {
   display: block;

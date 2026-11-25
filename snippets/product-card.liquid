@@ -6,7 +6,7 @@
   2026-10-29 对齐产品详情页）+ 单位价（2026-11-18 补，合规项 G-08；商品设了
   单位计价才出现）+ 星级 + 规格胶囊行（动力源 · 电池平台 · 切割宽度 ·
   排量 · 驱动方式 · 重量，2026-10-29 由"规格行 + 标签行"合并而来，每个字段只出现一次）
-  + Compare。
+  + Compare + 卡面 CTA（三态，见下方 quick_add 参数）。
 
   纪律：
   - 参数行逐项判空：缺值跳项，分隔符自动正确（li+li::before），不留空位（SDD §5.7）
@@ -24,9 +24,11 @@
   @param {boolean} show_weight - true → 规格行显示整机重量（经 spec-value 换算）
   @param {string} sizes - 图片 sizes 提示，**必传**（theme check 规则：@param 全部必传）。
     调用方按自己的列数估：首页 6 列 '15vw/30vw/45vw'，集合页桌面 3 列 '25vw/32vw/45vw'。
-  @param {boolean} quick_add - true → 单变体款渲染快速加购（2026-10-13 拍板：
-    仅单变体且 available 渲染；多变体卡不渲染任何 CTA；售罄置灰 disabled；
-    无 JS 降级为表单 POST /cart/add；交互由 assets/quick-add.js 的 quick-add 自定义元素接管）
+  @param {boolean} quick_add - true → 卡片 CTA（2026-11-20 三态，详见下方注释）：
+    单变体且 available → 快速加购（assets/quick-add.js 的 quick-add 元素接管，
+    无 JS 降级为表单 POST /cart/add）；单变体售罄 → 置灰 disabled；
+    多变体且有货 → 「Choose options」+ 快速查看弹窗（snippets/quick-view.liquid，
+    需要调用方同时引入 product-form.js）；多变体全售罄 → 置灰 disabled。
 {% enddoc %}
 
 {%- if product != blank -%}
@@ -94,11 +96,18 @@
       相同（短价格仍同一行），塞不下才分行——宁可分行，不溢出、不裁切。
       折扣缺数据时只出现现价，不留空位、不显示 0%（AGENTS §6）。
       百分比与 PDP 同一算法（main-product.liquid 顶部同款），两处不会漂。
+
+      变体价差（2026-11-21，演示店开始有价差变体）：平台口径（Liquid product 对象）
+      `price` = 全变体**最低价**、`compare_at_price` = 全变体**最低划线价**，
+      但这两个"最低"不保证来自同一个变体 —— 相减算出的百分比对不上任何具体变体。
+      所以 `product.price_varies` 为真时：现价前加 "From"（口径同预测搜索），
+      **不渲染划线价与折扣胶囊**；逐变体的精确价格只在产品页与快速查看里给。
     {%- endcomment -%}
     {%- liquid
+      assign card_price_varies = product.price_varies
       assign card_has_discount = false
       assign card_save_percent = 0
-      if product.compare_at_price > product.price
+      if card_price_varies != true and product.compare_at_price > product.price
         assign card_has_discount = true
         assign card_price_diff = product.compare_at_price | minus: product.price
         assign card_save_percent = card_price_diff | times: 100.0 | divided_by: product.compare_at_price | round
@@ -106,6 +115,9 @@
     -%}
     <p class="product-card__price">
       <span class="product-card__price-main">
+        {%- if card_price_varies -%}
+          <span class="product-card__price-from">{{ 'products.product.from_price_html' | t }}</span>
+        {%- endif -%}
         <span class="product-card__price-current">{{ product.price | money }}</span>
         {%- if card_has_discount -%}
           <s class="product-card__price-compare">{{ product.compare_at_price | money }}</s>
@@ -295,31 +307,46 @@
       </compare-toggle>
     {%- endif -%}
 
-    {%- comment -%} 快速加购（T-1.1）：仅调用方传 quick_add 且单变体时渲染；多变体无 CTA；售罄置灰。
-        无 JS 时整表单 POST /cart/add（默认跳转购物车页），JS 由 quick-add 自定义元素拦截为 fetch。
-        2026-10-16 刘工：挪到卡内最末 + margin-top:auto，各卡文字行数不一时按钮仍统一贴卡底。 {%- endcomment -%}
-    {%- if quick_add and product.variants.size == 1 -%}
-      <quick-add class="product-card__quick-add">
-        <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">
-          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
-          <input type="hidden" name="quantity" value="1">
-          <button
-            type="submit"
-            class="product-card__add btn-solid"
-            {% unless product.available %}disabled{% endunless %}
-            data-added-label="{{ 'products.product_card.added' | t }}"
-            data-added-message="{{ 'products.product_card.added_message' | t: title: product.title }}"
-            data-error-message="{{ 'products.product_card.add_error' | t }}"
-          >
-            {%- if product.available -%}
-              {{ 'products.product_card.add_to_cart' | t }}
-            {%- else -%}
-              {{ 'products.product_card.sold_out' | t }}
-            {%- endif -%}
+    {%- comment -%} 卡片 CTA（T-1.1 / 2026-11-20 刘工）：
+        ① 单变体 → 快速加购（quick-add）：有货直接加，售罄置灰；
+        ② 多变体且有货 → 「Choose options」+ 快速查看弹窗（snippets/quick-view.liquid，
+           2026-11-20 新增：原先多变体卡不渲染任何 CTA，买家必须整页跳走才能挑规格）；
+        ③ 多变体但全部售罄 → 与单变体售罄同形：置灰 Sold out，不给弹窗
+           （弹进去也只能看到一排售罄选项）。
+        无 JS 时 ① 走表单 POST /cart/add，② 的入口本身就是产品页链接 —— 都不会变成死按钮。
+        2026-10-16 刘工：整块挪到卡内最末，各卡文字行数不一时按钮仍统一贴卡底。 {%- endcomment -%}
+    {%- if quick_add -%}
+      {%- if product.variants.size > 1 -%}
+        {%- if product.available -%}
+          {%- render 'quick-view', product: product, settings: settings -%}
+        {%- else -%}
+          <button type="button" class="product-card__add btn-solid" disabled>
+            {{- 'products.product_card.sold_out' | t -}}
           </button>
-        </form>
-        <p class="visually-hidden" role="status" data-quick-add-status></p>
-      </quick-add>
+        {%- endif -%}
+      {%- else -%}
+        <quick-add class="product-card__quick-add">
+          <form method="post" action="{{ routes.cart_add_url }}" accept-charset="UTF-8">
+            <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+            <input type="hidden" name="quantity" value="1">
+            <button
+              type="submit"
+              class="product-card__add btn-solid"
+              {% unless product.available %}disabled{% endunless %}
+              data-added-label="{{ 'products.product_card.added' | t }}"
+              data-added-message="{{ 'products.product_card.added_message' | t: title: product.title }}"
+              data-error-message="{{ 'products.product_card.add_error' | t }}"
+            >
+              {%- if product.available -%}
+                {{ 'products.product_card.add_to_cart' | t }}
+              {%- else -%}
+                {{ 'products.product_card.sold_out' | t }}
+              {%- endif -%}
+            </button>
+          </form>
+          <p class="visually-hidden" role="status" data-quick-add-status></p>
+        </quick-add>
+      {%- endif -%}
     {%- endif -%}
   </tilt-element>
 {%- endif -%}

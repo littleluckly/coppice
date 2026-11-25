@@ -92,9 +92,10 @@
   belongs on the pinned row therefore lives INSIDE this section.
 
   Layout is three zones (logo / menu / tools). Search is an icon-only toggle in
-  the tools cluster; clicking it opens a right-side drawer (the <search-drawer>
-  element at the bottom of this file) that carries the full predictive search
-  form — 2026-10-10 刘工 requirement: the row itself never grows a search input.
+  the tools cluster; the row itself never grows a search input (2026-10-10 刘工).
+  The drawer it opens lives in its OWN section (sections/search-drawer.liquid,
+  2026-11-24 拆分) — 这里只留触发按钮，按 aria-controls="search-drawer-dialog"
+  与那个 section 关联。不要在 main-nav 里重新渲染搜索面板。
 
   Mobile is unaffected: it uses the drawer at the bottom of this file, which already
   renders its own account and cart copies.
@@ -601,19 +602,25 @@
         pinned row — see the file header note.
 
         The search toggle is icon-only (2026-10-10 刘工): the input never lives on
-        the row. It opens the <search-drawer> at the bottom of this file.
-        results_limit rides along into the drawer via the snippet param.
+        the row. 抽屉本体在 sections/search-drawer.liquid（2026-11-24 独立），
+        这里只靠 aria-controls 指过去；结果条数设置也在那个 section 上。
       {%- endcomment -%}
       <div class="main-nav__tools">
-        <button
-          type="button"
+        {%- comment -%}
+          用 <a> 不用 <button>（2026-11-24 抽屉独立成 section 之后）：那个 section
+          一旦被商家从页眉分组删掉，或者 JS 没跑起来，按钮就是一个死控件。
+          这里退化成指向搜索结果页的普通链接，JS 在场且有抽屉时才 intercept 掉。
+        {%- endcomment -%}
+        <a
+          href="{{ routes.search_url }}"
           class="main-nav__search-toggle"
           aria-label="{{ 'search.label' | t }}"
           aria-haspopup="dialog"
+          aria-controls="search-drawer-dialog"
           data-search-drawer-open
         >
           {{ 'icon-search.svg' | inline_asset_content }}
-        </button>
+        </a>
 
         {% render 'account-entry', menu: section.settings.customer_account_menu %}
         {%- comment -%}
@@ -666,15 +673,16 @@
       2026-11-02 刘工要求固定在顶部。复用 cart-entry snippet，计数角标与桌面共用
       同一套 cart-badge.js 同步逻辑。
     {%- endcomment -%}
-    <button
-      type="button"
+    <a
+      href="{{ routes.search_url }}"
       class="main-nav__search-toggle main-nav__search-toggle--mobile"
       aria-label="{{ 'search.label' | t }}"
       aria-haspopup="dialog"
+      aria-controls="search-drawer-dialog"
       data-search-drawer-open
     >
       {{ 'icon-search.svg' | inline_asset_content }}
-    </button>
+    </a>
 
     {% render 'cart-entry', class: 'cart-entry--mobile' %}
   </div>
@@ -727,14 +735,15 @@
               搜索图标（2026-10-13 刘工）：放头部、关闭按钮左侧。
               点击叠加打开搜索抽屉，不关本抽屉（nav-drawer.js 的 _onSearch）。
             {%- endcomment -%}
-            <button
-              type="button"
+            {%- comment -%} 同样是 <a>：没有搜索抽屉 section 时它就是个普通链接 {%- endcomment -%}
+            <a
+              href="{{ routes.search_url }}"
               class="nav-drawer__search"
               aria-label="{{ 'search.label' | t }}"
               data-nav-search
             >
               {{ 'icon-search.svg' | inline_asset_content }}
-            </button>
+            </a>
             <button
               type="button"
               class="nav-drawer__close"
@@ -891,36 +900,6 @@
     </bottom-sheet>
   </nav-drawer>
 
-  {%- comment -%} 【C】搜索抽屉 search-drawer（原文件 711–738） {%- endcomment -%}
-
-  <search-drawer>
-    <dialog class="search-drawer" data-search-drawer aria-labelledby="search-drawer-title">
-      <template data-search-drawer-template>
-        <div class="search-drawer__inner">
-          <div class="search-drawer__head">
-            <h2 class="search-drawer__title" id="search-drawer-title">
-              {{ 'search.label' | t }}
-            </h2>
-            <button
-              type="button"
-              class="search-drawer__close"
-              aria-label="{{ 'navigation.close' | t }}"
-              data-search-drawer-close
-            >
-              {{ 'icon-close.svg' | inline_asset_content }}
-            </button>
-          </div>
-
-          <div class="search-drawer__body">
-            {% render 'predictive-search-entry',
-              search_section_id: section.id,
-              results_limit: section.settings.results_limit
-            %}
-          </div>
-        </div>
-      </template>
-    </dialog>
-  </search-drawer>
 
 </nav>
 
@@ -933,8 +912,6 @@
 <script src="{{ 'nav-pill.js' | asset_url }}" defer></script>
 <script src="{{ 'nav-drawer.js' | asset_url }}" defer></script>
 <script src="{{ 'nav-sticky.js' | asset_url }}" defer></script>
-<script src="{{ 'predictive-search.js' | asset_url }}" defer></script>
-<script src="{{ 'search-drawer.js' | asset_url }}" defer></script>
 
 {% stylesheet %}
   /* BUG-044 防御修法（见 <nav> 首子节点注释）：唯一的非 ASCII 落点，
@@ -1028,6 +1005,8 @@
     color: var(--color-foreground);
     background: none;
     border: 0;
+    /* 它是 <a>（无抽屉时跳搜索页），这里清掉链接默认下划线 */
+    text-decoration: none;
     cursor: pointer;
   }
 
@@ -1840,139 +1819,15 @@
     background-color: rgb(0 0 0 / 45%);
   }
 
-  /* ---- 搜索抽屉：右侧滑出，桌面 + 移动共用（2026-10-10 刘工） ----
-     结构与 nav-drawer 同款（原生 <dialog> + showModal + template 惰性实例化），
-     差异只有宽度与内部排版。 */
-  .search-drawer {
-    inset-block: 0;
-    inset-inline: auto 0;
-    /* 由 showModal() 置于 top layer，无需 z-index */
-    /* 宽度（2026-10-10 刘工：最小 600px）：窄屏用 92vw 兜底，≥600px 时锁 600 起 */
-    width: max(600px, min(40rem, 92vw));
-    max-width: none;
-    height: 100%;
-    max-height: none;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-inline-end: 1px solid rgb(0 0 0 / 12%);
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
-  /* 竖屏手机：全宽（600px 下限在手机上必然溢出） */
-  @media screen and (max-width: 749px) {
-    .search-drawer {
-      width: 100vw;
-    }
-  }
-
-  .search-drawer::backdrop {
-    background-color: rgb(0 0 0 / 45%);
-  }
-
-  .search-drawer__inner {
-    /* 纵向 flex：head 固定，body（含结果面板）吃满剩余高度。
-       结果多时滚动只发生在列表上，dialog 自身不再出滚动条。 */
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    padding: 0.5rem 1rem 1.5rem;
-  }
-
-  .search-drawer__body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-  }
-
-  .search-drawer__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-block-end: 0.5rem;
-  }
-
-  .search-drawer__title {
-    margin: 0;
-    /* 工业小标签风格：与结果分组标题同款（uppercase + 大字距） */
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgb(0 0 0 / 45%);
-  }
-
-  .search-drawer__close {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    inline-size: 44px;
-    block-size: 44px;
-    padding: 0;
-    color: inherit;
-    background: none;
-    border: 0;
-    cursor: pointer;
-  }
-
-  .search-drawer__close:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
-    border-radius: 2px;
-  }
-
-  .search-drawer__close svg {
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
-  }
-
-  /* ---- 抽屉滑入 / 滑出动画 ----
-     搜索抽屉仍用 @starting-style + allow-discrete（开 → 从右侧滑入；关 → 等滑动完再摘除），
-     旧浏览器不支持时降级为瞬时显隐，无功能损失（渐进增强）。
-     translate 是物理属性：本主题仅 en（LTR），100% 恒为屏外。
-     导航抽屉已改由 <bottom-sheet> 播 keyframes（2026-11-03）——dialog 从
-     display:none 打开的同一帧里 transition 没有起点，写在这里只会闪现。 */
-  .search-drawer {
-    translate: 100% 0;
-    transition: translate 0.25s ease, display 0.25s allow-discrete, overlay 0.25s allow-discrete;
-  }
-
-  .search-drawer[open] {
-    translate: 0 0;
-  }
-
-  @starting-style {
-    .search-drawer[open] {
-      translate: 100% 0;
-    }
-    .search-drawer[open]::backdrop {
-      opacity: 0;
-    }
-  }
-
-  /* 遮罩同步淡入淡出 */
-  .search-drawer::backdrop {
-    opacity: 1;
-    transition: opacity 0.25s ease;
-  }
-
-  /* WCAG 2.1 / SDD §8.2：用户要求减少动效时全部关闭
-     （导航抽屉的滑入滑出由 <bottom-sheet> 自己判断 reduced-motion，不在这里） */
+  /* WCAG 2.1 / SDD §8.2：用户要求减少动效时全部关闭。
+     搜索抽屉那两条随它自己的 section 走了（2026-11-24 独立成 sections/search-drawer.liquid）。 */
   @media (prefers-reduced-motion: reduce) {
-    .search-drawer,
-    .search-drawer::backdrop,
     .nav-drawer__sub,
     .nav-drawer__chevron {
       transition: none;
     }
   }
 
-  /* 抽屉宽度即输入框宽度（snippet 已无 32rem 上限，此规则留作宽度解耦的文档锚点） */
 
   /* ---- 抓手横线（2026-11-03 刘工） ----
      与购物车抽屉 / 集合页筛选面板完全同一套系数：视觉条 56×6、前景色 18%、
@@ -2116,6 +1971,8 @@
     color: inherit;
     background: none;
     border: 0;
+    /* 同上：它是 <a>，清掉下划线 */
+    text-decoration: none;
     cursor: pointer;
   }
 
@@ -2555,269 +2412,6 @@
     align-items: center;
   }
 
-  /* ===== 预测搜索输入框（原 snippets/predictive-search-entry.liquid，2026-10-18 迁入）
-     该片段被下方 <search-drawer> 的 template 渲染。样式原先写在片段里，
-     导致一个 section 内出现两个样式块，编辑器装载 header 组时整组渲染失败。 ===== */
-  /* 视觉基调（2026-10-10 刘工：极简 / 高端 / 沉浸式 / 工业力量感）：
-     输入框去边框只留发丝底线，聚焦换品牌色；加载用一条细扫描线。
-     布局（2026-10-10 刘工）：抽屉是纵向 flex 链——结果面板作为
-     flex 子项吃满 dialog 剩余高度，滚动只发生在列表上。 */
-  .predictive-search {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    inline-size: 100%;
-    flex: 1;
-    /* 经典 flex 陷阱：子项默认 min-height:auto，不锁 0 就无法收缩，
-       溢出会把 dialog 撑出滚动而不是列表自己滚 */
-    min-height: 0;
-  }
-
-  .predictive-search__form {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-  }
-
-  /* 输入区：放大镜 / 输入框 / 清空按钮 / 扫描线的共同锚点 */
-  .predictive-search__field {
-    position: relative;
-    flex: none;
-  }
-
-  .predictive-search__submit {
-    position: absolute;
-    inset-inline-start: 0;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* 触摸目标 ≥ 44×44（AGENTS §8） */
-    inline-size: 44px;
-    block-size: 44px;
-    padding: 0;
-    /* 图标压在输入框左侧，输入框留出等宽内边距 */
-    inset-block-start: 50%;
-    translate: 0 -50%;
-    /* 2026-10-29：改从 foreground 派生（原 rgb(0 0 0 / 45%) 在深色骨架下不可见，BUG-059） */
-    color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
-    background: none;
-    border: 0;
-    cursor: pointer;
-    pointer-events: none; /* 点击穿透到输入框：它只是视觉图标 */
-  }
-
-  .predictive-search__submit svg {
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
-  }
-
-  .predictive-search__input {
-    inline-size: 100%;
-    /* 触摸目标 ≥ 44×44（AGENTS §8） */
-    min-block-size: 48px;
-    padding: 0.625rem 2.75rem 0.625rem 2.75rem;
-    color: var(--color-foreground);
-    background-color: var(--color-background);
-    /* 极简线型：无框，只有发丝底线；聚焦换品牌色加粗 */
-    border: 0;
-    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 25%, transparent);
-    border-radius: 0;
-    font: inherit;
-    font-size: 1.0625rem;
-    appearance: none;
-  }
-
-  /* 原生 WebKit search 清除 X 无法定制，隐藏——用下方自定义清空按钮替代 */
-  .predictive-search__input::-webkit-search-cancel-button,
-  .predictive-search__input::-webkit-search-decoration {
-    -webkit-appearance: none;
-    appearance: none;
-  }
-
-  .predictive-search__input::placeholder {
-    color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
-  }
-
-  /* 焦点指示：底线由灰转品牌色并加粗（可见变化，替代外框 outline）。
-     outline: none 是刻意的——线型输入框外框 outline 破坏极简基调，
-     且底线变化满足 WCAG 2.1「焦点位置可见」要求（SDD §8.2）。 */
-  .predictive-search__input:focus {
-    outline: none;
-    border-block-end: 2px solid var(--color-brand-accent);
-    padding-block-end: calc(0.625rem - 1px);
-  }
-
-  /* ---- 加载扫描线：请求进行中，输入框下沿一条细线往返 ----
-     aria-busy 由 JS 在请求生命周期内驱动（过期的请求不会误关）。
-     锚在 field 上（form 的底边现在是面板底，不再是输入框下沿）。 */
-  .predictive-search__field::after {
-    content: '';
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline-start: 0;
-    inline-size: 35%;
-    block-size: 2px;
-    background-color: var(--color-brand-accent);
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .predictive-search[aria-busy='true'] .predictive-search__field::after {
-    opacity: 1;
-    animation: predictive-search-sweep 0.9s ease-in-out infinite;
-  }
-
-  @keyframes predictive-search-sweep {
-    0% {
-      translate: 0 0;
-    }
-    50% {
-      translate: 186% 0;
-    }
-    100% {
-      translate: 0 0;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .predictive-search[aria-busy='true'] .predictive-search__field::after {
-      animation: none;
-      inline-size: 100%;
-      opacity: 0.4;
-    }
-  }
-
-  /* 结果面板：沉浸式——与抽屉同底色、无框无圆角，分区靠发丝线（见 section 样式） */
-  /* 清空按钮：与抽屉右上角关闭键（.search-drawer__close）同款。
-     垂直位置必须显式居中——form 改纵向 flex 后，绝对定位元素的
-     "静态位置"在输入框下方，不设 top 会被挤出去（BUG 2026-10-10）。 */
-  .predictive-search__clear {
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-end: 0;
-    translate: 0 -50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    inline-size: 44px;
-    block-size: 44px;
-    padding: 0;
-    color: inherit;
-    background: none;
-    border: 0;
-    cursor: pointer;
-  }
-
-  /* 无输入时隐藏（JS 用 hidden 属性控制，此处兜底初始态） */
-  .predictive-search__clear[hidden] {
-    display: none;
-  }
-
-  .predictive-search__clear svg {
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
-  }
-
-  .predictive-search__clear:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: -2px;
-    border-radius: 2px;
-  }
-
-  /* 结果面板：不再是绝对定位浮层——form 纵向 flex 的最后一个子项，
-     flex:1 吃满 dialog 剩余高度，滚动条只出现在列表上 */
-  .predictive-search__panel {
-    flex: 1;
-    min-height: 0;
-    margin-block-start: 0.75rem;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    background-color: var(--color-background);
-  }
-
-  .predictive-search__panel[hidden] {
-    display: none;
-  }
-
-  /* ---- 结果骨架屏（predictive-search.js 的 _queueSkeleton，2026-10-29） ----
-     只在"面板还是空的"这一刻出现：首次查询，或上一次查无结果。已有上一轮结果时
-     保持原样——边搜边换会把列表闪掉，比没有反馈更难受。
-     尺寸复刻真实结果行（112px 缩略图 + 两行文字 + 发丝线），换入结果时不跳。
-     底色一律从 foreground 派生：黑 alpha 硬编码在 Noir 深底上不可见（BUG-043 教训）。 */
-  .predictive-search__skeleton {
-    padding-block-end: 0.75rem;
-  }
-
-  .predictive-search__skeleton-heading,
-  .predictive-search__skeleton-thumb,
-  .predictive-search__skeleton-line {
-    background-color: color-mix(in srgb, var(--color-foreground) 7%, transparent);
-    animation: predictive-search-skeleton-pulse 1.4s ease-in-out infinite;
-  }
-
-  /* 分组标签占位：对位真实 .predictive-search__heading 的 padding + 行高 */
-  .predictive-search__skeleton-heading {
-    inline-size: 5rem;
-    block-size: 0.5rem;
-    margin: 1.5rem 1.5rem 0.75rem;
-    border-radius: 3px;
-  }
-
-  .predictive-search__skeleton-row {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    padding: 0.75rem 1.5rem;
-    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 7%, transparent);
-  }
-
-  .predictive-search__skeleton-thumb {
-    flex: 0 0 auto;
-    inline-size: 112px;
-    block-size: 112px;
-  }
-
-  .predictive-search__skeleton-text {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-inline-size: 0;
-  }
-
-  .predictive-search__skeleton-line {
-    block-size: 0.625rem;
-    inline-size: 70%;
-    border-radius: 3px;
-  }
-
-  .predictive-search__skeleton-line--short {
-    block-size: 0.5rem;
-    inline-size: 30%;
-  }
-
-  @keyframes predictive-search-skeleton-pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.55;
-    }
-  }
-
-  /* 无障碍红线：脉冲关停，保留静态灰块（仍能读出"这里有内容要来"） */
-  @media (prefers-reduced-motion: reduce) {
-    .predictive-search__skeleton-heading,
-    .predictive-search__skeleton-thumb,
-    .predictive-search__skeleton-line {
-      animation: none;
-    }
-  }
 {% endstylesheet %}
 
 {% schema %}
@@ -2882,15 +2476,6 @@
       "id": "show_follow_on_shop",
       "label": "t:labels.follow_on_shop",
       "default": false
-    },
-    {
-      "type": "range",
-      "id": "results_limit",
-      "label": "t:labels.results_limit",
-      "min": 1,
-      "max": 10,
-      "step": 1,
-      "default": 10
     }
   ],
   "presets": [

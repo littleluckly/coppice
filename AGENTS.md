@@ -34,6 +34,11 @@ python3 tools/check-focal-points.py  # 校验图片焦点（G-05）生效条件�
 python3 tools/split-facets-css.py    # 重抽筛选组件样式（改了 collection 里的 .facets__* 之后必跑）
 python3 tools/probe-facets-css.py    # 生成离线计算样式探针 + 无头 Chrome --dump-dom 读 getComputedStyle
 ruby tools/preview-selling-plans.rb  # 用真实 snippet/CSS 渲染「购买选项」预览页（演示店无 selling plan，只能这样看；依赖 `gem install liquid -v 5.3.0 --user-install`）
+ruby tools/preview-quick-view.rb     # 商品卡「快速查看」预览页（多变体 CTA 三态 + 弹窗；`--measure` 出体量，`#open` 出截图页，`#test` 跑 12 条交互自检）
+ruby tools/preview-product-faq.rb    # 产品页 FAQ 预览页（自包含：样式与脚本内联，可直接在浏览器点手风琴；`--static` 摘脚本出静态态截图）
+ruby tools/preview-contact.rb        # 联系页预览页（真实 section + critical.css；`--no-banner` / `--no-image` 验降级、`--filled` 验浮动标签已填态、`--focus` 验聚焦态、`--dark` 验深色 preset）
+python3 tools/probe-faq-autoplay.py <预览页>  # 用真 Chrome（CDP）验 FAQ 自动播放：真实鼠标/键盘输入 + 真实时间，9 条断言（依赖 `pip3 install websocket-client`）
+python3 tools/probe-input-shape.py   # 验全站输入框形状与聚焦环：抽各 section 的样式原样渲染 + CDP 真键盘 Tab 聚焦 + getComputedStyle，16 条断言（`--shot x.png` 顺带出截图）
 ```
 
 - 提交审核前：`shopify theme check` 不得出现任何 Error（Warning 尽量清零）。
@@ -109,6 +114,8 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - **不留未使用的 `assign`**：theme check 的 `UnusedAssign` 会抓出"写了但没接线"的残留变量——写 section 时每个 assign 都要有消费点。
 - **脚本改 CSS 后必查产物**：grep 检查重复规则块、裸选择器（如孤立 `::after {`）、缩进损坏；locale/JSON 文件校验前先剥 Shopify dev 同步的 `/* */` 注释头。
 - 单一 CSS 属性的设置 → CSS 变量（`style="--gap: {{ ... }}px"`）；多属性设置 → 修饰类（`.collection--narrow`）。
+- **焦点环画在"控件"的边界上**：输入框 / 按钮嵌在胶囊容器里时（数量步进器、搜索条、价格区间、分段选择），环画在容器（`:focus-within`）+ 内部控件 `outline: none`；只有当控件本身就是那个框时（联系表单、评论框）才画在自己身上。**UA 默认焦点框一律不许出现**——它画在元素边界外，会把 1px 描边的胶囊顶出一道方框（BUG-096）。
+- 改控件形状 / 边框时，验收必须覆盖**静止态**与**聚焦态**两种；只截静止态等于没验（BUG-096）。
 - 类名用 Skeleton 风格 BEM：`block__element--modifier`；品牌色等设计令牌走 `snippets/css-variables.liquid` 输出，不硬编码色值。
 
 **Liquid 写法**

@@ -1,0 +1,398 @@
+{% doc %}
+  quick-view — 商品卡「Choose options」入口 + 快速查看弹窗（2026-11-20 刘工）。
+
+  **解决的问题**：多变体商品在卡上没有任何 CTA（2026-10-13 拍板 2：多变体卡不渲染
+  CTA，转化路径走产品页），买家想挑规格必须先整页跳走。现在卡上给一个
+  「Choose options」，点击就地弹出「画廊 + 买盒」，随时可跳详情页。
+
+  **交付形态：Liquid 直接渲染进卡片，不做 fetch 拉取。**
+  被否掉的另一条路是「备用模板（product.quick-view.json）+ 点击时 fetch 注入」，
+  它省页面字节，但有三处硬伤：① 注入的 HTML 带不来 section 的 `{% stylesheet %}`
+  产物（那段 CSS 只随渲染它的页面下发），要另存一份 assets 样式，等于同一套买盒
+  样式维护两遍；② innerHTML 注入的 `<script>` 不执行，得手动补脚本加载；
+  ③ 无 JS 时按钮彻底没反应，而现在的 `<a>` 天然可跳转。
+  代价（说清楚，数字是桩测的）：多变体卡各自多背一份面板 HTML。
+  `ruby tools/preview-quick-view.rb --measure` 实测（3 变体 / 4 图的一台割草机）：
+  单卡面板 **12.2 KB 原始 / 2.3 KB gzip**；因为面板结构逐卡重复、gzip 跨卡去重，
+  **24 张多变体卡的整页 gzip 增量 ~5.3 KB**（原始仍是 +290 KB 的 DOM，
+  ⚠️ 这个数是用**假的** Shop Pay 标记量的，真实包体更大，装店后要重量一次；
+  未打开的 `<dialog>` 不参与布局、图是 lazy 不下载，成本在解析不在网络）。
+  换来的是零请求、零注入、无 JS 也能用；面板是 `<dialog>`。
+
+  **渲染条件（逐层收紧，任何一层不满足就只留链接）**：
+  1. 单变体 → 整块不渲染（调用方走 quick-add，见 snippets/product-card.liquid）
+  2. `product.available == false`（全部变体售罄）→ 调用方渲染置灰 Sold out，不弹窗
+  3. `product.selling_plan_groups` 非空、或商品是礼品卡 → **面板不渲染**，只留链接：
+     订阅要先选计划、礼品卡要填收件人，这两块弹窗里没有，宁可不给入口，
+     也不给一个点进去会失败的入口（订阅的加购校验在 selling-plan-picker 里，
+     本面板不接它）。
+
+  **无 JS**：入口是 `<a href="{{ product.url }}">`（btn-solid 即按钮外观），照常跳转。
+
+  **变体选择器与产品页同一份**（2026-11-21 抽取）：标记来自
+  `snippets/variant-picker.liquid`，联动归 `assets/product-form.js` 的
+  `<variant-picker>` —— 早先这里是原生 `<select>` + 一套自己的价格联动，
+  与产品页（胶囊 + radio）两套实现、必然漂。现在两边共用一份，本文件只负责
+  「变体自带图 → 主图」这一小段（弹窗的图库是一张主图 + 缩略图，不是 product-gallery）。
+
+  **买盒内容（2026-11-21 刘工：向产品页看齐，别再是"空壳"）**：
+  价格三件套 + 单位价 → 变体胶囊 → 数量 + 加购 → **加速结账**（Shop Pay）→
+  **分期**（Shop Pay Installments）→ **三条决策参数**（spec-bullets）→ **信任徽标**
+  （`snippets/quick-view-trust.liquid`：保修读 `spec.warranty_months`，两条政策文案
+  读主题设置 `settings.qv_trust_1..3`）。除政策文案外都是平台能力或产品级数据，
+  不依赖 main-product 的 section 设置/blocks，所以卡片 snippet 里也能安全渲染；
+  空内容一律在 Liquid 侧挡掉（见下方判空注释）。
+
+  规格与信任各有一个**主题设置总开关**（`settings.qv_show_specs` / `qv_show_trust`，
+  默认开，位置：主题编辑器 → 主题设置 → Quick view → Contents）。
+  为什么不是 section 设置：弹窗是卡片 snippet 渲染的，拿不到消费它的 6 个 section
+  各自的 block 配置，逐 section 开关会让"同一张卡片在不同页面行为不同"，更难解释。
+
+  **滚动归属（2026-11-21 刘工）**：**桌面只有右列滚** —— 画廊钉在原位，买盒长了
+  只出右列自己的滚动条；手机上整体一起滚（面板只有一列，拆开滚反而难用）。
+  实现见 product-card.css 的桌面媒体查询：body `overflow: hidden` +
+  `grid-template-rows: minmax(0, 1fr)` + `.quick-view__info { overflow-y: auto }`，
+  底部那 4.75rem 空白从 body 移交到两列各自身上（谁滚谁留）——
+  固定条是**不透明**的，空白留在别处，滚到底时最后一行就会被它吃掉。
+
+  **仍然不含（有意，逐条说清原因）**：
+  - 纵向描述：刘工 2026-11-20 的口径是"详情不展示"，摘要属于详情那一屏；
+  - 对比入口：对比是**产品级**、且入口在卡片上已有；弹窗里刚选了变体再去点，
+    等于暗示"比的是这个变体"，是错误预期（详见 SDD §5.4）；
+  - 自提（Pickup Availability）：组件切变体时要靠 `/products/x?section_id=<产品页 section id>`
+    重取，而弹窗是从集合页的卡片渲染的，**拿不到那个 id**，初帧之后就会变陈旧；
+  - 订阅计划：有 selling plan 的商品干脆不给弹窗（见上方第 3 层条件）。
+
+  数量步进与加购提交**复用 product-form.js 的 `<quantity-input>` / `<product-form>`**
+  （含 BUG-083 的 cart:add-failed 收口、cart:added / cart:updated 事件约定），
+  不另写一套提交逻辑；因此消费方 section 必须同时引入 product-form.js。
+
+  **金额一律由 Liquid 预格式化**（`money` filter）后经 data-* 下发，JS 只做替换
+  ——与 PDP 同口径，多货币/千分位不在前端拼。
+
+  @param {product} product - product 对象（必填，调用方保证 variants.size > 1）
+  @param {object} settings - 主题设置。只有信任徽标的文案用到（settings.qv_trust_*），
+    显式往下传是为了让"这段依赖主题设置"可见，也为了本地 liquid 桩（render 是隔离
+    作用域，不传就是 nil）。平台侧 snippet 本来就能读全局 settings，传的是同一个对象。
+{% enddoc %}
+
+{%- if product != blank and product.variants.size > 1 -%}
+  {%- liquid
+    assign qv_variant = product.selected_or_first_available_variant
+
+    assign qv_has_discount = false
+    assign qv_save = 0
+    if qv_variant.compare_at_price > qv_variant.price
+      assign qv_has_discount = true
+      assign qv_diff = qv_variant.compare_at_price | minus: qv_variant.price
+      assign qv_save = qv_diff | times: 100.0 | divided_by: qv_variant.compare_at_price | round
+    endif
+
+    # 能不能弹窗：有货 + 无订阅计划 + 非礼品卡（理由见 @doc 第 3 层）
+    assign qv_can_open = true
+    if product.available == false
+      assign qv_can_open = false
+    endif
+    if product.selling_plan_groups.size > 0
+      assign qv_can_open = false
+    endif
+    if product.gift_card?
+      assign qv_can_open = false
+    endif
+
+    assign qv_main = product.featured_media.preview_image
+    assign qv_image_count = 0
+    for media in product.media
+      if media.preview_image
+        assign qv_image_count = qv_image_count | plus: 1
+      endif
+    endfor
+
+    assign qv_save_template = 'products.product.save_percent' | t: percent: '[percent]'
+  -%}
+
+  {%- comment -%}
+    入口恒为 <a>：面板不渲染（订阅/礼品卡/售罄）或无 JS 时，它就是产品页链接。
+    class 复用 .product-card__add + .btn-solid，与单变体加购按钮逐像素一致。
+  {%- endcomment -%}
+  <quick-view class="product-card__quick-view">
+    <a
+      class="product-card__add btn-solid"
+      href="{{ product.url }}"
+      data-quick-view-open
+    >
+      {{- 'products.product_card.choose_options' | t -}}
+    </a>
+
+    {%- if qv_can_open -%}
+      {%- comment -%}
+        `settings` 是显式往下传的：信任徽标的文案来自主题设置（settings.qv_trust_*）。
+        平台侧 snippet 本来就能读到全局 settings，这里写明依赖是为了桩（liquid gem 的
+        render 是隔离作用域，不传就是 nil）——顺便让"这段依赖主题设置"变得可见。
+      {%- endcomment -%}
+      {%- comment -%}
+        开合与 Esc 交给 <bottom-sheet>（与购物车抽屉/筛选面板同一套）：手机上滑入，
+        桌面端 media 不匹配 → 直开直关（居中弹窗不需要位移动效）。
+        它 display:contents，不会成为卡片这个 flex 列的第 N 个 item。
+      {%- endcomment -%}
+      <bottom-sheet media="(max-width: 749.98px)">
+        {%- comment -%}
+          变体选择器的作用域锚点（2026-11-21）：与产品页买盒同一套元素约定，
+          所以 <variant-picker>（product-form.js）能在这里工作 ——
+          价格 / 划线价 / 折扣 / 按钮 / 单位价 / 隐藏 id 输入都在本 dialog 内。
+          data-section-id 只是"实例令牌"（值取 product.id）：variant:change 事件
+          冒到 document 后，本弹窗靠它区分"是不是我这一个"。
+        {%- endcomment -%}
+        <dialog
+          class="quick-view"
+          scroll-lock
+          aria-labelledby="QuickViewTitle-{{ product.id }}"
+          data-variant-scope
+          data-section-id="{{ product.id }}"
+          data-save-template="{{ qv_save_template }}"
+          data-unit-class="quick-view__unit"
+        >
+          <div class="quick-view__head">
+            <h2 class="quick-view__title" id="QuickViewTitle-{{ product.id }}">
+              {{- product.title | escape -}}
+            </h2>
+            <button
+              type="button"
+              class="quick-view__close"
+              data-quick-view-close
+              aria-label="{{ 'products.product_card.quick_view_close' | t }}"
+            >
+              {{- 'icon-close.svg' | inline_asset_content -}}
+            </button>
+          </div>
+
+          <div class="quick-view__body">
+            {%- comment -%}
+              画廊：主图 + 最多 5 张缩略图。只出 `preview_image`——视频与 3D 也有
+              封面帧（与 main-product 同一口径），弹窗里不接播放器，点缩略图只换静态图。
+              缩略图按钮带 aria-label（"N of M"），图自身是装饰性的 → alt 强制为空：
+              `image_tag` 在 alt 为空时会吞掉整条属性，所以 capture 后补一个 alt=""。
+            {%- endcomment -%}
+            <div class="quick-view__gallery">
+              <div class="quick-view__stage" data-quick-view-stage>
+                {%- if qv_main -%}
+                  {{
+                    qv_main
+                    | image_url: width: 900
+                    | image_tag:
+                      widths: '400, 600, 900',
+                      sizes: '(min-width: 750px) 380px, 88vw',
+                      width: qv_main.width,
+                      height: qv_main.height,
+                      loading: 'lazy',
+                      alt: qv_main.alt
+                  }}
+                {%- else -%}
+                  {{ 'product-1' | placeholder_svg_tag: 'quick-view__placeholder' }}
+                {%- endif -%}
+              </div>
+
+              {%- if qv_image_count > 1 -%}
+                <ul class="quick-view__thumbs" role="list">
+                  {%- for media in product.media limit: 5 -%}
+                    {%- if media.preview_image -%}
+                      {%- capture qv_thumb -%}
+                        {{
+                          media.preview_image
+                          | image_url: width: 120
+                          | image_tag: width: 60, height: 60, loading: 'lazy', class: 'quick-view__thumb-img'
+                        }}
+                      {%- endcapture -%}
+                      <li>
+                        <button
+                          type="button"
+                          class="quick-view__thumb{% if forloop.first %} is-active{% endif %}"
+                          data-quick-view-thumb
+                          data-media-id="{{ media.id }}"
+                          data-media="{{ media.preview_image | image_url: width: 900 }}"
+                          aria-label="{{ 'products.product.media_slide' | t: index: forloop.index, total: qv_image_count }}"
+                          {% if forloop.first %}aria-current="true"{% endif %}
+                        >
+                          {{ qv_thumb | replace: '<img ', '<img alt="" ' }}
+                        </button>
+                      </li>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+            </div>
+
+            <div class="quick-view__info">
+              {%- comment -%}
+                价格三件套的数据钩子（data-price / data-compare-price / data-save-badge）
+                与产品页买盒**同名**：VariantPicker 只认这些属性，不认类名，
+                所以两处共用一段联动逻辑，切换变体时价格 / 划线价 / 折扣自动跟。
+              {%- endcomment -%}
+              <div class="quick-view__price" data-price-block>
+                <span class="quick-view__price-current" data-price>
+                  {{- qv_variant.price | money -}}
+                </span>
+                <s
+                  class="quick-view__price-compare"
+                  data-compare-price
+                  {%- unless qv_has_discount %} hidden{% endunless %}
+                >
+                  {{- qv_variant.compare_at_price | money -}}
+                </s>
+                <span
+                  class="quick-view__price-save"
+                  data-save-badge
+                  {%- unless qv_has_discount %} hidden{% endunless %}
+                >
+                  {{- 'products.product.save_percent' | t: percent: qv_save -}}
+                </span>
+              </div>
+
+              {%- comment -%}
+                单位价（G-08 同一口径）：增量更新归 VariantPicker（它按
+                `${unitPrice} / ${unitReference}` 写，与产品页同一段代码）；
+                这里的初始值只是首屏直出，JS 会在首次对齐时覆盖。
+                无单位价的变体整行 hidden（VariantPicker 的 create 分支用
+                data-unit-class 生成同款类名，弹窗里不会冒出产品页的类）。
+              {%- endcomment -%}
+              <p class="quick-view__unit" data-unit-price {% unless qv_variant.unit_price_measurement %}hidden{% endunless %}>
+                {%- if qv_variant.unit_price_measurement -%}
+                  {%- assign qv_unit_ref = qv_variant.unit_price_measurement.reference_value
+                    | append: qv_variant.unit_price_measurement.reference_unit
+                  -%}
+                  {%- assign qv_unit_price = qv_variant.unit_price | money -%}
+                  {{- 'products.product_card.unit_price' | t: price: qv_unit_price, unit: qv_unit_ref -}}
+                {%- endif -%}
+              </p>
+
+              <product-form class="quick-view__form">
+                {%- form 'product', product, class: 'quick-view__form-inner', novalidate: 'novalidate' -%}
+                  {%- comment -%}
+                    变体选择器与产品页**同一份**（2026-11-21 抽取）：标记来自
+                    snippets/variant-picker.liquid，联动归 product-form.js 的
+                    <variant-picker>。选择器就在本 <form> 内部，所以 form_id 传空
+                    ——radio 不带 form 属性也能随表单提交。
+                    隐藏的 id 输入是提交值：VariantPicker 选中变体后把 variant.id 写进来
+                    （产品页同样写法，`[data-variant-input]`）。
+                  {%- endcomment -%}
+                  <input type="hidden" name="id" value="{{ qv_variant.id }}" data-variant-input>
+                  {%- render 'variant-picker', product: product, form_id: '' -%}
+
+                  <div class="quick-view__buy">
+                    <quantity-input class="quick-view__qty">
+                      <button
+                        type="button"
+                        class="quick-view__qty-btn"
+                        data-quantity-minus
+                        aria-label="{{ 'products.product.decrease_quantity' | t }}"
+                      >
+                        <span aria-hidden="true">&minus;</span>
+                      </button>
+                      <input
+                        class="quick-view__qty-input"
+                        type="number"
+                        name="quantity"
+                        value="1"
+                        min="1"
+                        step="1"
+                        data-quantity-input
+                        aria-label="{{ 'products.product.quantity' | t }}"
+                      >
+                      <button
+                        type="button"
+                        class="quick-view__qty-btn"
+                        data-quantity-plus
+                        aria-label="{{ 'products.product.increase_quantity' | t }}"
+                      >
+                        <span aria-hidden="true">+</span>
+                      </button>
+                    </quantity-input>
+
+                    <button
+                      type="submit"
+                      class="quick-view__submit btn-solid"
+                      data-add-button
+                      data-added-label="{{ 'products.product.added' | t }}"
+                      data-added-message="{{ 'products.product.added_message' | t: title: product.title | escape }}"
+                      data-error-message="{{ 'products.product.add_error' | t }}"
+                      data-sold-out-label="{{ 'products.product.sold_out' | t }}"
+                      data-add-label="{{ 'products.product.add_to_cart' | t }}"
+                      {% unless qv_variant.available %}disabled{% endunless %}
+                    >
+                      {%- if qv_variant.available -%}
+                        {{ 'products.product.add_to_cart' | t }}
+                      {%- else -%}
+                        {{ 'products.product.sold_out' | t }}
+                      {%- endif -%}
+                    </button>
+                  </div>
+
+                  <p class="quick-view__status" data-form-status role="status" aria-live="polite"></p>
+
+                  {%- comment -%}
+                    加速结账与分期（2026-11-21 刘工：弹窗买盒向产品页看齐）。
+                    两者都是**平台能力**，不依赖 main-product 的 section 设置 ——
+                    所以卡片 snippet 里也能安全渲染；店铺没开通 / 商品不适用时
+                    平台回空串，这里用 `!= empty and != nil` 把空壳挡掉
+                    （空串在 Liquid 里为真，只写 `!= blank` 在桩里会漏）。
+                  {%- endcomment -%}
+                  {%- capture qv_accelerated -%}{{ form | payment_button }}{%- endcapture -%}
+                  {%- if qv_accelerated != empty and qv_accelerated != nil -%}
+                    <div class="quick-view__accelerated accelerated-checkout">{{ qv_accelerated }}</div>
+                  {%- endif -%}
+                  {%- capture qv_terms -%}{{ form | payment_terms }}{%- endcapture -%}
+                  {%- if qv_terms != empty and qv_terms != nil -%}
+                    <div class="quick-view__terms">{{ qv_terms }}</div>
+                  {%- endif -%}
+                {%- endform -%}
+              </product-form>
+
+              {%- comment -%}
+                三条决策参数：与产品页同一个 snippet、同一套样式（样式已随胶囊一起
+                迁到 critical.css）。按 BUG-085 的判据 —— **按片段根类名判有没有内容**，
+                不按"block 是否存在"：全空时整块不输出，不留一条空线。
+              {%- endcomment -%}
+              {%- comment -%}
+                规格与信任由主题设置总开关控制（外观 → Quick view → Contents）：
+                `settings.qv_show_specs` / `settings.qv_show_trust`，schema 里默认 true。
+                **全局**——弹窗来自卡片 snippet，拿不到各 section 的 block 配置，
+                所以只能整店一起开关（设置面板里已写明这条限制）。
+              {%- endcomment -%}
+              {%- capture qv_specs -%}{%- render 'spec-bullets', product: product -%}{%- endcapture -%}
+              {%- if settings.qv_show_specs and qv_specs contains 'class="spec-bullets"' -%}
+                <div class="quick-view__specs">{{ qv_specs }}</div>
+              {%- endif -%}
+
+              {%- comment -%}
+                信任徽标（2026-11-21 刘工）：保修来自产品 metafield（与产品页同源），
+                文本政策来自主题设置（产品页那些是 section blocks，卡片读不到）。
+                判空同样按片段的根类名 `class="trust-item"`。
+              {%- endcomment -%}
+              {%- capture qv_trust -%}{%- render 'quick-view-trust', product: product, settings: settings -%}{%- endcapture -%}
+              {%- if settings.qv_show_trust and qv_trust contains 'class="trust-item"' -%}
+                <div class="quick-view__trust">{{ qv_trust }}</div>
+              {%- endif -%}
+
+            </div>
+          </div>
+
+          {%- comment -%}
+            底部固定条（2026-11-21 刘工，参考稿：文字左 + 行尾箭头右，整条压底）。
+            它在 body **之外**、dialog 的直接子节点上，用绝对定位贴底 ——
+            这样买盒内容再长、滚动条怎么滚，它都不动。
+            背景**不透明、无毛玻璃**（2026-11-21 刘工第二次口径）：半透明会把
+            滚过的小字透成一层脏影。所以**谁滚谁留空白**（手机 body、桌面右列），
+            空白留在不滚的那层，滚到底最后一行就会被条整个挡住。
+            箭头按 AGENTS §6 的箭头准则用在"行尾导航元素"上（不是卡内文字链接）。
+          {%- endcomment -%}
+          <a class="quick-view__foot" href="{{ product.url }}">
+            <span class="quick-view__foot-text">
+              {{- 'products.product_card.quick_view_details' | t -}}
+            </span>
+            <span class="quick-view__foot-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+        </dialog>
+      </bottom-sheet>
+    {%- endif -%}
+  </quick-view>
+{%- endif -%}

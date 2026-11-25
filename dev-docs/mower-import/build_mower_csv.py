@@ -7,14 +7,18 @@ build_mower_csv.py — 生成产品导入 CSV（Coppice SDD §5.9 口径）
   + 打草机  5 款（汽油 3 + 40V + 60V）
   + 链锯    5 款（汽油 3 + 40V + 80V）
   + 配件/耗材 11 款（刀片 3 + 导板 3 + 锯链 3 + 打草绳 1 + 40V 电池 1）
-  = 32 款，全部单变体。
+  = 32 款。
+
+变体（2026-11-21 刘工「在原有商品基础上 mock 不同功率 / 排量」）：
+  6 款主机带一个变体轴（电池机 → Motor power，汽油机 → Engine displacement），
+  其余 26 款仍单变体。规则与 mock 口径见下方 VARIANTS 段。
 
 产物两份：
-    mower-products-import.csv                 第一遍：商品 + 变体 + 字段 + metafield（55 行）
+    mower-products-import.csv                 第一遍：商品 + 变体 + 字段 + metafield（59 行：主行 32 + 变体行 6 + 图片行 21）
     mower-products-import.pass2-consumables.csv 第二遍：主机 → 耗材反挂（19 台主机）
 
-列结构 = 官方 product_template.csv 的核心子集（28 列，列头逐字取自模板）
-       + 23 个 metafield 列（SDD §5.3 全量，含链锯专用 bar_length_mm）= 51 列。
+列结构 = 官方 product_template.csv 的核心子集（29 列，列头逐字取自模板）
+       + 23 个 metafield 列（SDD §5.3 全量，含链锯专用 bar_length_mm）= 52 列。
 
 数据来源：主机参数 2026-09-29 / 10-26 / 10-27 网络核实（官方产品页 / 授权经销商页），
 配件价格是**定价决策**（锚点见 sources-and-notes.md §3c），不是厂商 MSRP。
@@ -52,6 +56,77 @@ DEMO_POWER_W = {
     "northbark-nb-t40b": 500,    # 40V 打草机
     "northbark-nb-t60b": 700,    # 60V 打草机
     "northbark-nb-c40b": 600,    # 40V 链锯
+}
+
+# ---------------------------------------------------------------- 变体轴（2026-11-21 刘工）
+# 要求原话：「在原有的产品基础上 mock 不同功率 / 排量」。**不合并商品、不删商品**，
+# 只给部分主机追加一个变体。
+#
+# 三条硬约束（改这里之前先读完）：
+#   1. 变体轴只能是**同一动力平台内的功率**（电池）或**排量**（汽油）。
+#      **电压平台（40V/60V/80V）绝不进变体轴** —— 电压是电池兼容边界，同一产品卖两种电压，
+#      顾客会以为电池通用，买错就是退不了的电芯。
+#   2. 第一个变体 = 原商品本身：值 / SKU / 价 / 库存 / 全部产品级 metafield 照旧。
+#      产品级 metafield 仍填基准款（SDD §5.4 认下的"产品级代表值"），
+#      差异由 `spec.spec_variance_note`（本表 note）说清 —— 那句 note 也让对比表的
+#      差异提示图标终于有真数据可验（SDD §13 验收项）。
+#   3. 追加变体是 **mock 数据**（MSRP / 重量 / 库存都是编的），与 DEMO_POWER_W 同一性质：
+#      只保证量级合理、彼此不矛盾；上架真实店铺前要么换成真实变体，要么整表清空。
+#
+# 为什么不做"每个主机都加"：32 款全变多变体后，卡面「快速加购」就只剩 11 款配件可演示，
+# 而「Choose options + 快速查看」反而失去对照。留 26 款单变体 = 两种 CTA 同屏可见，
+# 这正是演示店要展示的东西。要全量，就往这张表里继续加条目，脚本无需改动。
+VARIANTS = {
+    # ---- 电池机：同平台内的电机功率 ----
+    "northbark-nb-21b80": {
+        "option": "Motor power",
+        "base": "1,600 W",
+        "note": "Motor power varies by variant: 1,600 W or 1,200 W",
+        "extra": [
+            {"value": "1,200 W", "sku": "NB-21B80-12", "msrp": "549.00", "weight_lb": 56, "qty": 12},
+        ],
+    },
+    "northbark-nb-21bp": {
+        "option": "Motor power",
+        "base": "900 W",
+        "note": "Motor power varies by variant: 900 W or 700 W",
+        "extra": [
+            {"value": "700 W", "sku": "NB-21BP-07", "msrp": "459.99", "weight_lb": 56, "qty": 12},
+        ],
+    },
+    "northbark-nb-t40b": {
+        "option": "Motor power",
+        "base": "500 W",
+        "note": "Motor power varies by variant: 500 W or 400 W",
+        "extra": [
+            {"value": "400 W", "sku": "NB-T40B-04", "msrp": "229.00", "weight_lb": 11.2, "qty": 15},
+        ],
+    },
+    # ---- 汽油机：排量 ----
+    "northbark-nb-21p": {
+        "option": "Engine displacement",
+        "base": "166 cc",
+        "note": "Engine displacement varies by variant: 166 cc or 150 cc",
+        "extra": [
+            {"value": "150 cc", "sku": "NB-21P-150", "msrp": "549.00", "weight_lb": 74, "qty": 12},
+        ],
+    },
+    "northbark-nb-t27": {
+        "option": "Engine displacement",
+        "base": "27.2 cc",
+        "note": "Engine displacement varies by variant: 27.2 cc or 21.2 cc",
+        "extra": [
+            {"value": "21.2 cc", "sku": "NB-T27-212", "msrp": "209.99", "weight_lb": 10.2, "qty": 15},
+        ],
+    },
+    "northbark-nb-c18g": {
+        "option": "Engine displacement",
+        "base": "40.2 cc",
+        "note": "Engine displacement varies by variant: 40.2 cc or 30.1 cc",
+        "extra": [
+            {"value": "30.1 cc", "sku": "NB-C18G-301", "msrp": "369.99", "weight_lb": 9.8, "qty": 15},
+        ],
+    },
 }
 
 # ---------------------------------------------------------------- 列定义
@@ -932,6 +1007,7 @@ def build_rows():
         imgs = IMAGES[p["handle"]]
         price_val, compare_val = price_fields(p["price"], is_acc)
         base = {c: "" for c in OFFICIAL_KEEP}
+        axis = VARIANTS.get(p["handle"])
         base.update({
             "Title": p["title"],
             "URL handle": p["handle"],
@@ -943,8 +1019,9 @@ def build_rows():
             "Published on online store": "TRUE",
             "Status": "Active",
             "SKU": p["sku"],
-            "Option1 name": "Title",
-            "Option1 value": "Default Title",
+            # 变体轴的商品：Option1 = 该轴，值 = 基准款（原商品本身）；否则维持单变体写法
+            "Option1 name": axis["option"] if axis else "Title",
+            "Option1 value": axis["base"] if axis else "Default Title",
             "Price": price_val,
             "Compare-at price": compare_val,
             "Charge tax": "TRUE",
@@ -995,7 +1072,8 @@ def build_rows():
                 # 面积分段 N/A（打草机 / 链锯）→ 数字版必须真空，不能落 0
                 "Area coverage (sq ft) (product.metafields.spec.area_coverage_sqft)":
                     str(AREA_SQFT[p["area"]]) if p["area"] in AREA_SQFT else "",
-                "Spec variance note (product.metafields.spec.spec_variance_note)": p.get("spec_note", ""),
+                "Spec variance note (product.metafields.spec.spec_variance_note)":
+                    axis["note"] if axis else p.get("spec_note", ""),
                 "Warranty (months) (product.metafields.spec.warranty_months)": str(p["warranty_mo"]),
                 "Battery platform (product.metafields.platform.battery_platform)": p["battery_platform"],
                 "Shipping class (product.metafields.logistics.shipping_class)": p["shipping_class"],
@@ -1004,6 +1082,32 @@ def build_rows():
                 "Lead time (days) (product.metafields.logistics.lead_time_days)": str(p["lead"]),
             })
         rows.append({**base, **meta})
+        # 追加变体行（2026-11-21）：**只带变体级列**，商品级列一律留空。
+        # 依据 SDD §5.9 记录的平台规则：一行 = 一个变体，Title 与 Option 名只在首行，
+        # 商品级字段（含全部 metafield）也只在首行。这里若把商品级列再写一遍，
+        # 一是与规则相悖，二是重复的 metafield 值一旦与首行不一致就会互相覆盖。
+        for ex in (axis["extra"] if axis else []):
+            v_price, v_compare = price_fields(ex["msrp"], is_acc=False)
+            v_row = {c: "" for c in OFFICIAL_KEEP + META_HEADER}
+            v_row.update({
+                "URL handle": p["handle"],
+                "Option1 value": ex["value"],
+                "SKU": ex["sku"],
+                "Price": v_price,
+                "Compare-at price": v_compare,
+                "Charge tax": "TRUE",
+                "Inventory tracker": "shopify",
+                "Inventory quantity": str(ex.get("qty", 12)),
+                "Continue selling when out of stock": "DENY",
+                "Weight value (grams)": str(lb_to_g(ex["weight_lb"])),
+                "Weight unit for display": "lb",
+                "Requires shipping": "TRUE",
+                "Fulfillment service": "manual",
+                # 变体图留空：mock 变体是同一台机器的另一个功率/排量，外观相同，
+                # 硬挂主图以外的图反而是错图。真要变体图，官方模板有
+                # `Variant image URL` 列（57 列版第 40 列），本项目暂未启用。
+            })
+            rows.append(v_row)
         # 第二张图行：Shopify CSV 规范——图片行只填 handle + 图片列，其余留空
         if imgs["second"][0]:
             img_row = {c: "" for c in OFFICIAL_KEEP + META_HEADER}
@@ -1045,6 +1149,39 @@ def validate(rows):
             if not row["Image alt text"]:
                 errors.append(f"行 {i+1}: 图片行 alt 为空（无障碍硬要求）")
             continue
+        # 变体行（2026-11-21）：有 SKU、无 Title —— 与图片行靠 SKU 的有无区分开。
+        # 只允许带变体级列；商品级列一律不许出现（见 build_rows 里的说明）。
+        is_variant_row = bool(h) and bool(row["SKU"]) and not row["Title"]
+        if is_variant_row:
+            if not row["Option1 value"]:
+                errors.append(f"行 {i+1}: 变体行缺 Option1 value")
+            if row["Option1 name"]:
+                errors.append(f"行 {i+1}: 变体行不得重复 Option1 name（只在首行写）")
+            if row["Product image URL"] or row["Image position"]:
+                errors.append(f"行 {i+1}: 变体行不得带图片列")
+            for col in ("Description", "Vendor", "Product category", "Type", "Tags",
+                        "Status", "Published on online store") + tuple(META_HEADER):
+                if row[col]:
+                    errors.append(f"行 {i+1}: 变体行不得带商品级列 {col}")
+            if row["SKU"] in skus:
+                errors.append(f"行 {i+1}: SKU 重复 {row['SKU']}")
+            skus.add(row["SKU"])
+            v_price, v_compare = row["Price"], row["Compare-at price"]
+            if not v_price.replace(".", "").isdigit():
+                errors.append(f"行 {i+1}: 变体 Price 非法 '{v_price}'")
+            elif not v_compare.replace(".", "").isdigit():
+                errors.append(f"行 {i+1}: 变体缺 Compare-at price（主机变体同样走 5% 规则）")
+            elif Decimal(v_compare) <= Decimal(v_price):
+                errors.append(f"行 {i+1}: 变体 Compare-at({v_compare}) 不高于 Price({v_price})")
+            else:
+                v_back = (Decimal(v_price) / DISCOUNT_RATE).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+                if abs(v_back - Decimal(v_compare)) > 1:
+                    errors.append(
+                        f"行 {i+1}: 变体折扣偏离 5%（Price {v_price} 回算 MSRP {v_back}，Compare-at {v_compare}）"
+                    )
+            if not row["Weight value (grams)"].isdigit():
+                errors.append(f"行 {i+1}: 变体行重量必填且须为整数克")
+            continue
         if h in handles:
             errors.append(f"行 {i+1}: URL handle 重复 {h}")
         handles.add(h)
@@ -1063,10 +1200,17 @@ def validate(rows):
             warnings.append(f"行 {i+1}: Product image URL 非 Shopify CDN: {row['Product image URL'][:60]}")
         if not row["Image alt text"]:
             errors.append(f"行 {i+1}: Image alt text 为空（无障碍硬要求）")
-        # 单变体固定写法
-        if row["Option1 name"] != "Title" or row["Option1 value"] != "Default Title":
+        # Option1 写法：登记了变体轴的商品写「轴名 / 基准值」，其余必须 Title / Default Title
+        axis_cfg = VARIANTS.get(h)
+        if axis_cfg:
+            if row["Option1 name"] != axis_cfg["option"] or row["Option1 value"] != axis_cfg["base"]:
+                errors.append(
+                    f"行 {i+1}: 变体轴商品的首行必须 Option1 = "
+                    f"{axis_cfg['option']} / {axis_cfg['base']}"
+                )
+        elif row["Option1 name"] != "Title" or row["Option1 value"] != "Default Title":
             errors.append(f"行 {i+1}: 单变体商品必须 Option1 = Title / Default Title")
-        # 商品级字段只在首行：本文件每商品只有一行，Title 必须非空
+        # 走到这里的都是主行（图片行与变体行已 continue）⇒ Title 必填
         if not row["Title"]:
             errors.append(f"行 {i+1}: Title 为空")
         # 值域校验
@@ -1174,6 +1318,15 @@ def validate(rows):
             elif group != expected:
                 errors.append(f"行 {i+1}: 分类 '{cat.split(' > ')[-1]}' 应属 {expected}，实为 '{group}'")
 
+    # 变体行与 VARIANTS 表必须互相对得上：表里声明的必须真的输出，输出行的 handle
+    # 也必须在表里登记 —— 否则这张表就退化成一份没人读的注释。
+    variant_handles = {r["URL handle"] for r in rows if r["URL handle"] and r["SKU"] and not r["Title"]}
+    for h in VARIANTS:
+        if h not in variant_handles:
+            errors.append(f"VARIANTS 声明了 {h}，但产物里没有它的追加变体行")
+    for h in variant_handles - set(VARIANTS):
+        errors.append(f"{h} 有追加变体行，但 VARIANTS 没登记")
+
     return errors, warnings, infos
 
 
@@ -1231,15 +1384,21 @@ def write_pass2():
         # 必须带 Option1 name / Option1 value（2026-10-28 实测踩坑）：
         # 官方文档 —— 更新商品时若涉及变体、却没给这两列，平台会「删掉现有变体、新建一个默认变体」，
         # 直接报 "Product options input is required when updating variants" 整份文件拒收。
-        # 值必须与首次导入完全一致（Title / Default Title），改值同样会重建变体（variant ID 变化）。
+        # 值必须与首次导入完全一致（单变体 Title / Default Title；多变体商品的轴名 + 基准值），
+        # 改值同样会重建变体（variant ID 变化）—— 2026-11-21 起部分主机有变体轴，
+        # 这里改成按 VARIANTS 取真实值，不再硬编码 Title。
         # 其余列一律**不出现**：CSV 里出现但为空的列会把线上值覆盖成空，不出现的列才保持原值。
         w.writerow(["Title", "URL handle", "Option1 name", "Option1 value", CONSUMABLES_COL])
         for host, accs in CONSUMABLES.items():
-            w.writerow([titles[host], host, "Title", "Default Title", ",".join(accs)])
+            axis = VARIANTS.get(host)
+            opt_name = axis["option"] if axis else "Title"
+            opt_value = axis["base"] if axis else "Default Title"
+            w.writerow([titles[host], host, opt_name, opt_value, ",".join(accs)])
 
     # 生成后自检（BUG-051）：Title 与 option 必须与被更新商品逐字一致，否则平台整份拒收
+    # main_rows 只取主行（有 Title 的行）—— 变体行也带 SKU，用 SKU 判会把变体行当成主行
     with open(OUT_PATH, newline="", encoding="utf-8") as f:
-        main_rows = {r["URL handle"]: r for r in csv.DictReader(f) if r["SKU"]}
+        main_rows = {r["URL handle"]: r for r in csv.DictReader(f) if r["Title"]}
     with open(path, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             m = main_rows[r["URL handle"]]
@@ -1285,10 +1444,13 @@ def main():
     # 5) 报告
     n_host = sum(1 for p in PRODUCTS if p.get("kind") != "acc")
     n_acc = len(PRODUCTS) - n_host
+    n_variant_rows = sum(1 for r in rows if r["URL handle"] and r["SKU"] and not r["Title"])
+    n_img_rows = sum(1 for r in rows if r["URL handle"] and not r["SKU"])
     print(f"✓ 已写出 {OUT_PATH}")
     print(f"  列数 = {len(header)}（官方 {len(OFFICIAL_KEEP)} + metafield {len(META_HEADER)}）｜{template_note}")
-    print(f"  商品数 = {len(PRODUCTS)}（主机 {n_host} + 配件 {n_acc}，全部单变体）；总行数 = {len(rows)}"
-          f"（主行 {len(PRODUCTS)} + 第二图行 {len(rows) - len(PRODUCTS)}）")
+    print(f"  商品数 = {len(PRODUCTS)}（主机 {n_host} + 配件 {n_acc}；多变体 {len(VARIANTS)} 款，"
+          f"其余 {len(PRODUCTS) - len(VARIANTS)} 款单变体）；总行数 = {len(rows)}"
+          f"（主行 {len(PRODUCTS)} + 变体行 {n_variant_rows} + 图片行 {n_img_rows}）")
     by_group = {}
     for p in PRODUCTS:
         if p.get("compare_group"):

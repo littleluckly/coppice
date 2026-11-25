@@ -28,6 +28,14 @@
 <section class="product-recommendations" id="product-similar" data-section-id="{{ section.id }}">
   <script src="{{ 'product-recommendations.js' | asset_url }}" defer></script>
   <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+  {%- comment -%}
+    快速查看（2026-11-20）：多变体卡的「Choose options」弹窗。
+    product-form.js 在 PDP 上已由 main-product 引入，这里再写一次是因为
+    本 section 可能被单独留在模板里（Sections Everywhere）——重复引入无害，
+    文件顶部有 customElements.get 守卫。
+  {%- endcomment -%}
+  <script src="{{ 'quick-view.js' | asset_url }}" defer></script>
+  <script src="{{ 'product-form.js' | asset_url }}" defer></script>
   <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
   {{ 'product-card.css' | asset_url | stylesheet_tag }}
 

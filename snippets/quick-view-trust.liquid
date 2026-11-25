@@ -1,0 +1,78 @@
+{% doc %}
+  quick-view-trust — 快速查看弹窗里的信任徽标（2026-11-21 刘工："弹窗中信任项没有展示"）。
+
+  **为什么数据源和产品页不一样**：产品页的信任项是 **section blocks**（`trust_warranty`
+  + 任意条 `trust_item`），而弹窗是从**商品卡 snippet** 渲染的 —— Liquid 读不到另一个
+  模板里 section 的 blocks。所以：
+    · 保修项（`trust_warranty`）→ **产品级 metafield** `spec.warranty_months`，
+      与产品页同一段逻辑、同一个来源，天然一致；
+    · 文本项（Free shipping / 30-day returns 这类店铺政策）→ **主题设置
+      `settings.qv_trust_1..3`**（外观 → 快速查看）。空白即不渲染。
+
+  **条数（最容易误会的一点）**：弹窗最多 **4 条** = 1 条自动保修（metafield）
+  + 下面 3 行手填文本。设置面板里只有 3 个文本行，因为保修不在那 3 行里；
+  不想要自动保修就关 `settings.qv_show_warranty`。
+
+  **代价（说清楚）**：店铺政策文案现在有两个填写入口（产品页 block + 主题设置）。
+  想两边一致就得填两遍；不填的那边不显示。要单一数据源就得把产品页的 block 也改成
+  读设置 —— 那会让"逐产品换信任项"的灵活度消失，没做。
+
+  图标三选一（shipping / returns / warranty），与产品页 block 的图标集合相同，
+  所以两处外观一致。样式（`.trust-item*`）在 assets/critical.css，产品页与弹窗共用。
+
+  @param {product} product - product 对象（必填）
+  @param {object} settings - 主题设置（qv_trust_{1..3}_icon / _text）。由 quick-view 显式传入。
+{% enddoc %}
+
+{%- liquid
+  assign warranty = product.metafields.spec.warranty_months.value
+-%}
+
+{%- comment -%}
+  保修徽标是**自动项**，不在 `qv_trust_1..3` 那三行里 —— 商家看到"设了 3 行却显示 4 条"
+  就是它（2026-11-21 刘工问过）。因此单独给了开关 `settings.qv_show_warranty`：
+  不想要自动项时关掉，弹窗里就只剩自己填的那几行。
+  数据仍来自产品 metafield（与产品页同源），关开关不会影响产品页。
+{%- endcomment -%}
+{%- if settings.qv_show_warranty and warranty != blank and warranty != 0 -%}
+  <div class="trust-item">
+    <span class="trust-item__icon" aria-hidden="true">
+      {{- 'icon-warranty.svg' | inline_asset_content -}}
+    </span>
+    <span class="trust-item__text">
+      {%- assign warranty_rest = warranty | modulo: 12 -%}
+      {%- if warranty_rest == 0 -%}
+        {%- assign warranty_years = warranty | divided_by: 12 -%}
+        {{- 'products.product.warranty_years' | t: years: warranty_years -}}
+      {%- else -%}
+        {{- 'products.product.warranty_months' | t: months: warranty -}}
+      {%- endif -%}
+    </span>
+  </div>
+{%- endif -%}
+
+{%- for i in (1..3) -%}
+  {%- assign icon_key = 'qv_trust_' | append: i | append: '_icon' -%}
+  {%- assign text_key = 'qv_trust_' | append: i | append: '_text' -%}
+  {%- assign trust_text = settings[text_key] -%}
+  {%- comment -%}
+    判空用 `!= empty and != nil`：空串在 Liquid 里为真，只写 `!= blank` 时
+    "商家把第 3 条留空"会在平台上正确跳过、在桩里却渲染出一个空徽标
+    （same trap as BUG-092；平台与桩的 blank 语义不同）。
+  {%- endcomment -%}
+  {%- if trust_text != empty and trust_text != nil -%}
+    <div class="trust-item">
+      <span class="trust-item__icon" aria-hidden="true">
+        {%- case settings[icon_key] -%}
+          {%- when 'shipping' -%}
+            {{- 'icon-truck.svg' | inline_asset_content -}}
+          {%- when 'returns' -%}
+            {{- 'icon-return.svg' | inline_asset_content -}}
+          {%- else -%}
+            {{- 'icon-warranty.svg' | inline_asset_content -}}
+        {%- endcase -%}
+      </span>
+      <span class="trust-item__text">{{ trust_text | escape }}</span>
+    </div>
+  {%- endif -%}
+{%- endfor -%}

@@ -108,6 +108,15 @@
   color: var(--color-brand);
   font-variant-numeric: tabular-nums;
 }
+/* "From" 前缀（2026-11-21）：变体有价差时，卡面现价是全变体最低价，不加前缀
+   会被读成"这款就卖这个价"。字重与字号都压一档，只做限定词不抢价格。
+   颜色走 foreground-muted（70% = 4.95:1，AA 达标）。 */
+.product-card__price-from {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-foreground-muted);
+  white-space: nowrap;
+}
 .product-card__price-compare {
   font-weight: 400;
   font-size: 0.78rem;
@@ -194,9 +203,11 @@
   color: var(--color-brand);
 }
 
-/* 快速加购（T-1.1：仅单变体且 available 渲染；多变体无 CTA；售罄置灰）
+/* 快速加购（T-1.1：仅单变体且 available 渲染；售罄置灰）
    静态态即品牌绿（2026-10-16 刘工）：绿色主题下按钮应为绿色，不再等 hover。
-   取 var(--color-brand) 而非硬编码色值，未来换 preset 自动跟随。 */
+   取 var(--color-brand) 而非硬编码色值，未来换 preset 自动跟随。
+   2026-11-20 起「多变体」不再等于「没有 CTA」：多变体有货走 <quick-view>
+   （下方 .quick-view 段），全售罄仍走置灰按钮。 */
 .product-card__quick-add {
   display: block;
   /* 不再自持 auto：由上方 .product-card__compare 吃掉剩余空间，把「Compare + 加购」
@@ -415,5 +426,394 @@ html:not(.js) compare-toggle {
 @media (prefers-reduced-motion: reduce) {
   .product-card__compare.is-conflict {
     animation: none;
+  }
+}
+
+/* ===== 快速查看弹窗（2026-11-20 刘工，snippets/quick-view.liquid）=====
+   多变体商品的卡上 CTA：点「Choose options」就地看画廊 + 买盒。
+   样式放这里而不是新开一个 css 文件：卡片被 6 个 section 消费，且
+   product-card.css 已经是它们的共同依赖 —— 多一个请求只为 100 行样式不值得
+   （AGENTS §6「不为省 1–2 KB 把 section 自有样式拆成独立请求」同一条逻辑）。
+
+   两条硬约束（都踩过）：
+   1. `display:flex` 必须限定 `[open]` —— UA 对未打开的 <dialog> 给的是
+      display:none，作者样式的 display:flex 会压过它，关着的面板会裸露在卡上
+      （facets.css 的 `.facets__dialog[open]` 同款写法）。
+   2. `<quick-view>` 是容器型自定义元素，必须显式 display:block，否则子元素
+      只是碎片盒、按钮宽度失效（BUG-071）。
+   配色一律令牌派生（color-mix 调 alpha），唯一硬编码是遮罩黑 —— 配色纪律的
+   合法例外（压照片/压页面 恒黑）。 */
+quick-view {
+  display: block;
+}
+.quick-view {
+  /* ⚠️ 这里**不能**写 `position: relative`（2026-11-21 血的教训）：
+     modal dialog 由 UA 样式表给的是 `position: fixed`（top layer 里就靠它贴视口）。
+     一旦覆盖成 relative，面板回到文档流的正常位置（就在那张卡里），
+     `showModal()` 聚焦时浏览器把它 scrollIntoView ⇒ **整页跳到顶部**。
+     footer 的绝对定位不需要这一行：fixed 元素本身就是绝对定位的包含块。 */
+  overflow: hidden;
+  /* 手机：底部抽屉（宽度满屏 + 只圆上角）。
+     max-width 必须显式覆盖：UA 对 dialog:modal 默认
+     `max-width: calc((100% - 6px) - 2em)`，不覆盖时 width:100vw 会被钳窄。 */
+  inline-size: 100vw;
+  max-width: 100vw;
+  max-height: 85vh;
+  max-height: 88dvh;
+  margin: auto auto 0;
+  padding: 0;
+  border: none;
+  border-radius: 16px 16px 0 0;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+.quick-view[open] {
+  display: flex;
+  flex-direction: column;
+}
+.quick-view::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+/* [hidden] 必须显式兜住：下面若干规则会给自己 display，UA 的 [hidden]{display:none}
+   拼不过作者样式 —— 缺了这条，无单位价的商品会留一行空白。 */
+.quick-view [hidden] {
+  display: none;
+}
+
+.quick-view__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+  padding: 1rem 1.25rem 0.75rem;
+  border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+}
+.quick-view__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.quick-view__close {
+  display: grid;
+  place-items: center;
+  /* 44px 热区；负外边距让图标视觉上仍贴角，热区不被内边距吃掉 */
+  inline-size: 44px;
+  block-size: 44px;
+  margin: -0.5rem -0.5rem -0.25rem 0;
+  margin-inline-start: auto;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.quick-view__close:hover {
+  background-color: color-mix(in srgb, var(--color-foreground) 7%, transparent);
+}
+.quick-view__close svg {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+/* 手机（单列）：滚动发生在这一层 —— head 钉在顶部，画廊与买盒一起滚。
+   桌面（≥750px）滚动改由**右列自己**承担，见文末的桌面媒体查询：
+   画廊常驻不动，只有买盒列表出滚动条（2026-11-21 刘工）。 */
+.quick-view__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  flex: 1 1 auto;
+  min-block-size: 0;
+  padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  /* 底部固定条是绝对定位、盖在 body 之上**且不透明**，
+     所以这里必须留出等高的空白，否则最后一行内容永远被压在条下面看不见。 */
+  padding-block-end: calc(4.75rem + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+.quick-view__gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+.quick-view__stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--color-foreground) 4%, transparent);
+  aspect-ratio: 1;
+}
+.quick-view__stage img,
+.quick-view__placeholder {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+.quick-view__thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.quick-view__thumb {
+  display: block;
+  inline-size: 56px;
+  block-size: 56px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 15%, transparent);
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--color-foreground) 3%, transparent);
+  cursor: pointer;
+}
+.quick-view__thumb-img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+.quick-view__thumb.is-active {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 1px var(--color-brand);
+}
+
+.quick-view__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-inline-size: 0;
+}
+/* 桌面右列是滚动容器（下文媒体查询），行高受限时 flex 子项默认 flex-shrink:1
+   会被压扁 —— 那是「内容挤在一起」而不是「滚动」。所以一律不收缩。 */
+.quick-view__info > * {
+  flex-shrink: 0;
+}
+.quick-view__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.5rem;
+}
+.quick-view__price-current {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-brand);
+  font-variant-numeric: tabular-nums;
+}
+.quick-view__price-compare {
+  font-size: 0.85rem;
+  color: var(--color-foreground-muted);
+  font-variant-numeric: tabular-nums;
+}
+.quick-view__price-save {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background-color: var(--color-sale-surface);
+  color: var(--color-sale);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.quick-view__unit {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-foreground-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 变体胶囊（.product-variant__*）的样式已统一到 assets/critical.css（2026-11-21）：
+   产品页与弹窗共用一套，`{% stylesheet %}` 只在产品页下发，集合页上的弹窗会裸奔。
+   这里不要再定义第二份。 */
+.quick-view__buy {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+/* 数量步进：复用 product-form.js 的 <quantity-input>（认 data-* 不认类名），
+   外观自己给 —— .quantity__* 那套在 main-product 的 {% stylesheet %} 里，
+   集合页没有那份样式（BUG-071 同源：容器型元素必须显式 display）。 */
+.quick-view__qty {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 22%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* 焦点环画在容器上（2026-11-24）：默认焦点框会套在中间那格外面，
+   溢出胶囊上下沿。步进器算一个控件，与搜索抽屉 / 价格区间同口径。 */
+.quick-view__qty:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 1px var(--color-brand);
+}
+.quick-view__qty-btn:focus-visible,
+.quick-view__qty-input:focus-visible {
+  outline: none;
+}
+.quick-view__qty-btn {
+  inline-size: 40px;
+  block-size: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.quick-view__qty-btn:hover {
+  background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+}
+.quick-view__qty-input {
+  inline-size: 40px;
+  block-size: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.quick-view__qty-input::-webkit-outer-spin-button,
+.quick-view__qty-input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.quick-view__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  padding: 10px 1rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.quick-view__status {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-foreground-muted);
+}
+.quick-view__status:empty {
+  display: none;
+}
+/* 加速结账 / 分期 / 参数行（2026-11-21 补齐买盒）：
+   三个容器都只在"平台真给出了内容"时渲染（Liquid 侧判空），所以这里只管间距，
+   不要给它们加 border —— 空壳判断一旦退化成按元素存在与否，就会留下空框。 */
+.quick-view__accelerated {
+  margin-block-start: 0.6rem;
+}
+.quick-view__terms {
+  margin-block-start: 0.4rem;
+}
+.quick-view__specs {
+  margin-block-start: 0.25rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+}
+/* 信任徽标容器（2026-11-21）：与产品页 .main-product__trust 同形 ——
+   顶线分隔 + 响应式两列（窄了退单列）。徽标本身的样式在 critical.css。 */
+.quick-view__trust {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.6rem 1rem;
+  margin-block-start: 0.75rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+}
+
+/* ===== 底部固定条：View full details（2026-11-21 刘工，参考稿）=====
+   绝对定位贴在 dialog 底边、body 之外：买盒内容再长也不动它。
+   **实底、无毛玻璃**（2026-11-21 刘工第二次口径，推翻先前的 backdrop-filter）：
+   半透明会把底下滚过的小字透成一层脏影，压着正文读起来更费力；
+   实底 + 一条顶线更干净，也和「固定条」这个角色的语义一致。
+   由于背景不透明，滚动内容滑到条下面就会被完全挡住 —— 所以滚动容器自己的
+   底部空白（4.75rem）是**必须**的，不是装饰（谁滚谁留，见桌面媒体查询）。 */
+.quick-view__foot {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-block-size: 56px;
+  padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
+  border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.quick-view__foot:hover {
+  color: var(--color-brand);
+}
+.quick-view__foot-arrow {
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+.quick-view__foot:hover .quick-view__foot-arrow {
+  transform: translateX(3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .quick-view__foot-arrow {
+    transition: none;
+  }
+}
+
+/* 桌面：居中弹窗、画廊与买盒两列。
+   <bottom-sheet media="(max-width: 749.98px)"> 在这个断点上不匹配 ⇒
+   组件直开直关，不播位移动效（居中面板不需要从底部滑上来）。 */
+@media (min-width: 750px) {
+  .quick-view {
+    inline-size: min(900px, calc(100vw - 3rem));
+    max-width: 900px;
+    max-height: min(86vh, 760px);
+    margin: auto;
+    border-radius: 16px;
+  }
+  /* 桌面：**只有右列滚**（2026-11-21 刘工）——
+     买盒内容再长也只出现右列的滚动条，画廊钉在原位不跟着走。
+     做法：外层不滚（overflow: hidden）+ 行高锁成 1fr（不然行会被
+     max-content 撑开、item 就没有可滚的余地）+ 右列 min-block-size: 0。
+     底部那 4.75rem 的空白从 body 移交到两列各自身上：footer 是 dialog 层的
+     绝对定位、横跨整宽**且不透明**，谁滚谁就得自己留出这块，
+     否则滚到底时最后一行会被它整个吃掉（见 .quick-view__foot）。 */
+  .quick-view__body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 1.5rem;
+    padding: 1.25rem 1.5rem 0;
+    overflow: hidden;
+  }
+  .quick-view__info {
+    min-block-size: 0;
+    padding-block-end: calc(4.75rem);
+    overflow-y: auto;
+    /* 滚到底不要顺手把背后的页面或外层带起来 */
+    overscroll-behavior: contain;
+    /* 滚动条出没时内容不左右跳 */
+    scrollbar-gutter: stable;
+  }
+  /* 画廊原则上装得下（方图 + 一排缩略图 ≈ 480px），但视口极矮时也要能看全，
+     所以同样给一条自己的滚动条 —— 常态下它不出现，出滚动条的只有右列。 */
+  .quick-view__gallery {
+    min-block-size: 0;
+    padding-block-end: calc(4.75rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }

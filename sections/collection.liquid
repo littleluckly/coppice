@@ -78,6 +78,13 @@
 
 <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+{%- comment -%}
+  快速查看（2026-11-20）：卡上多变体的「Choose options」弹窗。
+  quick-view.js 只管开合与变体联动，提交归 product-form.js 的 <product-form>
+  ——两个都要，且 product-form.js 在集合页只有这一处消费（本 section 不渲染 PDP）。
+{%- endcomment -%}
+<script src="{{ 'quick-view.js' | asset_url }}" defer></script>
+<script src="{{ 'product-form.js' | asset_url }}" defer></script>
 <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
 {%- comment -%}
   筛选 / 排序组件样式（2026-11-18 从本 section 的 stylesheet 标签里抽出）：

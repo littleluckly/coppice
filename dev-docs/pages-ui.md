@@ -49,12 +49,12 @@
 | --- | --- | --- | --- | --- |
 | announcement-bar | 通用物流政策横幅 | 文本块 ×N | 可关闭、链接 | settings |
 | main-nav | 三级以内下拉；`Shop by Platform` 指向 battery_platform 自动化集合（§4.3/§6.5） | 菜单项 | 菜单选择、下拉样式 | `linklists.main-menu` |
-| header-search | 预测搜索输入（#16 Search + predictive） | — | 展开样式 | `/search/suggest`（Section Rendering API + `section_id`，返回渲染好的 HTML 片段） |
+| header-search | 预测搜索输入（#16 Search + predictive）。**2026-11-24 参考图改版**：点页头搜索图标 → 右侧 600px `<dialog>` 抽屉；抽屉内含「搜索前内容区」——热门搜索药丸（逗号分隔、直连结果页）、推荐卡（有文案即渲染；无图时用 `assets/icon-leaf.svg` 当底图，压在品牌色实底上）、快速链接 2×2 网格（`search_link` block）、帮助条。**同日从 main-nav 独立成 section `search-drawer`**（对齐 Cart drawer 的组织方式）：配置项与区块都挂在它自己身上，页眉分组里单独一行；main-nav 只留触发链接（`aria-controls="search-drawer-dialog"`，无该 section / 无 JS 时退化成跳 `/search` 的普通链接） | `search_link` ×N（默认 4，上限 8） | 结果条数、热门搜索词、推荐卡图/标题/文案/按钮、快速链接图标与链接、帮助条按钮链接（留空回落平台客服页 `routes.contact_url`；帮助条三行文案走 `search.need_help` 等翻译键，不设字段） | `/search/suggest`（Section Rendering API + `section_id`，返回渲染好的 HTML 片段）；药丸走 `routes.search_url?q=` |
 | account | `<shopify-account>` 原生组件，**桌面与移动均可见**（#22） | — | 登录态样式 | 平台组件 |
 | compare-entry | **页头对比入口**：图标 + 角标（清单款数）。**桌面常驻**——2026-11-15 起空态也显示（次级文字色弱化 + 悬停 `<ui-tooltip>` 提示可以对比商品，原「空态隐藏」作废，否则新顾客永远看不到这个功能）；移动端页头不渲染，走 ☰ 抽屉的行式入口。点击跳当前组对比页，目标页探测失败则不渲染（SDD §6.2.1/§6.2.8） | — | 无（分组来自 `page.handle`） | `localStorage` + `pages` 探测 |
 | cart-entry | 购物车入口 + 计数（本期仅跳 `routes.cart_url`，**不做抽屉交互**，后续另立清单） | — | 本期无 | `cart` 对象 |
 
-**状态要点**：移动端 ☰ 抽屉用原生 `<dialog>` + `showModal()`（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`，**不手写焦点陷阱**）；搜索联想为 combobox + listbox（**非模态**：DOM 焦点始终留在输入框，靠 `aria-activedescendant` 移动；禁用 `<dialog>`）；**页头对比图标在此（compare-entry），它是加入对比后唯一的持久入口与可见反馈**（底部对比条已于 2026-11-15 删除）。图标外面包一层 `<ui-tooltip>`（2026-11-15，`assets/tooltip.js`）：空态文案讲「怎么用」、有料文案说「点进去看到什么」，由 `compare.js` 按清单数量改写；移动端不显示提示（触摸没有 hover）。
+**状态要点**：移动端 ☰ 抽屉用原生 `<dialog>` + `showModal()`（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`，**不手写焦点陷阱**）；搜索联想为 combobox + listbox，**住在右侧 `<dialog>` 抽屉里**（`showModal`，2026-10-10 起）：DOM 焦点始终留在输入框，靠 `aria-activedescendant` 移动虚拟光标；Esc 分层退出（面板开 → 先收面板；再按 → 关抽屉）。2026-11-24 起抽屉外壳直接渲染、只把搜索表单留在一个 `<template>` 里惰性克隆（`replaceWith` 插回原位，保证结果面板排在内容区之前）；**页头对比图标在此（compare-entry），它是加入对比后唯一的持久入口与可见反馈**（底部对比条已于 2026-11-15 删除）。图标外面包一层 `<ui-tooltip>`（2026-11-15，`assets/tooltip.js`）：空态文案讲「怎么用」、有料文案说「点进去看到什么」，由 `compare.js` 按清单数量改写；移动端不显示提示（触摸没有 hover）。
 
 #### 1.1.1 主导航菜单树（SDD §4.3 逐项展开）
 
@@ -198,7 +198,7 @@ NORTHBARK                                       ← wordmark 一行 + 定位语
 | ⑦⑧ | complementary / related | 官方推荐双区块（#13 #14） | — | 标题 | Recommendations API |
 | — | description | 富文本 | — | — | `product.description` |
 
-**状态要点**：耗材多变体 → 未选完变体加购禁用 + "Choose a size"提示；缺货 → Sold out 置灰；`spec_variance_note` 非空 → 规格表/对比提示图标（`aria-expanded`，§6.2.4）；无 JS → 降级为常规表单加购（§6.3）；物流未配置 → ① 整条消失；对话浮层 = 模态规范 + "以结账为准"声明（§6.4）。
+**状态要点**：耗材多变体 → 未选完变体加购禁用 + "Choose a size"提示；缺货 → Sold out 置灰；`spec_variance_note` 非空 → 产品页规格表出**表格下方静态脚注**（无交互）、对比表在**该参数行的值旁**出提示图标（定位不到行时退回列头；`aria-expanded`，§6.2.4）；无 JS → 降级为常规表单加购（§6.3）；物流未配置 → ① 整条消失；对话浮层 = 模态规范 + "以结账为准"声明（§6.4）。
 
 ---
 
@@ -246,7 +246,7 @@ NORTHBARK                                       ← wordmark 一行 + 定位语
 - **筛选器 UI**：HTML/样式/交互壳完全自主重写（不照搬 Dawn DOM）；数据与更新仍走原生 `collection.filters` + Section Rendering API（红线保留）。实现形态：`snippets/faceted-filters.liquid` 通用件（集合页与搜索页共用）+ 单表单（筛选组 + sort_by + q 全在一个 GET form 内），`Custom Element` 拦截提交做局部更新。
 - **排序控件（2026-11-03 改）**：有 JS 时全断点接管 —— `≥990px` 按钮 + 浮层 listbox，`<990px` **底部滑入面板**（`<dialog>` + `showModal`，参数对齐筛选抽屉：抓手 + 16px 上圆角 / 85vh / 0.28s ease-out / 遮罩 40% 黑 / 下拉收起同阈值）。原「移动端保留原生 select」作废：与 Filters 并排时一个开抽屉、一个弹系统选择器，同一次操作出现两种界面语言。选项 DOM 只有一份，开面板时搬进 dialog，收起时搬回组件内。Tools 条两个控件（Filters / 排序）共用 `--facet-control-radius`（= `max(商家输入框圆角, 14px)`）与 `--facet-control-border`，高度统一 44px，均带同形状下拉箭头。
 - **视图切换（2026-11-03）**：工具条加一个图标按钮，网格 ⇄ 列表。移动端紧跟「排序」右侧、桌面在工具条最右；图标按 `aria-pressed` 二选一（未按下=网格态，按下=列表态），标签恒为「List view」（WAI-ARIA toggle button）。状态挂 `<html data-collection-view>` 而非 section 根（筛选走 Section Rendering 会替换子树，状态会丢），首帧由 `layout/theme.liquid` 的内联脚本从 `localStorage['coppice:collection-view']` 预写，避免列表态用户先看到网格；`view-toggle:not(:defined)` 在无 JS 时整块隐藏。列表版式=卡片改「图左 / 信息右」两列网格（`clamp(104px,30%,168px)` 图列 + 信息列），**不改 product-card 标记**（该卡被首页与搜索页共用），加购按钮封顶 240px。
-- **商品卡快加**：单变体且 available → 快加按钮（`/cart/add.js` + aria-live + 无 JS 表单降级）；多变体不渲染 CTA；售罄置灰。进 `product-card` snippet 全局生效（首页同步获得）。
+- **商品卡 CTA**：单变体且 available → 快加按钮（`/cart/add.js` + aria-live + 无 JS 表单降级）；售罄置灰。**多变体有货 → 「Choose options」+ 快速查看弹窗**（画廊 + 买盒，不含描述与参数，留跳详情链接；2026-11-20 拍板 9，原「多变体不渲染 CTA」作废）；多变体全售罄 → 置灰；订阅商品与礼品卡只留产品页链接。进 `product-card` + `quick-view` snippet 全局生效（首页同步获得）。
 - **价格筛选**：原生 min/max 形态（效果图 v1 的固定区间勾选为自研禁区，已放弃该形态）。
 
 ---
@@ -291,6 +291,44 @@ NORTHBARK                                       ← wordmark 一行 + 定位语
 
 ---
 
+## 6.1 `page.contact.json` — 联系页
+
+**用途**（§6 / G-14）：表单 + 售后/配件咨询入口。唯一需要 `{% form 'contact' %}` 的页面，2026-11-24 按参考效果图改版。
+
+```
+桌面                                       移动
+┌──────────────────────────────────────┐  ┌──────────────┐
+│ 通栏横幅：底图 + 页面底色渐隐          │  │ 横幅（上下压暗）│
+│  GET IN TOUCH / Contact Us / 引文     │  │ 换行 3–4 行   │
+├───────────────────┬──────────────────┤  ├──────────────┤
+│ Send us a message │ Contact details  │  │ 表单          │
+│  图标+标签的胶囊   │ ⓘ Phone          │  │ 信息卡（下移）│
+│                   │ ⓘ Email          │  │ 配图 16:9     │
+│  [Send message]   │ ⓘ Address        │  ├──────────────┤
+│                   │ ⓘ Hours          │  │ 信任条 4 项   │
+│                   │ ── 脚注   [照片]  │  │              │
+└───────────────────┴──────────────────┘  └──────────────┘
+│ 信任条：4 项（粗体承诺 + 小字副标题）   │
+```
+
+| section | 职责 | 关键实现 |
+| --- | --- | --- |
+| `contact-form` | 横幅 + 表单 + 联系信息卡，**一个 section 装整页** | 横幅只在有图时成立；信息卡与配图都依附于「至少一项联系方式」 |
+| `trust-bar` | 底部 4 项承诺带（复用首页那条） | 第二行副标题为 2026-11-24 新增的可选设置 |
+
+**状态要点**
+
+- **字段内的字是真标签，不是 placeholder**：`<label for>` 留在 DOM 里，空态居中、聚焦或已填时缩到框内上沿（`:focus` / `:not(:placeholder-shown)`）。配一个只含空格的 placeholder 让伪类成立；星号 `aria-hidden`，语义由 `required` 承担。
+- **标题下不加装饰短线**（2026-11-25 刘工定）。「标题 → 第一个字段」的间距全由 `.contact__form` 的 `margin-block-start: 1.5rem` 给；要加回短线就写 `.contact__form-heading::after`，同时把该 margin 收回 `0.875rem`。
+- **必填说明行（`* Required fields`）已按刘工要求删除**（2026-11-24，参考图里没有）。代价说明白：屏幕上不再有一行文字解释星号，语义只剩 `input` 的 `required` 与 `aria-hidden` 的星号；间距改由 `.contact__form` 的 `margin-block-start` 给。
+- **按钮不带箭头**：参考图里 `Send message →` 有箭头，AGENTS §6 的箭头准则只允许 View All 与行尾导航元素，按规则去掉。
+- **990–1199 断点特判**：卡片带配图时这一段表单在上、卡片整幅在下（右栏 ~450px 横排放不下照片，竖排会把卡片撑得比表单高一截）。≥1200 才左右两栏。
+- 提交结果、错误提示、无信息卡降级、无横幅降级：见 `sections/contact-form.liquid` 文件头注释。
+
+**验证**：`ruby tools/preview-contact.rb`（`--no-banner` / `--no-image` / `--filled` / `--focus` / `--dark` 分别验降级、已填态、聚焦态、深色 preset）；输入框形状与聚焦环归 `tools/probe-input-shape.py` 的 contact-* 三条用例。
+
+---
+
 ## 7. `page.compare.json` — 对比页（核心差异化）
 
 **用途**（§6.2）：每组一页（`/pages/<group-key>-compare`，由 `page.handle` 去掉 `-compare` 后缀反推分组，**无映射设置项**），服务端渲染默认表 + 数据岛，客户端按 localStorage 接管。**URL 全程无参数；canonical 服务端静态输出；页面不存在时入口不渲染（§6.2.1，探测必须判 `pages[h].title != blank`）。**
@@ -301,6 +339,7 @@ NORTHBARK                                       ← wordmark 一行 + 定位语
 桌面                                            移动（横滚 + sticky 表头）
 ┌─────────────────────────────────────────┐  ┌────────────────────┐
 │ [G] header                               │  │ [G] header          │
+│ 面包屑 Home / 对比页                      │  │ Home / 对比        │
 │ H1 割草机对比                             │  │ H1                  │
 │ 选型文案（该组怎么选：2–3 句）              │  │ 选型文案             │
 ├─────────────────────────────────────────┤  ├────────────────────┤
@@ -320,6 +359,11 @@ NORTHBARK                                       ← wordmark 一行 + 定位语
   注：底部对比条已于 2026-11-15 整条删除，对比页只剩表格本体。
 ```
 
+- **面包屑**（2026-11-24 补，此前整页漏了这条）：`<nav aria-label="Breadcrumb">` → `Home`（`routes.root_url`）+ 页面标题（纯文本 + `aria-current="page"`，不给自己链自己）。标题取同一个 `compare_heading`（设置覆盖 → `page.title` → 翻译兜底），与 `h1` 永远一致。
+  - **四个状态都输出**（分组未配 / 集合缺失 / 商品不足 2 / 正常）：这几个状态页面照样能被外链、旧书签、手输 URL 打开，导航不能因为数据问题就消失——那种页面恰好最需要一个回得去的出口。空状态里面包屑在 62ch 窄列内左对齐（`text-align: start`），不跟着下面居中。
+  - 翻译键用 `general.home` / `general.breadcrumb`（与产品页同一对）。集合页用的是 `collections.breadcrumb_*` 另一对——**两套并存是历史遗留，未合并**（改合集页要动 `collection.liquid` 与 locale，本轮不连带）。
+
+
 | section | 职责 | 关键设置 | 数据源 |
 | --- | --- | --- | --- |
 | **compare-page**（单 section） | 标题 + 选型文案 + 服务端默认表 + 数据岛，一次集合查询同时产出两者 | 标题覆盖、选型文案 | `compare_collections` 里的集合 → `spec.*`；数据岛 `#cmp-data` |
@@ -335,7 +379,7 @@ NORTHBARK                                       ← wordmark 一行 + 定位语
 - 无 JS：仍见默认 3 款表与选型文案；勾选入口优雅消失（§6.2.3）。
 - localStorage 为空/无效 → 不动默认表、不 `JSON.parse`（懒解析）。
 - L3 渲染层校验：跨组条目剔除 + aria-live 播报；handle 不在数据岛 → 该列显式降级"不在本页数据范围"+商品链接（§6.2.6），**不静默丢列**。
-- `spec_variance_note` 非空 → 该列表头提示图标 `<button aria-expanded>` + `aria-describedby`。
+- `spec_variance_note` 非空 → 提示图标落**该参数行 × 该商品**那一格（数值右侧），`<details>/<summary>` 原生展开 + 键盘可达；说明里无数值或对上多行时退回该列标题下方。
 - 缺值 `—` 不显示 0；表格 `<caption>` + `th scope` 双向；型号列表头移动端 sticky + "下一款"键盘路径。
 - 表格替换不丢焦点；载入清单 aria-live 播报且不抢焦点（§6.2.4）。
 - 索引开关 `compare_page_indexing`：商家一键 noindex；canonical 恒为去参路径。

@@ -196,4 +196,53 @@
       }
     ]
   }
+,
+  {
+    "name": "t:general.quick_view",
+    "settings": [
+      { "type": "header", "content": "t:general.quick_view_content_header" },
+      { "type": "paragraph", "content": "t:general.quick_view_content_info" },
+      { "type": "checkbox", "id": "qv_show_specs", "label": "t:general.quick_view_show_specs", "default": true },
+      { "type": "checkbox", "id": "qv_show_trust", "label": "t:general.quick_view_show_trust", "default": true },
+      { "type": "header", "content": "t:general.quick_view_trust_header" },
+      { "type": "paragraph", "content": "t:general.quick_view_trust_info" },
+      { "type": "checkbox", "id": "qv_show_warranty", "label": "t:general.quick_view_show_warranty", "default": true },
+      {
+        "type": "select",
+        "id": "qv_trust_1_icon",
+        "label": "t:general.quick_view_trust_icon",
+        "options": [
+          { "value": "shipping", "label": "t:sections.main_product.blocks.trust_item.icons.shipping" },
+          { "value": "returns", "label": "t:sections.main_product.blocks.trust_item.icons.returns" },
+          { "value": "warranty", "label": "t:sections.main_product.blocks.trust_item.icons.warranty" }
+        ],
+        "default": "shipping"
+      },
+      { "type": "text", "id": "qv_trust_1_text", "label": "t:general.quick_view_trust_1" },
+      {
+        "type": "select",
+        "id": "qv_trust_2_icon",
+        "label": "t:general.quick_view_trust_icon",
+        "options": [
+          { "value": "shipping", "label": "t:sections.main_product.blocks.trust_item.icons.shipping" },
+          { "value": "returns", "label": "t:sections.main_product.blocks.trust_item.icons.returns" },
+          { "value": "warranty", "label": "t:sections.main_product.blocks.trust_item.icons.warranty" }
+        ],
+        "default": "returns"
+      },
+      { "type": "text", "id": "qv_trust_2_text", "label": "t:general.quick_view_trust_2" },
+      {
+        "type": "select",
+        "id": "qv_trust_3_icon",
+        "label": "t:general.quick_view_trust_icon",
+        "options": [
+          { "value": "shipping", "label": "t:sections.main_product.blocks.trust_item.icons.shipping" },
+          { "value": "returns", "label": "t:sections.main_product.blocks.trust_item.icons.returns" },
+          { "value": "warranty", "label": "t:sections.main_product.blocks.trust_item.icons.warranty" }
+        ],
+        "default": "warranty"
+      },
+      { "type": "text", "id": "qv_trust_3_text", "label": "t:general.quick_view_trust_3" }
+    ]
+  }
 ]

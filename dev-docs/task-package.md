@@ -41,6 +41,7 @@ Shopify 后台编辑器里的每一次改动（菜单、文案、图片、社交
 | 9 | `sections/header-group.json` | `main-nav` 的 `brand_name` | `"Northbark"`（演示店写入） | 清空。新店会回落 `shop.name`——schema 里那个 `"default": "Northbark"` 已于 2026-11-19 删除（`sections/main-nav.liquid`），但**演示店的存值仍会写回 JSON**，不清就等于硬编码别人的品牌名 |
 | 10 | `sections/footer-group.json` | `brand` block 的 `email` | `support@northbark.example` | 清空（假邮箱，装到商家店里会被当成真实客服地址） |
 | 11 | `templates/page.contact.json` | `info_email` | `support@northbark.example` | 清空 → 信息卡四项全空时走 `contact__grid--single` 单列降级，不会裂版 |
+| 12 | `templates/page.contact.json` | `banner_image` / `info_image` | 演示店选的两张图（`shopify://shop_images/…`） | **清空**。2026-11-24 联系页改版新增：横幅底图与信息卡配图。新店没有这些文件，留着是别人的 handle（解析为空 drop、不报错，但导出的设置不该带）。清空后横幅降级为白底标题区、信息卡不显示配图 |
 
 > 合计：`sections/` 3 处（header-group 2 + footer-group 1）+ `templates/` 21 处（index 20 + collection 1）+ `config/settings_data.json` 2 处 = **26 处 `shopify://` 引用**（2026-11-19 扫描；11-08 为 25 处，多出来的是页脚背景图）。
 >

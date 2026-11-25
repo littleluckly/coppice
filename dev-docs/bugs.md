@@ -868,7 +868,133 @@
 
 ---
 
+### BUG-086 · FAQ 图列比问题列高出 70px：断点覆盖被基线规则反压
+
+- **日期**：2026-11-20 ｜ **状态**：Fixed
+- **现象**：新建 `sections/product-faq.liquid` 首版渲染（1440×900）里，右侧图片上下边比左侧手风琴多出约 70px，图列底部留一条突兀空白。效果图里两列是等高的。
+- **根因**：桌面覆盖写成 `@media (min-width:990px) { .product-faq__media { aspect-ratio: auto; block-size: 100% } }`，但**基线** `.product-faq__media { aspect-ratio: 3 / 2 }` 写在样式块的靠后位置。媒体查询**不提高特异性**，两条同为 (0,1,0)，后写的胜出 ⇒ 桌面端的 `aspect-ratio: auto` 被基线吃掉，图仍按 3/2 撑高整行；`align-items: stretch` 其实已生效，面板被拉到同样高，只是它没有背景/边框，肉眼看不出被拉伸，于是只剩"图比卡片高"这一个现象。
+- **修复**：`.product-faq__layout` 桌面端改 `align-items: stretch`（图列跟手风琴实际高度走，不再靠比例），并把 `aspect-ratio: auto` 的桌面覆盖移到 `.product-faq__media` 基线**之后**，就地写明"顺序依赖，放前面会被盖掉"。
+- **验证**：`ruby tools/preview-product-faq.rb` 用真实 `{% stylesheet %}` + 真实标记渲染，无头 Chrome 1440×900 截图：图列与末张卡上下边对齐（top 135 / bottom 395 两侧一致）；375px（iframe 套层）截图无横向溢出、卡片单列、图 3/2。
+- **预防**：① 在 `{% stylesheet %}` 里写**断点覆盖**，要么紧跟在被覆盖的基线之后，要么把基线本身写成"只在小屏生效"的分支——**同特异性下是源序决定胜负，媒体查询不加权**。这条对全站所有 section 样式块成立，写完用 `grep -n "aspect-ratio\|@media" sections/<x>.liquid` 顺一遍顺序。② 判"两列等高/对齐"不要靠肉眼看截图留白，**量 rect**：取左右两个元素 `getBoundingClientRect()` 的 top/bottom 是否相等。③ 媒体查询内的错误 theme check 一条都不会报，新增 section 一律跑一次 1440 / 375 双宽真渲染截图。
+
+---
+
+### BUG-087 · 手动点一下手风琴，自动播放就再也不动了
+
+- **日期**：2026-11-20 ｜ **状态**：Fixed
+- **现象**：刘工在产品页 FAQ 上手动点开一条问题后，进度条不再走、也不再自动跳到下一条，整块"死"在那里。
+- **根因**：初版把"用户动过就永久停播"当安全网写死了——`click` 落在 `summary` 上就调 `_stopAutoplay()`，摘掉 `data-playing`（动画开关）并打 `data-stopped`。但自动播放**本来只依赖一个信号**：当前展开条的进度条动画跑完（`animationend`）就切下一条；而手动打开新条目时，选择器 `[data-playing] > details[open]` 会重新匹配，动画自己就从 0 开始了，轮播本来接得上。那条分支等于用一层状态把天然行为一票否决，而且不可恢复（没有任何"复活"入口）。
+- **修复**：删掉 `click` 监听与 `_stopAutoplay()`（`data-stopped` 属性一并消失）。保留四路挂起：hover / focus-within（纯 CSS）、离开视口（IO）、标签页后台（visibilitychange）、`prefers-reduced-motion`。全部收起时没有展开项也就没有进度条动画，轮播自然停住；再点开任意一条即恢复。`sections/product-faq.liquid` 与 schema 的 `autoplay_info` 文案同步改成"手动打开 = 该条重新计时"，并把这次反转写进文件头，防止下次又加回去。
+- **验证**：桩实测 8 条断言——初始 open=0 且在播；点开第 3 条后 `playing` 仍在、无 `data-stopped`、`animationName=product-faq-fill`（倒计时重启）；两次 `animationend` 走 2→3→0 回绕且始终只开一条；收起全部 → open=-1；再点开 → 动画恢复并继续推进。动画参数实测 `duration=6s / linear / forwards / transform-origin 左端`，来源是设置输出的 `--product-faq-interval: 6s`。
+- **预防**：① 自动播放的"停"必须能指出**哪一步真的不该再动**；"用户碰过"不是理由——它顺带否掉了"碰过之后还想看轮播"这个更常见的诉求。真要停，就得同时给恢复入口。② 实现"停止类"逻辑前先回答：这个功能**靠什么信号推进**？若信号本身（动画结束）已经覆盖了手动交互，就别再叠一层状态去压制它——那层状态迟早变成"功能失效"。③ 自动播放的验收必须分三段：初始轮播 / 手动点开后是否继续 / 全部收起再打开是否恢复。只测第一段正好漏掉本次问题。
+
+---
+
+### BUG-088 · 手动开合手风琴后移开鼠标，自动播放不动了（两个叠加缺陷）
+
+- **日期**：2026-11-20 ｜ **状态**：Fixed
+- **现象**：在产品页 FAQ 上手动展开、收起、再展开，然后把鼠标移开，进度条不再走、也不再自动跳下一条。
+- **根因（两个，都只在真浏览器里显形）**：
+  1. **`:focus-within` 被点击留下的焦点永久点亮**。悬停/焦点暂停写的是 `.product-faq__panel:focus-within`，而鼠标点 `<summary>` 后 Chrome 会把焦点留在它身上（实测 `document.activeElement = SUMMARY.product-faq__summary`）。鼠标移开后 `:hover` 为假、`:focus-within` 仍为真 ⇒ `animation-play-state: paused` 一直挂着。
+  2. **关掉再打开的条目会带着 finished 状态回来**。原先指望"重新匹配 `[data-playing] > details[open]` 选择器"就等于重启动画；实测打开的瞬间 `transform` 直接是 `matrix(1,0,0,1)`（满格）且不再派 `animationend`，于是轮播停摆——即使焦点问题修好，它也会在"收起再展开"这一步继续坏。
+- **修复**：
+  1. `sections/product-faq.liquid`：焦点暂停改成 `.product-faq__panel:has(:focus-visible)`。鼠标点击不匹配 `:focus-visible`（实测 false），键盘 Tab 仍匹配（实测 true）⇒ 只保留键盘用户需要的"可停"，鼠标路径不再被粘住。
+  2. `assets/product-faq.js`：新增 `_restartProgress(item)`——`animation: none` → 强制一次重排（`void bar.offsetWidth`）→ 撤销内联值，让样式表里的动画真正从 0 重新开始。`_advance()` 打开下一条后调用它；`click` 落在 summary 上时延后一拍（原生 toggle 在 click 派发之后生效）对当前展开项调用它。
+- **验证**：新增 `tools/probe-faq-autoplay.py`（CDP 驱动真 Chrome、真实鼠标/键盘输入、真实时间）：9/9 通过——初始轮播、静置一个周期自动切、点开后仍在播（`playState=running` 且 `focusVisible=false`）、点同一条收起全部、重新点开后 `scale=0.07`（从 0 重启而非满格）、移开鼠标再等一个周期继续切、Tab 聚焦暂停、点空白恢复、无 JS 异常。另跑连续三轮推进 1→2→3→回绕 0。`theme check` 对 product-faq 零命中（整包仅 1 条既有 `OrphanedSnippet` 误报）。
+- **预防**：① **交互类验证不许只用事件桩**：`dispatchEvent(new MouseEvent('click'))` 不移动焦点、不产生 `:hover`，`--dump-dom` 不推进动画时间轴——这三个盲区正好覆盖了本次两个缺陷。凡涉及自动播放 / 悬停 / 焦点，一律用 `tools/probe-faq-autoplay.py` 这种"真 Chrome + CDP 真实输入 + 真实时间"的探针。② **`:focus-within` 不能用作"鼠标离开就恢复"的暂停开关**：点击会把焦点留在元素上。要区分输入方式就用 `:focus-visible`（鼠标 false / 键盘 true）。③ **"重新开始一段 CSS 动画"不能靠选择器重新匹配**，必须显式 restart（摘动画 + 强制重排 + 复位），否则会继承上一次的 finished 状态。
+
+---
+
+### BUG-089 · 规格表标题右侧的「Why specs can vary」像一段悬空绿字，点了说明还吊在表格外面
+
+- **日期**：2026-11-21 ｜ **状态**：Fixed
+- **现象**：产品页 Specifications 标题行右侧一段品牌色小字 `Why specs can vary`，看不出可点；点开后台说明挂在表格右上角外侧、把表格往下推。刘工一句「这是什么，直接删除吧，看起来很奇怪」。
+- **根因（两处，都不报错）**：
+  1. **`<summary>` 上写了 `display: inline-flex`**（当初为了 44px 触摸区 + 垂直居中）。Chrome 的默认三角标记只在 `display: list-item` 时渲染，`display` 一改就整块消失 ⇒ 可展开块退化成裸文本，affordance 归零。
+  2. **说明文字挂在标题行的 flex item 内部**：`.product-spec-table__head` 是 `justify-content: space-between`，`<details>` 是它的第二个 flex 子项，展开的 `<p>` 只能长在右侧那一栏里——于是"解释表格的文字"被放在表格外面、且与被解释对象没有任何版面关系。
+- **修复**：`sections/product-spec-table.liquid` 里把 `<details>/<summary>` 整块换成表格之后的静态 `<p class="product-spec-table__note">`（0.85rem / `--color-foreground-muted` / `max-width: 72ch` / 上边距 0.65rem）；删除 `.product-spec-table__note-summary` / `-note-text` 两个废弃类；删除已无消费点的 locale 键 `sections.product_spec_table.variance_label`。变体差异的披露本身**没有丢**（NB-21P 选 150cc 时规格表仍显示 166 cc，脚注负责说明）。对比页列头的 "i" 提示图标由 `assets/compare.js` 另建 DOM，不受影响。
+- **验证**：从 section 抽真 CSS + 正则抽真标记，无头 Chrome 渲染桌面 1200 / 移动 390（`<iframe width="390">` 套一层）两档——脚注紧贴表格下方、移动端两行不裁切；`check-locale-keys.py` 两个命名空间全命中，`en.default.json` 剥注释头后 JSON 合法；`check-tag-balance.py` 对本文件零命中（其余 15 处为既有误报）。
+- **预防**：① **`<summary>` 上加任何 `display` 都会吃掉默认三角标记**——要可展开就必须显式补一个可见标记（对比表用 "i" 徽标就是这么做的），否则等于静默删掉 affordance。② **解释某块内容的文字，位置由被解释对象的版面关系决定**：脚注就该在表格下方，不能塞进标题行的 flex 当第二个子项。判据——这段文字是否必须与某元素视觉紧邻？是则贴它，否则平铺成脚注。
+
+---
+
+### BUG-090 · 预览桩"成功"生成了一页没有 CTA 的截图，差点当成"功能没生效"
+
+- **日期**：2026-11-20 ｜ **状态**：Fixed
+- **现象**：为商品卡快速查看写 `tools/preview-quick-view.rb` 后，页面能生成、无报错，但整个卡片 CTA 区（含新加的 `quick-view`）**一个字都没输出**；同时卡片主图位置是一句 `Liquid error: wrong number of arguments`。若不是顺手 `grep` 了一眼，下一步就是拿这张"看着正常"的截图去判断样式。
+- **根因**：三层叠加，且**都没有抛出**。① 桩用 `Liquid::Template#render` 渲染（默认 `render` 会吞异常，把错误降级成一句 `Liquid error` 落进 HTML）；② 桩漏传 `quick_add` 参数 → `{%- if quick_add -%}` 为假 → CTA 整块静默不渲染（真实调用方都传了，只有桩没传）；③ Ruby `<<~HTML` 是**双引号 heredoc**，注入 JS 里的 `\n` 先被 Ruby 解成真换行、把字符串字面量截断，自检脚本整段 SyntaxError 静默失效。
+- **修复**：桩改成 `render!`（Liquid 报错当场炸掉，不许页面留 `Liquid error`）；`render_card` 补齐调用方真实参数（`quick_add` / `show_*` / `sizes`）；注入 JS 里一律不写反斜杠（换行用 `String.fromCharCode(10)`）；页内自检改用 `#test` 模式 + `--dump-dom` 读结果，逐条 PASS/FAIL。
+- **验证**：`--measure` 能算出单卡面板 9.2 KB / 1.7 KB gzip；`#test` 模式 11 条断言全 PASS（开面板 / 售罄变体禁用 / 价格联动 / 缩略图切图 / 摘 srcset / 变体图跟随 / 加购成功收面板 / 加购失败保留面板 + 错误文案 / 订阅商品不弹窗）。
+- **预防**：① 桩里**一律用 `render!`**（或 `Liquid::Template.error_mode = :strict`），并断言关键选择器数量（如 `assert html.include?('data-quick-view-open')`）——"页面生成了"不等于"你要验的东西在里面"。② 桩的渲染参数必须**照抄真实调用方**：少传一个布尔值就等于换了另一条分支，测的东西根本不是你改的那条。③ 往 Ruby heredoc 里注入 JS 时，反斜杠先被 Ruby 吃掉一层：字符串里的 `\n` 用 `String.fromCharCode(10)`，正则里的 `\s` 用 `[[:space:]]` 或字符类，写完先 `grep` 一眼产出文件确认没被截断。**2026-11-21 复发一次更隐蔽的**：桩脚本是 python 生成 ruby 源、ruby 再生成 HTML，`\(` 经两层转义落到浏览器里变成裸 `(`，正则未闭合 → **整段 `<script>` 语法错误、连 `load` 监听都没注册**，界面上表现为"什么都没发生"（不是报错）。对策：桩里的 JS 一律不写反斜杠，正则换 `indexOf`/`includes`；`#test` 已包 try/catch，异常会作为 `EXCEPTION ...` 写进结果行。
+
+---
+### BUG-091 · 抽出共享变体选择器时，顺手删掉了四个事件 handler（面板加购后再也不收）
+
+- **日期**：2026-11-21 ｜ **状态**：Fixed
+- **现象**：`assets/quick-view.js` 改造成"接 `<variant-picker>` 事件"后，桩测里"加购成功后收面板"变红：按钮已经进入 `added` 态、`status` 也写入了"added to your cart"，面板却一直开着；"加购失败保留面板"却仍然绿（因为它本来就不该关）。
+- **根因**：替换"`_onChange` 到 `_syncUnitPrice` 之前"这一整段代码时，按**旧**的行号锚点做区间替换，而被替换区间里还躺着 `_onSubmit` / `_onCartUpdated` / `_onCartFailed` / `_onDialogClose` 四个 handler。它们被一起删掉后：`addEventListener('submit', undefined)` 静默无效 → `_submitted` 永远 false → 收到 `cart:updated` 也不收面板。**`node --check` 通过、theme check 也不管 JS**，只有跑桩才炸。
+- **修复**：把四个 handler 原样补回，并在 `_onSubmit` / `_onCartFailed` 上补注释说明"标记只用来回答'这个 cart:updated 是不是我这次提交引起的'"。
+- **预防**：① **删除后的插入锚点必须重算**（`MEMORY.md` §五第一条，这次又犯）；区间替换前先 `grep -n "_on[A-Za-z]* ="` 把区间内**所有**函数名列一遍，或改用"只替换包含唯一上下文的最小片段"。② 桩的断言要覆盖**每一条有副作用的出口**：这次正是因为"失败路径"的断言与"成功路径"共用同一个"面板不关"的表象，才掩盖了 handler 消失。③ 改完 `grep -c "addEventListener"` 与 handler 定义数对一遍。
+
+---
+
+### BUG-092 · 同一页两个快速查看弹窗，先打开的那个选项选中态被"顶掉"（radio 没有 form owner）
+
+- **日期**：2026-11-21 ｜ **状态**：Fixed
+- **现象**：桩页里同时渲染 3 张多变体卡，第一个弹窗的"1,600 W"胶囊明明带 `checked` 属性，视觉上却和其它两个胶囊一模一样（没有品牌色描边）；用探针读状态才发现 `input.checked === false`，而 `input.hasAttribute('checked') === true`。
+- **根因**：`snippets/variant-picker.liquid` 用 `{% if form_id != blank %}form="{{ form_id }}"{% endif %}` 决定要不要写 `form` 属性。liquid gem 里 `blank` 被桩替换成 `nil`，而 `'' != nil` 为真 ⇒ 桩渲染出 `form=""`。`form` 属性一旦存在就**覆盖祖先 `<form>` 的归属**，`form=""` 指向不存在的 id ⇒ radio 变成"无 form owner"。同名 radio 的互斥组按「同一棵树 + 同一 name + **同一 form owner**」划分 ⇒ 页面上所有弹窗的同名 radio 落进同一个组，后渲染的 `checked` 把先前的顶掉。（平台侧 `'' != blank` 为假、不会输出该属性，所以线上没这个现象；但"空 form 属性"这条静默失效路径是真的。）
+- **修复**：条件改成 `{% if form_id and form_id != '' %}`（Liquid 里空串为真、nil 为假，两种运行环境结论一致）；`variant-picker.liquid` 的 `@doc` 补一段"radio 必须始终有 form owner"的说明。
+- **预防**：① 任何"同 name 的 radio/checkbox"都必须能指出它的 form owner 来自哪里（祖先 `<form>` 或有效 `form` 属性），**不允许输出空 `form` 属性**；桩断言里已加一条 `every(r => r.form !== null)`。② 判"选中态有没有生效"不能只看 HTML 属性，要读 `input.checked` 或 `getComputedStyle`（本次属性在、状态不在）。③ 桩的 `blank` 语义与平台不同，凡是用 `!= blank` 决定"要不要输出属性"的地方，写成 `x and x != ''` 更稳。
+
+---
+
+### BUG-093 · 点「Choose options」整页跳到顶部
+
+- **日期**：2026-11-21 ｜ **状态**：Fixed
+- **现象**：在集合页往下滚几百像素后点卡片上的「Choose options」，弹窗正常打开，但**整页滚回顶部**（桩测：`scrollY` 420 → 0）。
+- **根因**：给 `.quick-view` 加 `position: relative`（为让底部固定条有个"定位上下文"）时，覆盖掉了 **UA 给 modal dialog 的 `position: fixed`**。于是面板回到文档流的正常位置（就在那张卡里），`showModal()` 聚焦时浏览器把它 `scrollIntoView` ⇒ 整页跳到那张卡（在页面顶部）。讽刺的是**视觉上看不出异常**：top layer 仍然把它画在视口中央。
+- **修复**：删掉 `.quick-view` 的 `position: relative`。footer 的绝对定位不需要它 —— `<dialog>` 本身是 `fixed`，天然就是绝对定位子元素的包含块。文件里留了"⚠️ 不能写 relative"的注释。
+- **预防**：① **不要覆盖 `<dialog>` 的 `position`**（要定位上下文时，先确认当前 `position` 是不是 UA 给的 `fixed`；`getComputedStyle(dialog).position` 一行就能看出来）。② 模态相关改动的验收里固定加一条**"滚动位置不变"**断言（现在桩里就有：`打开弹窗不跳顶 y0=420 y1=420`）——这类 bug 截图全绿、只有量 scrollY 才看得见。③ top layer 元素"看起来对"不等于"定位对"：它被画在视口里，但盒模型可能还在文档流中。
+
+---
+
+### BUG-094 · 插入新函数时抄丢锚点里的一行，`fillColumn` 的 forEach 头被吃掉
+
+- **日期**：2026-11-23 ｜ **状态**：Fixed（自查阶段发现，未进产物）
+- **现象**：给 `assets/compare.js` 加 `numberTokens` / `resolveNoteRow` / `buildNote` 三个函数时，第一次编辑后 `fillColumn` 变成 `function fillColumn(tbody, index, values) { const cell = tr.children[index + 1]; …` —— `tbody.querySelectorAll('tr').forEach((tr, rowIndex) => {` 整行消失，`tr` / `rowIndex` 全部悬空。
+- **根因**：Edit 的 `old_string` 抄了三行（注释 + 函数签名 + forEach 头），`new_string` 只写了两行（注释 + 函数签名）。**纯插入场景下 old 与 new 行数不对称，等于删掉了没重打的那一行**。`node --check` 不会报（未定义变量不是语法错误），只有跑到 `fillColumn`（超范围商品补拉）才炸 ReferenceError —— 与 BUG-091 同一类，只是那次吃掉的是一段函数体，这次是循环头。
+- **修复**：按 `sed -n '620,642p'` 的现状把那行补回，`node --check` 通过，函数头尾（签名 → `});` → `}`）复核完整。
+- **预防**：① **纯插入时 `new_string` = 新代码 + 完整原样的 `old_string`**，锚点不重打——重打就会漏行；只有确实要改被替换内容时才让两者不等长。② 结构性编辑后立刻 `sed -n 'A,Bp'` 看被改函数的**头尾**，别只跑 `node --check`（未定义变量、丢一行循环头都是语法合法的）。③ 本条补上 BUG-091 预防①的缺口：那条只讲"删除后重算插入锚点"，没覆盖"new 少抄 old 的行"。
+
+---
+
+### BUG-095 · 对比页整页没有面包屑（集合页、产品页都有）
+
+- **日期**：2026-11-24 ｜ **状态**：Fixed
+- **现象**：`/pages/<group>-compare` 从页头对比图标、toast「Manage comparison」、商品卡勾选进来后，页面顶部直接是 `h1`，没有 `Home / …` 这一行。同一站内集合页（§5）与产品页（§6）都有，只有这张"深一层"的页面没有——从面向上看像进了个孤岛，回上一级只能靠浏览器返回键。
+- **根因**：**工单没画，实现就没做**。`dev-docs/pages-ui.md` §7 的线框只画了「H1 + 选型文案 + 表格」，`sections/compare-page.liquid` 严格照图施工。而面包屑在 pages-ui 里**只给集合页写过一条规格**（line 245），产品页那条是当时代码里顺手加的、从未进文档 ⇒ 没有"每个页面都要有"的全局约定可对照，遗漏不会在任何检查里暴露（theme check 不管、tag balance 不管、截图不看不知道）。
+- **修复**：`sections/compare-page.liquid` 加 `compare_breadcrumb`（capture 一次、四处输出：分组未配 / 集合缺失 / 商品不足 2 / 正常）。末项取同一个 `compare_heading`（设置覆盖 → `page.title` → 翻译兜底）保证与 `h1` 一致，并 `escape`；不给自己链自己，用 `aria-current="page"`。翻译键复用 `general.home` / `general.breadcrumb`（产品页同一对，**不新增键**）。样式与集合页同参：44px 触控盒、`align-items: center`、`/` 伪元素分隔、`--color-foreground-muted`。pages-ui §7 线框补上这一行 + 三条落地说明。
+- **验证**：从 section 文件里提取真实 `{% stylesheet %}` 样式、用 liquid gem 渲染 capture（`Engine & Bar <Compare>` 正确转义成 `&amp;` / `&lt;`），再用无头 Chrome 两个视口（1200 / 500）实测：链接盒高 44、两项文字中心差 0px、面包屑左缘 = `h1` 左缘（80/80、60/60）、空状态里在 62ch 窄列内左对齐且不跟随居中、`scrollWidth - clientWidth = 0` 无横向溢出。`python3 tools/check-tag-balance.py` 对本文件无告警。
+- **预防**：① **pages-ui 的每节线框必须画全"页面级 chrome"**——面包屑 / `h1` / 主入口三件套；线框里没有的东西，实现者（人或 Agent）不会补，**不画 = 决定不做**。② 开工新页面前先 `grep -rn 'general.breadcrumb' sections/` 把既有页面的骨架过一遍，缺哪件在工单里写明"本页不做 + 理由"。③ 同一件事写在两个地方就等于没写：翻译键眼下有 `general.home/breadcrumb`（产品页、对比页）和 `collections.breadcrumb_*`（集合页）两套并存，合并要动 `collection.liquid` + locale，**留待专门一轮**，别在改页面时顺手改（会连带断掉集合页已验证的 44px 对齐）。
+
+---
+
+### BUG-096 · 购物车数量框聚焦时，浏览器默认焦点框套在数字格外面、还溢出胶囊上下沿
+
+- **日期**：2026-11-24 ｜ **状态**：Fixed
+- **现象**：购物车行里的数量步进器（胶囊 + `−` + 数字 + `+`），Tab 进数字格后出现一个**黑色圆角方框**：比 40px 宽的数字格大一圈，上下各溢出胶囊边沿约 2px（刘工截图）。同一处 `−`/`+` 按钮聚焦时也是同一个黑框。
+- **根因**：三处数量步进器（`assets/cart-line.css` 的 `.cart-line__qty*`、`sections/main-product.liquid` 的 `.quantity*`、`assets/product-card.css` 的 `.quick-view__qty*`）**从来没有写过任何 `:focus` / `outline` 规则**，输入格与按钮全靠 UA 默认焦点框（Chrome 计算值 `outline: 1px auto`，实际绘制是画在元素边界外的双色环）。容器只有 1px 描边、数字格 40×44 撑满内高 —— 默认环一画就顶出胶囊。同类控件一直没人报，是因为全站焦点样式都是各页面自己写的，只有这三处没写；而当天刚做「输入框形状统一」，注意力在圆角与边框色上，没把 outline 纳入验收。
+- **修复**：把步进器当**一个**控件处理 —— 容器 `:focus-within` 给 `border-color: var(--color-brand)` + `box-shadow: 0 0 0 1px var(--color-brand)`（1px 边框 + 1px 外扩 = 2px 实环，与搜索抽屉、价格区间同一口径），内部 `-btn` / `-input` 的 `:focus-visible` 一律 `outline: none`。三处同步改，容器加 `box-shadow` 过渡。
+- **验证**：`tools/probe-input-shape.py` 扩到 20 条（新增 cart-qty / cart-qty-btn / product-qty / quickview-qty + 通用断言「控件自身 outline-width 必须 0px」），**并做了反向验证**：临时删掉 `outline: none` 后探针立刻报 `✗ 控件自身还有默认焦点框（outline 1px auto）`，18/20 —— 证明这条断言不是恒真。还原后 20/20。
+- **预防**：① **凡是"内部元素撑满容器"的复合控件**（数量步进器、搜索条、价格区间、分段选择），焦点环一律画在容器上、内部控件 `outline: none` —— 已写进 AGENTS.md §6。② 改输入/控件的形状或边框时，**验收清单必须包含"聚焦态"一项**：只检查静止态，默认焦点框永远看不见。③ 探针里那条通用 outline 断言对所有 case 生效，新加控件会自动被它盯住。
+
+---
+
 ## 记录模板（追加新 bug 用）
+
+> **编号纪律**：新增前先 `grep -n "^### BUG-0" dev-docs/bugs.md | tail -3` 取最大号 +1。
+> 2026-11-21 出现过两条记录同时用 088（两个会话并行写作），后来把后写的那条补成 090 ——
+> 补号会上浮，别以为"文件最后一条 = 最大号"。
 
 ```
 ### BUG-NNN · 一句话现象

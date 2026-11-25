@@ -9,6 +9,18 @@
  */
 {
   "general": {
+    "quick_view": "Quick view",
+    "quick_view_content_header": "Quick view contents",
+    "quick_view_content_info": "The quick view panel is shared by every product card on the storefront, so these switches are store-wide — they apply to all products at once, unlike the product page where each block can differ per template.",
+    "quick_view_show_specs": "Show the three key specs",
+    "quick_view_show_trust": "Show trust badges",
+    "quick_view_trust_header": "Trust badges in the quick view",
+    "quick_view_trust_info": "Up to 4 badges: 1 warranty badge generated automatically from each product's warranty metafield, plus the 3 lines below. The lines are store-wide text — leave a line empty to hide it. The product page has its own trust blocks (set per template), so keep the wording in sync if you want the two to match.",
+    "quick_view_show_warranty": "Show the warranty badge (from the product's warranty metafield)",
+    "quick_view_trust_icon": "Icon",
+    "quick_view_trust_1": "Badge line 1 (optional)",
+    "quick_view_trust_2": "Badge line 2 (optional)",
+    "quick_view_trust_3": "Badge line 3 (optional)",
     "404": "Not found",
     "announcement_bar": "Announcement bar",
     "article": "Article",
@@ -80,6 +92,48 @@
           "first": "First",
           "before_last": "Before last link",
           "last": "Last"
+        }
+      }
+    },
+    "search_drawer": {
+      "name": "Search drawer",
+      "labels": {
+        "popular_terms": "Popular searches",
+        "popular_terms_info": "Comma-separated words shown as pills under the search field. Each pill opens the search results page for that word. Leave empty to hide the row.",
+        "promo_image": "Promo image",
+        "promo_image_info": "Landscape photo for the promo card. Leave empty to use the leaf icon as the card backdrop.",
+        "promo_heading": "Promo heading",
+        "promo_text": "Promo text",
+        "promo_cta_label": "Promo button label",
+        "promo_cta_link": "Promo button link",
+        "promo_cta_link_info": "The button only appears when both a label and a link are filled in.",
+        "help_link": "Help button link",
+        "help_link_info": "Where the Contact Us button at the bottom goes. Leave empty to use your store's built-in contact page."
+      },
+      "blocks": {
+        "search_link": {
+          "name": "Quick link",
+          "labels": {
+            "icon": "Icon",
+            "title": "Title",
+            "subtitle": "Subtitle",
+            "link": "Link",
+            "link_info": "A card needs a title to appear. Without a valid link it still shows, but cannot be clicked."
+          }
+        }
+      },
+      "options": {
+        "search_icon": {
+          "mower": "Lawn mower",
+          "trimmer": "String trimmer",
+          "chainsaw": "Chainsaw",
+          "parts": "Parts",
+          "accessories": "Accessories",
+          "battery": "Battery",
+          "leaf": "Leaf",
+          "truck": "Delivery",
+          "warranty": "Warranty",
+          "support": "Support"
         }
       }
     },
@@ -435,6 +489,22 @@
       "default_heading": "Pairs well with",
       "limit": "Number of products"
     },
+    "product_faq": {
+      "name": "FAQ",
+      "defaults": {
+        "eyebrow": "FAQ",
+        "heading": "Frequently asked questions",
+        "subheading": "Quick answers to the questions we hear most about our machines, batteries, and support.",
+        "button": "View more FAQs"
+      },
+      "blog_info": "Each article's title becomes a question and its excerpt becomes the answer. Nothing is shown until a blog is selected.",
+      "image_info": "Shown on the right of the questions. Leave empty to use the product's featured image.",
+      "autoplay_header": "Auto-advance",
+      "autoplay": "Advance to the next question automatically",
+      "autoplay_info": "The progress bar under an open question is its countdown. It pauses on hover or focus and when the section is off screen, and it never runs when the system asks for reduced motion. Opening a question yourself restarts its countdown instead of stopping the rotation.",
+      "autoplay_seconds": "Seconds per question",
+      "button_info": "Defaults to the selected blog when left empty."
+    },
     "cart_lines": {
       "name": "Cart items",
       "labels": {
@@ -534,15 +604,23 @@
     },
     "contact_form": {
       "defaults": {
-        "eyebrow": "Support",
-        "lead": "Questions about a machine, an order or a spare part? Send us a note and we will get back to you within one business day.",
-        "info_heading": "Contact details"
+        "eyebrow": "Get in touch",
+        "lead": "Questions about a machine, an order or a spare part?\nSend us a note and we will get back to you within one business day.",
+        "info_heading": "Contact details",
+        "form_heading": "Send us a message"
       },
       "labels": {
+        "banner_header": "Banner",
+        "banner_image": "Banner photo",
+        "banner_image_info": "Wide photo behind the page title. The page background fades over it so the title stays readable. Leave empty to show the title on a plain background.",
+        "banner_overlay": "Image fade",
+        "banner_overlay_info": "How strongly the background fades over the photo. Raise it if your photo is busy or the text is hard to read.",
+        "intro_header": "Title area",
         "eyebrow": "Eyebrow",
         "heading_info": "Leave empty to use the page title.",
         "lead": "Intro text",
         "form_header": "Form",
+        "form_heading": "Form heading",
         "show_phone": "Show phone field",
         "show_phone_info": "Adds an optional phone number field, so you can call back instead of writing.",
         "consent": "Note under the button",
@@ -553,7 +631,9 @@
         "address": "Address",
         "hours": "Opening hours",
         "hours_info": "One entry per line. Leave the whole card empty to hide it.",
-        "note": "Additional note"
+        "note": "Additional note",
+        "info_image": "Card photo",
+        "info_image_info": "Optional photo beside the contact details. Shown only when at least one detail above is filled in."
       }
     },
     "trust_bar": {
@@ -566,6 +646,8 @@
         "show_dividers_info": "Thin vertical lines between items. Hidden on the stacked mobile layout, where there is nothing to separate.",
         "icon": "Icon",
         "text": "Text",
+        "subtext": "Second line",
+        "subtext_info": "Optional smaller line under the text, such as \"Fast & reliable delivery\".",
         "link": "Link",
         "link_info": "Optional. Makes the whole item clickable - useful for a shipping or warranty page."
       },

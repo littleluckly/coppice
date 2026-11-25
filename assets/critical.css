@@ -1137,3 +1137,171 @@ bottom-sheet > dialog.is-close-anim {
   padding-block-start: 2rem;
   border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
 }
+
+/* ===================================================================
+   变体选择器（<variant-picker>，2026-11-21 从 main-product 的样式块迁到全局）
+   为什么放全局：选择器现在被两处消费 —— 产品页买盒与商品卡快速查看弹窗。
+   `{% stylesheet %}` 只随渲染它的页面下发：弹窗出现在集合页 / 搜索页时拿不到
+   main-product 的那段样式，胶囊会退化成裸文字。
+   radio 现在**包在 label 里**（不再用 id/for 关联，理由见
+   snippets/variant-picker.liquid），所以选中/聚焦态从 `input:checked + label`
+   改成 `label:has(input:checked)`。
+   =================================================================== */
+.product-variant__group {
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+.product-variant__label {
+  padding: 0;
+  margin-block-end: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-foreground);
+}
+.product-variant__values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.product-variant__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 18%, transparent);
+  border-radius: var(--style-border-radius-inputs);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.product-variant__pill:has(.product-variant__radio:checked) {
+  border-color: var(--color-brand);
+  box-shadow: inset 0 0 0 1px var(--color-brand);
+  color: var(--color-brand);
+  font-weight: 500;
+}
+.product-variant__pill:has(.product-variant__radio:focus-visible) {
+  outline: 2px solid var(--color-brand-accent);
+  outline-offset: 2px;
+}
+
+/* ===================================================================
+   三条决策参数（spec-bullets snippet 的样式归属，2026-11-21 从 main-product
+   的样式块迁到全局）
+   为什么放全局：同一个 snippet 现在被产品页买盒与商品卡快速查看弹窗共用，
+   而 section 的样式块只随产品页下发 —— 放在那里，集合页上的弹窗会得到
+   "无图标、无两列、无 hover" 的裸列表。
+   =================================================================== */
+.spec-bullets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.spec-bullets__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--color-foreground-muted);
+  transition: color 0.2s ease;
+}
+.spec-bullets__item:hover {
+  color: var(--color-brand);
+}
+.spec-bullets__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--color-brand);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.spec-bullets__item:hover .spec-bullets__icon {
+  transform: scale(1.25) rotate(5deg);
+}
+.spec-bullets__icon svg {
+  width: 18px;
+  height: 18px;
+}
+.spec-bullets__text {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: baseline;
+}
+.spec-bullets__text .spec-value,
+.spec-bullets__value {
+  color: var(--color-foreground);
+  font-weight: 500;
+}
+
+/* ===================================================================
+   加速结账按钮（Buy it now，`accelerated-checkout`，2026-11-21 从 main-product
+   的样式块迁到全局）
+   为什么放全局：同一组按钮出现在两处 —— 产品页买盒（.product-form__accelerated）
+   与商品卡快速查看弹窗（.quick-view__accelerated）；两处容器都带
+   `accelerated-checkout` 类，样式只写这一份。
+
+   平台事实（shopify.dev / Accelerated checkout）：按钮渲染在自定义元素
+   `shopify-accelerated-checkout` 的 **closed shadow DOM** 里，针对内部类名与结构
+   的样式不生效。官方开放的只有高度 / 圆角 / 投影 / 骨架色 / 购物车布局，
+   **没有背景色、没有文字色** —— 那两项只能在主题设置 Colors 里改。
+   所以分两路：① 圆角 + 内描边走官方自定义属性（box-shadow 冒充 border）；
+   ② 去底色用旧版类名兜底，已升级 shadow DOM 的实现会静默忽略。
+   代价：平台若已升级，按钮仍是实心底，只有形状变胶囊。
+   =================================================================== */
+.accelerated-checkout shopify-accelerated-checkout {
+  --shopify-accelerated-checkout-button-border-radius: 999px;
+  --shopify-accelerated-checkout-button-block-size: 44px;
+  --shopify-accelerated-checkout-button-box-shadow: inset 0 0 0 1.5px var(--color-brand);
+}
+.accelerated-checkout .shopify-payment-button__button--unbranded {
+  /* 旧版实现的按钮是普通 <button>，没有平台给的块级尺寸 —— 补上，才与
+     影子 DOM 版（width 100% / 44px 高）看起来是同一个东西。 */
+  inline-size: 100%;
+  min-block-size: 44px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 999px;
+  background-color: transparent;
+  color: var(--color-brand);
+  box-shadow: inset 0 0 0 1.5px var(--color-brand);
+}
+.accelerated-checkout .shopify-payment-button__button--unbranded:hover:not([disabled]) {
+  background-color: color-mix(in srgb, var(--color-brand) 7%, transparent);
+}
+
+/* ===================================================================
+   信任徽标（.trust-item，2026-11-21 从 main-product 的样式块迁到全局）
+   两处消费：产品页买盒（section blocks）与商品卡快速查看弹窗
+   （snippets/quick-view-trust.liquid）。容器各自定义（顶线分隔那套），
+   这里只放徽标本身。
+   =================================================================== */
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--color-foreground-muted);
+  transition: color 0.2s ease;
+}
+.trust-item:hover {
+  color: var(--color-brand);
+}
+.trust-item__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--color-brand);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.trust-item:hover .trust-item__icon {
+  transform: scale(1.25) rotate(5deg);
+}
+.trust-item__icon svg {
+  width: 20px;
+  height: 20px;
+}

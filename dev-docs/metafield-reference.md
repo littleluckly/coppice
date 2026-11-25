@@ -70,7 +70,7 @@
 | ---- | ---- |
 | `spec.compare_group` | 预设 `walk-behind-mower` / `riding-mower` / `chainsaw` / `string-trimmer`，商家可扩展。**空值 = 该商品不可加入对比，不兜底**；是跨类型校验的唯一权威键（不用 product_type） |
 | `spec.compare_hidden` | `true` = 停产款/订制品排除出对比勾选入口；默认 false |
-| `spec.spec_variance_note` | 仅当关键参数随变体变化时填（如 `Deck width varies by variant: 20 in or 22 in`）；非空 → 对比表该列表头出提示图标；为空 → 不渲染任何提示。**注意：本方案没有变体级 metafield，但商品仍可有变体（Option 列）；此字段是"参数只存产品级"的诚实补丁——差异是选购核心就拆独立产品，拆不值得才用它标注** |
+| `spec.spec_variance_note` | 仅当关键参数随变体变化时填（如 `Deck width varies by variant: 20 in or 22 in`）；非空 → 对比表在「该参数行 × 该商品」那一格（数值右侧）出提示图标（按说明里的数值与行值比对定位，**唯一命中才落地**；没写数值或对上多行退回该列标题下方）；为空 → 不渲染任何提示。**注意：本方案没有变体级 metafield，但商品仍可有变体（Option 列）；此字段是"参数只存产品级"的诚实补丁——差异是选购核心就拆独立产品，拆不值得才用它标注** |
 
 ### B. `platform` 命名空间（1 个）
 

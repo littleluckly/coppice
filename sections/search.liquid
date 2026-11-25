@@ -67,6 +67,9 @@
 
 <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+{%- comment -%} 快速查看（2026-11-20）：多变体卡的选择选项弹窗 + 提交依赖 {%- endcomment -%}
+<script src="{{ 'quick-view.js' | asset_url }}" defer></script>
+<script src="{{ 'product-form.js' | asset_url }}" defer></script>
 <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
 <script src="{{ 'view-toggle.js' | asset_url }}" defer></script>
 <script src="{{ 'search-field.js' | asset_url }}" defer></script>
@@ -844,14 +847,18 @@
     gap: 0.6rem;
     padding: 0.35rem 0.35rem 0.35rem 1rem;
     border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
-    border-radius: 999px;
+    border-radius: var(--input-radius, 999px);
     background-color: var(--color-background);
     box-shadow: 0 10px 30px -18px color-mix(in srgb, var(--color-foreground) 45%, transparent);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
+  /* 2026-11-24 全站统一成 1px 实环（原先是 3px 18% 光晕）。
+     悬浮投影必须跟着重写一遍——box-shadow 是整条替换，漏写就"聚焦时框掉地上"。 */
   .search-hero__field:focus-within {
     border-color: var(--color-brand);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 18%, transparent);
+    box-shadow:
+      0 0 0 1px var(--color-brand),
+      0 10px 30px -18px color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
   .search-hero__icon {
     display: grid;
@@ -1605,14 +1612,15 @@
     overflow-wrap: break-word;
   }
 
-  /* 窄栏：搜索条改圆角矩形，给按钮和输入留足空间，胶囊不会挤成球 */
+  /* 窄栏只收紧内边距：形状仍是胶囊（2026-11-24 全站统一输入框形状，
+     不再在 480 以下退回方角——同一个控件在手机上换形状，是全站最显眼的不一致） */
   @media (max-width: 480px) {
     .search-hero__inner {
       padding-inline: var(--page-margin);
     }
     .search-hero__field {
-      padding-inline-start: 0.75rem;
-      border-radius: var(--style-border-radius-inputs);
+      padding-inline-start: 1rem;
+      border-radius: var(--input-radius, 999px);
     }
     .search-hero__subtitle {
       margin-block-end: 1rem;
@@ -1725,7 +1733,7 @@
     {
       "type": "text",
       "id": "suggested_searches",
-      "default": "lawn mower, weed trimmer, chainsaw, 40V battery, mower blade",
+      "default": "lawn mower, string trimmer, chainsaw, 40V battery, mower blade",
       "label": "t:sections.search.settings.suggested_searches",
       "info": "t:sections.search.settings.suggested_searches_info"
     },

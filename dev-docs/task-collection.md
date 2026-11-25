@@ -3,7 +3,7 @@
 > **性质**：SDD 驱动开发的页面级任务清单（v1.0）。拆解自 `dev-docs/pages-ui.md` §4（集合页工单）与 `dev-docs/sdd.md` 对应章节（§6.1 / §6.2.2 / §8.1 / §8.2 / §8.3 / §13），并以 Northbark 集合页效果图（`dev-docs/ref-mockup-collection-northbark.jpg`）为视觉参照，**不引入未经拍板的新决策**。
 > **权威关系**：与 SDD / pages-ui 冲突时，以 `dev-docs/sdd.md` 为准；本清单只负责把集合页工作切成可执行、可验收的任务。
 > **范围**：仅 `templates/collection.json` 及其 section + `snippets/product-card.liquid` 的快加扩展（含首页复测连带）。header/footer group、搜索页接线、购物车抽屉**不在本清单内**（见 §0 外部依赖）。
-> **版本**：v1.1（2026-10-14：拍板 8 侵入式白卡，T-2.1 +0.25）｜ 整理日期：2026-10-13 ｜ 总人日：**7.25**（累加链见 §3）
+> **版本**：v1.2（2026-11-20：**拍板 9 商品卡多变体 CTA + 快速查看弹窗**，T-1.1 增补；人日不变——面板复用 product-form.js 的提交件，未新增独立任务）｜ 前版 v1.1（2026-10-14：拍板 8 侵入式白卡，T-2.1 +0.25）｜ 整理日期：2026-10-13 ｜ 总人日：**7.25**（累加链见 §3）
 > **2026-10-13 拍板记录**（Grill Me 追问后刘工裁定）：
 > 1. 商品卡**星级评分不做**（依赖评论 App 或伪造数据，双双撞红线）。
 > 2. 商品卡**快速加购做，仅单变体款**；多变体款**不显示按钮**；逻辑**进共享 snippet，全局生效**（首页 featured-collection 同步获得，需复测首页）。
@@ -12,6 +12,7 @@
 > 5. **面包屑做**（效果图有、文档未提——按低成本补齐，随 T-0.2 级联回 pages-ui §4）。
 > 6. **分页用数字分页**（原生 `paginate`，与效果图一致）。
 > 7. **筛选器 UI 层完全自主重写**（DOM 结构 / 样式 / 交互壳不照搬 Dawn）；**数据层与更新机制仍走原生**——`collection.filters` + 原生 URL 参数 + Section Rendering API，**"不自研 AJAX 筛选"红线保留**（2026-10-13 拍板后同日更正确认；曾短暂提出删红线，已撤回）。
+> 9. **商品卡多变体 CTA（2026-11-20 刘工，推翻拍板 2 的"多变体不显示按钮"）**：多变体且有货 → 卡上出「Choose options」，点击打开**卡内快速查看弹窗**——画廊（主图 + 最多 5 张缩略图）+ 买盒（原生变体下拉、数量、加购、单位价），**不展示描述与参数**，另有跳产品详情页链接；多变体全售罄仍置灰；**订阅商品与礼品卡不弹窗**，只留产品页链接（弹窗里选不了计划、填不了收件人，宁可不给入口）。
 > 8. **横幅布局升级为"侵入式白卡"**（2026-10-14，效果图 v2 = `ref-mockup-collection-northbark-v2.jpg`）：面包屑 + H1 + 副标题置于白色圆角卡内，白卡上移侵入横幅；曲线**全部 CSS 实现**（border-radius + 伪元素 radial-gradient 反向弧），**图片保持矩形不烤形状**（复用 hero 矩阵、响应式自适应、商家换图不破样、LCP 不受影响）。T-2.1 人日 0.5 → 0.75。
 > **通用约束**：以下不逐任务重复——文案走 `t:` 键、URL 走 `routes`、图片 `image_tag` + width/height + 焦点裁剪、JS 一律 defer/async、隐藏组件首次打开才建 DOM、JS 组件一律 Custom Element（`AbortController` 防重复绑定）、类名 Skeleton 风格 BEM、设计令牌走 `css-variables.liquid`（AGENTS.md §4/§6）。
 
@@ -51,12 +52,29 @@
 #### T-1.1 `snippets/product-card.liquid` 扩展：快速加购 · 1.0 人日 · 依赖：T-0.2 🔄 代码完成（2026-10-15），待 theme check + 开发店实测后转 ✅
 
 - [ ] **单变体且 available** → 渲染快加按钮：Custom Element 封装，`fetch /cart/add.js` 提交，成功后按钮短暂 "Added" 态 + `aria-live="polite"` 播报（SDD §8.2 动态区域硬规定）
-- [ ] **多变体款 → 不渲染任何 CTA**（拍板 2；卡面右下角留白，转化路径走产品页）
+- [ ] **多变体款 → 「Choose options」+ 卡内快速查看弹窗**（拍板 9 取代拍板 2 的"不渲染任何 CTA"）：画廊 + 买盒，无描述/参数，留跳详情链接；全售罄置灰；订阅商品与礼品卡只留链接
 - [ ] 售罄 → 按钮显示 Sold out 并 `disabled` 置灰（缺值/缺货通用行为，pages-ui §0）
 - [ ] **无 JS 降级**：按钮包在产品表单内，无 JS 时 POST `/cart/add` 跳 `routes.cart_url`（SDD §6.3 降级原则同源）
 - [ ] 快加数量固定 1，不出现数量选择器
 - [ ] 触摸目标 ≥ 44×44px；文案键落 `locales/` 双文件（`en.default.json` + `en.default.schema.json`）
 - [ ] **首页复测**：featured-collection 卡片行为变更 → 复测快加三态（单变体/多变体/售罄）+ 回填 `task-index.md` T-4.1 状态
+
+> **拍板 9 落地记录（2026-11-20）**
+>
+> | 项 | 内容 |
+> | --- | --- |
+> | 新增文件 | `snippets/quick-view.liquid`（入口 + 面板）、`assets/quick-view.js`（开合 / 变体联动 / 缩略图 / 收面板） |
+> | 改动文件 | `snippets/product-card.liquid`（三态分流）、`assets/product-card.css`（`.quick-view*` 段，不新开请求）、6 个消费卡片的 section 引入 `quick-view.js` + `product-form.js`、`locales/en.default.json` 4 个键 |
+> | 买盒实现 | **变体选择器与产品页同一份**：`snippets/variant-picker.liquid`（胶囊 + variant JSON 数据岛）+ `product-form.js` 的 `<variant-picker>`（按 `[data-variant-scope]` 找作用域）。2026-11-21 之前这里是原生 `<select>` 加一套自己的价格联动 —— 两套实现必然漂，已下线。数量与提交**复用 `<quantity-input>` / `<product-form>`**，不另写提交逻辑（含 BUG-083 的 `cart:add-failed` 收口） |
+> | 开合 | `<bottom-sheet>`：手机滑入、桌面直开（`media="(max-width: 749.98px)"`）；Esc / 遮罩 / 焦点归还全走平台 `<dialog>` |
+> | 无 JS | 入口是 `<a href="{{ product.url }}">`，照常跳详情页（不是死按钮） |
+> | 体量（桩测） | 单卡面板 **13.9 KB 原始 / 2.6 KB gzip**（3 变体 / 4 图）；24 张多变体卡整页 **gzip 增量 ~5.9 KB**；量法 `ruby tools/preview-quick-view.rb --measure`。涨来自两处：换掉 select 的 variant JSON + 胶囊（+0.7 KB）、买盒补齐的加速结账/分期/参数行（+0.6 KB）。**Shop Pay 标记是假的，装店后要重量** |
+> | 验证 | `shopify theme check` 0 error / 1 既有 warning（`OrphanedSnippet` 于 `snippets/image.liquid`，已知误报）；`check-locale-keys` / `check-focal-points` / `check-tag-balance`（新增文件 0 问题）通过；桩内 11 项交互自检全 PASS（`tools/preview-quick-view.rb` 的 `#test` 模式） |
+> | 变体选择器 | 2026-11-21 抽成 `snippets/variant-picker.liquid`（与产品页共用）；桩里同时验了**两种作用域**：弹窗（dialog）与 PDP 形态买盒（section + `form` 属性） |
+> | 弹窗内容开关 | 主题设置新增「Quick view」：`qv_show_specs` / `qv_show_trust`（Contents 组）、`qv_show_warranty`（Trust 组），默认全开、**全店级**。**保修是自动项**（读 `spec.warranty_months`），不在三行手填文本里 —— 弹窗最多 **4 条 = 1 自动 + 3 手填**（刘工 2026-11-21 问过"设置 3 条、弹窗 4 条"，第 4 条正是手填的 Badge line 3）。三行标签已改为 "Badge line N (optional)"，段落文案写明条数来源。关掉时**连容器都不渲染**（容器自带顶线，空壳会留一条横线 —— 沿用 BUG-085 的判据）。为什么不做成 section 设置：弹窗由卡片 snippet 渲染，拿不到消费它的 6 个 section 各自的 block 配置，逐 section 开关会让"同一张卡片在不同页面行为不同"。桩支持 `--no-extras` 跑关闭态，多 2 条断言（规格块 / 信任块都不存在） |
+> | 滚动归属 | 2026-11-21 刘工：桌面**只有右列出滚动条**（外层 `overflow: hidden` + `grid-template-rows: minmax(0,1fr)` + 右列 `overflow-y: auto`），画廊钉在原位；手机整体滚。底部 4.75rem 空白从 body 移交到两列（谁滚谁留），否则滚动内容会停在条上方、毛玻璃背后没东西可糊。桩 35 条断言含 4 条新的：外层不滚 / 右列真滚 / 滚右列时画廊不动 / 滚到底最后一行不被条压住 |
+> | 买盒补齐 + 固定条 | 同日追加：加速结账 / 分期 / 三条决策参数 / **信任徽标**（都按 Liquid 判空，空内容不留壳；信任文本走主题设置 `qv_trust_*`，保修走 metafield）；「View full details」改贴底固定条（滚动容器之外）。**2026-11-21 后改口径：实底 + 顶线，不再毛玻璃**（半透明会把滚过的小字透成脏影）；底部 4.75rem 空白从「给毛玻璃垫内容」变成「防最后一行被条挡住」，仍是必须项。桩断言 26 条全 PASS，其中 5 条专验固定条：不在滚动容器里 / 容器真能滚 / 底色带 alpha / `backdrop-filter` 生效 / 贴住 dialog 底边 |
+> | 未覆盖 | 真实店铺的多变体商品（演示店 21 款全 `Default Title`，见 `task-product.md` 风险 12）——需自建 1 款多变体测试商品后复验弹窗链路 |
 
 ### P2 集合页 sections（pages-ui §4 线框自上而下）
 
@@ -111,7 +129,7 @@
 - [ ] **6 维筛选全部出现且计数正确**（SDD §13 验收项；缺配置暂停报商家侧问题）
 - [ ] 筛选后 URL 可分享、刷新保留；canonical 无自拼伪路径（§6.1 SEO 行）
 - [ ] 移动抽屉：键盘可达、焦点锁定、Esc 回焦、触摸目标 ≥ 44px、首次打开才建 DOM
-- [ ] 快加冒烟：单变体款加购成功 + aria-live 播报；多变体款无按钮；售罄置灰；**无 JS 可整页表单加购**
+- [ ] 卡面 CTA 冒烟：单变体款加购成功 + aria-live 播报；**多变体款出 Choose options → 弹窗内切变体（价格/按钮态/变体图联动）→ 加购成功收面板**；全售罄置灰；订阅商品只留链接；**无 JS 可整页表单加购 / 链接直跳详情**
 - [ ] 对比勾选：集合页勾选 → 页头角标计数 +1、勾选框保持选中态（与 compare 体系联动冒烟，§6.2.2）。**底部对比条已删除（2026-11-15），不再检查它是否出现**
 - [ ] Lighthouse：Performance 桌面+移动 ≥ 60 准入/80 目标、LCP < 2.5s、CLS < 0.1；Accessibility ≥ 90/95——**实测值回填本清单**
 - [ ] 空态两场景实测（筛选无结果 / 空集合）
@@ -126,7 +144,7 @@
 | --- | --- | --- | --- |
 | T-0.1 | §0 前置开关 | §5.3 A、§5.8、§5.9 | — |
 | T-0.2 | §4（级联回写） | §6.1、§8.1 | 拍板 1/2/4/5 |
-| T-1.1 | §4 product-grid 行 | §8.1、§8.2、§6.3 | 拍板 2（快加/多变体/无按钮） |
+| T-1.1 | §4 product-grid 行 | §8.1、§8.2、§6.3 | 拍板 2（快加）+ 拍板 9（多变体弹窗，取代"无按钮"） |
 | T-2.1 | §4 collection-banner 行 | §7.1（Sections Everywhere）、§8.2 | 拍板 5（面包屑）、拍板 8（侵入式白卡/CSS 曲线） |
 | T-2.2 | §4 faceted-filters 行 | §6.1 全部、§8.2、§11 风险 7 | 拍板 4（价格原生形态） |
 | T-2.3 | §4 active-facets 行 | §6.1 已选标签行 | — |

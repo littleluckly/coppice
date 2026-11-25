@@ -80,6 +80,22 @@
 -%}
 
 {%- comment -%}
+  面包屑（2026-11-24 补）：页面级导航，**四个状态都输出**。
+  集合缺失 / 分组未配这些状态页面照样能到（外链、旧书签、手输 URL），
+  导航不能因为数据问题就消失——那种页面恰好最需要一个回得去的出口。
+  文案复用 general.home / general.breadcrumb（与产品页同一对键，不新增翻译键）；
+  末项是纯文本 + aria-current，不给自己链自己。
+{%- endcomment -%}
+{%- capture compare_breadcrumb -%}
+  <nav class="compare-page__breadcrumb" aria-label="{{ 'general.breadcrumb' | t }}">
+    <ol class="compare-page__breadcrumb-list" role="list">
+      <li><a href="{{ routes.root_url }}">{{ 'general.home' | t }}</a></li>
+      <li><span aria-current="page">{{ compare_heading | escape }}</span></li>
+    </ol>
+  </nav>
+{%- endcapture -%}
+
+{%- comment -%}
   对比页标记：底部确认条据此判断「我自己就在对比页」，从而不显示
   —— 在对比页上再给一个「查看对比」是多余的。
 {%- endcomment -%}
@@ -88,12 +104,14 @@
 {%- if compare_group == blank -%}
 
   <div class="compare-page__notice">
+    {{ compare_breadcrumb }}
     <p>{{ 'compare.page.group_missing' | t }}</p>
   </div>
 
 {%- elsif compare_collection == blank -%}
 
   <div class="compare-page__notice">
+    {{ compare_breadcrumb }}
     <p>{{ 'compare.page.collection_missing' | t }}</p>
     <a class="compare-page__back" href="{{ routes.all_products_collection_url }}">
       {{- 'compare.page.back' | t -}}
@@ -103,6 +121,7 @@
 {%- elsif compare_total < 2 -%}
 
   <div class="compare-page__notice">
+    {{ compare_breadcrumb }}
     <p>{{ 'compare.page.empty_group' | t }}</p>
     <a class="compare-page__back" href="{{ routes.all_products_collection_url }}">
       {{- 'compare.page.back' | t -}}
@@ -112,6 +131,8 @@
 {%- else -%}
 
   <section class="compare-page" data-compare-page data-compare-group="{{ compare_group }}">
+    {{ compare_breadcrumb }}
+
     <header class="compare-page__header">
       <h1 class="compare-page__title">
         {{ compare_heading }}
@@ -226,6 +247,51 @@
   /* 拦 automatic minimum size：即使将来有人删掉 inline-size: 100%，
      这一条也能保证 item 不被 min-content 顶出轨道。 */
   min-inline-size: 0;
+}
+
+/* ===== 面包屑（2026-11-24 补）=====
+   与集合页 / 产品页同构：Home / 页面标题，分隔符走伪元素，末项不上链。
+   两个易错点，抄这条时别删：
+   ① `align-items: center` 必须写（集合页 2026-10-20 那条教训）：链接按全局约定
+      撑到 44px 触控高度、纯文本末项只有行高，stretch 下两项文字中心会差十几像素；
+   ② `text-align: start` 必须写：本列表在空状态里落在 `.compare-page__notice`
+      （text-align: center）内部，居中会被子项继承下去。
+   下边距只给 0.5rem：链接的 44px 触控盒本身已经吃掉了一大截视觉间距
+   （与集合页同一组参数，那边实测过）。 */
+.compare-page__breadcrumb-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  text-align: start;
+  font-size: 0.82rem;
+  color: var(--color-foreground-muted);
+}
+
+.compare-page__breadcrumb-list li + li::before {
+  content: '/';
+  margin-inline-end: 0.35rem;
+  opacity: 0.6;
+}
+
+.compare-page__breadcrumb-list a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.compare-page__breadcrumb-list a:hover {
+  color: var(--color-foreground);
+  text-decoration: underline;
+}
+
+.compare-page__breadcrumb-list [aria-current='page'] {
+  color: var(--color-foreground);
 }
 
 /* ===== 表格渐显（2026-10-22）=====
@@ -476,13 +542,16 @@ html:not(.js) .compare-empty__js {
   cursor: pointer;
 }
 
-/* 变体差异提示：原生 details，自带展开状态与键盘支持（§6.2.4） */
+/* 变体差异提示：原生 details，自带展开状态与键盘支持（§6.2.4）。
+   默认挂在列头（说明里没写任何数值 ⇒ 定位不到具体行时的兜底）；
+   能定位到参数行时挂在那一格的 .compare-table__cell 里，见下方 cell 变体。 */
 .compare-table__note {
   margin-block-start: 0.35rem;
   font-size: 0.8rem;
 }
 
 .compare-table__note summary {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -494,6 +563,22 @@ html:not(.js) .compare-empty__js {
   list-style: none;
 }
 
+/* 视觉 20px，命中区外扩到 44×44（AGENTS §8） */
+.compare-table__note summary::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
+.compare-table__note summary:hover {
+  border-color: var(--color-foreground);
+}
+
+.compare-table__note summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 .compare-table__note summary::-webkit-details-marker {
   display: none;
 }
@@ -501,6 +586,14 @@ html:not(.js) .compare-empty__js {
 .compare-table__note p {
   margin: 0.4rem 0 0;
   color: var(--compare-muted);
+}
+
+/* 落在单元格里（紧随该参数的值）：details 用 inline ⇒ 徽标留在值那一行；
+   内部的 <p> 是块级，会被包成匿名块盒、宽度取单元格内容宽度 ⇒ 展开时说明
+   换到下一行铺满整格，**不会把单元格撑宽**（inline-block 就会）。 */
+.compare-table__cell .compare-table__note {
+  display: inline;
+  margin-inline-start: 0.4rem;
 }
 
 @media (max-width: 767px) {

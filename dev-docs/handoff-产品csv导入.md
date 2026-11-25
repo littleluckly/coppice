@@ -42,3 +42,36 @@
 
 - `find-skills` —— 若下一会话需要直连 Shopify 后台操作（建集合/上传图片），先搜有没有 Shopify 连接器/技能，避免纯手工
 - `handoff` —— 若导入验证中发现新问题需要再次交接
+
+---
+
+## 2026-11-21 变更：6 款主机带变体轴（导入前必读）
+
+**改了什么**：`build_mower_csv.py` 新增 `VARIANTS` 表，给 6 款主机各追加 1 个变体
+（电池机 `Motor power`、汽油机 `Engine displacement`）。商品总数不变（32），文件行数
+**55 → 60**（含表头；数据行 = 主行 32 + 变体行 6 + 图片行 21 = 59）。决策与边界见 `sdd.md` §5.4「演示店落地」。
+
+**新的行结构**（一个多变体商品占 3 类行）：
+
+| 行类型 | 特征 | 带哪些列 |
+| --- | --- | --- |
+| 主行 | 有 `Title` | 全部（含 Option1 name/value、全部商品级 metafield、主图 position 1） |
+| 变体行 | **无 `Title`、有 `SKU`** | 只有 `URL handle` / `Option1 value` / SKU / Price / Compare-at / 库存 / 重量 / 税务与履约开关 |
+| 图片行 | 无 `Title`、**无 `SKU`** | 只有 `URL handle` + `Image position` / `Product image URL` / `Image alt text` |
+
+顺序：主行 → 变体行 → 图片行。校验器按"有无 SKU"区分变体行与图片行，并会拦截
+"变体行误带商品级列"（那会把首行写的 metafield 覆盖掉）。
+
+**导入后必须手工核对**（CSV 校验器管不到平台行为）：
+
+1. 商品数仍 **32**，其中 **6 款是 2 个变体**；没有多出来的商品（若变体被拆成独立商品，
+   说明 `Option1 name` 写在了错误的位置）。
+2. 抽 `northbark-nb-21b80`：`Power (W)` 仍为 **1600**、`Battery platform` 仍为 **80V**
+   —— 证明变体行没有把商品级 metafield 清空。
+3. 产品页变体选择器出现两个选项（1,600 W / 1,200 W；166 cc / 150 cc），切换时价格、
+   按钮态、单位价跟着变；卡面显示 **From** 且没有折扣胶囊。
+4. **第二遍耗材文件必须用新生成的那份**：`pass2` 里的 `Option1` 现在会随轴变化
+   （如 `Motor power` / `1,600 W`）。用旧的 `Title / Default Title` 重导会重建变体、
+   variant ID 全变，购物车与对比里已加入的项会失效。
+5. 变体图**没挂**（`Variant image URL` 列未启用）：mock 变体是同一台机器的另一个功率/排量，
+   外观相同，挂别的图反而是错图。要验"变体图联动"需另建带变体专属图的测试商品。

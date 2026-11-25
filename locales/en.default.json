@@ -9,10 +9,10 @@
  */
 {
   "404": {
-    "title": "Oops! Page Not Found",
+    "title": "Oops! Page not found",
     "not_found": "The page you're looking for might have been removed, had its name changed, or is temporarily unavailable.",
-    "back_to_home": "Back to Home",
-    "browse_products": "Browse Products"
+    "back_to_home": "Back to home",
+    "browse_products": "Browse products"
   },
   "accessibility": {
     "refresh_page": "Choosing a selection results in a full page refresh.",
@@ -220,12 +220,12 @@
   "contact": {
     "title": "Contact us",
     "form": {
+      "heading": "Send us a message",
       "name": "Name",
       "email": "Email",
       "phone": "Phone",
-      "message": "Message",
+      "message": "Your message",
       "optional": "Optional",
-      "required_note": "* Required fields",
       "submit": "Send message",
       "success": "Thanks for getting in touch. We will reply within one business day.",
       "error": "Please review the errors below and try again."
@@ -346,6 +346,9 @@
       "sold_out": "Sold out",
       "rating_label": "Rated {{ rating }} out of 5",
       "unit_price": "{{ price }} / {{ unit }}",
+      "choose_options": "Choose options",
+      "quick_view_close": "Close",
+      "quick_view_details": "View full details",
       "spec_cutting_width": "Cutting width",
       "spec_power_source": "Power source",
       "spec_weight": "Weight"
@@ -359,15 +362,18 @@
     "category_link_label": "Browse {{ title }}",
     "clear": "Clear search",
     "collections": "Collections",
+    "contact_us": "Contact us",
     "content_heading": "Articles & pages",
     "empty_body": "We couldn't find a match. Try one of these before searching again.",
+    "help_note": "Our support team is here to help.",
     "hero_subtitle": "Find the perfect solution for your outdoor space.",
-    "hero_title": "Search Results",
+    "hero_title": "Search results",
     "instructions": "Use the up and down arrow keys to review results, and press Enter to open one.",
     "intro": "Find the right tool, part, or guide — search the whole catalogue.",
     "label": "Search",
     "start_prompt": "Start with a search above, or pick a category.",
     "suggested_label": "Suggested searches",
+    "need_help": "Need help?",
     "no_results_html": "No results found for {{ terms }}",
     "page_number": "Page {{ number }}",
     "pages": "Pages",
@@ -376,7 +382,9 @@
     "pagination_previous": "Previous page",
     "placeholder": "Search articles, pages, or products",
     "popular_heading": "Or start with a category",
+    "popular_searches": "Popular searches",
     "products": "Products",
+    "quick_links": "Quick links",
     "results_count": {
       "one": "{{ count }} result for",
       "other": "{{ count }} results for"
@@ -391,6 +399,7 @@
     "type_label": "Filter results by type",
     "type_page": "Page",
     "view_all": "View all results for \"{{ terms }}\"",
+    "view_all_link": "View all",
     "view_all_types": "Search all result types instead"
   },
   "sections": {
@@ -442,8 +451,7 @@
       "bundle_added": "Added all items"
     },
     "product_spec_table": {
-      "default_heading": "Specifications",
-      "variance_label": "Why specs can vary"
+      "default_heading": "Specifications"
     },
     "product_description": {
       "default_heading": "Overview"
@@ -460,6 +468,10 @@
     },
     "product_complementary": {
       "default_heading": "Pairs well with"
+    },
+    "product_faq": {
+      "default_heading": "Frequently asked questions",
+      "read_more": "Read the full guide"
     },
     "footer": {
       "follow_us": "Follow us",

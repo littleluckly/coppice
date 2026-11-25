@@ -62,6 +62,9 @@
     {{ 'product-card.css' | asset_url | stylesheet_tag }}
     <script src="{{ 'wishlist-toggle.js' | asset_url }}" defer></script>
     <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+    {%- comment -%} 快速查看（2026-11-20）：多变体卡的选择选项弹窗 + 提交依赖 {%- endcomment -%}
+    <script src="{{ 'quick-view.js' | asset_url }}" defer></script>
+    <script src="{{ 'product-form.js' | asset_url }}" defer></script>
     <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
 
   <div

@@ -101,7 +101,9 @@
        口径 = 配件卡 product-supplies__item —— 上浮 2px + 0 6px 20px / 30% 浅绿光晕，
        与 .btn-solid:hover（assets/critical.css）同一组参数。原 24px 大投影撤掉：
        它在浅底上只是一圈灰，没有「被点亮」的绿色回应。
-       消费方三处：.product-card、.main-nav__mega-card-link、.product-supplies__item
+       消费方四处：.product-card、.main-nav__mega-card-link、.product-supplies__item、
+       搜索抽屉里的三个可点元素（2026-11-24 刘工：快速链接卡 / 推荐卡 / 热门搜索药丸，
+       见 sections/search-drawer.liquid 结尾的 @media (hover) 段）。
        （platform-cards 是分类大瓷砖，仍自持 24px 投影，不在此签名内）。 */
     --card-hover-lift: -2px;
     {%- assign content_luma = settings.background_color | color_brightness | default: 255 -%}
@@ -123,5 +125,13 @@
     {%- endif -%}
 
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
+
+    /* 输入框形状（2026-11-24 刘工：全站向搜索抽屉看齐）。
+       单行 = 胶囊；多行 = 软圆角 —— 999px 落在多行高度上会变成左右半圆，
+       首行与末行的文字被弧线裁掉，所以 textarea 单独一档。
+       这两条是输入框形状的唯一出口，改这里全站跟着变。
+       引用点必须带同值兜底（gift_card 等独立模板未必走到这里）。 */
+    --input-radius: 999px;
+    --input-radius-multiline: 1rem;
   }
 {% endstyle %}

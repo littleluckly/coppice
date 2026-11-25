@@ -1,0 +1,77 @@
+{% doc %}
+  variant-picker — 变体选择器（产品页买盒 + 商品卡快速查看共用，2026-11-21 抽取）。
+
+  **为什么要抽**：快速查看原来用原生 select 下拉，产品页用胶囊 + radio，同一件事
+  （选项值 → 变体 → 价格 / 划线价 / 折扣 / 单位价 / 按钮态 / 变体图）写了两遍，
+  两套实现必然漂；而且下拉把第二档藏在点击之后 —— 本店 6 款变体商品都只有
+  2 个值，胶囊能一眼看全，选择成本更低。现在：标记归本 snippet，行为归
+  `assets/product-form.js` 的 variant-picker 元素，两处同一份。
+
+  **不再用 `id` / `for` 关联**（同日改）：`id` 要求"每渲染实例唯一"，而同一商品
+  可能在一页出现两次（两个 featured-collection 区块放同一商品、集合页 + 推荐位），
+  重复 id 会让 `label` 指向文档里第一个 radio —— 那个在另一个已关闭的弹窗里，
+  于是"点了没反应、状态错乱"。改成 `label` 直接包裹 `input`（隐式关联），
+  CSS 相应从 `:checked + .product-variant__pill` 改为 `:has(input:checked)`。
+
+  **数据岛**：变体 JSON 里都是 Liquid 侧格式化好的价格串（`money`），JS 只做替换
+  ——货币符号、千分位、多货币市场全由平台决定，前端不自己拼。
+
+  **radio 必须始终有 form owner**（2026-11-21 桩测踩到）：同名 radio 的互斥组按
+  "同一棵 DOM 树 + 同一 name + **同一 form owner**" 划分。一旦输出 `form=""`
+  （指向不存在的 id），radio 就变成"无 form owner"，页面上所有同名 radio 落进
+  同一个组 —— 第二个商品的弹窗渲染后会把第一个商品的选中项顶掉（属性还在、
+  `checked` 已经是 false）。所以：产品页靠显式 `form_id`，弹窗靠"选择器在
+  表单内部"这个祖先关系，两者都必须成立，不能出现空 `form` 属性。
+
+  @param {product} product - product 对象（必填）
+  @param {string} form_id - radio 的 `form` 属性：产品页的选择器在表单**之外**，
+    必须靠它才能随表单提交；留空则不加该属性，用于"选择器就在表单内部"的场景
+    （商品卡快速查看）。
+{% enddoc %}
+
+{%- unless product.has_only_default_variant -%}
+  {%- capture variants_json -%}
+    [
+    {%- for variant in product.variants -%}
+      {
+        "id": {{ variant.id }},
+        "available": {{ variant.available }},
+        "options": {{ variant.options | json }},
+        "price": {{ variant.price | money | json }},
+        "compare": {% if variant.compare_at_price > variant.price %}{{ variant.compare_at_price | money | json }}{% else %}null{% endif %},
+        "save": {% if variant.compare_at_price > variant.price %}{{ variant.compare_at_price | minus: variant.price | times: 100.0 | divided_by: variant.compare_at_price | round }}{% else %}0{% endif %},
+        "unitPrice": {% if variant.unit_price_measurement %}{{ variant.unit_price | money | json }}{% else %}null{% endif %},
+        "unitReference": {% if variant.unit_price_measurement %}{{ variant.unit_price_measurement.reference_value }}{{ variant.unit_price_measurement.reference_unit }}{% else %}null{% endif %},
+        "mediaId": {{ variant.featured_media.id | default: 0 }}
+      }{%- unless forloop.last -%},{%- endunless -%}
+    {%- endfor -%}
+    ]
+  {%- endcapture -%}
+
+  <variant-picker class="product-variant">
+    <script type="application/json" data-variant-json>{{ variants_json | strip }}</script>
+    {%- for option in product.options_with_values -%}
+      <fieldset class="product-variant__group">
+        <legend class="product-variant__label">{{ option.name | escape }}</legend>
+        <div class="product-variant__values">
+          {%- for value in option.values -%}
+            <label class="product-variant__pill">
+              <input
+                type="radio"
+                class="product-variant__radio visually-hidden"
+                name="options[{{ option.name | escape }}]"
+                value="{{ value | escape }}"
+                {% if form_id and form_id != '' %}form="{{ form_id }}"{% endif %}
+                data-option-position="{{ option.position }}"
+                {% if option.selected_value == value %}
+                  checked
+                {% endif %}
+              >
+              <span class="product-variant__pill-text">{{ value | escape }}</span>
+            </label>
+          {%- endfor -%}
+        </div>
+      </fieldset>
+    {%- endfor -%}
+  </variant-picker>
+{%- endunless -%}

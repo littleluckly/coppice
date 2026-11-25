@@ -1,0 +1,564 @@
+{% comment %}
+  product-faq — 产品页「常见问题」（2026-11-20 刘工）。
+
+  **内容源 = 博客**（刘工 2026-11-20 拍板）：不设问答 block，直接吃一个 blog 的
+  前 N 篇（默认 4）。文章标题当「问题」、摘要/正文前 26 词当「答案」，展开后给
+  一条「Read the full guide」文字链接跳原文。理由：主题包带不了文章正文，
+  商家演示店里本来就有博客，换博客即换问题；手写 block 反而要多维护一份重复内容。
+  没选 blog 或该 blog 没有文章 → 整块不输出（不留空标题空手风琴）。
+
+  **进度条 = 自动播放倒计时，不是指标**（刘工 2026-11-20）：
+  效果图上那条 75% / 0% 若照抄，FAQ 里凭空冒出百分比等于伪造数据（AGENTS §4 禁止项）。
+  这里把它改成有语义的东西——**当前展开条的阅读进度**，走完自动跳下一条：
+    · 自动播放开 → 条从 0 填到 1，`animationend` 驱动切下一条；
+    · 手动点开任意一条 → 那一条从 0 重新计时，到期照常切下一条（**不停播**）；
+    · 全部收起 → 没有展开项就没有进度条，轮播自然停住，再点开任意一条即恢复；
+    · 系统要求减少动效 / 无 JS / 设置里关掉自动播放 → 不出动画，条整条填满当展开指示。
+  换句话说：**有动画 = 在倒计时；没动画 = 它只是一条下划线**，两种态都不撒谎。
+  ⚠️ 初版写的是"用户点过就永久停播"，2026-11-20 当天被刘工退回：点一下手风琴整块
+  就再也不动了。别再加那条分支（理由见 assets/product-faq.js 的文件头）。
+
+  **为什么 `<details name=...>`**：原生互斥手风琴，键盘 / 屏幕阅读器 / 无 JS 全部
+  照常工作（无 JS 时首条默认展开，其余可点）；JS 只负责「播完切下一条」和
+  「手动开合后重启该条倒计时」，不接管点击，也不重写 aria。`name` 在老浏览器被
+  忽略时，脚本切换前会显式关掉其余条目，行为一致。
+
+  **挂起的三条路**（WCAG 2.2.2：超过 5 秒的自动变化必须可停）：
+    ① 鼠标悬停在**当前展开的那一条**上 / **键盘**焦点进入区块（CSS
+       `.product-faq__item[open]:hover` / `:has(:focus-visible)` 挂
+       animation-play-state；**不能写成 `:focus-within`**，鼠标点过之后焦点留在
+       summary 上会把倒计时永久挂起，见 BUG-088。悬停故意不按整块判：鼠标停在
+       别的条目上时，正在展开的那条该继续走）
+    ② 区块离开视口（IntersectionObserver 打 data-paused）
+    ③ 标签页切到后台（visibilitychange）
+  ②③ 由 assets/product-faq.js 处理，①是纯 CSS。①有个必须知道的副作用：点完手风琴
+  光标还停在卡片上时，倒计时是**暂停**的（这是"别在用户眼皮底下换内容"的保护），
+  移开光标即继续——看着像"失效"，其实是暂停。
+
+  依赖「动画跑完」而不是 JS 计时器：动画被 `prefers-reduced-motion` 摘掉时
+  就永远不会有 `animationend`，自动播放自然失效——不需要在 JS 里再判一次。
+
+  图片：image_picker，留空回退**商品主图**（商品自己的图，不是假数据）。
+  留空且商品也无图 → 单栏，手风琴吃满全宽。
+
+  底部按钮「View more FAQs」：没填链接就落到 `blog.url`（“还有更多问题”的下一个
+  落脚点就是内容源头），填了就以商家为准。
+{% endcomment %}
+
+{%- liquid
+  assign blog_source = section.settings.blog
+  assign limit = section.settings.limit | default: 4
+  assign interval = section.settings.autoplay_seconds | default: 6
+
+  assign eyebrow = section.settings.eyebrow
+  assign heading = section.settings.heading
+  if heading == blank
+    assign heading = 'sections.product_faq.default_heading' | t
+  endif
+  assign subheading = section.settings.subheading
+
+  assign faq_image = section.settings.image
+  if faq_image == blank
+    assign faq_image = product.featured_image
+  endif
+  assign image_alt = faq_image.alt
+  if image_alt == blank
+    assign image_alt = product.title
+  endif
+
+  assign cta_label = section.settings.button_label
+  assign cta_url = section.settings.button_link
+  if cta_url == blank
+    assign cta_url = blog_source.url
+  endif
+-%}
+
+{%- if blog_source != blank and blog_source.articles.size > 0 -%}
+  <section class="product-faq" id="product-faq" data-reveal>
+    <script src="{{ 'product-faq.js' | asset_url }}" defer></script>
+
+    <header class="product-faq__header">
+      {%- if eyebrow != blank -%}
+        <p class="product-faq__eyebrow">
+          <span class="product-faq__eyebrow-text">{{ eyebrow | escape }}</span>
+        </p>
+      {%- endif -%}
+
+      <h2 class="product-faq__heading">{{ heading | escape }}</h2>
+
+      {%- if subheading != blank -%}
+        <p class="product-faq__subheading">{{ subheading | escape }}</p>
+      {%- endif -%}
+    </header>
+
+    <div class="product-faq__layout{% if faq_image == blank %} product-faq__layout--solo{% endif %}">
+      {%- comment -%}
+        --product-faq-interval 必须**带单位**输出（秒）：
+        它同时喂给 CSS 的 animation-duration，裸数字在那里是非法值，
+        整条 animation 声明会失效（不报错，只是永远不动）。
+      {%- endcomment -%}
+      <product-faq
+        class="product-faq__panel"
+        style="--product-faq-interval: {{ interval }}s"
+        {%- unless section.settings.autoplay %}
+          data-autoplay="off"
+        {%- endunless %}
+      >
+        {%- for article in blog_source.articles limit: limit -%}
+          {%- comment -%}
+            name 用 section.id 隔离：同一页放两块 FAQ 时，各自的条目互斥、
+            不跨区块抢开着的状态。
+          {%- endcomment -%}
+          <details
+            class="product-faq__item"
+            name="product-faq-{{ section.id }}"
+            {% if forloop.first %}open{% endif %}
+          >
+            <summary class="product-faq__summary">
+              <h3 class="product-faq__question">{{ article.title | escape }}</h3>
+              <span class="product-faq__chevron" aria-hidden="true">
+                {{- 'icon-chevron-down.svg' | inline_asset_content -}}
+              </span>
+            </summary>
+
+            {%- comment -%}
+              进度条放在 summary **之外**：它是「展开后」的进度指示，
+              折起来时不该占位（也就自动不出现在收起态的卡片里）。
+            {%- endcomment -%}
+            <span class="product-faq__progress" aria-hidden="true">
+              <span class="product-faq__progress-bar"></span>
+            </span>
+
+            <div class="product-faq__answer">
+              {%- comment -%}
+                与 blog-posts / search 同口径：按词截断，不按字符 —— 字符截断会
+                切出半词。摘要为空则退正文，两者都空就只留「阅读全文」。
+              {%- endcomment -%}
+              {%- if article.excerpt != blank -%}
+                <p class="product-faq__text">{{ article.excerpt | strip_html | truncatewords: 26 }}</p>
+              {%- elsif article.content != blank -%}
+                <p class="product-faq__text">{{ article.content | strip_html | truncatewords: 26 }}</p>
+              {%- endif -%}
+
+              {%- comment -%}
+                不带箭头：AGENTS §6 的箭头准则只放两种位置——View All 链接与行尾
+                导航元素。这条是卡内文字链接，加箭头会跟底部 CTA 抢注意力。
+              {%- endcomment -%}
+              <a class="product-faq__more" href="{{ article.url }}">
+                {{- 'sections.product_faq.read_more' | t -}}
+              </a>
+            </div>
+          </details>
+        {%- endfor -%}
+      </product-faq>
+
+      {%- if faq_image != blank -%}
+        <div class="product-faq__media">
+          {{
+            faq_image
+            | image_url: width: 1200
+            | image_tag:
+              widths: '500,700,900,1200',
+              sizes: '(min-width: 990px) 45vw, 100vw',
+              loading: 'lazy',
+              class: 'product-faq__img',
+              alt: image_alt
+          }}
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- if cta_label != blank and cta_url != blank -%}
+      <div class="product-faq__cta">
+        <a class="btn-solid product-faq__button" href="{{ cta_url }}">
+          {{- cta_label | escape -}}
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    {%- endif -%}
+  </section>
+{%- endif -%}
+
+{% stylesheet %}
+  .product-faq {
+    /* 与 product-spec-table / product-supplies 同节奏：上 2rem、下 0，
+       下一块（product-recommendations）自带 2rem 上距，合成 2rem 视觉间距 */
+    padding-block: 2rem 0;
+  }
+
+  .product-faq__header {
+    max-inline-size: 44rem;
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  /* 眉标：两侧细线 + 中间胶囊，效果图的做法。线用伪元素而不是 border，
+     这样胶囊本身能保持独立圆角、两侧线也不会跟着胶囊高度拉长 */
+  .product-faq__eyebrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: 0 0 0.9rem;
+  }
+  .product-faq__eyebrow::before,
+  .product-faq__eyebrow::after {
+    content: '';
+    inline-size: clamp(1.5rem, 6vw, 4.5rem);
+    block-size: 1px;
+    background-color: color-mix(in srgb, var(--color-foreground) 16%, transparent);
+  }
+  .product-faq__eyebrow-text {
+    padding: 0.3rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+    border-radius: 999px;
+    background-color: var(--color-background);
+    color: var(--color-brand);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .product-faq__heading {
+    margin: 0;
+    /* 700 不是 500：本主题只 font_face 了原字重与 bold 两档，写 500 会退到 400
+       （BUG-064）。而 <h2> 的 UA 默认就是 bold——写 500 等于把标题改细。 */
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+  .product-faq__subheading {
+    margin: 0.6rem 0 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-foreground-muted);
+  }
+
+  .product-faq__layout {
+    display: grid;
+    /* minmax(0, 1fr) 从源头掐断 min-content 传导：长问题标题是单行不换行的
+       （正文可以断，标题不该被挤成一字一行），裸 1fr 会被它撑出视口 */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+    align-items: start;
+    margin-block-start: 2rem;
+  }
+  @media (min-width: 990px) {
+    .product-faq__layout {
+      /* 左列略宽于图片列：四行问题需要横向呼吸，图是配角 */
+      grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+      gap: 2.5rem;
+      /* stretch 而不是 start：图列跟着手风琴的实际高度走（效果图里两者等高）。
+         start 会让图按自己的比例（3/2）算高度，条数少时图比问题列高出一大截，
+         底部留一条突兀的空白。 */
+      align-items: stretch;
+    }
+    /* 没有配图（且商品也没图）时退回单栏：否则手风琴只占左边半幅，
+       右半幅空白 —— 那是"漏渲染"的样子，不是排版 */
+    .product-faq__layout--solo {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* 自定义元素默认是 inline —— 容器型 Custom Element 必须显式 block，
+     否则 padding / 子元素布局全在碎片盒里跑（BUG-071） */
+  .product-faq__panel {
+    display: block;
+    min-inline-size: 0;
+  }
+
+  .product-faq__item {
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    border-radius: 14px;
+    background-color: var(--color-background);
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+  .product-faq__item + .product-faq__item {
+    margin-block-start: 0.6rem;
+  }
+  .product-faq__item:hover {
+    border-color: color-mix(in srgb, var(--color-brand) 25%, transparent);
+  }
+  .product-faq__item[open] {
+    border-color: color-mix(in srgb, var(--color-brand) 32%, transparent);
+    /* 展开态淡染品牌色：color-mix 派生，不硬编码色值（两套 preset 都成立） */
+    background-color: color-mix(in srgb, var(--color-brand) 5%, var(--color-background));
+  }
+
+  .product-faq__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    cursor: pointer;
+    /* 摘掉 UA 的三角标记（两种语法各管一半浏览器） */
+    list-style: none;
+  }
+  .product-faq__summary::-webkit-details-marker {
+    display: none;
+  }
+  .product-faq__summary:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+    border-radius: 10px;
+  }
+  .product-faq__question {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.4;
+    /* break-word 只在单词超宽时才断，anywhere 会拆断 Chainsaws 这类词 */
+    overflow-wrap: break-word;
+  }
+
+  .product-faq__chevron {
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    color: var(--color-foreground-muted);
+    transition: rotate 0.2s ease, color 0.2s ease;
+  }
+  .product-faq__chevron svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+  .product-faq__item[open] .product-faq__chevron {
+    rotate: 180deg;
+    color: var(--color-brand);
+  }
+
+  /* 进度条：默认整条填满（=「这条是展开的」），只有自动播放时才有 0→1 的动画。
+     基线写成填满而不是空，是为了让无 JS / 关自动播放 / 减少动效三种情况
+     都落到「一条品牌色下划线」，而不是一条永远空着的轨道。 */
+  .product-faq__progress {
+    display: block;
+    block-size: 3px;
+    margin: 0 1rem 0.75rem;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--color-brand) 14%, transparent);
+    overflow: hidden;
+  }
+  .product-faq__progress-bar {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: inherit;
+    background-color: var(--color-brand);
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+
+  @keyframes product-faq-fill {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  /* 倒计时只在「脚本允许自动播放（data-playing）」+「系统未要求减少动效」时出现。
+     var() 带兜底 6s：解析不到时只丢时长，不会连 animation-name 一起失效
+     （那会变成硬切，还不报错）。 */
+  @media (prefers-reduced-motion: no-preference) {
+    .product-faq__panel[data-playing] > .product-faq__item[open] .product-faq__progress-bar {
+      animation: product-faq-fill var(--product-faq-interval, 6s) linear forwards;
+    }
+  }
+
+  /* 悬停 / 键盘焦点进入即暂停：倒计时与「正在读这一条」抢时间是最烦人的那种自动播放。
+     ⚠️ 悬停判定只认**当前展开的那一条**（2026-11-20 刘工）：选择器挂在
+     `.product-faq__item[open]:hover` 上，而不是整个 panel。整个 panel 判悬停的话，
+     鼠标只是在区块里路过、或者停在学习点第 5 条上，展开着的第 2 条就跟着停住 ——
+     明明是"在看另一条"，却把正在走的那条按下了。
+     ⚠️ 焦点暂停只认 `:focus-visible`，**不能**用 `:focus-within`（BUG-088）：
+     鼠标点开 <summary> 后焦点会留在它身上，而鼠标早已移开 ⇒ `:focus-within` 一直为真，
+     倒计时被永久挂起，看上去就是"点一下自动播放就坏了"。`:focus-visible` 对鼠标
+     点击为 false、对键盘 Tab 为 true，正好只保留键盘用户需要的那一半。
+     焦点仍按整块判：键盘用户在区块内任何位置操作都该先把画面停住（WCAG 2.2.2 的
+     "可停"要有一条键盘够得着的路），这跟悬停的"只在正在读的那条上停"不冲突。
+     ⚠️ 悬停这条**必须带 `.product-faq__panel` 前缀**：上一条 animation 简写规则是
+     (0,5,0)，只写 `.product-faq__item[open]:hover …` 是 (0,4,0)，会被简写里的
+     `animation-play-state: running` 反压 ⇒ 悬停根本不暂停（BUG-086 同族：同属性
+     冲突看特异性，媒体查询和源序都救不了低特异性）。带上前缀后同为 (0,5,0)，
+     靠"写在后面"取胜。 */
+  .product-faq__panel > .product-faq__item[open]:hover .product-faq__progress-bar,
+  .product-faq__panel:has(:focus-visible) > .product-faq__item[open] .product-faq__progress-bar,
+  .product-faq__panel[data-paused] > .product-faq__item[open] .product-faq__progress-bar {
+    animation-play-state: paused;
+  }
+
+  .product-faq__answer {
+    padding: 0 1rem 1rem;
+  }
+  .product-faq__text {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: var(--color-foreground-muted);
+  }
+  .product-faq__more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-block-start: 0.6rem;
+    color: var(--color-brand-accent);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .product-faq__more:hover {
+    text-decoration: underline;
+  }
+
+  .product-faq__media {
+    position: relative;
+    overflow: hidden;
+    /* 图是 grid item：默认 min-inline-size: auto 会被 intrinsic 宽度顶出去 */
+    min-inline-size: 0;
+    aspect-ratio: 3 / 2;
+    border-radius: calc(var(--style-border-radius-inputs) * 2);
+    background-color: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  }
+  /* 图脱离文档流：流内 img 会按固有比例参与行高，把容器从 aspect-ratio 上顶开；
+     绝对定位 + cover 后容器比例说了算，焦点（image_tag 自动写的 object-position）
+     照样生效 */
+  .product-faq__media img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+  /* 桌面端图列不吃 3/2 比例，跟着手风琴的高度走（效果图里两者等高）。
+     ⚠️ 这条必须写在上面 .product-faq__media 基线**之后**：同为 0,1,0 特异性，
+     媒体查询不提高优先级，放前面会被基线里的 aspect-ratio 直接盖掉
+     （第一版就这么写的，图比问题列高出 70px，底部多一条空白）。 */
+  @media (min-width: 990px) {
+    .product-faq__media {
+      aspect-ratio: auto;
+      block-size: 100%;
+    }
+  }
+
+  .product-faq__cta {
+    display: flex;
+    justify-content: center;
+    margin-block-start: 2rem;
+  }
+  /* .btn-solid 只给形状与配色（display / padding / 字号由用法方补，见 critical.css），
+     少了这几条会渲染成文字顶在上边缘的方块（BUG-083） */
+  .product-faq__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.7rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-faq__item,
+    .product-faq__chevron {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:sections.product_faq.name",
+  "tag": "div",
+  "class": "product-faq-section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "blog",
+      "id": "blog",
+      "label": "t:labels.blog",
+      "info": "t:sections.product_faq.blog_info"
+    },
+    {
+      "type": "range",
+      "id": "limit",
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "label": "t:labels.posts_to_show",
+      "default": 4
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow",
+      "default": "t:sections.product_faq.defaults.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "t:sections.product_faq.defaults.heading"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "t:labels.subheading",
+      "default": "t:sections.product_faq.defaults.subheading"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "info": "t:sections.product_faq.image_info"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.product_faq.autoplay_header"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:sections.product_faq.autoplay",
+      "default": true,
+      "info": "t:sections.product_faq.autoplay_info"
+    },
+    {
+      "type": "range",
+      "id": "autoplay_seconds",
+      "min": 4,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "label": "t:sections.product_faq.autoplay_seconds",
+      "default": 6
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.button_label",
+      "default": "t:sections.product_faq.defaults.button"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "t:labels.button_link",
+      "info": "t:sections.product_faq.button_info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.product_faq.name"
+    }
+  ]
+}
+{% endschema %}

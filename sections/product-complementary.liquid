@@ -34,6 +34,9 @@
   <section class="product-complementary" id="product-pairs" data-section-id="{{ section.id }}">
     <script src="{{ 'product-recommendations.js' | asset_url }}" defer></script>
     <script src="{{ 'quick-add.js' | asset_url }}" defer></script>
+    {%- comment -%} 快速查看（2026-11-20）：多变体卡的弹窗 + 提交依赖（重复引入有守卫） {%- endcomment -%}
+    <script src="{{ 'quick-view.js' | asset_url }}" defer></script>
+    <script src="{{ 'product-form.js' | asset_url }}" defer></script>
     <script src="{{ 'tilt-element.js' | asset_url }}" defer></script>
     {{ 'product-card.css' | asset_url | stylesheet_tag }}
 
