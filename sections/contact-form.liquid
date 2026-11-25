@@ -617,19 +617,6 @@
     line-height: 1.2;
   }
 
-  /* 标题下的短横线：效果图里的那个强调块。宽度写死 2.5rem，
-     跟标题长短无关 —— 它只是标出「从这里开始填」。
-     ⚠️ 2026-11-25：这条规则被前几轮脚本替换整段吞掉过一次（截图里短线凭空消失），
-     改本段前后请确认它还在（`grep -n 'form-heading::after'`）。 */
-  .contact__form-heading::after {
-    content: '';
-    display: block;
-    inline-size: 2.5rem;
-    block-size: 3px;
-    margin-block-start: 0.6875rem;
-    border-radius: 999px;
-    background-color: var(--color-brand);
-  }
 
   /* 「* Required fields」提示行 2026-11-24 按刘工要求删除（参考图里没有）。
      星号的语义仍由 input 的 required 承担，读屏不受影响；只是屏幕上不再有
