@@ -299,7 +299,7 @@
               id="ContactMessage-{{ section.id }}"
               name="contact[body]"
               placeholder=" "
-              rows="7"
+              rows="4"
               required
               {% if form.errors contains 'body' %}
                 aria-invalid="true" aria-describedby="{{ error_id }}"
@@ -509,12 +509,12 @@
   /* 窄屏放不下「左压右透」的横向渐变：文字几乎盖满整条带，
      横向遮罩到右侧就透干净了，最后一行会掉进照片里（对照 375 实测）。
      改成上下渐变，整条带统一压到一个可读的亮度。 */
-  @media (max-width: 749px) {
+  @media (max-width: 899px) {
     .contact__banner-mask {
       background: linear-gradient(
         180deg,
-        color-mix(in srgb, var(--color-background) 88%, transparent) 0%,
-        color-mix(in srgb, var(--color-background) 74%, transparent) 100%
+        color-mix(in srgb, var(--color-background) 90%, transparent) 0%,
+        color-mix(in srgb, var(--color-background) 78%, transparent) 100%
       );
     }
   }
@@ -967,13 +967,15 @@
   }
 
   /* ── 卡片配图 ────────────────────────────────────────────────────────────
-     单列时照片在文字下方（4:3）；卡片足够宽时改为右侧竖条。
-     图片绝对定位填满容器 —— 容器高度由同行的文字列决定，
+     上下排时照片在文字下方，16:9 —— 用 4:3 会让卡片比左边的表单还高，
+     990–1199 那一段（卡片最窄）尤其明显。
+     条目很少时照片贴底，看起来仍是一条「卡片的图」，不会变成主角。
+     图片绝对定位填满容器：容器高度由同行的文字列决定，
      给它 aspect-ratio 反而会在文字很矮时把卡片撑高。 */
   .contact__info-media {
     position: relative;
     overflow: hidden;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 9;
     border-radius: 14px;
   }
 
@@ -985,12 +987,12 @@
     object-fit: cover;
   }
 
-  /* 600–989：卡片是整幅宽（在表单下方），右侧分出 38% 给照片；
+  /* 600–989：卡片是整幅宽（在表单下方），右侧分出 42% 给照片；
      ≥1200：卡片回到右栏，宽度够，同样分成两栏。
-     990–1199 这一段卡片最窄（≈430px），塞两栏两边都憋屈 ⇒ 维持上下排。 */
+     990–1199 这一段卡片最窄（≈460px），塞两栏两边都憋屈 ⇒ 维持上下排。 */
   @media (min-width: 600px) and (max-width: 989px), (min-width: 1200px) {
     .contact__info--media {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 0.62fr);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
       gap: 1.5rem;
       align-items: stretch;
     }
