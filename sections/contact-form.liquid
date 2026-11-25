@@ -164,7 +164,7 @@
       </div>
     </div>
   {%- else -%}
-    <div class="contact__inner contact__inner--intro">
+    <div class="contact__inner">
       <div class="contact__intro">{{ intro_html }}</div>
     </div>
   {%- endif -%}
@@ -446,11 +446,6 @@
     max-inline-size: var(--page-width);
     margin-inline: auto;
     padding-inline: var(--page-margin);
-  }
-
-  /* 无横幅时，标题区自己补上原来由 .contact 承担的上边距 */
-  .contact__inner--intro {
-    padding-block-start: 2.5rem;
   }
 
   /* ── 横幅 ────────────────────────────────────────────────────────────────
