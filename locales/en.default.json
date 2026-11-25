@@ -122,6 +122,11 @@
     "pagination_previous": "Previous page",
     "pagination_next": "Next page",
     "page_number": "Page {{ number }}",
+    "per_page": {
+      "label": "Per page",
+      "group_label": "Series per page",
+      "option_label": "Show {{ count }} series per page"
+    },
     "no_matches": "No products match your filters.",
     "clear_filters": "Clear all filters",
     "sort": {

@@ -306,7 +306,9 @@
         "columns": "Columns on desktop",
         "columns_info": "Tablet tops out at three columns, mobile always shows two. Above four columns each card gets narrow — check the preview before publishing.",
         "collections_per_page": "Series per page",
-        "collections_per_page_info": "Extra series move to a second page.",
+        "collections_per_page_info": "The default page size. Customers can switch between 12, 24 and 48 with the switcher on the page, so this value only decides which option they land on.",
+        "show_per_page": "Show per-page switcher",
+        "show_per_page_info": "Each page size is a separate template (12 / 24 / 48), so their heading and column settings are stored separately. If you change the heading here, update the other two templates too.",
         "show_description": "Show collection descriptions"
       }
     },
