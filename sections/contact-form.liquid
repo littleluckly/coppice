@@ -587,26 +587,6 @@
       margin-block-start: 3rem;
     }
 
-    .contact__grid--single .contact__form-col {
-      max-inline-size: 40rem;
-    }
-  }
-
-  /* 卡片带照片时，990–1199 这一段不走左右两栏：
-     右栏此时只有 ~450px，卡片横排放不下「文字 + 照片」，竖排又会把卡片撑到
-     比表单高一截（1024 实测差 ≈320px，按钮下方一大片空白）。改成表单在上、
-     卡片整幅在下（卡片内部横排），≥1200 才回到左右两栏。 */
-  @media (min-width: 990px) and (max-width: 1199px) {
-    .contact__grid--media {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .contact__grid--media .contact__form-col {
-      max-inline-size: 40rem;
-    }
-  }
-
-  @media (min-width: 1200px) {
     /* 卡片里横向排着「文字 + 照片」时，两栏接近等分；
        沿用 1.35/0.65 会把照片压成一条。 */
     .contact__grid--media {
@@ -618,6 +598,12 @@
      1400px 宽的行输入框会让眼睛在两端来回跳，40rem 约 60 字符/行。 */
   .contact__grid--single {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (min-width: 990px) {
+    .contact__grid--single .contact__form-col {
+      max-inline-size: 40rem;
+    }
   }
 
   /* ── 表单 ────────────────────────────────────────────────────────────── */
@@ -1001,10 +987,10 @@
     object-fit: cover;
   }
 
-  /* 卡片从 600 起就够宽（600–989 是整幅宽、990–1199 整幅宽、≥1200 是右半），
-     一律横排；只有手机（<600，卡片 100vw 且列很窄）用上下排 + 16:9。
-     16:9 只在上下排时生效，横排时高度交给同行文字列。 */
-  @media (min-width: 600px) {
+  /* 600–989：卡片是整幅宽（在表单下方），右侧分出 38% 给照片；
+     ≥1200：卡片回到右栏，宽度够，同样分成两栏。
+     990–1199 这一段卡片最窄（≈430px），塞两栏两边都憋屈 ⇒ 维持上下排。 */
+  @media (min-width: 600px) and (max-width: 989px), (min-width: 1200px) {
     .contact__info--media {
       grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
       gap: 1.5rem;
