@@ -55,6 +55,7 @@
           assign icon_handle = block.settings.icon
           assign icon_asset = 'icon-' | append: icon_handle | append: '.svg'
           assign item_text = block.settings.text
+          assign item_subtext = block.settings.subtext
           assign item_link = block.settings.link
         -%}
 
@@ -62,12 +63,19 @@
           {%- comment -%}
             图标是装饰（文字已经说完了意思），所以整块 aria-hidden 包住。
             文案走 escape：商家可能填 "&" 或 "<"，不转义会破版。
+            第二行（subtext）是 2026-11-24 照联系页参考图加的可选项：
+            粗体承诺语 + 一行小字解释，两行同属一个 <span> 容器，断行由容器给。
           {%- endcomment -%}
           {%- capture item_inner -%}
             <span class="trust-bar__icon" aria-hidden="true">
               {{- icon_asset | inline_asset_content -}}
             </span>
-            <span class="trust-bar__text">{{ item_text | escape }}</span>
+            <span class="trust-bar__body">
+              <span class="trust-bar__text">{{ item_text | escape }}</span>
+              {%- if item_subtext != blank -%}
+                <span class="trust-bar__subtext">{{ item_subtext | escape }}</span>
+              {%- endif -%}
+            </span>
           {%- endcapture -%}
 
           <li class="trust-bar__item" {{ block.shopify_attributes }}>
@@ -138,8 +146,25 @@
   }
 
   /* break-word 而不是 anywhere：承诺语里有 "Parts & Service" 这类词，任何处断字会很难看 */
+  .trust-bar__body {
+    display: grid;
+    gap: 0.125rem;
+    min-inline-size: 0;
+  }
+
   .trust-bar__text {
     min-inline-size: 0;
+    overflow-wrap: break-word;
+  }
+
+  /* 第二行：同一条带里的小字，字重与字色都降一档，但仍在 AA 之上
+     （--color-foreground-muted = 70% 前景，压在这条 4% 前景底的浅带上 ≈ 4.5:1） */
+  .trust-bar__subtext {
+    min-inline-size: 0;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--color-foreground-muted);
     overflow-wrap: break-word;
   }
 
@@ -245,6 +270,12 @@
           "id": "text",
           "label": "t:sections.trust_bar.labels.text",
           "default": "t:sections.trust_bar.defaults.item_text"
+        },
+        {
+          "type": "text",
+          "id": "subtext",
+          "label": "t:sections.trust_bar.labels.subtext",
+          "info": "t:sections.trust_bar.labels.subtext_info"
         },
         {
           "type": "url",
