@@ -60,7 +60,7 @@
             "icon": "icon-mower.svg",
             "title": "Walk-behind mowers",
             "subtitle": "Explore our full range",
-            "link": "shopify://collections/walk-behind"
+            "link": "/collections/all"
           }
         },
         "search_link_riding": {
@@ -69,7 +69,7 @@
             "icon": "icon-mower.svg",
             "title": "Riding mowers",
             "subtitle": "Cover more ground",
-            "link": "shopify://collections/riding"
+            "link": "/collections/all"
           }
         },
         "search_link_chainsaw": {
@@ -78,7 +78,7 @@
             "icon": "icon-chainsaw.svg",
             "title": "Chainsaws",
             "subtitle": "Power through timber",
-            "link": "shopify://collections/chainsaw"
+            "link": "/collections/all"
           }
         },
         "search_link_trimmer": {
@@ -87,7 +87,7 @@
             "icon": "icon-trimmer.svg",
             "title": "String trimmers",
             "subtitle": "Keep edges clean",
-            "link": "shopify://collections/string-trimmer"
+            "link": "/collections/all"
           }
         }
       },
