@@ -718,6 +718,25 @@
     color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
 
+  /* ---------- 底部工具行：窄屏堆叠 ---------- */
+
+  /* 放在样式块末尾是刻意的：媒体查询里的 grid-column 要覆盖上面那条
+     .collections-list__pagination 基础规则，靠源码顺序而不是堆选择器权重。
+     一行塞不下（档位组 197px + 页码约 150px > 375px 内容列），所以两行堆叠，
+     档位在上、页码在下。 */
+  @media (max-width: 749px) {
+    .collections-list__pager {
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+      justify-items: center;
+    }
+    .collections-list__per-page,
+    .collections-list__pagination {
+      grid-column: 1;
+      justify-self: center;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .collections-list__card,
     .collections-list__media img {
