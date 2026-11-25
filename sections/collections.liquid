@@ -190,37 +190,6 @@
 
     {%- assign cards_trimmed = cards_markup | strip -%}
     {%- if cards_trimmed != blank -%}
-      {%- if section.settings.show_per_page -%}
-        {%- comment -%}
-          档位为什么用 <a> 而不是 <select> + form：切档本质是一次换模板的跳转
-          （?view=12 → list-collections.12.json），链接能无 JS 工作、可中键开新窗、
-          有真实 URL 可分享；select 要 JS 才能即时提交，还得补 noscript 兜底。
-          跳转故意不带 page 参数 —— 换档后回第 1 页是对的，第 3 页的第 2 档没有意义。
-        {%- endcomment -%}
-        <div class="collections-list__toolbar">
-          <div
-            class="collections-list__per-page"
-            role="group"
-            aria-label="{{ 'collections.per_page.group_label' | t }}"
-          >
-            <span class="collections-list__per-page-label">{{ 'collections.per_page.label' | t }}</span>
-            <span class="collections-list__per-page-options">
-              {%- for size in page_sizes -%}
-                {%- assign size_num = size | plus: 0 -%}
-                {%- if size_num == per_page -%}
-                  <span class="collections-list__per-page-option is-current" aria-current="true">{{ size }}</span>
-                {%- else -%}
-                  <a
-                    class="collections-list__per-page-option"
-                    href="{{ routes.collections_url }}?view={{ size }}"
-                    aria-label="{{ 'collections.per_page.option_label' | t: count: size }}"
-                  >{{ size }}</a>
-                {%- endif -%}
-              {%- endfor -%}
-            </span>
-          </div>
-        </div>
-      {%- endif -%}
       <ul
         class="collections-list__grid"
         role="list"
@@ -245,72 +214,121 @@
       </div>
     {%- endif -%}
 
-    {%- if paginate.pages > 1 -%}
-      {%- comment -%}
-        分页：圆形按钮（与集合页同一套视觉）。箭头恒在 —— 不可用方向渲染禁用占位，
-        行宽不跳；页码用 paginate.parts，截断部分渲染为 … 间隔。
-      {%- endcomment -%}
-      <nav class="collections-list__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
-        {%- if paginate.previous -%}
+    {%- comment -%}
+      底部工具行：每页档位与分页并排放在一起 —— 两者都是「这一屏怎么看」的控件，
+      分置上下两端会让人以为档位属于内容区。页码居中（grid 的 1fr auto 1fr 保证居中），
+      档位靠左，是电商页脚的惯例位置；窄屏两行堆叠，档位在上。
+      一张卡都不剩时（全是空集合）整行不渲染，免得空态下面挂一排死控件。
+    {%- endcomment -%}
+    {%- liquid
+      assign show_pager = false
+      if cards_trimmed != blank
+        if section.settings.show_per_page or paginate.pages > 1
+          assign show_pager = true
+        endif
+      endif
+    -%}
+
+    {%- if show_pager -%}
+      <div class="collections-list__pager">
+        {%- if section.settings.show_per_page -%}
           {%- comment -%}
-            带档位时自己拼 URL，不用 paginate.previous.url：后者只有 ?page=N，
-            会把顾客选好的档位丢掉，翻一页就跳回默认档。页码从 current_page 推。
+            档位为什么用 <a> 而不是 <select> + form：切档本质是一次换模板的跳转
+            （?view=12 → list-collections.12.json），链接能无 JS 工作、可中键开新窗、
+            有真实 URL 可分享；select 要 JS 才能即时提交，还得补 noscript 兜底。
+            跳转故意不带 page 参数 —— 换档后回第 1 页是对的，第 3 页的第 2 档没有意义。
           {%- endcomment -%}
-          {%- assign prev_href = paginate.previous.url -%}
-          {%- if active_suffix != blank -%}
-            {%- assign prev_page = paginate.current_page | minus: 1 -%}
-            {%- assign prev_href = routes.collections_url | append: '?page=' | append: prev_page | append: '&view=' | append: active_suffix -%}
-          {%- endif -%}
-          <a
-            class="collections-list__pagination-nav"
-            href="{{ prev_href }}"
-            aria-label="{{ 'collections.pagination_previous' | t }}"
+          <div
+            class="collections-list__per-page"
+            role="group"
+            aria-label="{{ 'collections.per_page.group_label' | t }}"
           >
-            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </a>
-        {%- else -%}
-          <span class="collections-list__pagination-nav" aria-disabled="true">
-            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </span>
+            <span class="collections-list__per-page-label">{{ 'collections.per_page.label' | t }}</span>
+            <span class="collections-list__per-page-options">
+              {%- for size in page_sizes -%}
+                {%- assign size_num = size | plus: 0 -%}
+                {%- if size_num == per_page -%}
+                  <span class="collections-list__per-page-option is-current" aria-current="true">{{ size }}</span>
+                {%- else -%}
+                  <a
+                    class="collections-list__per-page-option"
+                    href="{{ routes.collections_url }}?view={{ size }}"
+                    aria-label="{{ 'collections.per_page.option_label' | t: count: size }}"
+                  >{{ size }}</a>
+                {%- endif -%}
+              {%- endfor -%}
+            </span>
+          </div>
         {%- endif -%}
 
-        {%- for part in paginate.parts -%}
-          {%- if part.is_link -%}
-            {%- assign part_href = part.url -%}
+      {%- if paginate.pages > 1 -%}
+        {%- comment -%}
+          分页：圆形按钮（与集合页同一套视觉）。箭头恒在 —— 不可用方向渲染禁用占位，
+          行宽不跳；页码用 paginate.parts，截断部分渲染为 … 间隔。
+        {%- endcomment -%}
+        <nav class="collections-list__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
+          {%- if paginate.previous -%}
+            {%- comment -%}
+              带档位时自己拼 URL，不用 paginate.previous.url：后者只有 ?page=N，
+              会把顾客选好的档位丢掉，翻一页就跳回默认档。页码从 current_page 推。
+            {%- endcomment -%}
+            {%- assign prev_href = paginate.previous.url -%}
             {%- if active_suffix != blank -%}
-              {%- assign part_href = routes.collections_url | append: '?page=' | append: part.title | append: '&view=' | append: active_suffix -%}
+              {%- assign prev_page = paginate.current_page | minus: 1 -%}
+              {%- assign prev_href = routes.collections_url | append: '?page=' | append: prev_page | append: '&view=' | append: active_suffix -%}
             {%- endif -%}
             <a
-              class="collections-list__pagination-page"
-              href="{{ part_href }}"
-              aria-label="{{ 'collections.page_number' | t: number: part.title }}"
-            >{{ part.title }}</a>
-          {%- elsif part.title == paginate.current_page -%}
-            <span class="collections-list__pagination-page" aria-current="page">{{ part.title }}</span>
+              class="collections-list__pagination-nav"
+              href="{{ prev_href }}"
+              aria-label="{{ 'collections.pagination_previous' | t }}"
+            >
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </a>
           {%- else -%}
-            <span class="collections-list__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+            <span class="collections-list__pagination-nav" aria-disabled="true">
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </span>
           {%- endif -%}
-        {%- endfor -%}
 
-        {%- if paginate.next -%}
-          {%- assign next_href = paginate.next.url -%}
-          {%- if active_suffix != blank -%}
-            {%- assign next_page = paginate.current_page | plus: 1 -%}
-            {%- assign next_href = routes.collections_url | append: '?page=' | append: next_page | append: '&view=' | append: active_suffix -%}
+          {%- for part in paginate.parts -%}
+            {%- if part.is_link -%}
+              {%- assign part_href = part.url -%}
+              {%- if active_suffix != blank -%}
+                {%- assign part_href = routes.collections_url | append: '?page=' | append: part.title | append: '&view=' | append: active_suffix -%}
+              {%- endif -%}
+              <a
+                class="collections-list__pagination-page"
+                href="{{ part_href }}"
+                aria-label="{{ 'collections.page_number' | t: number: part.title }}"
+              >{{ part.title }}</a>
+            {%- elsif part.title == paginate.current_page -%}
+              <span class="collections-list__pagination-page" aria-current="page">{{ part.title }}</span>
+            {%- else -%}
+              <span class="collections-list__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+            {%- endif -%}
+          {%- endfor -%}
+
+          {%- if paginate.next -%}
+            {%- assign next_href = paginate.next.url -%}
+            {%- if active_suffix != blank -%}
+              {%- assign next_page = paginate.current_page | plus: 1 -%}
+              {%- assign next_href = routes.collections_url | append: '?page=' | append: next_page | append: '&view=' | append: active_suffix -%}
+            {%- endif -%}
+            <a
+              class="collections-list__pagination-nav"
+              href="{{ next_href }}"
+              aria-label="{{ 'collections.pagination_next' | t }}"
+            >
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </a>
+          {%- else -%}
+            <span class="collections-list__pagination-nav" aria-disabled="true">
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </span>
           {%- endif -%}
-          <a
-            class="collections-list__pagination-nav"
-            href="{{ next_href }}"
-            aria-label="{{ 'collections.pagination_next' | t }}"
-          >
-            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-          </a>
-        {%- else -%}
-          <span class="collections-list__pagination-nav" aria-disabled="true">
-            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-          </span>
-        {%- endif -%}
-      </nav>
+        </nav>
+      {%- endif -%}
+      </div>
     {%- endif -%}
   {%- endpaginate -%}
 </div>
