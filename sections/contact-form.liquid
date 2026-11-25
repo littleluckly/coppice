@@ -462,7 +462,10 @@
     position: relative;
     display: grid;
     align-items: center;
-    min-block-size: clamp(11.5rem, 6.5rem + 15vw, 19.5rem);
+    /* 高度按参考图的比例定：横幅高 ≈ 视口宽的 16%（1440 下 ≈ 240px）。
+       用 min-block-size 而不是 aspect-ratio —— 文字行数变化时横幅要能长高，
+       固定比例会把长标题挤出图外。 */
+    min-block-size: clamp(11rem, 5.5rem + 11vw, 16rem);
     overflow: hidden;
     isolation: isolate;
   }
