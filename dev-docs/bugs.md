@@ -193,6 +193,8 @@
   **不修的理由**：基础样式搬进 snippet 后，抽屉用的 `.account--in-drawer` / `.cart-entry--in-drawer` modifier（依赖基础类名）必须留在 main-nav，样式会**拆成两处**——正是 BUG-026 漏 `</div>` 那类容易出错的地方，收益（消 warning）远小于风险。
 - **搜索不受影响**：`predictive-search-entry` 与 `predictive-search` section **各自带 `{% stylesheet %}`**，标记与样式同文件，是正确写法。
 
+> **2026-11-25 补注（见 BUG-097）**：上面「22 条 = 误报」的判定**已过期**。当时确有整包误报（连 5 处有 `render` 调用的 `image` 都被报），但当前 theme check 版本做的是**真引用分析**：27 个 snippet 里只报 `snippets/image.liquid` 一个，而它的调用方在重构为 `image_tag` 后已归零——它是**真孤儿**，已于当日删除。此后不许再按「整包误报」豁免 `OrphanedSnippet`。
+
 ### BUG-028 · 预测搜索接线错位：响应按 JSON 解析，联想面板永远出不来
 - **日期**：2026-10-10 ｜ **状态**：Fixed
 - **现象**：`assets/predictive-search.js` 的 `_fetch()` 对 `/search/suggest` 发起请求后执行 `await response.json()` 并读取 `sections[id].html`。按官方 Predictive Search API 参考，`section_id` 参数的响应是 **HTML**（含 `#shopify-section-<id>` 包裹层），HTML 走 JSON 解析必然抛错 → 落入 catch → 面板永远 `_close()`。且当时传的 `section_id` 是 main-nav 的动态实例 id 而非 section 文件名，即使解析成功拿到的也是整个导航行的 HTML。**T-1.4 完成时未做浏览器实测，这个缺陷在 T-3.1 验收前不会被暴露。**
@@ -987,6 +989,15 @@
 - **修复**：把步进器当**一个**控件处理 —— 容器 `:focus-within` 给 `border-color: var(--color-brand)` + `box-shadow: 0 0 0 1px var(--color-brand)`（1px 边框 + 1px 外扩 = 2px 实环，与搜索抽屉、价格区间同一口径），内部 `-btn` / `-input` 的 `:focus-visible` 一律 `outline: none`。三处同步改，容器加 `box-shadow` 过渡。
 - **验证**：`tools/probe-input-shape.py` 扩到 20 条（新增 cart-qty / cart-qty-btn / product-qty / quickview-qty + 通用断言「控件自身 outline-width 必须 0px」），**并做了反向验证**：临时删掉 `outline: none` 后探针立刻报 `✗ 控件自身还有默认焦点框（outline 1px auto）`，18/20 —— 证明这条断言不是恒真。还原后 20/20。
 - **预防**：① **凡是"内部元素撑满容器"的复合控件**（数量步进器、搜索条、价格区间、分段选择），焦点环一律画在容器上、内部控件 `outline: none` —— 已写进 AGENTS.md §6。② 改输入/控件的形状或边框时，**验收清单必须包含"聚焦态"一项**：只检查静止态，默认焦点框永远看不见。③ 探针里那条通用 outline 断言对所有 case 生效，新加控件会自动被它盯住。
+
+---
+
+### BUG-097 · 一个从未被渲染的 snippet 被当成「已知误报」维护了 8 天
+- **日期**：2026-11-25 ｜ **状态**：Fixed
+- **现象**：`shopify theme check` 从 81 files 到 90 files 的历次验证里稳定输出 1 条 warning（`OrphanedSnippet` · `snippets/image.liquid`），每次验证行都照抄一句「既有误报」带过；11-17 还以「预防性修正」为名改过这个文件（去掉 `image_url` 的 `crop`）。11-25 重跑时 warning 变成 2 条（新增 `SchemaPresetsBlockOrder`），顺手核 `OrphanedSnippet` 才发现：**27 个 snippet 只报这 1 个**，`css-variables` / `meta-tags` 都没被报。
+- **根因**：两层。① 结论来自 2026-10-10 的**真实事件**——同一版本整包报了 22 条 `OrphanedSnippet`，逐条核实后 8 个 snippet 全都有 `render` 调用（`image` 5 次），于是判定「该版本的引用扫描整体失效」，写成「已知误报」。② 之后各 section 重构为直接用 `image_tag` 输出图片，`snippets/image.liquid` 的最后 5 处调用全部消失，它变成**真孤儿**；但「误报」两字已经作为结论固化进 AGENTS.md，没人回头复核，于是这个标签越过了一个已经变化的事实。文件本身是 **Skeleton 自带的 LiquidDoc 示例**（`@example` 里自己 render 自己 3 次，看着像有调用方，实际没有），更不容易被怀疑。
+- **修复**：`git rm snippets/image.liquid` ⇒ 预期 0 warning（历史上它从不是功能的一部分，全仓 0 引用；G-05 那条「`image_url` 别传 `crop`」的教训在 `tools/check-focal-points.py` 的 C 检查、`bugs.md` 的 G-05 条目、AGENTS.md §4 都有留档，不随文件消失）。同步改：AGENTS.md §2 的结论、`bugs.md` 里 10-10 那段的补注、`task-compliance.md` v1.8 变更行。
+- **预防**：① **凡写「已知误报 / 已知问题」，必须带复核日期与复核方法**；下一次验证不重新核实就自动降级为「待复核」，不许继续照抄。② **warning 数的变化必须逐条解释**（这次 1→2 就是新发现入口：多出来的那条是新问题，不是既有的那条变严重了）——只看 `error = 0` 会漏掉它。③ 判定「工具误报」的前提是**能举出反例**（如「这条它报错了，但该文件确实被 render」），举不出反例就按真问题处理。
 
 ---
 

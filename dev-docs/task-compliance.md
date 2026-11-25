@@ -4,7 +4,7 @@
 > **权威关系**：功能口径以 `dev-docs/sdd.md` §7.1 为准；本清单只做"官方要求 ↔ 主题现状"的映射，不新增产品决策。修复方案涉及设计取舍时，回填对应页面清单（`task-product.md` / `task-collection.md` / `task-footer.md` 等）。
 > **范围**：主题级必填项——section/block 能力、全局设置、模板页面完整性、强制功能落点。
 > **不在范围**：各页面清单已覆盖的项（页脚 newsletter / 社交 / 国家语言 → `task-footer.md`；页头菜单与搜索 → `task-header.md`；购物车 → `task-cart.md`；集合页 → `task-collection.md`；产品页主体 → `task-product.md`）。**本清单只在它们漏掉的接缝处补位。**
-> **版本**：v1.7 ｜ 2026-11-19 ｜ **不含工期**
+> **版本**：v1.8 ｜ 2026-11-25 ｜ **不含工期**
 > **v1.1 变更**：G-03 / G-11 / G-13 已实现（全局 Brand 设置、favicon、品牌 logo）；§5.2 顾客端配色开关经刘工拍板**不做**。
 > **v1.2 变更**：G-01 已实现（新建 `sections/custom-liquid.liquid`）；G-10 经对账销项（页脚 `custom_liquid` block 早已落地，本清单漏勾）；G-02 已实现（`main-product` 支持 `@app` block）。
 > **v1.3 变更**：G-08 已实现（商品卡补单位价，集合页 / 首页 / 搜索页 / 推荐位共用同一 snippet 一并生效）。**剩余 4 条缺口，其中 S1 3 条**（G-05 / G-06 / G-14）、S2 1 条（G-12）。
@@ -12,6 +12,7 @@
 > **v1.5 变更**：G-12 **演示店实测通过**（装 Shopify Subscriptions → 建 plan → `nb-21p` 渲染正常、加购后购物车行显示计划名）。口径从「代码符合官方写法」升级为「面板与购物车已实证，仅结账页按代码判定」；顺手修掉计划名含百分比时徽标重复。剩余缺口仍是 G-05 / G-06 / G-14（全 S1）。
 > **v1.6 变更**：G-05 **销项**——但结论与条目标题相反：焦点不是「未实现」，而是**平台自动实现、原判定是误判**（`image_tag` 有焦点时自动写内联 `object-position`，主题只需用 `image_tag` + `object-fit: cover`）。本轮只补了真洞（hero 移动端 `<picture>` 的焦点归属），并新增 `tools/check-focal-points.py` 把判据固化。**剩余 2 条缺口：G-06 / G-14（S1）**。
 > **v1.7 变更**：二次复扫，**15 条全部销项**。① G-06 落地（`theme_info` → `Coppice Studio` + 文档站 200 + 支持邮箱）；② G-14 补销（11-17 已做联系页，本清单漏勾）；③ **新发现并修掉 G-15**——`main-nav` 的 `brand_name` schema 默认值硬编码 `"Northbark"`，导致 `| default: shop.name` 永久失效，商家装完页头显示别人的品牌名。凡 `settings.x | default: <平台对象>` 的写法都要先查 schema 有没有 `default`。
+> **v1.8 变更**：① **删除 `snippets/image.liquid`**——Skeleton 自带的 LiquidDoc 示例，全仓 0 调用方；本清单历次验证记录里那句「`OrphanedSnippet` 误报」**作废**（当前 theme check 做真引用分析：27 个 snippet 只报它一个，是真孤儿；10-10 那次整包报 22 条是旧版本扫描失效，结论已过期，见 BUG-097）。② `sections/search-drawer.liquid` 的 preset 补 `block_order`（消 `SchemaPresetsBlockOrder`）。预期 `shopify theme check`：**90→89 files / 0 warning / 0 error**。
 
 ---
 
@@ -371,7 +372,7 @@ theme 开发文档「image focal points」给出的检查清单只有两条：
 **本轮实际改动（补的是真洞）**
 
 1. `sections/hero-slideshow.liquid`：移动端底图走 `<picture><source>`。**先说清这不是「运行时换图」**——轮播是整屏切换（每屏各自一套 `<picture>` / `<img>`，JS 只翻 `hidden` 与 `loading`，没有代码改 `img.src`）。问题出在**媒体条件选源**：`<source>` 不能承载 `object-position`，≤749px 时浏览器改取它的 `srcset`（画的是 `image_mobile` 的像素），但 `<img>` 元素与它身上 `image_tag` 按**桌面图**写的内联 `object-position` 都没变 ⇒ 商家给移动图设的焦点不生效。改为 `<picture style="--focal-m: …">` + 749 断点内 `object-position: var(--focal-m, 50% 50%) !important`。`!important` 是必需的：要压过 `image_tag` 写的内联样式，否则规则永不命中；选择器挂在 `picture` 后代上，没有移动图时整条不生效。
-2. `snippets/image.liquid`：去掉 `image_url` 的 `crop` 传参。服务端定死裁剪后 `object-position` 无从生效，**用这个 snippet 反而会丢焦点**（当前无调用方，属预防性修正）。
+2. `snippets/image.liquid`：去掉 `image_url` 的 `crop` 传参。服务端定死裁剪后 `object-position` 无从生效，**用这个 snippet 反而会丢焦点**（当前无调用方，属预防性修正）。**（2026-11-25 补注：该文件已整体删除，见 BUG-097——这次「预防性修正」做在了一个从不渲染的文件上。）**
 3. 新增 `tools/check-focal-points.py`（对应 §4.2 的固化成脚本）：
    - **A（硬）** 文件里有 `object-fit: cover` 就必须出现 `image_tag`——手写 `<img>` 拿不到内联焦点；
    - **B（警告）** `<picture>` 缺 `--focal-m`：`object-fit: contain` 的图不裁剪，规范明说不用接，故只告警；
@@ -588,7 +589,7 @@ URL 可分享、无 JS 整页 GET），否则同一个组件在两页上的行�
 - [x] **T-1.2** `main-product.liquid` 补 `@app` block（G-02）· 依赖：无
 - [x] **T-1.3** 全局品牌设置：`favicon` + `logo` / `logo_dark` + 亮度自动选图（G-03 / G-13 / §5.1）· 依赖：无
 - [x] **T-1.4** 礼品卡二维码（G-04）· 依赖：无
-- [x] **T-1.5** 图片焦点（G-05）· 2026-11-19 完成——**原方案作废**：焦点由 `image_tag` 自动应用，不需要「按会裁剪处逐个接」。实改 1 处真洞（hero 移动端 `<picture>` 的 `--focal-m`）+ 1 处预防性修正（`snippets/image.liquid` 去 `crop`）+ 判据脚本化
+- [x] **T-1.5** 图片焦点（G-05）· 2026-11-19 完成——**原方案作废**：焦点由 `image_tag` 自动应用，不需要「按会裁剪处逐个接」。实改 1 处真洞（hero 移动端 `<picture>` 的 `--focal-m`）+ 1 处预防性修正（`snippets/image.liquid` 去 `crop`）+ 判据脚本化（`snippets/image.liquid` 已于 2026-11-25 删除，见 BUG-097）
 - [x] **T-1.6** `theme_info` 更正（G-06）· 2026-11-19 完成（作者 `Coppice Studio` + 文档站 200 + 支持邮箱，见 §2.0g）
 - [x] **T-1.7** 联系表单 section + `page.contact.json` 模板（G-14）· 2026-11-17 完成（见 §2.0g）
 - [x] **T-1.8** 页头品牌名默认值（G-15）· 2026-11-19 完成——删 schema `default`，让 `| default: shop.name` 生效

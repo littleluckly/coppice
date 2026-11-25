@@ -44,7 +44,7 @@ python3 tools/probe-input-shape.py   # 验全站输入框形状与聚焦环：�
 - 提交审核前：`shopify theme check` 不得出现任何 Error（Warning 尽量清零）。
 - **`shopify theme check` 优先于一切本地检查**。Agent 侧的自查脚本只能做近似判断，`check-tag-balance.py` 尤其容易因属性里的 `>` 误报——它用于「改动后快速发现明显缺口」，**最终以 theme check 为准**。
 - **Agent 沙箱内 `shopify` CLI 不可见**（`command not found`），但刘工本机正常——需要跑 theme check 时请刘工代跑并回贴结果。
-- **已知 warning 不必追**：`OrphanedSnippet` 在当前 theme check 版本上会误报全部 snippet（连 Skeleton 自带的 `css-variables`、`meta-tags`、`image` 都被报），`ValidScopedCSSClass` 对「标记在 snippet、样式在调用方 section」这种既有模式也会报。判定依据见 `dev-docs/bugs.md` 末尾的说明。
+- **`OrphanedSnippet` 现在是真扫描，逐条核实后再豁免**：2026-10-10 那次它整包报了 22 条（含当时确有 5 处 `render` 调用的 `image`），据此写下的「会误报全部 snippet」**已过期**——当前版本对 27 个 snippet 只报真正无引用的那一个（`css-variables` / `meta-tags` 均不再被报）。真正的孤儿是 Skeleton 自带的 LiquidDoc 示例 `snippets/image.liquid`（示例重构成 `image_tag` 后调用方归零），已于 2026-11-25 删除，见 BUG-097。**`ValidScopedCSSClass`** 对「标记在 snippet、样式在调用方 section」这种既有模式仍会报，属已知不修（理由见 `dev-docs/bugs.md`）。
 - Lighthouse 验收线见 §7 / §8。
 
 ## 3. 目录结构
@@ -103,6 +103,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 
 - 每个 section 必须有 `{% schema %}`；schema 内 `name`、`label` 等文案用 `t:` 键（`en.default.schema.json`）。
 - 每个 section 提供可用 preset；preset 默认值必须是**可用的示例内容**，不是占位符。
+  - **例外：section group 内的单例**（`enabled_on.groups` 只有 header / footer 的 section，如 `search-drawer`）。实例的最终值只存在 `sections/*-group.json` 里，preset 里再放一份 blocks 就成了**两份同样数据的副本**（改一份不动另一份，最容易扫错地方）。这类 section 的 preset 只保留 `name`，**block 内容只存在 group JSON 一处**（2026-11-25 刘工拍板；官方主题的 header 做法更彻底——连 `presets` 都不写）。
 - 区块可复用样式优先 `{% stylesheet %}` / `{% javascript %}` 标签（多次声明只输出一次）；全局关键样式放 `assets/critical.css`。
 - **样式归属判据**：section 自有布局样式 → `{% stylesheet %}`（聚合加载，section 移除时自动卸载，且**必须位于 section 顶层**，不得嵌套在 if/for 内）。仅当样式为**大体积可选增强**或**跨 section 全局功能**（如对比冲突提示、Dawn mask-blobs 类设置级变体）时，才拆独立 `.css` + 条件 `stylesheet_tag`——不为省 1–2 KB 把 section 自有样式拆成独立请求。
 - **箭头准则**：`→` 仅用于两类位置——View All 链接、行尾导航元素（如 platform 横条卡右端）。卡内文字链接**不加**箭头；新增箭头前先数同屏总数（≤5）。
