@@ -12,11 +12,21 @@
     "main": {
       "type": "contact-form",
       "settings": {
+        "banner_image": "shopify://shop_images/404-bg_webp.webp",
+        "banner_overlay": 78,
+        "eyebrow": "Get in touch",
+        "heading": "",
+        "lead": "Questions about a machine, an order or a spare part?\nSend us a note and we will get back to you within one business day.",
+        "form_heading": "Send us a message",
+        "show_phone": true,
+        "consent": "",
+        "info_heading": "Contact details",
         "info_phone": "(555) 010-0182",
         "info_email": "support@northbark.example",
         "info_address": "1204 Mill Road\nAsheville, NC 28801",
         "info_hours": "Mon–Fri, 8am–6pm ET\nSat, 9am–4pm ET",
-        "info_note": "Parts orders placed before 2pm ET ship the same day."
+        "info_note": "Parts orders placed before 2pm ET ship the same day.",
+        "info_image": "shopify://shop_images/footer-bg_webp.webp"
       }
     },
     "trust": {
@@ -55,11 +65,19 @@
           }
         }
       },
-      "block_order": ["item_1", "item_2", "item_3", "item_4"],
+      "block_order": [
+        "item_1",
+        "item_2",
+        "item_3",
+        "item_4"
+      ],
       "settings": {
         "show_dividers": true
       }
     }
   },
-  "order": ["main", "trust"]
+  "order": [
+    "main",
+    "trust"
+  ]
 }
