@@ -604,15 +604,23 @@
     },
     "contact_form": {
       "defaults": {
-        "eyebrow": "Support",
-        "lead": "Questions about a machine, an order or a spare part? Send us a note and we will get back to you within one business day.",
-        "info_heading": "Contact details"
+        "eyebrow": "Get in touch",
+        "lead": "Questions about a machine, an order or a spare part?\nSend us a note and we will get back to you within one business day.",
+        "info_heading": "Contact details",
+        "form_heading": "Send us a message"
       },
       "labels": {
+        "banner_header": "Banner",
+        "banner_image": "Banner photo",
+        "banner_image_info": "Wide photo behind the page title. The page background fades over it so the title stays readable. Leave empty to show the title on a plain background.",
+        "banner_overlay": "Image fade",
+        "banner_overlay_info": "How strongly the background fades over the photo. Raise it if your photo is busy or the text is hard to read.",
+        "intro_header": "Title area",
         "eyebrow": "Eyebrow",
         "heading_info": "Leave empty to use the page title.",
         "lead": "Intro text",
         "form_header": "Form",
+        "form_heading": "Form heading",
         "show_phone": "Show phone field",
         "show_phone_info": "Adds an optional phone number field, so you can call back instead of writing.",
         "consent": "Note under the button",
@@ -623,7 +631,9 @@
         "address": "Address",
         "hours": "Opening hours",
         "hours_info": "One entry per line. Leave the whole card empty to hide it.",
-        "note": "Additional note"
+        "note": "Additional note",
+        "info_image": "Card photo",
+        "info_image_info": "Optional photo beside the contact details. Shown only when at least one detail above is filled in."
       }
     },
     "trust_bar": {
