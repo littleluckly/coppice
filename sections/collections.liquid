@@ -95,15 +95,14 @@
 </div>
 
 <div class="collections-list__page">
-  {%- assign collections_test = collections | sort: 'all_products_count' -%}
-  {%- paginate collections_test by per_page -%}
+  {%- paginate collections by per_page -%}
     {%- comment -%}
       卡片列表先 capture 再判空：空集合被过滤后可能一张卡都不剩（店铺全是空集合，
       或这一页切片恰好全是空集合）。判空用 capture 出来的字符串，不依赖循环内
       计数器能否带出循环 —— 那是 Liquid 作用域里最容易被绕进去的地方。
     {%- endcomment -%}
     {%- capture cards_markup -%}
-      {%- for collection in collections_test -%}
+      {%- for collection in collections -%}
         {%- if collection.handle == 'frontpage' -%}
           {%- continue -%}
         {%- endif -%}
