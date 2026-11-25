@@ -220,10 +220,11 @@
   "contact": {
     "title": "Contact us",
     "form": {
+      "heading": "Send us a message",
       "name": "Name",
       "email": "Email",
       "phone": "Phone",
-      "message": "Message",
+      "message": "Your message",
       "optional": "Optional",
       "required_note": "* Required fields",
       "submit": "Send message",

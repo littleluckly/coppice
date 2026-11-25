@@ -1,5 +1,5 @@
 {% comment %}
-  联系页 —— 左侧表单、右侧联系信息卡，用于 templates/page.contact.json。
+  联系页 —— 顶部横幅 + 左侧表单、右侧联系信息卡，用于 templates/page.contact.json。
 
   ## 为什么单独一个 section，而不是塞进 page.liquid
   联系页的主内容是**交互**（原生 `{% form 'contact' %}`），通用 page 模板只渲染
@@ -22,9 +22,21 @@
   3. **提交结果用 `role="status"` / `role="alert"`**，且在表单**之上**。
      重载后页面停在顶部，读屏用户先听到结果再听到表单，顺序与视觉一致。
 
+  ## 字段里的字是「标签」，不是占位符（2026-11-24 参考图改版）
+  效果图把 Label 画在输入框内侧、前面带一枚图标。**不能直接改成 placeholder**：
+  占位符会随输入消失，读屏软件把它当提示而不是字段名，WCAG 3.3.2 直接不过。
+  做法是真正的 `<label for>` 留在 DOM 里，靠 `:focus` / `:not(:placeholder-shown)`
+  把它缩小顶到框内上沿 —— 空态是框内居中的大字，输入后变成框内左上角的小字。
+  这需要给 input 配一个**只含空格**的 placeholder（`:placeholder-shown` 没有
+  placeholder 属性时永不命中），空格本身不上屏。
+
+  图标是装饰（标签文字已经说明字段用途），整枚 `aria-hidden`。
+
   ## 降级
   · 信息卡的四项（电话/邮箱/地址/营业时间）全部留空时整块不渲染，
     表单自动独占一行 —— 不出现「Contact details」下面一片空白。
+    此时即使配了「信息卡配图」也不渲染（图不能单独成卡）。
+  · 没配横幅配图 → 标题区回到白底普通排版，不做「深色遮罩 + 空图」的假横幅。
   · `page.content` 为空是常态（商家往往只填了标题），此时只输出标题区。
   · 标题默认取 `page.title`；商家在 section 里填了 heading 就以它为准。
 {% endcomment %}
@@ -48,10 +60,37 @@
     assign info_heading = 'contact.info.heading' | t
   endif
 
+  assign form_heading = s.form_heading
+  if form_heading == blank
+    assign form_heading = 'contact.form.heading' | t
+  endif
+
   assign has_info = false
   if s.info_phone != blank or s.info_email != blank or s.info_address != blank or s.info_hours != blank
     assign has_info = true
   endif
+
+  # 横幅只在真有图时成立。没图时标题区留在白底上（见文件头「降级」）。
+  assign banner_image = s.banner_image
+  assign has_banner = false
+  if banner_image != blank
+    assign has_banner = true
+  endif
+
+  # 信息卡配图依附于信息卡：卡不渲染，图也不渲染。
+  assign info_image = s.info_image
+  assign has_info_image = false
+  if info_image != blank and has_info
+    assign has_info_image = true
+  endif
+
+  # 遮罩强度两档：主值给文字所在的一侧，柔和值给过渡段。
+  # 都从同一个设置算出来，商家只调一个滑杆；样式侧用 var(..., 兜底) 再兜一层。
+  assign veil = s.banner_overlay
+  if veil == blank
+    assign veil = 78
+  endif
+  assign veil_soft = veil | times: 0.7 | round
 
   # tel: 里不能有空格和括号（RFC 3966）；可见文本保持商家输入的排版。
   # 归一化只做字符剥离，不做 +1 → 00 之类的猜测性改写（同 footer.liquid）。
@@ -64,20 +103,73 @@
   assign info_heading_id = 'ContactInfoHeading-' | append: section.id
 -%}
 
-<div class="contact">
-  <div class="contact__inner">
-    <div class="contact__intro">
-      {%- if s.eyebrow != blank -%}
-        <p class="contact__eyebrow">{{ s.eyebrow | escape }}</p>
-      {%- endif -%}
+<div class="contact full-width{% if has_banner %} contact--banner{% endif %}">
+  {%- comment -%}
+    标题区只写一次、两处复用：有横幅时压在图上，没横幅时落在白底。
+    重复写两份的话，`page.title` 回落和 h1 的唯一性会在两处慢慢长歪。
+  {%- endcomment -%}
+  {%- capture intro_html -%}
+    {%- if s.eyebrow != blank -%}
+      <p class="contact__eyebrow">{{ s.eyebrow | escape }}</p>
+    {%- endif -%}
 
-      <h1 class="contact__heading">{{ heading_text | escape }}</h1>
+    <h1 class="contact__heading">{{ heading_text | escape }}</h1>
 
-      {%- if s.lead != blank -%}
-        <p class="contact__lead">{{ s.lead | escape }}</p>
-      {%- endif -%}
+    {%- if s.lead != blank -%}
+      {%- comment -%}
+        lead 是 textarea：商家按效果图断成两行，换行是内容的一部分。
+        escape 必须在 newline_to_br **之前**，反过来 <br> 会变成字面量。
+      {%- endcomment -%}
+      <p class="contact__lead">{{ s.lead | escape | newline_to_br }}</p>
+    {%- endif -%}
+  {%- endcapture -%}
+
+  {%- if has_banner -%}
+    <div
+      class="contact__banner"
+      style="--contact-veil: {{ veil }}%; --contact-veil-soft: {{ veil_soft }}%;"
+    >
+      <div class="contact__banner-media">
+        {%- comment -%}
+          底图是装饰：标题与引文已在同一屏说完信息，照片不额外承载语义，
+          所以 alt 恒为空。image_tag 在 alt 为空时会把属性整条吞掉（不是输出
+          alt=""），Lighthouse 会判「缺 alt」—— 捕获后补一次，同 collection.liquid。
+          不传 height：横幅是定高容器 + object-fit: cover，height 属性会把
+          aspect-ratio 压掉（MEMORY 第五节）。
+        {%- endcomment -%}
+        {%- capture banner_img -%}
+          {{
+            banner_image
+            | image_url: width: 2400
+            | image_tag:
+              class: 'contact__banner-img',
+              widths: '750, 1100, 1500, 2000, 2400',
+              sizes: '100vw',
+              width: banner_image.width,
+              loading: 'eager',
+              fetchpriority: 'high',
+              alt: ''
+          }}
+        {%- endcapture -%}
+        {%- unless banner_img contains ' alt=' -%}
+          {%- assign banner_img = banner_img | replace: '<img ', '<img alt="" ' -%}
+        {%- endunless -%}
+        {{ banner_img }}
+      </div>
+
+      <div class="contact__banner-mask" aria-hidden="true"></div>
+
+      <div class="contact__banner-inner">
+        <div class="contact__intro">{{ intro_html }}</div>
+      </div>
     </div>
+  {%- else -%}
+    <div class="contact__inner contact__inner--intro">
+      <div class="contact__intro">{{ intro_html }}</div>
+    </div>
+  {%- endif -%}
 
+  <div class="contact__inner">
     {%- comment -%}
       商家在页面正文里写的内容（如「响应时间」「保修说明」）照常渲染，
       与表单同宽，避免它被挤到两栏之外变成孤立的一段。
@@ -87,11 +179,20 @@
     {%- endif -%}
 
     {%- comment -%}
-      没有联系方式时用单列：否则空着的第二列仍占 0.65fr，
-      表单被压到 65% 宽度、右边一片空白（实测截图确认过）。
+      没有联系方式时用单列：否则空着的第二列仍占着宽度，
+      表单被压窄、右边一片空白（实测截图确认过）。
+      有配图时两栏接近等分（左 1.02 / 右 0.98）：卡片里横向排着文字 + 照片，
+      沿用 1.35/0.65 会把照片压成窄条。
     {%- endcomment -%}
-    <div class="contact__grid{% unless has_info %} contact__grid--single{% endunless %}">
+    <div class="contact__grid{% unless has_info %} contact__grid--single{% endunless %}{% if has_info_image %} contact__grid--media{% endif %}">
       <div class="contact__form-col">
+        <h2 class="contact__form-heading">{{ form_heading | escape }}</h2>
+        {%- comment -%}
+          必填星号只对视觉说话（aria-hidden），语义由 input 的 required 承担。
+          这行小字是给「看不见星号 / 开着高对比模式」的场景补的说明。
+        {%- endcomment -%}
+        <p class="contact__hint">{{ 'contact.form.required_note' | t }}</p>
+
         {%- form 'contact', class: 'contact__form', id: 'ContactForm' -%}
           {%- if form.posted_successfully? -%}
             <p class="contact__alert contact__alert--success" role="status">
@@ -114,19 +215,17 @@
             </div>
           {%- endif -%}
 
-          <p class="contact__hint">{{ 'contact.form.required_note' | t }}</p>
-
           <div class="contact__row">
             <div class="contact__field">
-              <label class="contact__label" for="ContactName-{{ section.id }}">
-                {{- 'contact.form.name' | t -}}
-                <span class="contact__required" aria-hidden="true">*</span>
-              </label>
+              <span class="contact__field-icon" aria-hidden="true">
+                {{- 'icon-account.svg' | inline_asset_content -}}
+              </span>
               <input
                 class="contact__input"
                 id="ContactName-{{ section.id }}"
                 type="text"
                 name="contact[name]"
+                placeholder=" "
                 autocomplete="name"
                 value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}"
                 required
@@ -134,18 +233,23 @@
                   aria-invalid="true" aria-describedby="{{ error_id }}"
                 {% endif %}
               >
+              {%- comment -%}标签在 input 之后：样式靠 `input + .contact__label` 定位，与 for/id 无关。{%- endcomment -%}
+              <label class="contact__label" for="ContactName-{{ section.id }}">
+                {{- 'contact.form.name' | t -}}
+                <span class="contact__required" aria-hidden="true">*</span>
+              </label>
             </div>
 
             <div class="contact__field">
-              <label class="contact__label" for="ContactEmail-{{ section.id }}">
-                {{- 'contact.form.email' | t -}}
-                <span class="contact__required" aria-hidden="true">*</span>
-              </label>
+              <span class="contact__field-icon" aria-hidden="true">
+                {{- 'icon-mail.svg' | inline_asset_content -}}
+              </span>
               <input
                 class="contact__input"
                 id="ContactEmail-{{ section.id }}"
                 type="email"
                 name="contact[email]"
+                placeholder=" "
                 autocomplete="email"
                 spellcheck="false"
                 autocapitalize="off"
@@ -155,50 +259,62 @@
                   aria-invalid="true" aria-describedby="{{ error_id }}"
                 {% endif %}
               >
+              <label class="contact__label" for="ContactEmail-{{ section.id }}">
+                {{- 'contact.form.email' | t -}}
+                <span class="contact__required" aria-hidden="true">*</span>
+              </label>
             </div>
           </div>
 
           {%- if s.show_phone -%}
             <div class="contact__field">
-              <label class="contact__label" for="ContactPhone-{{ section.id }}">
-                {{- 'contact.form.phone' | t -}}
-                <span class="contact__optional">{{ 'contact.form.optional' | t }}</span>
-              </label>
+              <span class="contact__field-icon" aria-hidden="true">
+                {{- 'icon-phone.svg' | inline_asset_content -}}
+              </span>
               <input
                 class="contact__input"
                 id="ContactPhone-{{ section.id }}"
                 type="tel"
                 name="contact[phone]"
+                placeholder=" "
                 autocomplete="tel"
                 value="{{ form.phone }}"
                 {% if form.errors contains 'phone' %}
                   aria-invalid="true" aria-describedby="{{ error_id }}"
                 {% endif %}
               >
+              <label class="contact__label" for="ContactPhone-{{ section.id }}">
+                {{- 'contact.form.phone' | t -}}
+                <span class="contact__optional">({{ 'contact.form.optional' | t }})</span>
+              </label>
             </div>
           {%- endif -%}
 
-          <div class="contact__field">
-            <label class="contact__label" for="ContactMessage-{{ section.id }}">
-              {{- 'contact.form.message' | t -}}
-              <span class="contact__required" aria-hidden="true">*</span>
-            </label>
+          <div class="contact__field contact__field--textarea">
+            <span class="contact__field-icon" aria-hidden="true">
+              {{- 'icon-message.svg' | inline_asset_content -}}
+            </span>
             <textarea
               class="contact__input contact__textarea"
               id="ContactMessage-{{ section.id }}"
               name="contact[body]"
+              placeholder=" "
               rows="7"
               required
               {% if form.errors contains 'body' %}
                 aria-invalid="true" aria-describedby="{{ error_id }}"
               {% endif %}
             >{{ form.body }}</textarea>
+            <label class="contact__label" for="ContactMessage-{{ section.id }}">
+              {{- 'contact.form.message' | t -}}
+              <span class="contact__required" aria-hidden="true">*</span>
+            </label>
           </div>
 
           <div class="contact__actions">
             {%- comment -%}
               按钮里不放箭头：AGENTS §6 的箭头准则只允许 View All 链接与行尾导航元素，
-              表单按钮不属于这两类。
+              表单按钮不属于这两类（效果图里有，这里按项目规则去掉）。
             {%- endcomment -%}
             <button class="btn-solid contact__submit" type="submit">
               {{- 'contact.form.submit' | t -}}
@@ -212,45 +328,94 @@
       </div>
 
       {%- if has_info -%}
-        <aside class="contact__info" aria-labelledby="{{ info_heading_id }}">
-          <h2 class="contact__info-heading" id="{{ info_heading_id }}">{{ info_heading | escape }}</h2>
+        <aside class="contact__info{% if has_info_image %} contact__info--media{% endif %}" aria-labelledby="{{ info_heading_id }}">
+          <div class="contact__info-body">
+            <h2 class="contact__info-heading" id="{{ info_heading_id }}">{{ info_heading | escape }}</h2>
 
-          <dl class="contact__details">
-            {%- if s.info_phone != blank -%}
-              <div class="contact__detail">
-                <dt>{{ 'contact.info.phone' | t }}</dt>
-                <dd><a href="tel:{{ tel_href | escape }}">{{ s.info_phone | escape }}</a></dd>
-              </div>
+            {%- comment -%}
+              图标放在 <dt> 里而不是和 dt/dd 平级：dl 的分组 div 只允许装 dt/dd，
+              塞一个装饰用的 <span> 严格校验会报错。布局靠 grid 让 dt 跨两列、
+              内部再分「图标 + 标签」两栏，dd 落在第二列与标签左对齐。
+            {%- endcomment -%}
+            <dl class="contact__details">
+              {%- if s.info_phone != blank -%}
+                <div class="contact__detail">
+                  <dt>
+                    <span class="contact__detail-icon" aria-hidden="true">
+                      {{- 'icon-phone.svg' | inline_asset_content -}}
+                    </span>
+                    <span>{{ 'contact.info.phone' | t }}</span>
+                  </dt>
+                  <dd><a href="tel:{{ tel_href | escape }}">{{ s.info_phone | escape }}</a></dd>
+                </div>
+              {%- endif -%}
+
+              {%- if s.info_email != blank -%}
+                <div class="contact__detail">
+                  <dt>
+                    <span class="contact__detail-icon" aria-hidden="true">
+                      {{- 'icon-mail.svg' | inline_asset_content -}}
+                    </span>
+                    <span>{{ 'contact.info.email' | t }}</span>
+                  </dt>
+                  <dd><a href="mailto:{{ s.info_email | escape }}">{{ s.info_email | escape }}</a></dd>
+                </div>
+              {%- endif -%}
+
+              {%- if s.info_address != blank -%}
+                <div class="contact__detail">
+                  <dt>
+                    <span class="contact__detail-icon" aria-hidden="true">
+                      {{- 'icon-pin.svg' | inline_asset_content -}}
+                    </span>
+                    <span>{{ 'contact.info.address' | t }}</span>
+                  </dt>
+                  {%- comment -%}
+                    textarea 的换行是商家有意给的排版（门牌/城市/邮编各一行）。
+                    escape 后再 newline_to_br —— 顺序不能反。
+                  {%- endcomment -%}
+                  <dd>{{ s.info_address | escape | newline_to_br }}</dd>
+                </div>
+              {%- endif -%}
+
+              {%- if s.info_hours != blank -%}
+                <div class="contact__detail">
+                  <dt>
+                    <span class="contact__detail-icon" aria-hidden="true">
+                      {{- 'icon-clock.svg' | inline_asset_content -}}
+                    </span>
+                    <span>{{ 'contact.info.hours' | t }}</span>
+                  </dt>
+                  <dd>{{ s.info_hours | escape | newline_to_br }}</dd>
+                </div>
+              {%- endif -%}
+            </dl>
+
+            {%- if s.info_note != blank -%}
+              <p class="contact__info-note">{{ s.info_note | escape }}</p>
             {%- endif -%}
+          </div>
 
-            {%- if s.info_email != blank -%}
-              <div class="contact__detail">
-                <dt>{{ 'contact.info.email' | t }}</dt>
-                <dd><a href="mailto:{{ s.info_email | escape }}">{{ s.info_email | escape }}</a></dd>
-              </div>
-            {%- endif -%}
-
-            {%- if s.info_address != blank -%}
-              <div class="contact__detail">
-                <dt>{{ 'contact.info.address' | t }}</dt>
-                {%- comment -%}
-                  textarea 的换行是商家有意给的排版（门牌/城市/邮编各一行），
-                  escape 后再 newline_to_br —— 顺序不能反，否则 <br> 会被转义成字面量。
-                {%- endcomment -%}
-                <dd>{{ s.info_address | escape | newline_to_br }}</dd>
-              </div>
-            {%- endif -%}
-
-            {%- if s.info_hours != blank -%}
-              <div class="contact__detail">
-                <dt>{{ 'contact.info.hours' | t }}</dt>
-                <dd>{{ s.info_hours | escape | newline_to_br }}</dd>
-              </div>
-            {%- endif -%}
-          </dl>
-
-          {%- if s.info_note != blank -%}
-            <p class="contact__info-note">{{ s.info_note | escape }}</p>
+          {%- if has_info_image -%}
+            <div class="contact__info-media">
+              {%- capture info_img -%}
+                {{
+                  info_image
+                  | image_url: width: 1200
+                  | image_tag:
+                    class: 'contact__info-img',
+                    widths: '400, 600, 900, 1200',
+                    sizes: '(min-width: 1200px) 260px, (min-width: 990px) 40vw, (min-width: 600px) 30vw, 100vw',
+                    width: info_image.width,
+                    loading: 'lazy',
+                    alt: ''
+                }}
+              {%- endcapture -%}
+              {%- unless info_img contains ' alt=' -%}
+                {%- assign info_img = info_img | replace: '<img ', '<img alt="" ' -%}
+              {%- endunless -%}
+              {{ info_img }}
+            </div>
           {%- endif -%}
         </aside>
       {%- endif -%}
@@ -260,9 +425,10 @@
 
 {% stylesheet %}
   /* ── 容器 ────────────────────────────────────────────────────────────────
-     与 product-highlights 同一套：page-width 居中 + page-margin 内缩。
-     根 div 显式 inline-size: 100% —— Shopify 的 section 包裹层是 grid，
-     grid item 的 automatic minimum size 会让它按内容宽度顶出去（MEMORY 第五节）。
+     根 div 带 full-width：横幅必须通栏，不能跟着内容列缩进（.shopify-section
+     是三列 grid，`.shopify-section > .full-width` 才会跨满整行）。
+     内容宽度回到 .contact__inner 自己管 —— page-width + page-margin 与
+     wrapper 的中央列等价，两种写法宽度一致。
      contact__inner 带 margin-inline: auto，此时 min-inline-size: 0 不管用，
      只能给根元素定死宽度（BUG-063）。 */
   .contact {
@@ -271,10 +437,83 @@
     background-color: var(--color-background);
   }
 
+  /* 有横幅时横幅自己贴着页头（参考图里两者之间没有缝），顶距归零 */
+  .contact--banner {
+    padding-block-start: 0;
+  }
+
   .contact__inner {
     max-inline-size: var(--page-width);
     margin-inline: auto;
     padding-inline: var(--page-margin);
+  }
+
+  /* 无横幅时，标题区自己补上原来由 .contact 承担的上边距 */
+  .contact__inner--intro {
+    padding-block-start: 2.5rem;
+  }
+
+  /* ── 横幅 ────────────────────────────────────────────────────────────────
+     三层叠在一起：底图（z0）→ 遮罩（z1）→ 文字（z2）。
+     遮罩取页面底色（不是写死的白/黑）：浅色 preset 下是压白、Noir 下自动变
+     压黑，字色 --color-foreground 与它天然对着，两套 preset 都不用单独调。
+     强度上限由 --contact-veil 给（section 设置 → 内联变量）。 */
+  .contact__banner {
+    position: relative;
+    display: grid;
+    align-items: center;
+    min-block-size: clamp(11.5rem, 6.5rem + 15vw, 19.5rem);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .contact__banner-media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .contact__banner-img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .contact__banner-mask {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-background) var(--contact-veil, 78%), transparent) 0%,
+      color-mix(in srgb, var(--color-background) var(--contact-veil-soft, 55%), transparent) 44%,
+      color-mix(in srgb, var(--color-background) 18%, transparent) 74%,
+      transparent 100%
+    );
+  }
+
+  .contact__banner-inner {
+    position: relative;
+    z-index: 2;
+    inline-size: 100%;
+    max-inline-size: var(--page-width);
+    margin-inline: auto;
+    padding-inline: var(--page-margin);
+    padding-block: clamp(1.75rem, 1rem + 3vw, 3.25rem);
+  }
+
+  /* 窄屏放不下「左压右透」的横向渐变：文字几乎盖满整条带，
+     横向遮罩到右侧就透干净了，最后一行会掉进照片里（对照 375 实测）。
+     改成上下渐变，整条带统一压到一个可读的亮度。 */
+  @media (max-width: 749px) {
+    .contact__banner-mask {
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-background) 88%, transparent) 0%,
+        color-mix(in srgb, var(--color-background) 74%, transparent) 100%
+      );
+    }
   }
 
   /* ── 标题区 ──────────────────────────────────────────────────────────── */
@@ -290,7 +529,8 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     /* 品牌色小字：Coppice #1E4B3C 压白 ≈ 8.6:1、Noir #A3E635 压 #0F1012 ≈ 11:1，
-       两套 preset 都远超 AA，所以这里可以直接用品牌色而不是次级前景色。 */
+       两套 preset 都远超 AA，所以这里可以直接用品牌色而不是次级前景色。
+       压在图上的那版由遮罩兜住亮度（见 --contact-veil 的默认值）。 */
     color: var(--color-brand);
   }
 
@@ -301,17 +541,24 @@
     text-wrap: balance;
   }
 
+  /* 横幅里的标题放大一档：它独占一屏横幅，与表单区的 h2 拉不开层级就白做了 */
+  .contact__banner .contact__heading {
+    font-size: clamp(2rem, 1.1rem + 3.4vw, 3.25rem);
+  }
+
   .contact__lead {
     max-inline-size: 38rem;
     margin-block-start: 0.875rem;
     font-size: 1rem;
     line-height: 1.6;
-    color: var(--color-foreground-muted);
+    /* 压在图上的引文用前景色、不用 70% 次级色：遮罩是半透的，
+       底色亮度随照片浮动，次级色的 3.7:1 会掉到 AA 线以下。 */
+    color: var(--color-foreground);
   }
 
   .contact__body {
     max-inline-size: 42rem;
-    margin-block-start: 1.25rem;
+    margin-block-start: 1.5rem;
   }
 
   /* ── 两栏 ────────────────────────────────────────────────────────────────
@@ -336,6 +583,12 @@
       align-items: start;
       margin-block-start: 3rem;
     }
+
+    /* 卡片里横向排着「文字 + 照片」时，两栏接近等分；
+       沿用 1.35/0.65 会把照片压成一条。 */
+    .contact__grid--media {
+      grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+    }
   }
 
   /* 单列（没有联系方式卡）时不能留半屏空白；同时把表单钳到可读宽度 ——
@@ -350,15 +603,41 @@
     }
   }
 
+  /* ── 表单 ────────────────────────────────────────────────────────────── */
+  .contact__form-heading {
+    margin: 0;
+    font-size: clamp(1.375rem, 1.15rem + 0.7vw, 1.75rem);
+    line-height: 1.2;
+  }
+
+  /* 标题下的短横线：效果图里的那个强调块。宽度写死 2.5rem，
+     跟标题长短无关 —— 它只是标出「从这里开始填」。 */
+  .contact__form-heading::after {
+    content: '';
+    display: block;
+    inline-size: 2.5rem;
+    block-size: 3px;
+    margin-block-start: 0.6875rem;
+    border-radius: 999px;
+    background-color: var(--color-brand);
+  }
+
+  .contact__hint {
+    margin: 0.5rem 0 1.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-foreground-muted);
+  }
+
   .contact__form {
     display: grid;
-    gap: 1.25rem;
+    gap: 0.875rem;
   }
 
   .contact__row {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 1.25rem;
+    gap: 0.875rem;
   }
 
   @media (min-width: 600px) {
@@ -368,45 +647,42 @@
     }
   }
 
+  /* ── 字段（图标 + 浮动标签） ──────────────────────────────────────────────
+     定位关系：图标与标签都相对 .contact__field 绝对定位，输入框自己撑高度。
+     标签必须在 input **之后**（`input + .contact__label`），
+     与 for/id 的关联无关 —— 顺序反了浮动样式整段失效。 */
   .contact__field {
-    display: grid;
-    gap: 0.375rem;
+    position: relative;
     min-inline-size: 0;
   }
 
-  .contact__label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-
-  /* 必填星号只对视觉说话（aria-hidden），语义由 input 的 required 承担；
-     这行小字是给"看不见星号"的场景补的说明。 */
-  .contact__required {
-    margin-inline-start: 0.125rem;
-  }
-
-  .contact__optional {
-    margin-inline-start: 0.375rem;
-    font-weight: 400;
-    font-size: 0.8125rem;
+  .contact__field-icon {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 1.0625rem;
+    translate: 0 -50%;
+    display: flex;
     color: var(--color-foreground-muted);
+    pointer-events: none;
+    transition: color 0.15s ease;
   }
 
-  .contact__hint {
-    margin: 0;
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    color: var(--color-foreground-muted);
+  .contact__field-icon svg {
+    inline-size: 20px;
+    block-size: 20px;
   }
 
-  /* ── 输入框 ────────────────────────────────────────────────────────────── */
+  /* 聚焦时图标跟标签一起转品牌色：只变一处会让框里出现两种「激活」信号 */
+  .contact__field:focus-within .contact__field-icon {
+    color: var(--color-brand);
+  }
+
   .contact__input {
     inline-size: 100%;
-    min-block-size: 3rem;
-    /* 胶囊的左右内边距要跟着半径走：3rem 高的胶囊半径 1.5rem，
-       旧的 0.875rem 会让首字母坐进圆弧里 */
-    padding: 0.75rem 1.25rem;
+    min-block-size: 3.5rem;
+    /* 上 1.5rem 是给浮动后的标签留的位置，下 0.5rem 让输入文字视觉居中；
+       左 3.125rem = 图标左内距 1.0625rem + 图标 1.25rem + 间隔 0.8125rem */
+    padding: 1.5rem 1.25rem 0.5rem 3.125rem;
     font: inherit;
     line-height: 1.5;
     color: var(--color-foreground);
@@ -419,8 +695,39 @@
       box-shadow 0.15s ease;
   }
 
+  /* 只含空格的占位符：不显示任何字，只为让 :placeholder-shown 成立 */
   .contact__input::placeholder {
+    color: transparent;
+  }
+
+  .contact__label {
+    position: absolute;
+    inset-inline-start: 3.125rem;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    font-size: 0.9375rem;
+    line-height: 1.4;
     color: var(--color-foreground-muted);
+    pointer-events: none;
+    transition:
+      inset-block-start 0.15s ease,
+      translate 0.15s ease,
+      font-size 0.15s ease,
+      color 0.15s ease;
+  }
+
+  /* 浮动态：聚焦 或 已有内容（含浏览器自动填充、回填的客户信息） */
+  .contact__input:focus + .contact__label,
+  .contact__input:not(:placeholder-shown) + .contact__label {
+    inset-block-start: 0.4375rem;
+    translate: 0;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .contact__input:focus + .contact__label {
+    color: var(--color-brand);
   }
 
   /* 焦点：边框转主题色 + 外侧 1px 同色，合起来是 2px 实环 ——
@@ -442,9 +749,47 @@
     box-shadow: 0 0 0 1px var(--color-sale);
   }
 
+  /* 必填星号只对视觉说话（aria-hidden），语义由 input 的 required 承担；
+     这行小字是给"看不见星号"的场景补的说明。 */
+  .contact__required {
+    margin-inline-start: 0.125rem;
+  }
+
+  .contact__optional {
+    margin-inline-start: 0.25rem;
+  }
+
+  /* 浮动之后两个标记一起缩小，否则 0.8125rem 的括号比标签本身还大 */
+  .contact__optional,
+  .contact__required {
+    font-weight: 400;
+    color: var(--color-foreground-muted);
+  }
+
+  /* ── 多行留言 ────────────────────────────────────────────────────────────
+     文字域的标签不居中：框高 10rem，标签飘在正中间会离输入起点太远。
+     它固定在框内左上、和图标同一行，正文从它下面开始写。
+     空态与浮动态只差字号 —— 位置不动，输入时不会有东西在眼前跳。 */
+  .contact__field--textarea .contact__field-icon {
+    inset-block-start: 1.1875rem;
+    translate: 0;
+  }
+
+  .contact__field--textarea .contact__label {
+    inset-block-start: 1.125rem;
+    translate: 0;
+  }
+
+  .contact__field--textarea .contact__input:focus + .contact__label,
+  .contact__field--textarea .contact__input:not(:placeholder-shown) + .contact__label {
+    inset-block-start: 1.1875rem;
+    font-size: 0.6875rem;
+  }
+
   .contact__textarea {
-    min-block-size: 10rem;
-    padding: 0.75rem 0.875rem;
+    min-block-size: 9.5rem;
+    /* 上内距盖过标签行（标签底 ≈ 1.875rem） */
+    padding: 2.6875rem 1.25rem 0.875rem 3.125rem;
     border-radius: var(--input-radius-multiline, 1rem);
     resize: vertical;
     line-height: 1.6;
@@ -455,6 +800,7 @@
     display: grid;
     gap: 0.875rem;
     justify-items: start;
+    margin-block-start: 0.375rem;
   }
 
   .contact__submit {
@@ -516,6 +862,9 @@
 
   /* ── 联系信息卡 ──────────────────────────────────────────────────────── */
   .contact__info {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
     padding: 1.5rem;
     border: 1px solid color-mix(in srgb, var(--color-brand) 14%, transparent);
     border-radius: 20px;
@@ -528,10 +877,17 @@
     }
   }
 
+  .contact__info-body {
+    display: grid;
+    align-content: start;
+    gap: 1rem;
+    min-inline-size: 0;
+  }
+
   .contact__info-heading {
-    margin: 0 0 1rem;
-    font-size: 1.0625rem;
-    line-height: 1.35;
+    margin: 0;
+    font-size: 1.25rem;
+    line-height: 1.3;
     font-weight: 700;
   }
 
@@ -541,27 +897,48 @@
     margin: 0;
   }
 
+  /* dt 跨满两列、内部再分「图标 | 标签」，dd 落在第二列 ——
+     于是四条记录的图标成一条竖线、标签与值左边缘对齐。 */
   .contact__detail {
     display: grid;
-    gap: 0.25rem;
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    column-gap: 0.75rem;
     min-inline-size: 0;
   }
 
   .contact__detail dt {
-    font-size: 0.75rem;
-    font-weight: 600;
-    line-height: 1.3;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--color-foreground-muted);
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    column-gap: 0.75rem;
+    align-items: center;
+    grid-column: 1 / -1;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.35;
   }
 
-  /* break-word 而不是 anywhere：邮箱/地址里的长串要能折行，但不许词内随意断开
-     （同搜索页行卡的教训）。 */
+  .contact__detail-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border-radius: 50%;
+    color: var(--color-brand);
+    background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
+  }
+
+  .contact__detail-icon svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
   .contact__detail dd {
-    margin: 0;
+    grid-column: 2;
+    margin: 0.25rem 0 0;
     font-size: 0.9375rem;
-    line-height: 1.6;
+    line-height: 1.5;
+    /* break-word 而不是 anywhere：邮箱/地址里的长串要能折行，但不许词内随意断开 */
     overflow-wrap: break-word;
   }
 
@@ -576,11 +953,48 @@
     color: var(--color-brand);
   }
 
+  /* 与上面几条之间用一条细线隔开：效果图里这句是「脚注」，不是第五条联系方式 */
   .contact__info-note {
-    margin-block-start: 1.25rem;
+    margin: 0;
+    padding-block-start: 0.875rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
     font-size: 0.8125rem;
-    line-height: 1.6;
+    line-height: 1.55;
     color: var(--color-foreground-muted);
+  }
+
+  /* ── 卡片配图 ────────────────────────────────────────────────────────────
+     单列时照片在文字下方（4:3）；卡片足够宽时改为右侧竖条。
+     图片绝对定位填满容器 —— 容器高度由同行的文字列决定，
+     给它 aspect-ratio 反而会在文字很矮时把卡片撑高。 */
+  .contact__info-media {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    border-radius: 14px;
+  }
+
+  .contact__info-img {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /* 600–989：卡片是整幅宽（在表单下方），右侧分出 38% 给照片；
+     ≥1200：卡片回到右栏，宽度够，同样分成两栏。
+     990–1199 这一段卡片最窄（≈430px），塞两栏两边都憋屈 ⇒ 维持上下排。 */
+  @media (min-width: 600px) and (max-width: 989px), (min-width: 1200px) {
+    .contact__info--media {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.62fr);
+      gap: 1.5rem;
+      align-items: stretch;
+    }
+
+    .contact__info--media .contact__info-media {
+      aspect-ratio: auto;
+    }
   }
 {% endstylesheet %}
 
@@ -590,6 +1004,31 @@
   "tag": "div",
   "class": "contact-section",
   "settings": [
+    {
+      "type": "header",
+      "content": "t:sections.contact_form.labels.banner_header"
+    },
+    {
+      "type": "image_picker",
+      "id": "banner_image",
+      "label": "t:sections.contact_form.labels.banner_image",
+      "info": "t:sections.contact_form.labels.banner_image_info"
+    },
+    {
+      "type": "range",
+      "id": "banner_overlay",
+      "label": "t:sections.contact_form.labels.banner_overlay",
+      "info": "t:sections.contact_form.labels.banner_overlay_info",
+      "min": 40,
+      "max": 100,
+      "step": 2,
+      "unit": "%",
+      "default": 78
+    },
+    {
+      "type": "header",
+      "content": "t:sections.contact_form.labels.intro_header"
+    },
     {
       "type": "text",
       "id": "eyebrow",
@@ -611,6 +1050,12 @@
     {
       "type": "header",
       "content": "t:sections.contact_form.labels.form_header"
+    },
+    {
+      "type": "text",
+      "id": "form_heading",
+      "label": "t:sections.contact_form.labels.form_heading",
+      "default": "t:sections.contact_form.defaults.form_heading"
     },
     {
       "type": "checkbox",
@@ -660,6 +1105,12 @@
       "type": "textarea",
       "id": "info_note",
       "label": "t:sections.contact_form.labels.note"
+    },
+    {
+      "type": "image_picker",
+      "id": "info_image",
+      "label": "t:sections.contact_form.labels.info_image",
+      "info": "t:sections.contact_form.labels.info_image_info"
     }
   ],
   "presets": [
