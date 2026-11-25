@@ -617,14 +617,13 @@
     line-height: 1.2;
   }
 
-
-  /* 「* Required fields」提示行 2026-11-24 按刘工要求删除（参考图里没有）。
-     星号的语义仍由 input 的 required 承担，读屏不受影响；只是屏幕上不再有
-     一行文字解释它。原来那行还兼着「标题短线 → 第一个字段」的间距，
-     删了要在这里补回来，否则表单会顶到短线上。 */
+  /* 标题下没有强调短线（2026-11-25 刘工定的：只有标题，不加装饰线）。
+     于是「标题文字 → 第一个字段」的间距全部落在这里，取 1.5rem；
+     线上那条 2.5rem×3px 的短横线若哪天要加回来，把它加在
+     .contact__form-heading::after 上、同时把这里的 margin 收回 0.875rem。 */
   .contact__form {
     display: grid;
-    margin-block-start: 0.875rem;
+    margin-block-start: 1.5rem;
     gap: 0.875rem;
   }
 
