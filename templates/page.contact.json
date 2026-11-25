@@ -18,9 +18,48 @@
         "info_hours": "Mon–Fri, 8am–6pm ET\nSat, 9am–4pm ET",
         "info_note": "Parts orders placed before 2pm ET ship the same day."
       }
+    },
+    "trust": {
+      "type": "trust-bar",
+      "blocks": {
+        "item_1": {
+          "type": "item",
+          "settings": {
+            "icon": "truck",
+            "text": "Free shipping over $99",
+            "subtext": "Fast & reliable delivery"
+          }
+        },
+        "item_2": {
+          "type": "item",
+          "settings": {
+            "icon": "warranty",
+            "text": "Warranty protection",
+            "subtext": "Built to last"
+          }
+        },
+        "item_3": {
+          "type": "item",
+          "settings": {
+            "icon": "parts",
+            "text": "Genuine parts & service",
+            "subtext": "Keep your equipment running"
+          }
+        },
+        "item_4": {
+          "type": "item",
+          "settings": {
+            "icon": "support",
+            "text": "Dedicated customer support",
+            "subtext": "Here to help"
+          }
+        }
+      },
+      "block_order": ["item_1", "item_2", "item_3", "item_4"],
+      "settings": {
+        "show_dividers": true
+      }
     }
   },
-  "order": [
-    "main"
-  ]
+  "order": ["main", "trust"]
 }

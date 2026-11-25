@@ -646,6 +646,8 @@
         "show_dividers_info": "Thin vertical lines between items. Hidden on the stacked mobile layout, where there is nothing to separate.",
         "icon": "Icon",
         "text": "Text",
+        "subtext": "Second line",
+        "subtext_info": "Optional smaller line under the text, such as \"Fast & reliable delivery\".",
         "link": "Link",
         "link_info": "Optional. Makes the whole item clickable - useful for a shipping or warranty page."
       },
