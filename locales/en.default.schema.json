@@ -304,7 +304,7 @@
       "name": "Collections list",
       "labels": {
         "columns": "Columns on desktop",
-        "columns_info": "Tablet tops out at three columns, mobile always shows two.",
+        "columns_info": "Tablet tops out at three columns, mobile always shows two. Above four columns each card gets narrow — check the preview before publishing.",
         "collections_per_page": "Series per page",
         "collections_per_page_info": "Extra series move to a second page.",
         "show_description": "Show collection descriptions"

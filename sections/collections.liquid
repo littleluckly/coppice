@@ -34,7 +34,10 @@
 
 {%- liquid
   assign per_page = section.settings.collections_per_page | default: 24
-  assign columns = section.settings.columns | default: 3
+  assign columns = section.settings.columns | default: 4
+  # 平板封顶 3：750–989px 内容宽约 700–940px，四列以上单卡会压到 160px 以下，
+  # 1:1 图 + 两行标题在这个宽度已经不成样子。桌面设 5/6 列时平板仍按 3 列走，
+  # 跳变是故意的 —— 宁可断层，也不要平板上一排挤六张缩略图。
   assign tablet_columns = columns
   if columns > 3
     assign tablet_columns = 3
@@ -342,7 +345,7 @@
   }
   @media (min-width: 990px) {
     .collections-list__grid {
-      grid-template-columns: repeat(var(--cols-desktop, 3), minmax(0, 1fr));
+      grid-template-columns: repeat(var(--cols-desktop, 4), minmax(0, 1fr));
     }
   }
 
@@ -593,11 +596,11 @@
       "type": "range",
       "id": "columns",
       "min": 2,
-      "max": 4,
+      "max": 6,
       "step": 1,
       "label": "t:sections.collections_list.labels.columns",
       "info": "t:sections.collections_list.labels.columns_info",
-      "default": 3
+      "default": 4
     },
     {
       "type": "range",
