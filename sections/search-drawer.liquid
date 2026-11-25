@@ -1001,6 +1001,9 @@
   }
 
   .search-discovery__card-link:hover {
+    /* 底色抬到 8% 之后，与这里的 12% 只差 4pp（原 5%→12% 差 7pp），
+       色变落差因此变小；hover 的体感由 2026-11-24 那套「上浮 2px + 浅绿光晕」补足。
+       真要更明显就调这里，别去动常态底色（它要和 .blog-posts__media 逐字一致）。 */
     background-color: color-mix(in srgb, var(--color-brand) 12%, var(--color-background));
   }
 
