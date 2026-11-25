@@ -226,7 +226,6 @@
       "phone": "Phone",
       "message": "Your message",
       "optional": "Optional",
-      "required_note": "* Required fields",
       "submit": "Send message",
       "success": "Thanks for getting in touch. We will reply within one business day.",
       "error": "Please review the errors below and try again."

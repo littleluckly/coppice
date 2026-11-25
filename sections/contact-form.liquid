@@ -187,11 +187,6 @@
     <div class="contact__grid{% unless has_info %} contact__grid--single{% endunless %}{% if has_info_image %} contact__grid--media{% endif %}">
       <div class="contact__form-col">
         <h2 class="contact__form-heading">{{ form_heading | escape }}</h2>
-        {%- comment -%}
-          必填星号只对视觉说话（aria-hidden），语义由 input 的 required 承担。
-          这行小字是给「看不见星号 / 开着高对比模式」的场景补的说明。
-        {%- endcomment -%}
-        <p class="contact__hint">{{ 'contact.form.required_note' | t }}</p>
 
         {%- form 'contact', class: 'contact__form', id: 'ContactForm' -%}
           {%- if form.posted_successfully? -%}
