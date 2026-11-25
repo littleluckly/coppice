@@ -33,7 +33,23 @@
 {% endcomment %}
 
 {%- liquid
-  assign per_page = section.settings.collections_per_page | default: 24
+  # ---- 顾客端「每页系列数」档位 ----
+  # 为什么档位必须落在模板文件上：paginate 的 by 只吃编译期常量或设置，而 Liquid
+  # 读不到 URL 的 query 参数（request 对象只有 path / host / locale / page_type）。
+  # 官方唯一通道是 alternate template：?view=12 会去找 templates/list-collections.12.json，
+  # section 里再用 template.suffix 反查。
+  # ⚠️ 实测坑：后缀对应的文件不存在时，Shopify **静默回落默认模板且 suffix 变空**
+  # （不报错、不 404），所以 12 / 24 / 48 三档各需要一个内容相同的副本文件，
+  # 副本的唯一作用是让 suffix 有值 —— 但它的 settings 是独立一份，
+  # 改了主模板的标题/列数要跑 tools/sync-page-size-templates.py 同步（见 AGENTS §2）。
+  assign page_sizes = '12,24,48' | split: ','
+  assign per_page = section.settings.collections_per_page | default: 24 | plus: 0
+  # 后缀过白名单才认：否则 ?view=任意串 会把手写的数字塞进 paginate 的 by
+  assign active_suffix = ''
+  if template.suffix != blank and page_sizes contains template.suffix
+    assign active_suffix = template.suffix
+    assign per_page = active_suffix | plus: 0
+  endif
   assign columns = section.settings.columns | default: 4
   # 平板封顶 3：750–989px 内容宽约 700–940px，四列以上单卡会压到 160px 以下，
   # 1:1 图 + 两行标题在这个宽度已经不成样子。桌面设 5/6 列时平板仍按 3 列走，
@@ -57,7 +73,6 @@
   endif
 -%}
 
-<!--DEBUG-SUFFIX:{{ template.suffix }}:END-->
 <div class="collections-list__hero full-width">
   <div class="collections-list__hero-inner">
     <nav class="collections-list__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
