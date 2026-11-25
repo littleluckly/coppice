@@ -439,11 +439,6 @@
     grid-column: 1 / -1;
     justify-self: center;
   }
-  .collections-list__per-page {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-  }
   .collections-list__per-page-label {
     font-size: 0.8rem;
     line-height: 1.2;
@@ -481,19 +476,6 @@
   @media (hover: hover) and (pointer: fine) {
     .collections-list__per-page-option:not(.is-current):hover {
       background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
-    }
-  }
-  /* 窄屏：两行堆叠，档位在上、页码在下（一行塞不下 —— 档位组 197px + 页码约 150px） */
-  @media (max-width: 749px) {
-    .collections-list__pager {
-      grid-template-columns: 1fr;
-      gap: 0.65rem;
-      justify-items: center;
-    }
-    .collections-list__per-page,
-    .collections-list__pagination {
-      grid-column: 1;
-      justify-self: center;
     }
   }
 
@@ -697,7 +679,12 @@
     justify-content: center;
     align-items: center;
     gap: 0.4rem;
-    margin-block-start: 2rem;
+    /* 与网格的间距由 .collections-list__pager 的 margin-block-start 提供，
+       这里再写一份会叠成双倍空档 */
+    grid-column: 2;
+  }
+  .collections-list__pagination:only-child {
+    grid-column: 1 / -1;
   }
   .collections-list__pagination-nav,
   .collections-list__pagination-page {
