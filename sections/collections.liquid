@@ -485,7 +485,9 @@
     margin: 0 0 0.5rem;
     font-size: 0.82rem;
     line-height: 1.2;
-    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+    /* 横幅上文字压在底图/雾化层上，55% 前景在这个底色上对比度不够 ——
+       统一走 muted（70%），与全站次级文字同一口径。 */
+    color: var(--color-foreground-muted);
   }
   .collections-list__breadcrumb-item + .collections-list__breadcrumb-item::before {
     content: '/';
@@ -502,17 +504,44 @@
     text-decoration: underline;
   }
 
+  /* 标题上方的小标（效果图里那行 ALL SERIES）：字距拉开 + 全大写 + 品牌色。
+     全大写走 CSS text-transform：商家填 "All series" 也能出效果，
+     不用在文案里喊话（也就不用为每种语言另配值）。 */
+  .collections-list__eyebrow {
+    margin: 0 0 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-brand) 72%, var(--color-foreground));
+  }
+
   .collections-list__title {
     margin: 0;
-    font-size: clamp(1.9rem, 3.6vw, 2.75rem);
+    /* 24ch：横幅右侧要留出图的位置，标题不能铺满整个内容列 */
+    max-inline-size: 24ch;
+    font-size: clamp(2rem, 4vw, 3.35rem);
     font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
+    line-height: 1.08;
+    letter-spacing: -0.025em;
     text-wrap: balance;
+  }
+  /* 标题下的短粗线（效果图那条）。用伪元素而不是 border-block-end：
+     后者会撑满整个 24ch 的文字盒宽，而这里要的是"话说完就收住"的短笔。 */
+  .collections-list__title::after {
+    content: '';
+    display: block;
+    inline-size: 5rem;
+    block-size: 4px;
+    margin-block-start: 0.7rem;
+    border-radius: 999px;
+    background-color: var(--color-brand);
   }
   .collections-list__subheading {
     margin: 0.55rem 0 0;
-    max-inline-size: 58ch;
+    /* 42ch：横幅是左文右图，副标题超过这个宽度就伸进图里了 */
+    max-inline-size: 42ch;
     font-size: 0.95rem;
     line-height: 1.55;
     color: var(--color-foreground-muted);
