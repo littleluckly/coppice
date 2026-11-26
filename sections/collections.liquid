@@ -453,15 +453,17 @@
     block-size: auto;
   }
   .collections-list__hero-leaves svg:first-of-type {
-    inline-size: 11rem;
-    inset-block-start: -2rem;
-    inset-inline-start: -3rem;
+    /* 4.5rem 是放大上限：这个图标按 20×20 起稿，放到 10rem 以上时
+       1.2 宽的叶脉线会粗到 6px，整片糊成一个圆点（第一版就是这么翻车的）。 */
+    inline-size: 4.5rem;
+    inset-block-start: -0.75rem;
+    inset-inline-start: -1rem;
     transform: rotate(-16deg);
   }
   .collections-list__hero-leaves svg:last-of-type {
-    inline-size: 6.5rem;
-    inset-block-start: 58%;
-    inset-inline-start: 1rem;
+    inline-size: 3rem;
+    inset-block-start: 4.75rem;
+    inset-inline-start: 3.25rem;
     transform: rotate(22deg);
   }
   .collections-list__hero-inner {
@@ -933,15 +935,28 @@
   "settings": [
     {
       "type": "text",
+      "id": "eyebrow",
+      "label": "t:sections.collections_list.labels.eyebrow",
+      "info": "t:sections.collections_list.labels.eyebrow_info",
+      "default": "All series"
+    },
+    {
+      "type": "text",
       "id": "heading",
       "label": "t:labels.heading",
-      "default": "All series"
+      "default": "Power for Every Yard"
     },
     {
       "type": "text",
       "id": "subheading",
       "label": "t:labels.subheading",
       "default": "Every series we carry — battery platforms and gas-powered machines alike."
+    },
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "t:sections.collections_list.labels.hero_image",
+      "info": "t:sections.collections_list.labels.hero_image_info"
     },
     {
       "type": "range",
