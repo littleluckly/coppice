@@ -303,6 +303,10 @@
     "collections_list": {
       "name": "Collections list",
       "labels": {
+        "eyebrow": "Small label above the heading",
+        "eyebrow_info": "Rendered in caps with wide letter spacing. Leave empty to hide it.",
+        "hero_image": "Banner image",
+        "hero_image_info": "Sits behind the heading with a fade over the left side so the text stays readable. Leave empty for the plain brand tint.",
         "columns": "Columns on desktop",
         "columns_info": "Tablet tops out at three columns, mobile always shows two. Above four columns each card gets narrow — check the preview before publishing.",
         "collections_per_page": "Series per page",
