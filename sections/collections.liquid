@@ -133,60 +133,93 @@
     {%- endcomment -%}
     {%- capture cards_markup -%}
       {%- for collection in collections -%}
-        {%- if collection.handle == 'frontpage' -%}
-          {%- continue -%}
-        {%- endif -%}
-        {%- if collection.all_products_count > 0 -%}
-          {%- liquid
-            assign card_loading = 'lazy'
-            assign card_priority = 'auto'
-            if forloop.index <= 3
-              assign card_loading = 'eager'
-            endif
-            if forloop.index == 1
-              assign card_priority = 'high'
-            endif
-            # 入场延迟封顶 360ms：24 张卡按 80ms 递增会排到 1.9s，越往下越像卡住
-            assign reveal_delay = forloop.index0 | times: 60 | at_most: 360
-          -%}
-          <li
-            class="collections-list__item"
-            data-reveal
-            style="--reveal-delay: {{ reveal_delay }}ms"
-          >
-            <a class="collections-list__card" href="{{ collection.url }}">
+        {%- liquid
+          # ⚠️ 这里不许 continue、不许过滤 —— 每页条数是 paginate 按「集合条目」切的，
+          # 跳过任何一条都会变成"选每页 12 只显示 11 张卡"（2026-11-26 刘工实测报障）。
+          # 三种条目各占一格：
+          #   正常集合 → 可点卡
+          #   空集合   → 不可点的占位卡（写 Coming soon），不指向死路
+          #   frontpage → 平台自动建的「主页」集合，标题是店铺名、直接显示很怪；
+          #               但它装的本来就是全部商品，改写成「All products」指 /collections/all，
+          #               语义正确又补上那一格。
+          assign card_title = collection.title
+          assign card_url = collection.url
+          assign card_is_empty = false
+          if collection.handle == 'frontpage'
+            assign card_title = 'collections.list.all_products' | t
+            assign card_url = routes.all_products_collection_url
+          endif
+          if collection.all_products_count == 0
+            assign card_is_empty = true
+          endif
+          assign card_loading = 'lazy'
+          assign card_priority = 'auto'
+          if forloop.index <= 3
+            assign card_loading = 'eager'
+          endif
+          if forloop.index == 1
+            assign card_priority = 'high'
+          endif
+          # 入场延迟封顶 360ms：24 张卡按 80ms 递增会排到 1.9s，越往下越像卡住
+          assign reveal_delay = forloop.index0 | times: 60 | at_most: 360
+        -%}
+        {%- comment -%}
+          媒体盒抽成一份 capture，正常卡与占位卡共用（两种卡型只在 body 和"可不可点"上不同）。
+          嵌套 capture 是合法的：内层 card_image 用完即弃，不会污染外层 cards_markup。
+        {%- endcomment -%}
+        {%- capture card_media -%}
+          <span class="collections-list__media">
+            {%- if collection.featured_image -%}
               {%- comment -%}
                 alt 留空（装饰性）：同一链接内已有集合名文字，重复一遍会让
-                读屏念成 "Chainsaws Chainsaws"。
-                image_tag 在 alt 为空时会把 alt 属性整条吞掉（不是输出 alt=""），
-                Lighthouse 判缺 alt —— 所以捕获后补一次（与集合页 banner 同套手法）。
+                读屏念成 "Chainsaws Chainsaws"。容器补一次空 alt，防止 Lighthouse 判缺 alt。
               {%- endcomment -%}
-              <span class="collections-list__media">
-                {%- if collection.featured_image -%}
-                  {%- capture card_image -%}
-                    {{
-                      collection.featured_image
-                      | image_url: width: 800
-                      | image_tag:
-                        widths: '320, 480, 640, 800',
-                        sizes: sizes_str,
-                        width: collection.featured_image.width,
-                        height: collection.featured_image.height,
-                        loading: card_loading,
-                        fetchpriority: card_priority,
-                        alt: ''
-                    }}
-                  {%- endcapture -%}
-                  {%- unless card_image contains ' alt=' -%}
-                    {%- assign card_image = card_image | replace: '<img ', '<img alt="" ' -%}
-                  {%- endunless -%}
-                  {{ card_image }}
-                {%- else -%}
-                  <span class="collections-list__media-placeholder" aria-hidden="true">
-                    {{- 'icon-leaf.svg' | inline_asset_content -}}
-                  </span>
-                {%- endif -%}
+              {%- capture card_image -%}
+                {{
+                  collection.featured_image
+                  | image_url: width: 800
+                  | image_tag:
+                    widths: '320, 480, 640, 800',
+                    sizes: sizes_str,
+                    width: collection.featured_image.width,
+                    height: collection.featured_image.height,
+                    loading: card_loading,
+                    fetchpriority: card_priority,
+                    alt: ''
+                }}
+              {%- endcapture -%}
+              {%- unless card_image contains ' alt=' -%}
+                {%- assign card_image = card_image | replace: '<img ', '<img alt="" ' -%}
+              {%- endunless -%}
+              {{ card_image }}
+            {%- else -%}
+              <span class="collections-list__media-placeholder" aria-hidden="true">
+                {{- 'icon-leaf.svg' | inline_asset_content -}}
               </span>
+            {%- endif -%}
+          </span>
+        {%- endcapture -%}
+
+        <li
+          class="collections-list__item"
+          data-reveal
+          style="--reveal-delay: {{ reveal_delay }}ms"
+        >
+          {%- if card_is_empty -%}
+            {%- comment -%}
+              占位卡用 <div> 不是 <a>：空集合没有可去的地方，做成链接就是把顾客送进死路。
+              不看颜色也能分辨 —— 虚线边 + 没有悬停反馈 + 计数位写的是 Coming soon。
+            {%- endcomment -%}
+            <div class="collections-list__card collections-list__card--empty">
+              {{ card_media }}
+              <div class="collections-list__body">
+                <h2 class="collections-list__card-title">{{ card_title | escape }}</h2>
+                <p class="collections-list__count">{{ 'collections.list.coming_soon' | t }}</p>
+              </div>
+            </div>
+          {%- else -%}
+            <a class="collections-list__card" href="{{ card_url }}">
+              {{ card_media }}
 
               {%- comment -%}
                 body 用 div 而不是 span：h2 / p 是流内容，塞进 span 是非法嵌套。
@@ -194,7 +227,7 @@
                 且标题保留 h2 语义 —— 读屏可以按标题快跳各系列。
               {%- endcomment -%}
               <div class="collections-list__body">
-                <h2 class="collections-list__card-title">{{ collection.title | escape }}</h2>
+                <h2 class="collections-list__card-title">{{ card_title | escape }}</h2>
 
                 {%- if section.settings.show_description and collection.description != blank -%}
                   <p class="collections-list__card-desc">
@@ -213,8 +246,8 @@
                 </p>
               </div>
             </a>
-          </li>
-        {%- endif -%}
+          {%- endif -%}
+        </li>
       {%- endfor -%}
     {%- endcapture -%}
 
@@ -659,6 +692,24 @@
      4:3 的 cover 会把方形抠底图上下裁掉一截，产品被切头切脚；
      1:1 对方图零裁切，横幅实景图只是裁两侧，观感无损。
      与 product-card 的媒体盒同比例，两套卡在同一屏里也不会打架。 */
+  /* 空系列占位卡：空集合没有目标可去，所以它是 <div> 不是 <a> —— 没有焦点、
+     没有悬停抬升，鼠标也不是手型。识别靠虚线边 + 图文降透明度 + 计数位写
+     "Coming soon"，不靠颜色深浅硬造（Noir 预设下深浅对比会翻过来）。 */
+  .collections-list__card--empty {
+    background-color: color-mix(in srgb, var(--color-background) 96%, var(--color-foreground) 4%);
+    border-style: dashed;
+    cursor: default;
+  }
+  .collections-list__card--empty .collections-list__media {
+    background-color: color-mix(in srgb, var(--color-brand) 5%, transparent);
+  }
+  .collections-list__card--empty .collections-list__media img {
+    opacity: 0.6;
+  }
+  .collections-list__card--empty .collections-list__card-title {
+    color: var(--color-foreground-muted);
+  }
+
   .collections-list__media {
     position: relative;
     display: block;

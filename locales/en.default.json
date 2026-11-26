@@ -152,8 +152,10 @@
       "body": "Check back later, or browse everything we carry.",
       "link": "Browse all products"
     },
-    "list": {
-      "title": "All series",
+  "list": {
+    "title": "All series",
+    "all_products": "All products",
+    "coming_soon": "Coming soon",
       "empty": {
         "title": "No series to show yet",
         "body": "Once a collection has products in it, it shows up here. Everything we carry is still one click away."
