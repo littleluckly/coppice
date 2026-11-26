@@ -119,13 +119,7 @@ class VariantPicker extends HTMLElement {
 
     this._syncUnitPrice(variant);
 
-    if (this._button) {
-      const soldOutLabel = this._button.dataset.soldOutLabel || '';
-      const addLabel = this._button.dataset.addLabel || '';
-      this._button.disabled = !variant.available;
-      this._button.textContent = variant.available ? addLabel : soldOutLabel;
-      delete this._button.dataset.state;
-    }
+    if (this._button) this._syncButton(variant);
 
     document.dispatchEvent(
       new CustomEvent('variant:change', {
@@ -141,6 +135,30 @@ class VariantPicker extends HTMLElement {
         },
       })
     );
+  }
+
+  /** 按钮态：文字 + 可用性都按传入变体裁决（唯一一份，别在别处再拼一遍） */
+  _syncButton(variant) {
+    const soldOutLabel = this._button.dataset.soldOutLabel || '';
+    const addLabel = this._button.dataset.addLabel || '';
+    this._button.disabled = !variant.available;
+    this._button.textContent = variant.available ? addLabel : soldOutLabel;
+    delete this._button.dataset.state;
+  }
+
+  /**
+   * 给宿主回退按钮态用（<product-form> 加购成功 2.5s 后 / 失败收尾）。
+   *
+   * 为什么不自己写 `textContent = addLabel; disabled = false`：加购成功到回退
+   * 这 2.5s 里顾客可能把变体切到售罄那一档，选择器已经改过文字并禁用按钮了；
+   * 宿主照着"加购态"硬恢复，会把售罄变体改回可买。当前变体是唯一的真值来源，
+   * 由这里重放一次。返回 false = 没有可用变体（宿主自行降级）。
+   */
+  syncButton() {
+    const variant = this._variants ? this._resolve() : null;
+    if (!variant || !this._button) return false;
+    this._syncButton(variant);
+    return true;
   }
 
   /** 单位计价：多变体价格时也要跟着变；原本没有这块就补一个，放在价格区后面。
@@ -291,10 +309,16 @@ class ProductForm extends HTMLElement {
   /** 按钮文字回到「加购」或「售罄」——售罄态由变体选择器维护，这里只恢复可用标签 */
   _reset() {
     delete this._button.dataset.state;
-    /* 原来是 `if (!this._button.dataset.addLabel)` 才写文字：两处渲染点
+
+    /* 交给 <variant-picker> 重放：它手里有"当前选中变体是否还有货"的真值。
+       原来这里是 `if (!this._button.dataset.addLabel)` 才写文字 —— 两处渲染点
        （产品页买盒与快速查看）**都带** data-add-label，这个分支永远进不去，
-       于是加购成功后按钮永久停在 "Added"，弹窗关掉再打开也还是它（2026-11-26，
-       与播报残留同一次发现）。有 add-label 就用它，没有才退回首屏文案。 */
+       加购成功后按钮就永久停在 "Added"（2026-11-26，与播报残留同一次发现）。
+       自己拼一份"addLabel + 解禁"也不行：2.5s 内切到售罄变体时会把按钮改回可买。 */
+    const picker = this.querySelector('variant-picker');
+    if (picker && typeof picker.syncButton === 'function' && picker.syncButton()) return;
+
+    /* 没有变体选择器（或一个变体都没解析出来）：退回最保守的恢复 */
     this._button.textContent = this._button.dataset.addLabel || this._defaultLabel;
     this._button.disabled = false;
   }
