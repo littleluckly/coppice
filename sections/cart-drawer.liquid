@@ -459,6 +459,9 @@
        「购物车是空的」加一个按钮，撑满整屏反而空得难看。 */
     .cart-drawer__dialog:has(.cart-drawer__footer),
     cart-drawer[data-cart-loading] .cart-drawer__dialog {
+      /* 两行一个道理：不支持 dvh 的浏览器取 85vh —— 与 quick-view 的 vh 兜底
+         同值，仍然齐平；支持的取 88dvh。 */
+      block-size: 85vh;
       block-size: 88dvh;
     }
     .cart-drawer__dialog[open] {
