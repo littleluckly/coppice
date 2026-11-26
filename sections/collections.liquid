@@ -66,6 +66,9 @@
   assign sizes_str = sizes_str | append: 'vw, (min-width: 750px) '
   assign sizes_str = sizes_str | append: tablet_vw
   assign sizes_str = sizes_str | append: 'vw, 46vw'
+  # 横幅底图：留空时退回淡品牌色带（叶子装饰仍在，页面不会空）
+  assign hero_image = section.settings.hero_image
+
   # H1 兜底：商家清空标题设置时仍要有一个有文字的 h1（每页恰好一个 h1）
   assign heading_text = section.settings.heading
   if heading_text == blank
@@ -73,7 +76,42 @@
   endif
 -%}
 
-<div class="collections-list__hero full-width">
+<div class="collections-list__hero full-width{% if hero_image != blank %} collections-list__hero--image{% endif %}">
+  {%- if hero_image != blank -%}
+    <span class="collections-list__hero-media" aria-hidden="true">
+      {%- comment -%}
+        image_tag 在 alt 为空时会把整个 alt 属性吞掉（不是输出 alt=""），Lighthouse
+        会判"缺 alt"。容器已 aria-hidden，这里再补一次空 alt —— 与集合卡图同套手法。
+      {%- endcomment -%}
+      {%- capture hero_img -%}
+        {{
+          hero_image
+          | image_url: width: 2400
+          | image_tag:
+            widths: '750, 1100, 1500, 2000, 2400',
+            sizes: '100vw',
+            loading: 'eager',
+            fetchpriority: 'high',
+            alt: ''
+        }}
+      {%- endcapture -%}
+      {%- unless hero_img contains ' alt=' -%}
+        {%- assign hero_img = hero_img | replace: '<img ', '<img alt="" ' -%}
+      {%- endunless -%}
+      {{ hero_img }}
+    </span>
+    <span class="collections-list__hero-scrim" aria-hidden="true"></span>
+  {%- endif -%}
+
+  {%- comment -%}
+    叶形装饰恒在（有图无图都放）：它给纯色带那版一个视觉落点，
+    有图时压在雾化区里也不抢戏。两片来自同一个 20×20 图标，靠尺寸/旋转/透明度区分。
+  {%- endcomment -%}
+  <span class="collections-list__hero-leaves" aria-hidden="true">
+    {{- 'icon-leaf.svg' | inline_asset_content -}}
+    {{- 'icon-leaf.svg' | inline_asset_content -}}
+  </span>
+
   <div class="collections-list__hero-inner">
     <nav class="collections-list__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
       <ol class="collections-list__breadcrumb-list" role="list">
@@ -85,6 +123,10 @@
         </li>
       </ol>
     </nav>
+
+    {%- if section.settings.eyebrow != blank -%}
+      <p class="collections-list__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+    {%- endif -%}
 
     <h1 class="collections-list__title">{{ heading_text | escape }}</h1>
 
@@ -350,14 +392,85 @@
      两块左边缘因此严格对齐。
      ============================================================ */
 
+  /* 横幅：左文右图。图用绝对定位铺满、不参与文档流 ——
+     参与的话图高会把带子顶高，文字"垂直居中"就变成被图牵着走。
+     左侧压一层背景色渐变（左浓右透）保证文字可读；没设图时退回淡品牌色带。
+     遮罩与底图全部从 --color-* 派生：Noir 深色预设下渐变自动变深、文字自动变浅，
+     不需要为深色另写一套。 */
   .collections-list__hero {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    min-block-size: clamp(15rem, 21vw, 22rem);
     background-color: color-mix(in srgb, var(--color-background) 94%, var(--color-brand) 6%);
-    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  /* 有图时不画底部分隔线：图自己已经把带子和内容分开了 */
+  .collections-list__hero--image {
+    border-block-end: 0;
+  }
+  .collections-list__hero-media {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    display: block;
+  }
+  .collections-list__hero-media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    /* 焦点偏右：左侧留给文字，构图主体（房子/草坪）不压到字下面 */
+    object-position: 65% 50%;
+  }
+  /* 左浓右透的雾化遮罩。中段用 color-mix 逐级降透明度，
+     避免两档之间出现一条硬边（纯 linear-gradient 从 1 到 0 会显出色阶）。 */
+  .collections-list__hero-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      90deg,
+      var(--color-background) 0%,
+      color-mix(in srgb, var(--color-background) 92%, transparent) 34%,
+      color-mix(in srgb, var(--color-background) 52%, transparent) 58%,
+      transparent 86%
+    );
+  }
+  .collections-list__hero-leaves {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: -1;
+    inline-size: 22rem;
+    color: var(--color-brand);
+    opacity: 0.14;
+    pointer-events: none;
+  }
+  .collections-list__hero-leaves svg {
+    position: absolute;
+    block-size: auto;
+  }
+  .collections-list__hero-leaves svg:first-of-type {
+    inline-size: 11rem;
+    inset-block-start: -2rem;
+    inset-inline-start: -3rem;
+    transform: rotate(-16deg);
+  }
+  .collections-list__hero-leaves svg:last-of-type {
+    inline-size: 6.5rem;
+    inset-block-start: 58%;
+    inset-inline-start: 1rem;
+    transform: rotate(22deg);
   }
   .collections-list__hero-inner {
+    position: relative;
+    z-index: 1;
+    inline-size: 100%;
     max-inline-size: var(--content-width);
     margin-inline: auto;
-    padding-block: clamp(1.5rem, 3.5vw, 2.75rem);
+    padding-block: clamp(1.75rem, 4vw, 3.25rem);
   }
 
   /* 面包屑：与集合页同一口径（当前项纯文本；链接给 44px 触控高度，
