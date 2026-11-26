@@ -203,7 +203,7 @@ class CartDrawer extends HTMLElement {
    * 下拉收起（移动端，与集合页筛选面板同一套手感）。
    *
    * 只在底部抽屉形态下启用（≤989.98px）：桌面是从右侧滑出的窄栏，往下拽没有语义。
-   * 热区 = 抓手横线 + 头部行（样式里给了 touch-action:none）；
+   * 热区 = 头部行（2026-11-26 去掉抓手横线后只剩它，样式给了 touch-action:none）。
    * 列表区不参与——那里的手势属于滚动，抢过来顾客就没法翻长购物车了。
    * 越过阈值（抽屉高的 30%，至少 120px）→ 关闭；未过 → 弹回原位。
    */
@@ -213,7 +213,7 @@ class CartDrawer extends HTMLElement {
     /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
     if (this._sheet?.isClosing) return;
 
-    const handle = event.target.closest('.cart-drawer__grabber, .cart-drawer__header');
+    const handle = event.target.closest('.cart-drawer__header');
     /* 关闭按钮在头部行里，不能当成拖拽起点 */
     if (!handle || event.target.closest('[data-cart-drawer-close]')) return;
 
