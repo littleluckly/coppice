@@ -43,8 +43,6 @@
   {%- endcomment -%}
   <bottom-sheet>
   <dialog class="cart-drawer__dialog" scroll-lock aria-labelledby="CartDrawerTitle-{{ section.id }}">
-    {%- comment -%} 移动端底部抽屉的抓手横线（桌面隐藏）。纯装饰，不参与交互 {%- endcomment -%}
-    <div class="cart-drawer__grabber" aria-hidden="true"></div>
     <div class="cart-drawer__panel">
       <div class="cart-drawer__header">
         <h2 class="cart-drawer__title" id="CartDrawerTitle-{{ section.id }}" tabindex="-1">
@@ -415,14 +413,12 @@
 
   /* reduce 下"直接出现"由 <bottom-sheet> 组件负责（不挂动效类），这里无需覆盖 */
 
-  .cart-drawer__grabber {
-    display: none;
-  }
-
   /* ---- 移动端：底部通栏上滑 ----
      与集合页筛选面板同一套动效（sections/collection.liquid 的 .facets__dialog）：
-     通栏、顶部圆角、translateY(100%) 滑入、遮罩淡入、抓手横线。
+     通栏、顶部圆角、translateY(100%) 滑入、遮罩淡入。
      两处用同一组参数，顾客在不同页面看到的是同一种"从底部拉起"的手感。
+     购物车这一份**不带抓手横线**（2026-11-26 刘工：去掉）：顶部直接是标题行，
+     下拉收起的手势热区只落在头部行上（见 assets/cart-drawer.js 的 _onDragStart）。
 
      断点取 989.98px 而不是常见的 749px：集合页筛选面板与导航的移动形态都在
      990px 换挡（见 collection.liquid 的 @media (max-width: 989.98px)、
@@ -477,37 +473,11 @@
       block-size: auto;
     }
 
-    /* 系数与集合页两个面板完全一致（2026-11-03 对齐）：
-       视觉条 56×6、前景色 18%、命中区 120×54。
-       此前这里是 40×5 且没有命中区扩展——手指抓不住，正是刘工在筛选面板上
-       提过的问题，只是改的时候漏了购物车这一份。 */
-    .cart-drawer__grabber {
-      display: block;
-      flex-shrink: 0;
-      position: relative;
-      inline-size: 56px;
-      block-size: 6px;
-      /* 上外边距 1rem：抓手离面板顶边 16px，与另外两个面板同值；
-         也正因为这 16px，下面伪元素向上扩的那一段才不会被 dialog 的
-         overflow:hidden 全部裁掉 */
-      margin: 1rem auto 0.5rem;
-      border-radius: 999px;
-      background-color: color-mix(in srgb, var(--color-foreground) 18%, transparent);
-      /* 抓手要能被拖：touch-action:none 让浏览器不把手势抢给滚动
-         （手势归属由初始触点决定），user-select 防鼠标拖拽时选中文字。 */
-      touch-action: none;
-      user-select: none;
-    }
-    /* 只吃指针、不参与绘制：命中区 120×54（视觉条 56×6）。
-       横向 ±32px 容忍左右偏；纵向向上受 dialog 的 overflow:hidden 限制
-       （恰好扩满那 16px 内边距），向下补到 32px —— 下方就是头部行，
-       本来就是拖拽热区，多铺这一层不改变行为，也够不着右上角的关闭按钮。 */
-    .cart-drawer__grabber::after {
-      content: '';
-      position: absolute;
-      inset: -16px -32px -32px;
-    }
-    /* 头部行也是拖拽热区（抓手只有 6px 高，手指按不准） */
+    /* 头部行是唯一的拖拽热区（2026-11-26 去掉抓手横线之后）。
+       touch-action: none 让浏览器不把手势抢给滚动（手势归属由初始触点决定），
+       user-select 防鼠标拖拽时选中标题文字。
+       头部行自身有 1rem 上内边距，抽屉顶边到标题之间仍是 16px，
+       和去掉抓手之前的第一行位置一致，不是贴着圆角顶。 */
     .cart-drawer__header {
       touch-action: none;
       user-select: none;
