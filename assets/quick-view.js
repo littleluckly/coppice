@@ -44,19 +44,7 @@ class QuickView extends HTMLElement {
     this._stage = this._dialog.querySelector('[data-quick-view-stage]');
 
     this._dialog.addEventListener('click', this._onDialogClick, { signal });
-    this._dialog.addEventListener('close', this._onDialogClose, { signal });
     document.addEventListener('variant:change', this._onVariantChange, { signal });
-
-    const form = this._dialog.querySelector('form');
-    if (form) form.addEventListener('submit', this._onSubmit, { signal });
-
-    /* 两个终局信号分开处理：
-       cart:updated    → 加购成功，收面板（购物车抽屉已经带着新数量开好了）
-       cart:add-failed → **不收**。product-form 把错误文案写进面板里的
-         [data-form-status]，收掉面板等于把唯一的失败提示藏起来；抽屉那边
-         自己会退出骨架（BUG-083），用户回到面板时能看到"试试重试"。 */
-    document.addEventListener('cart:updated', this._onCartUpdated, { signal });
-    document.addEventListener('cart:add-failed', this._onCartFailed, { signal });
   }
 
   disconnectedCallback() {

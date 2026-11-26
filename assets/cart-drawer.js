@@ -52,7 +52,6 @@ class CartDrawer extends HTMLElement {
   disconnectedCallback() {
     this._ac.abort();
     window.clearTimeout(this._pendingTimer);
-    this._cancelQueuedOpen();
   }
 
   _onOpen = (event) => {
@@ -73,64 +72,21 @@ class CartDrawer extends HTMLElement {
    * 正确的等待信号是 cart:updated：它在 /cart/add.js 成功、/cart.js 查回
    * item_count 之后才派发，那一刻服务端已经是加完的购物车。
    *
-   * **快速查看弹窗里点加购：先收弹窗，弹窗滑出结束再开抽屉**（2026-11-26 刘工）。
-   * cart:added 在 fetch 之前派发，而弹窗要等 cart:updated（两个来回之后）才 close，
-   * 中间这一两百毫秒里两张 modal dialog 会同时在 top layer 上：后开的抽屉把已经
-   * 打开的弹窗的遮罩再压一层（整屏发暗），位置上就是"上半截还是快速查看、
-   * 下半截已经是购物车"两截拼在一起。按钮还在详情面板里的时候，开抽屉这件事
-   * 必须让位给弹窗的收场动画。
-   *
-   * 为什么等 close 事件而不是 setTimeout：close 是 <bottom-sheet> 播完滑出、
-   * 真正 dialog.close() 的那一刻（见它 close() 里的 finish），拿它当信号就不用
-   * 复制一份"动画多长"的常量；而且在 close 的处理里同步 showModal，浏览器不会
-   * 绘制"两个都不开"的中间帧——`html:has(dialog[open])` 的滚动锁不会抖。
+   * **快速查看弹窗里点加购：抽屉直接盖上去，弹窗不收**（2026-11-26 刘工第二版）。
+   * 试过"等弹窗播完滑出再开抽屉"：顺序是干净了，但顾客要连看两段动画
+   * （0.22s 关 + 0.28s 开）、中间还有一瞬两面都没有，而且抽屉关掉后落回的是
+   * 商品列表，不是刚才那个商品。现在的做法是弹窗留在原地当背景，抽屉从底部
+   * 推上来把它整块盖住 —— 前提是**抽屉必须比弹窗高**，否则第一帧就会露出
+   * 上半截弹窗，变成两截拼接（那正是 BUG-100 的现场）。移动端两者都锁
+   * 88dvh（见 sections/cart-drawer.liquid 与 assets/product-card.css），
+   * 所以这条时序才成立；改高度时两边必须一起改。
    */
-  _onAdded = (event) => {
-    const host = event.detail?.button?.closest?.('quick-view');
-    const dialog = host?.querySelector('dialog');
-
-    if (dialog) {
-      /* 骨架先挂上：抽屉虽然还没露脸，等待期已经从这一秒算起 */
-      this._beginPending();
-      this._openAfterClose(dialog);
-      return;
-    }
-
+  _onAdded = () => {
     this._showPending();
   };
 
-  /** 排队等这张面板收场，close 时再把抽屉拉出来（连点两件只排一次） */
-  _openAfterClose(dialog) {
-    if (this._queued === dialog) return;
-    this._cancelQueuedOpen();
-
-    const onClose = () => {
-      this._cancelQueuedOpen();
-      /* 走 _show() 而不是 _openSheet()：排队这一小段时间里刷新可能已经回来
-         （网络快时 /cart.js 会在弹窗滑出的 0.22s 内返回），那时骨架已收，
-         _show() 会自己判断要不要再刷一次，直接打开就是成品内容。 */
-      this._show();
-    };
-
-    this._queued = dialog;
-    this._queuedHandler = onClose;
-    dialog.addEventListener('close', onClose);
-  }
-
-  _cancelQueuedOpen() {
-    if (this._queued && this._queuedHandler) {
-      this._queued.removeEventListener('close', this._queuedHandler);
-    }
-    this._queued = null;
-    this._queuedHandler = null;
-  }
-
   /** 加购失败（三条加购路径的 catch 都会派发）：骨架不能一直转，刷一次真实购物车 */
   _onAddFailed = () => {
-    /* 排队中的那一次失败了：弹窗要留着显示错误文案（quick-view 的 _onCartFailed
-       刻意不收它），抽屉不能跟着冒出来——顾客关掉弹窗后会凭空多一个购物车。
-       撤掉排队，让他自己点购物车入口。 */
-    this._cancelQueuedOpen();
     if (!this._isPending()) return;
     this._refresh();
   };
