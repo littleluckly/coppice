@@ -65,6 +65,15 @@ class QuickView extends HTMLElement {
 
   open() {
     if (!this._dialog) return;
+
+    /* 每次打开都是一张干净的面板（2026-11-26 刘工）：[data-form-status] 里那句
+       "was added to your cart" / 失败提示是给当时那一下看的，不该带到下一次
+       开面板——它落在按钮和 Buy it now 之间，紧挨着上下元素，看着像多了一块内容。
+       product-form 那边会让成功文案随按钮态 2.5s 退场；失败文案是刻意留在面板上
+       让人看清原因的，所以这里再兜一层：**开面板即清**，覆盖所有来源。 */
+    const status = this._dialog.querySelector('[data-form-status]');
+    if (status) status.textContent = '';
+
     if (typeof this._sheet?.open === 'function') this._sheet.open();
     else if (!this._dialog.open) this._dialog.showModal();
   }

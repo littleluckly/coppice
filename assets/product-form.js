@@ -265,7 +265,16 @@ class ProductForm extends HTMLElement {
       this._button.dataset.state = 'added';
       this._button.textContent = this._button.dataset.addedLabel || this._defaultLabel;
       this._announce(this._button.dataset.addedMessage || '');
-      this._revertTimer = setTimeout(() => this._reset(), ProductForm.REVERT_DELAY_MS);
+      /* 成功播报与按钮的「已加入」同寿：2.5s 后一起退场。
+         文案是给"点下去那一下"看的即时反馈，不是页面内容 —— 不清掉的话它会
+         永久留在 [data-form-status] 里，:empty 的隐藏也就永久失效：
+         快速查看弹窗关掉再打开，上次那句"was added to your cart"还在，
+         紧挨着新面板的按钮（2026-11-26 刘工）。
+         只有这一条路径清（失败路径的 _reset 不清，错误提示要留在眼前）。 */
+      this._revertTimer = setTimeout(() => {
+        this._announce('');
+        this._reset();
+      }, ProductForm.REVERT_DELAY_MS);
 
       this._syncCartCount();
     } catch (error) {
@@ -288,8 +297,13 @@ class ProductForm extends HTMLElement {
     this._button.disabled = false;
   }
 
+  /**
+   * 播报：写进面板/买盒里的 [data-form-status]（aria-live 容器）。
+   * **空串也是有效入参**（表示"撤掉播报"）——不能写成 `if (message)`，
+   * 那样成功文案的退场就清不掉，`:empty` 的隐藏也回不来。
+   */
   _announce(message) {
-    if (this._status && message) this._status.textContent = message;
+    if (this._status) this._status.textContent = message;
   }
 
   async _syncCartCount() {
