@@ -473,15 +473,9 @@
       block-size: auto;
     }
 
-    /* 头部行是唯一的拖拽热区（2026-11-26 去掉抓手横线之后）。
-       touch-action: none 让浏览器不把手势抢给滚动（手势归属由初始触点决定），
-       user-select 防鼠标拖拽时选中标题文字。
-       头部行自身有 1rem 上内边距，抽屉顶边到标题之间仍是 16px，
-       和去掉抓手之前的第一行位置一致，不是贴着圆角顶。 */
-    .cart-drawer__header {
-      touch-action: none;
-      user-select: none;
-    }
+    /* 头部行不再承担拖拽（2026-11-26 刘工：抓手横线与拖拽逻辑一并去掉），
+       所以不写 touch-action / user-select —— 标题按正常文本处理。
+       顶部留白由 .cart-drawer__header 自身的 1rem 上内边距给。 */
   }
 
 {% endstylesheet %}
