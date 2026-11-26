@@ -136,19 +136,18 @@
         {%- liquid
           # ⚠️ 这里不许 continue、不许过滤 —— 每页条数是 paginate 按「集合条目」切的，
           # 跳过任何一条都会变成"选每页 12 只显示 11 张卡"（2026-11-26 刘工实测报障）。
-          # 三种条目各占一格：
+          # 两种条目各占一格：
           #   正常集合 → 可点卡
           #   空集合   → 不可点的占位卡（写 Coming soon），不指向死路
-          #   frontpage → 平台自动建的「主页」集合，标题是店铺名、直接显示很怪；
-          #               但它装的本来就是全部商品，改写成「All products」指 /collections/all，
-          #               语义正确又补上那一格。
+          #
+          # 关于 frontpage：原实现按 handle == 'frontpage' 把它 continue 掉，理由是
+          # "平台自动建的『主页』集合出现在列表里毫无意义"。实测（2026-11-26，dev 店）
+          # 该集合的 handle **不是** frontpage、url 本身就指向 /collections/all、
+          # 标题是 "Products"、装着全部 32 个商品 —— 也就是说它其实是一个有效入口，
+          # 原来的 continue 只是白吃掉一格（还会让每页条数对不上）。故不再排除它。
           assign card_title = collection.title
           assign card_url = collection.url
           assign card_is_empty = false
-          if collection.handle == 'frontpage'
-            assign card_title = 'collections.list.all_products' | t
-            assign card_url = routes.all_products_collection_url
-          endif
           if collection.all_products_count == 0
             assign card_is_empty = true
           endif
