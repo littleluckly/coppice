@@ -291,9 +291,11 @@ class ProductForm extends HTMLElement {
   /** 按钮文字回到「加购」或「售罄」——售罄态由变体选择器维护，这里只恢复可用标签 */
   _reset() {
     delete this._button.dataset.state;
-    if (!this._button.dataset.addLabel) {
-      this._button.textContent = this._defaultLabel;
-    }
+    /* 原来是 `if (!this._button.dataset.addLabel)` 才写文字：两处渲染点
+       （产品页买盒与快速查看）**都带** data-add-label，这个分支永远进不去，
+       于是加购成功后按钮永久停在 "Added"，弹窗关掉再打开也还是它（2026-11-26，
+       与播报残留同一次发现）。有 add-label 就用它，没有才退回首屏文案。 */
+    this._button.textContent = this._button.dataset.addLabel || this._defaultLabel;
     this._button.disabled = false;
   }
 
