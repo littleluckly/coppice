@@ -85,9 +85,24 @@ class CartDrawer extends HTMLElement {
     this._showPending();
   };
 
-  /** 加购失败（三条加购路径的 catch 都会派发）：骨架不能一直转，刷一次真实购物车 */
+  /**
+   * 加购失败（三条加购路径的 catch 都会派发）。
+   *
+   * 分两种：顾客自己点开的抽屉只把骨架换成真实内容（加法跟原来一样）；
+   * **这次加购自动弹出来的**要收回去 —— 失败原因写在快速查看面板的
+   * [data-form-status] 里，而抽屉此刻正整块盖着那张面板、里面又没有任何新商品，
+   * 顾客只会看到"购物车没变"却不知道发生了什么。收掉抽屉（_onClose 会 _endPending），
+   * 错误文案就露出来了。
+   */
   _onAddFailed = () => {
     if (!this._isPending()) return;
+
+    if (this._autoOpened) {
+      this._autoOpened = false;
+      this._closeSheet();
+      return;
+    }
+
     this._refresh();
   };
 
@@ -101,7 +116,12 @@ class CartDrawer extends HTMLElement {
 
   _showPending() {
     this._beginPending();
-    if (!this.dialog.open) this._openSheet();
+    if (!this.dialog.open) {
+      /* 记下"这次是加购叫出来的"：失败时要能原路收回去（见 _onAddFailed）。
+         顾客自己点购物车入口打开的不置这个标记。 */
+      this._autoOpened = true;
+      this._openSheet();
+    }
   }
 
   _isPending() {
@@ -250,6 +270,8 @@ class CartDrawer extends HTMLElement {
     delete document.documentElement.dataset.cartDrawerOpen;
     /* 关掉就结束等待：不然顾客关掉再打开会看到一屏骨架（而请求可能早就没在飞了） */
     this._endPending();
+    /* "加购自动弹出"的身份随这次开合结束：下一次打开由 _showPending 重新判定 */
+    this._autoOpened = false;
     if (this._lastTrigger && this._lastTrigger.isConnected) {
       this._lastTrigger.focus({ preventScroll: true });
     }
