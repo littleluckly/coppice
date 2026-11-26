@@ -314,8 +314,13 @@ class ProductForm extends HTMLElement {
        原来这里是 `if (!this._button.dataset.addLabel)` 才写文字 —— 两处渲染点
        （产品页买盒与快速查看）**都带** data-add-label，这个分支永远进不去，
        加购成功后按钮就永久停在 "Added"（2026-11-26，与播报残留同一次发现）。
-       自己拼一份"addLabel + 解禁"也不行：2.5s 内切到售罄变体时会把按钮改回可买。 */
-    const picker = this.querySelector('variant-picker');
+       自己拼一份"addLabel + 解禁"也不行：2.5s 内切到售罄变体时会把按钮改回可买。
+
+       按作用域找选择器，不能用 this.querySelector：产品页的 <variant-picker>
+       在 <product-form> **外面**（main-product 第 467 行 vs 469 行），
+       只有快速查看那份才在 form 里。data-variant-scope 两处都有。 */
+    const scope = this.closest('[data-variant-scope]') || this;
+    const picker = scope.querySelector('variant-picker');
     if (picker && typeof picker.syncButton === 'function' && picker.syncButton()) return;
 
     /* 没有变体选择器（或一个变体都没解析出来）：退回最保守的恢复 */
