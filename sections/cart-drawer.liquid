@@ -441,21 +441,25 @@
          max-width: calc((100% - 6px) - 2em)，不覆盖时 width:100vw 会被钳窄 */
       max-inline-size: 100vw;
       block-size: auto;
+      /* 与 assets/product-card.css 的 .quick-view 那两行逐字对齐（85vh 兜底 +
+         88dvh 实际值）：快速查看里点加购后，抽屉是直接盖在弹窗上面的，矮一点
+         就会露出上半截弹窗，变成两截拼接（2026-11-26 刘工第二版）。 */
       max-block-size: 85vh;
+      max-block-size: 88dvh;
       margin: 0;
       border-radius: 16px 16px 0 0;
     }
     /* 高度不跟内容走（2026-11-26 刘工「弹出的位置不正常」）。
        原来是 block-size:auto：骨架只有两行 80px，加购后抽屉就以一根 340px 的
-       矮条贴底弹出，等商品行刷回来再猛地长到 85vh——看起来像"位置错了"。
+       矮条贴底弹出，等商品行刷回来再猛地长到 88dvh——看起来像"位置错了"。
        有商品（footer 只在 item_count > 0 时渲染）和等待骨架期间都锁成同一个
        高度，第一帧与最终帧一样高，不会跳。
        用 dvh 而不是 vh：手机上地址栏展开时 85vh 会低于可视线，抽屉顶（抓手
-       和标题）会被切掉；85dvh 跟着可视高度走。空车仍然 auto——那是一句
+       和标题）会被切掉；88dvh 跟着可视高度走。空车仍然 auto——那是一句
        「购物车是空的」加一个按钮，撑满整屏反而空得难看。 */
     .cart-drawer__dialog:has(.cart-drawer__footer),
     cart-drawer[data-cart-loading] .cart-drawer__dialog {
-      block-size: 85dvh;
+      block-size: 88dvh;
     }
     .cart-drawer__dialog[open] {
       display: flex;
