@@ -879,6 +879,38 @@
     }
   }
 
+  /* ---------- 横幅：窄屏 ---------- */
+
+  /* 手机上文字会横跨整幅图，所以遮罩从"左浓右透"改成"上浓下透"——
+     横向渐变在窄屏只剩最左一小段有遮盖，右半边文字会压在亮图上。
+     叶子也缩小，避免占掉本就狭窄的左侧留白。 */
+  @media (max-width: 749px) {
+    .collections-list__hero {
+      min-block-size: 15rem;
+    }
+    .collections-list__hero-scrim {
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-background) 90%, transparent) 0%,
+        color-mix(in srgb, var(--color-background) 72%, transparent) 100%
+      );
+    }
+    .collections-list__hero-media img {
+      object-position: 60% 50%;
+    }
+    .collections-list__hero-leaves {
+      inline-size: 14rem;
+    }
+    .collections-list__hero-leaves svg:first-of-type {
+      inline-size: 7.5rem;
+      inset-block-start: -1.5rem;
+      inset-inline-start: -2rem;
+    }
+    .collections-list__hero-leaves svg:last-of-type {
+      inline-size: 4.5rem;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .collections-list__card,
     .collections-list__media img {
@@ -901,9 +933,16 @@
   "settings": [
     {
       "type": "text",
+      "id": "eyebrow",
+      "label": "t:sections.collections_list.labels.eyebrow",
+      "info": "t:sections.collections_list.labels.eyebrow_info",
+      "default": "All series"
+    },
+    {
+      "type": "text",
       "id": "heading",
       "label": "t:labels.heading",
-      "default": "All series"
+      "default": "Power for Every Yard"
     },
     {
       "type": "text",
