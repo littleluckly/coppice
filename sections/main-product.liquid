@@ -951,7 +951,9 @@
   .product-gallery__thumbs {
     display: flex;
     gap: 0.5rem;
-    margin: 0;
+    /* 舞台下方那一行要跟上面的圆点分开（2026-11-26 刘工：手机上缩略图紧贴舞台）。
+       ≥1100px 时缩略图变成左侧一列、间距交给网格的 gap，那里显式归零。 */
+    margin: 0.75rem 0 0;
     padding: 0;
     list-style: none;
     overflow-x: auto;
@@ -1041,6 +1043,8 @@
       flex-direction: column;
       overflow-y: auto;
       max-height: 78vh;
+      /* 桌面是左列，与舞台顶端对齐；上边距在这里归零，间距由网格 gap 管 */
+      margin-block-start: 0;
     }
   }
 
