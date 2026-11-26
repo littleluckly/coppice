@@ -527,11 +527,17 @@
   const FLY_ARC_PX = 90;
 
   function findTarget() {
-    const entry = document.querySelector('compare-entry');
-    if (!entry) return null;
-    const icon = entry.querySelector('svg') || entry;
-    const rect = icon.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 ? icon : null;
+    /* 页头现在有两份（桌面工具区 / 移动行，2026-11-26），抽屉里那份躺在 <template>
+       里不参与渲染。按文档顺序取第一个**真正有尺寸**的：另一份在断点外被
+       display:none 包着，矩形是 0×0 —— 只取 querySelector 的第一个，移动端的
+       飞入动画会永远落空（它拿到的是桌面那份的空盒子）。 */
+    const entries = document.querySelectorAll('compare-entry');
+    for (const entry of entries) {
+      const icon = entry.querySelector('svg') || entry;
+      const rect = icon.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) return icon;
+    }
+    return null;
   }
 
   function buildFlyFrames(from, to) {

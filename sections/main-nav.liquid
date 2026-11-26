@@ -684,6 +684,13 @@
       {{ 'icon-search.svg' | inline_asset_content }}
     </a>
 
+    {%- comment -%}
+      对比入口（SDD §6.2.8，2026-11-26 补）：移动行宽只够 ☰ / 搜索 / 购物车，
+      所以这一份**只在角标 > 0 时出现**（空清单由 [data-empty] 整块 display:none，
+      见下方 `.compare-entry--mobile` 那条），空态入口交给 ☰ 抽屉里常驻的那一行。
+      不包 <ui-tooltip>：手机上不存在悬停，包一层还会往 flex 行里塞一个 0 宽宿主。
+    {%- endcomment -%}
+    {% render 'compare-entry', class: 'compare-entry--mobile' %}
     {% render 'cart-entry', class: 'cart-entry--mobile' %}
   </div>
   {%- comment -%} 【B】移动抽屉 nav-drawer（2026-11-03 手风琴改版） {%- endcomment -%}
@@ -2132,7 +2139,8 @@
       margin-inline-start: auto;
     }
 
-    /* 两个 44px 触摸目标相邻，留一点缝避免误触 */
+    /* 三个 44px 触摸目标相邻，留一点缝避免误触 */
+    .main-nav__mobile .compare-entry,
     .main-nav__mobile .cart-entry {
       margin-inline-start: 0.35rem;
     }
@@ -2239,8 +2247,8 @@
 
   /* ============ 对比入口（SDD §6.2.8，2026-10-22） ============
      与购物车同规格：44×44 触摸目标、图标 1.5rem、角标绝对定位（不占流，避免 CLS）。
-     移动端不需要为它让位：入口只存在于桌面工具区（.main-nav__desktop），
-     ≤989px 整块 display: none，移动端要走 ☰ 抽屉里那行。 */
+     三处渲染：桌面工具区（常驻）、移动行（仅角标 > 0，见 .compare-entry--mobile）、
+     ☰ 抽屉底部（常驻行式，传 show_label）。 */
 
   compare-entry {
     display: inline-flex;
@@ -2329,6 +2337,16 @@
   .compare-entry--in-drawer .compare-entry__count {
     position: static;
     inset: auto;
+  }
+
+  /* 移动页头行（2026-11-26 补）：行宽只够 ☰ / 搜索 / 购物车，空清单时整块退场，
+     清单非空才露面 —— 判据用 data-empty（compare.js 在 sync() 里切换），不是断点，
+     与 .cart-entry--in-drawer 同一路子：同一个组件换容器，行为跟着容器变。
+
+     必须限定到 --mobile：桌面那份走「常驻弱化」而不是隐藏（理由见下一条注释），
+     写成 compare-entry[data-empty] 会把它一起抹掉。 */
+  .compare-entry--mobile[data-empty] {
+    display: none;
   }
 
   /* 没有选择时页头图标的处理（2026-11-15 刘工改，原为 display: none）。

@@ -25,6 +25,7 @@ shopify theme push         # 推送到开发店
 shopify theme pull         # 拉取线上主题
 
 python3 tools/check-locale-keys.py    # 校验 t: 翻译键在两个 locale 文件里都存在
+python3 tools/sync-page-size-templates.py  # 同步集合列表页三档副本（.12/.24/.48）的 section 设置；改了 templates/list-collections.json 的标题/列数后必跑，--check 只报差异，退出码 1 表示有漂移
 python3 tools/check-tag-balance.py   # 校验 HTML 标签配对（theme check 的本地补充）
 tools/package-theme.sh               # 一键出包：从 HEAD 取文件→剥注释→打包→整包校验（不碰工作区）
 tools/package-theme.sh --dry-run     # 只看会删多少注释
@@ -39,6 +40,7 @@ ruby tools/preview-product-faq.rb    # 产品页 FAQ 预览页（自包含：样
 ruby tools/preview-contact.rb        # 联系页预览页（真实 section + critical.css；`--no-banner` / `--no-image` 验降级、`--filled` 验浮动标签已填态、`--focus` 验聚焦态、`--dark` 验深色 preset）
 python3 tools/probe-faq-autoplay.py <预览页>  # 用真 Chrome（CDP）验 FAQ 自动播放：真实鼠标/键盘输入 + 真实时间，9 条断言（依赖 `pip3 install websocket-client`）
 python3 tools/probe-input-shape.py   # 验全站输入框形状与聚焦环：抽各 section 的样式原样渲染 + CDP 真键盘 Tab 聚焦 + getComputedStyle，16 条断言（`--shot x.png` 顺带出截图）
+python3 tools/preview-mobile-header.py  # 移动页头行核对稿：抽 main-nav 的样式 + 同构 DOM，在 375/320 两档量图标几何（对比入口空态退场、44px 触摸目标、无横向溢出）；`--open` 目视，`--shot` 出图
 ```
 
 - 提交审核前：`shopify theme check` 不得出现任何 Error（Warning 尽量清零）。
@@ -124,7 +126,7 @@ dev-docs/   # 项目规格文档（SDD、页面工单、metafield 字典、CSV �
 - metafield 取值与 `assign` **移到循环外**；避免嵌套循环；长列表用 `limit`。
 - 商家未填 metafield / 设置时：**该行/该模块不渲染**，不留空壳、不崩页、参数缺值显示 `—` 而**永不显示 0**。
 - JS 一律 `defer` 或 `async`；隐藏组件（抽屉、筛选面板）**首次打开才构建 DOM**。
-- 图片统一 `image_tag` + `width` / `height` + srcset；尊重焦点裁剪；非首屏 lazy。
+- 图片统一 `image_tag` + `width` / `height` + srcset；**`widths` 只生成 srcset，不能替代 `width`/`height` —— 两者都缺时 filter 静默返回空串**（不报错，见 BUG-098）；尊重焦点裁剪；非首屏 lazy。
 
 **JS 组件化：优先 Web Components（Custom Elements）**
 

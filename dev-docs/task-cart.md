@@ -415,8 +415,9 @@ Total               {{ cart.total_price | money }}
 **移动端形态（2026-11-02 追加，对齐集合页筛选面板）**
 
 - **≤ 989.98px 从底部上滑**，不是右侧滑出。断点取 989.98 而不是常见的 749：筛选面板的 `_mobileQuery` 是 `(max-width: 989.98px)`、导航的移动形态在 990 换挡。抽屉若在 750–989px 仍走右侧，会出现「页头是移动形态、抽屉是桌面形态」的错位。
-- 参数与 `.facets__dialog` 逐项一致：通栏 `100vw`（必须显式覆盖 `max-inline-size`，UA 对 `dialog:modal` 默认 `max-width: calc((100% - 6px) - 2em)`）、`border-radius: 16px 16px 0 0`、`max-block-size: 85vh`、`animation 0.28s ease-out`、遮罩 `rgb(0 0 0 / 40%)`、抓手 40×5。
-- **下拉收起**：抓手与头部行是热区（`touch-action: none`），越过「抽屉高 30% / 至少 120px」即关闭，未过则弹回；`prefers-reduced-motion` 下不播回弹过渡。列表区不参与拖拽——那里的手势属于滚动。拖拽松手会补一个 click，用 `_dragEndedAt` 挡掉，避免"拽回一半顺手把抽屉关了"。
+- 参数与 `.facets__dialog` 基本一致：通栏 `100vw`（必须显式覆盖 `max-inline-size`，UA 对 `dialog:modal` 默认 `max-width: calc((100% - 6px) - 2em)`）、`border-radius: 16px 16px 0 0`、`animation 0.28s ease-out`、遮罩 `rgb(0 0 0 / 40%)`。
+  - **两处例外（2026-11-26）**：① 高度不是 `85vh` —— 有商品时与等待骨架期间都锁 `88dvh`，与快速查看弹窗的 `max-height: 88dvh` 同值（加购后抽屉要整块盖住弹窗，见 `bugs.md` BUG-100 第二版）；② **不带抓手横线**，顶部直接是标题行（刘工要求去掉，DOM 与样式里均已无 `.cart-drawer__grabber`）。
+- **没有下拉收起（2026-11-26 刘工）**：抓手横线与拖拽逻辑一并去掉，关闭只有三条路——关闭按钮、点遮罩、Esc。头部行因此也不写 `touch-action: none` / `user-select: none`（那是为拖拽服务的）。筛选面板、导航抽屉、排序面板的拖拽不受影响，它们仍用 `<bottom-sheet>` 的 `close({ fromDrag })`。
 - 实测（无头 Chrome，等动画 `finished` 后取值）：500 宽 `w=500 x=0 y=149 h=751 bottom=900=v h`、`dialogScroll=751/751`（dialog 自身无滚动条）、列表 `462/402`（只有列表滚）、`html.overflowY=hidden`；900 宽同样 `x=0 / w=vw / bottom=vh`；1440 宽仍是 `w=416 x=1013` 的右侧抽屉、抓手下高 0。
 
 **风险（未实测）**：`?sections=` 对 layout 里的静态 section 是否有效，没有实机验证过。无效时会走上面那条 `/cart.js` 兜底，表现为"加购后跳到购物车页"而不是"抽屉打开"。

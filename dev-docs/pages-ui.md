@@ -51,7 +51,7 @@
 | main-nav | 三级以内下拉；`Shop by Platform` 指向 battery_platform 自动化集合（§4.3/§6.5） | 菜单项 | 菜单选择、下拉样式 | `linklists.main-menu` |
 | header-search | 预测搜索输入（#16 Search + predictive）。**2026-11-24 参考图改版**：点页头搜索图标 → 右侧 600px `<dialog>` 抽屉；抽屉内含「搜索前内容区」——热门搜索药丸（逗号分隔、直连结果页）、推荐卡（有文案即渲染；无图时用 `assets/icon-leaf.svg` 当底图，压在品牌色实底上）、快速链接 2×2 网格（`search_link` block）、帮助条。**同日从 main-nav 独立成 section `search-drawer`**（对齐 Cart drawer 的组织方式）：配置项与区块都挂在它自己身上，页眉分组里单独一行；main-nav 只留触发链接（`aria-controls="search-drawer-dialog"`，无该 section / 无 JS 时退化成跳 `/search` 的普通链接） | `search_link` ×N（默认 4，上限 8） | 结果条数、热门搜索词、推荐卡图/标题/文案/按钮、快速链接图标与链接、帮助条按钮链接（留空回落平台客服页 `routes.contact_url`；帮助条三行文案走 `search.need_help` 等翻译键，不设字段） | `/search/suggest`（Section Rendering API + `section_id`，返回渲染好的 HTML 片段）；药丸走 `routes.search_url?q=` |
 | account | `<shopify-account>` 原生组件，**桌面与移动均可见**（#22） | — | 登录态样式 | 平台组件 |
-| compare-entry | **页头对比入口**：图标 + 角标（清单款数）。**桌面常驻**——2026-11-15 起空态也显示（次级文字色弱化 + 悬停 `<ui-tooltip>` 提示可以对比商品，原「空态隐藏」作废，否则新顾客永远看不到这个功能）；移动端页头不渲染，走 ☰ 抽屉的行式入口。点击跳当前组对比页，目标页探测失败则不渲染（SDD §6.2.1/§6.2.8） | — | 无（分组来自 `page.handle`） | `localStorage` + `pages` 探测 |
+| compare-entry | **页头对比入口**：图标 + 角标（清单款数）。**桌面常驻**——2026-11-15 起空态也显示（次级文字色弱化 + 悬停 `<ui-tooltip>` 提示可以对比商品，原「空态隐藏」作废，否则新顾客永远看不到这个功能）；**移动行只在角标 > 0 时出现**（`[data-empty]` → `display:none`，2026-11-26 补齐 —— 此前移动行根本没渲染这一份，空态入口由 ☰ 抽屉那行常驻兜底，SDD §6.2.8）。点击跳当前组对比页，目标页探测失败则不渲染（SDD §6.2.1/§6.2.8） | — | 无（分组来自 `page.handle`） | `localStorage` + `pages` 探测 |
 | cart-entry | 购物车入口 + 计数（本期仅跳 `routes.cart_url`，**不做抽屉交互**，后续另立清单） | — | 本期无 | `cart` 对象 |
 
 **状态要点**：移动端 ☰ 抽屉用原生 `<dialog>` + `showModal()`（自带焦点锁定、背景 `inert`、`Esc` 关闭、`::backdrop`，**不手写焦点陷阱**）；搜索联想为 combobox + listbox，**住在右侧 `<dialog>` 抽屉里**（`showModal`，2026-10-10 起）：DOM 焦点始终留在输入框，靠 `aria-activedescendant` 移动虚拟光标；Esc 分层退出（面板开 → 先收面板；再按 → 关抽屉）。2026-11-24 起抽屉外壳直接渲染、只把搜索表单留在一个 `<template>` 里惰性克隆（`replaceWith` 插回原位，保证结果面板排在内容区之前）；**页头对比图标在此（compare-entry），它是加入对比后唯一的持久入口与可见反馈**（底部对比条已于 2026-11-15 删除）。图标外面包一层 `<ui-tooltip>`（2026-11-15，`assets/tooltip.js`）：空态文案讲「怎么用」、有料文案说「点进去看到什么」，由 `compare.js` 按清单数量改写；移动端不显示提示（触摸没有 hover）。
@@ -273,9 +273,30 @@ NORTHBARK                                       ← wordmark 一行 + 定位语
 
 | section | 职责 | 关键设置 | 数据源 |
 | --- | --- | --- | --- |
-| collections-list | 按组渲染集合卡（平台组 / 品类组） | 组排序、卡图 | `collections` + `collection.metafields` |
+| `collections`（`sections/collections.liquid`，一个 section 装整页） | 横幅 + 集合卡网格 + 分页 + 每页档位 | 小标 / 标题 / 副标题、横幅底图、每行 2–6 列、默认每页 12/24/48、显示描述、显示档位控件 | `collections` 全局对象（顺序由平台给定，本页不提供排序） |
 
-**状态要点**：卡内工具数 = 集合 `all_products_count`；空集合不渲染卡（与首页平台卡同规则）。
+**横幅（2026-11-26 加，2026-11-26 定稿为「简化版」）**
+
+左文右图的通栏带：底图铺满（绝对定位，不参与文档流）+ 左侧背景色雾化遮罩（左浓右透）保证文字可读 + 小标（`eyebrow`，CSS `text-transform` 出全大写）+ 大标题（H1）+ 短品牌色下划线 + 副标题。
+
+- **图可选**：`hero_image` 为空时退回淡品牌色带，页面不空（叶子类图标装饰已删——20×20 图标放大到 100px 以上时叶脉粗到 6px，糊成一个圆点，见 2026-11-26 截图）。
+- 遮罩与底图全部从 `--color-*` 派生，Noir 深色预设自动翻转，不另写深色版。
+- 窄屏（<750px）遮罩改为**上浓下透**：横向渐变在 375px 下只剩最左一小段有遮盖，右半文字会压在亮图上。
+- 商家传白底产品图会很怪（图与页底同色，像被切断）——横幅实际需要的是 16:9 左右的实景图，演示店目前没有这类素材。
+
+**状态要点**：卡内工具数 = 集合 `all_products_count`；空集合不渲染卡（与首页平台卡同规则）；`frontpage` 按 handle 排除；不足一页时不渲染分页条（只有一页的分页器是点不动的死控件）。
+
+**每页档位（2026-11-25 加，顾客可切 12 / 24 / 48）**
+
+位置：**网格下方，与分页同一行**（`.collections-list__pager` → grid `1fr auto 1fr`：左档位、中页码；窄屏两行堆叠、档位在上）。只渲染其中之一时（关掉档位 / 不足一页）用 `:only-child` 跨列居中。
+
+Liquid **读不到 URL 的 query 参数**（`request` 只有 path / host / locale / page_type），所以档位不能靠 `?per_page=N` —— 只能落在 alternate template 上：`?view=12` → `templates/list-collections.12.json`，section 里用 `template.suffix` 反查。
+
+- ⚠️ 实测坑：后缀对应的文件**不存在时 Shopify 静默回落默认模板、suffix 变空**（不报错、不 404）。所以 12/24/48 各有一份副本模板 —— 副本的唯一作用是让 suffix 有值。
+- ⚠️ 副本的 settings 是**独立一份**：改了主模板的标题 / 列数，切档后会看到另一套文案。改完跑 `python3 tools/sync-page-size-templates.py`（`--check` 只报差异）。
+- 翻页链接自己拼 `?page=N&view=S`：`paginate.*.url` 只有 `?page=N`，直接用会丢掉档位、翻页跳回默认档。
+- canonical 由 Shopify 自动归一成 `/collections`（带 `?view=` / `?page=` 的请求都指向它），SEO 无需额外处理。
+- ⚠️ 条数按「集合条目」切，空集合被隐藏 ⇒ `?view=12` 可能只显示 11 张卡（17 个非空集合的店实测）。
 
 ---
 

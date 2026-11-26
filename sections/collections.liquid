@@ -33,8 +33,27 @@
 {% endcomment %}
 
 {%- liquid
-  assign per_page = section.settings.collections_per_page | default: 24
-  assign columns = section.settings.columns | default: 3
+  # ---- 顾客端「每页系列数」档位 ----
+  # 为什么档位必须落在模板文件上：paginate 的 by 只吃编译期常量或设置，而 Liquid
+  # 读不到 URL 的 query 参数（request 对象只有 path / host / locale / page_type）。
+  # 官方唯一通道是 alternate template：?view=12 会去找 templates/list-collections.12.json，
+  # section 里再用 template.suffix 反查。
+  # ⚠️ 实测坑：后缀对应的文件不存在时，Shopify **静默回落默认模板且 suffix 变空**
+  # （不报错、不 404），所以 12 / 24 / 48 三档各需要一个内容相同的副本文件，
+  # 副本的唯一作用是让 suffix 有值 —— 但它的 settings 是独立一份，
+  # 改了主模板的标题/列数要跑 tools/sync-page-size-templates.py 同步（见 AGENTS §2）。
+  assign page_sizes = '12,24,48' | split: ','
+  assign per_page = section.settings.collections_per_page | default: 24 | plus: 0
+  # 后缀过白名单才认：否则 ?view=任意串 会把手写的数字塞进 paginate 的 by
+  assign active_suffix = ''
+  if template.suffix != blank and page_sizes contains template.suffix
+    assign active_suffix = template.suffix
+    assign per_page = active_suffix | plus: 0
+  endif
+  assign columns = section.settings.columns | default: 4
+  # 平板封顶 3：750–989px 内容宽约 700–940px，四列以上单卡会压到 160px 以下，
+  # 1:1 图 + 两行标题在这个宽度已经不成样子。桌面设 5/6 列时平板仍按 3 列走，
+  # 跳变是故意的 —— 宁可断层，也不要平板上一排挤六张缩略图。
   assign tablet_columns = columns
   if columns > 3
     assign tablet_columns = 3
@@ -47,6 +66,9 @@
   assign sizes_str = sizes_str | append: 'vw, (min-width: 750px) '
   assign sizes_str = sizes_str | append: tablet_vw
   assign sizes_str = sizes_str | append: 'vw, 46vw'
+  # 横幅底图：留空时退回淡品牌色带（叶子装饰仍在，页面不会空）
+  assign hero_image = section.settings.hero_image
+
   # H1 兜底：商家清空标题设置时仍要有一个有文字的 h1（每页恰好一个 h1）
   assign heading_text = section.settings.heading
   if heading_text == blank
@@ -54,7 +76,30 @@
   endif
 -%}
 
-<div class="collections-list__hero full-width">
+<div class="collections-list__hero full-width{% if hero_image != blank %} collections-list__hero--image{% endif %}">
+  {%- if hero_image != blank -%}
+    <span class="collections-list__hero-media" aria-hidden="true">
+      {%- comment -%}
+        ⚠️ width / height 必须给：只传 widths 时 image_tag 不报错、直接输出空字符串，
+        横幅会静默退回淡色带（本地踩过一次，查了半天 HTML）。
+        容器已 aria-hidden，alt 传空 —— 当前版本会保留 alt="" 属性，不必事后补。
+      {%- endcomment -%}
+      {{
+        hero_image
+        | image_url: width: 2400
+        | image_tag:
+          widths: '750, 1100, 1500, 2000, 2400',
+          sizes: '100vw',
+          width: hero_image.width,
+          height: hero_image.height,
+          loading: 'eager',
+          fetchpriority: 'high',
+          alt: ''
+      }}
+    </span>
+    <span class="collections-list__hero-scrim" aria-hidden="true"></span>
+  {%- endif -%}
+
   <div class="collections-list__hero-inner">
     <nav class="collections-list__breadcrumb" aria-label="{{ 'collections.breadcrumb_label' | t }}">
       <ol class="collections-list__breadcrumb-list" role="list">
@@ -66,6 +111,10 @@
         </li>
       </ol>
     </nav>
+
+    {%- if section.settings.eyebrow != blank -%}
+      <p class="collections-list__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+    {%- endif -%}
 
     <h1 class="collections-list__title">{{ heading_text | escape }}</h1>
 
@@ -195,54 +244,121 @@
       </div>
     {%- endif -%}
 
-    {%- if paginate.pages > 1 -%}
-      {%- comment -%}
-        分页：圆形按钮（与集合页同一套视觉）。箭头恒在 —— 不可用方向渲染禁用占位，
-        行宽不跳；页码用 paginate.parts，截断部分渲染为 … 间隔。
-      {%- endcomment -%}
-      <nav class="collections-list__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
-        {%- if paginate.previous -%}
-          <a
-            class="collections-list__pagination-nav"
-            href="{{ paginate.previous.url }}"
-            aria-label="{{ 'collections.pagination_previous' | t }}"
+    {%- comment -%}
+      底部工具行：每页档位与分页并排放在一起 —— 两者都是「这一屏怎么看」的控件，
+      分置上下两端会让人以为档位属于内容区。页码居中（grid 的 1fr auto 1fr 保证居中），
+      档位靠左，是电商页脚的惯例位置；窄屏两行堆叠，档位在上。
+      一张卡都不剩时（全是空集合）整行不渲染，免得空态下面挂一排死控件。
+    {%- endcomment -%}
+    {%- liquid
+      assign show_pager = false
+      if cards_trimmed != blank
+        if section.settings.show_per_page or paginate.pages > 1
+          assign show_pager = true
+        endif
+      endif
+    -%}
+
+    {%- if show_pager -%}
+      <div class="collections-list__pager">
+        {%- if section.settings.show_per_page -%}
+          {%- comment -%}
+            档位为什么用 <a> 而不是 <select> + form：切档本质是一次换模板的跳转
+            （?view=12 → list-collections.12.json），链接能无 JS 工作、可中键开新窗、
+            有真实 URL 可分享；select 要 JS 才能即时提交，还得补 noscript 兜底。
+            跳转故意不带 page 参数 —— 换档后回第 1 页是对的，第 3 页的第 2 档没有意义。
+          {%- endcomment -%}
+          <div
+            class="collections-list__per-page"
+            role="group"
+            aria-label="{{ 'collections.per_page.group_label' | t }}"
           >
-            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </a>
-        {%- else -%}
-          <span class="collections-list__pagination-nav" aria-disabled="true">
-            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </span>
+            <span class="collections-list__per-page-label">{{ 'collections.per_page.label' | t }}</span>
+            <span class="collections-list__per-page-options">
+              {%- for size in page_sizes -%}
+                {%- assign size_num = size | plus: 0 -%}
+                {%- if size_num == per_page -%}
+                  <span class="collections-list__per-page-option is-current" aria-current="true">{{ size }}</span>
+                {%- else -%}
+                  <a
+                    class="collections-list__per-page-option"
+                    href="{{ routes.collections_url }}?view={{ size }}"
+                    aria-label="{{ 'collections.per_page.option_label' | t: count: size }}"
+                  >{{ size }}</a>
+                {%- endif -%}
+              {%- endfor -%}
+            </span>
+          </div>
         {%- endif -%}
 
-        {%- for part in paginate.parts -%}
-          {%- if part.is_link -%}
+      {%- if paginate.pages > 1 -%}
+        {%- comment -%}
+          分页：圆形按钮（与集合页同一套视觉）。箭头恒在 —— 不可用方向渲染禁用占位，
+          行宽不跳；页码用 paginate.parts，截断部分渲染为 … 间隔。
+        {%- endcomment -%}
+        <nav class="collections-list__pagination" aria-label="{{ 'collections.pagination_label' | t }}">
+          {%- if paginate.previous -%}
+            {%- comment -%}
+              带档位时自己拼 URL，不用 paginate.previous.url：后者只有 ?page=N，
+              会把顾客选好的档位丢掉，翻一页就跳回默认档。页码从 current_page 推。
+            {%- endcomment -%}
+            {%- assign prev_href = paginate.previous.url -%}
+            {%- if active_suffix != blank -%}
+              {%- assign prev_page = paginate.current_page | minus: 1 -%}
+              {%- assign prev_href = routes.collections_url | append: '?page=' | append: prev_page | append: '&view=' | append: active_suffix -%}
+            {%- endif -%}
             <a
-              class="collections-list__pagination-page"
-              href="{{ part.url }}"
-              aria-label="{{ 'collections.page_number' | t: number: part.title }}"
-            >{{ part.title }}</a>
-          {%- elsif part.title == paginate.current_page -%}
-            <span class="collections-list__pagination-page" aria-current="page">{{ part.title }}</span>
+              class="collections-list__pagination-nav"
+              href="{{ prev_href }}"
+              aria-label="{{ 'collections.pagination_previous' | t }}"
+            >
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </a>
           {%- else -%}
-            <span class="collections-list__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+            <span class="collections-list__pagination-nav" aria-disabled="true">
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </span>
           {%- endif -%}
-        {%- endfor -%}
 
-        {%- if paginate.next -%}
-          <a
-            class="collections-list__pagination-nav"
-            href="{{ paginate.next.url }}"
-            aria-label="{{ 'collections.pagination_next' | t }}"
-          >
-            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-          </a>
-        {%- else -%}
-          <span class="collections-list__pagination-nav" aria-disabled="true">
-            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
-          </span>
-        {%- endif -%}
-      </nav>
+          {%- for part in paginate.parts -%}
+            {%- if part.is_link -%}
+              {%- assign part_href = part.url -%}
+              {%- if active_suffix != blank -%}
+                {%- assign part_href = routes.collections_url | append: '?page=' | append: part.title | append: '&view=' | append: active_suffix -%}
+              {%- endif -%}
+              <a
+                class="collections-list__pagination-page"
+                href="{{ part_href }}"
+                aria-label="{{ 'collections.page_number' | t: number: part.title }}"
+              >{{ part.title }}</a>
+            {%- elsif part.title == paginate.current_page -%}
+              <span class="collections-list__pagination-page" aria-current="page">{{ part.title }}</span>
+            {%- else -%}
+              <span class="collections-list__pagination-gap" aria-hidden="true">{{ part.title }}</span>
+            {%- endif -%}
+          {%- endfor -%}
+
+          {%- if paginate.next -%}
+            {%- assign next_href = paginate.next.url -%}
+            {%- if active_suffix != blank -%}
+              {%- assign next_page = paginate.current_page | plus: 1 -%}
+              {%- assign next_href = routes.collections_url | append: '?page=' | append: next_page | append: '&view=' | append: active_suffix -%}
+            {%- endif -%}
+            <a
+              class="collections-list__pagination-nav"
+              href="{{ next_href }}"
+              aria-label="{{ 'collections.pagination_next' | t }}"
+            >
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </a>
+          {%- else -%}
+            <span class="collections-list__pagination-nav" aria-disabled="true">
+              <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </span>
+          {%- endif -%}
+        </nav>
+      {%- endif -%}
+      </div>
     {%- endif -%}
   {%- endpaginate -%}
 </div>
@@ -264,14 +380,59 @@
      两块左边缘因此严格对齐。
      ============================================================ */
 
+  /* 横幅：左文右图。图用绝对定位铺满、不参与文档流 ——
+     参与的话图高会把带子顶高，文字"垂直居中"就变成被图牵着走。
+     左侧压一层背景色渐变（左浓右透）保证文字可读；没设图时退回淡品牌色带。
+     遮罩与底图全部从 --color-* 派生：Noir 深色预设下渐变自动变深、文字自动变浅，
+     不需要为深色另写一套。 */
   .collections-list__hero {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    min-block-size: clamp(15rem, 21vw, 22rem);
     background-color: color-mix(in srgb, var(--color-background) 94%, var(--color-brand) 6%);
-    border-block-end: 1px solid color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  }
+  /* 有图时不画底部分隔线：图自己已经把带子和内容分开了 */
+  .collections-list__hero--image {
+    border-block-end: 0;
+  }
+  .collections-list__hero-media {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    display: block;
+  }
+  .collections-list__hero-media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    /* 焦点偏右：左侧留给文字，构图主体（房子/草坪）不压到字下面 */
+    object-position: 65% 50%;
+  }
+  /* 左浓右透的雾化遮罩。中段用 color-mix 逐级降透明度，
+     避免两档之间出现一条硬边（纯 linear-gradient 从 1 到 0 会显出色阶）。 */
+  .collections-list__hero-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      90deg,
+      var(--color-background) 0%,
+      color-mix(in srgb, var(--color-background) 92%, transparent) 34%,
+      color-mix(in srgb, var(--color-background) 52%, transparent) 58%,
+      transparent 86%
+    );
   }
   .collections-list__hero-inner {
+    position: relative;
+    z-index: 1;
+    inline-size: 100%;
     max-inline-size: var(--content-width);
     margin-inline: auto;
-    padding-block: clamp(1.5rem, 3.5vw, 2.75rem);
+    padding-block: clamp(1.75rem, 4vw, 3.25rem);
   }
 
   /* 面包屑：与集合页同一口径（当前项纯文本；链接给 44px 触控高度，
@@ -286,7 +447,9 @@
     margin: 0 0 0.5rem;
     font-size: 0.82rem;
     line-height: 1.2;
-    color: color-mix(in srgb, var(--color-foreground) 55%, transparent);
+    /* 横幅上文字压在底图/雾化层上，55% 前景在这个底色上对比度不够 ——
+       统一走 muted（70%），与全站次级文字同一口径。 */
+    color: var(--color-foreground-muted);
   }
   .collections-list__breadcrumb-item + .collections-list__breadcrumb-item::before {
     content: '/';
@@ -303,17 +466,44 @@
     text-decoration: underline;
   }
 
+  /* 标题上方的小标（效果图里那行 ALL SERIES）：字距拉开 + 全大写 + 品牌色。
+     全大写走 CSS text-transform：商家填 "All series" 也能出效果，
+     不用在文案里喊话（也就不用为每种语言另配值）。 */
+  .collections-list__eyebrow {
+    margin: 0 0 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-brand) 72%, var(--color-foreground));
+  }
+
   .collections-list__title {
     margin: 0;
-    font-size: clamp(1.9rem, 3.6vw, 2.75rem);
+    /* 24ch：横幅右侧要留出图的位置，标题不能铺满整个内容列 */
+    max-inline-size: 24ch;
+    font-size: clamp(2rem, 4vw, 3.35rem);
     font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
+    line-height: 1.08;
+    letter-spacing: -0.025em;
     text-wrap: balance;
+  }
+  /* 标题下的短粗线（效果图那条）。用伪元素而不是 border-block-end：
+     后者会撑满整个 24ch 的文字盒宽，而这里要的是"话说完就收住"的短笔。 */
+  .collections-list__title::after {
+    content: '';
+    display: block;
+    inline-size: 5rem;
+    block-size: 4px;
+    margin-block-start: 0.7rem;
+    border-radius: 999px;
+    background-color: var(--color-brand);
   }
   .collections-list__subheading {
     margin: 0.55rem 0 0;
-    max-inline-size: 58ch;
+    /* 42ch：横幅是左文右图，副标题超过这个宽度就伸进图里了 */
+    max-inline-size: 42ch;
     font-size: 0.95rem;
     line-height: 1.55;
     color: var(--color-foreground-muted);
@@ -321,6 +511,76 @@
 
   .collections-list__page {
     padding-block: clamp(1.5rem, 3vw, 2.25rem) clamp(3rem, 6vw, 5rem);
+  }
+
+  /* ---------- 底部工具行：每页档位 + 分页 ---------- */
+
+  /* 档位与分页是同一类控件（「这一屏怎么看」），所以并排放在网格下方一行：
+     左 = 档位，中 = 页码。1fr auto 1fr 让中间列真正居中 —— 用 flex +
+     space-between 时左右宽度不等会把页码推偏。
+     只有其中一个时（关掉档位 / 不足一页），:only-child 让它跨满三列居中，
+     不会孤零零挂在左半边。 */
+  .collections-list__pager {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin-block-start: 2rem;
+  }
+
+  /* 三档是「换模板」的链接，视觉按一组分段控件处理：整组一个胶囊外框，
+     当前档反白（品牌色底）。组内靠 overflow: hidden 裁圆角 ⇒ 焦点环必须内画
+     （outline-offset 负值），否则会被容器裁掉、键盘 Tab 过来看不见焦点。
+     44×44 与分页按钮同口径（触控最小尺寸）；label 只是说明文字，不占触控位。 */
+  .collections-list__per-page {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    grid-column: 1;
+    justify-self: start;
+  }
+  .collections-list__per-page:only-child {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+  .collections-list__per-page-label {
+    font-size: 0.8rem;
+    line-height: 1.2;
+    color: var(--color-foreground-muted);
+  }
+  .collections-list__per-page-options {
+    display: inline-flex;
+    border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .collections-list__per-page-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 44px;
+    block-size: 44px;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    color: inherit;
+    text-decoration: none;
+  }
+  .collections-list__per-page-option + .collections-list__per-page-option {
+    border-inline-start: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  }
+  .collections-list__per-page-option.is-current {
+    background-color: var(--color-brand);
+    color: var(--color-background);
+    font-weight: 500;
+  }
+  .collections-list__per-page-option:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: -3px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .collections-list__per-page-option:not(.is-current):hover {
+      background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+    }
   }
 
   /* ---------- 网格 ---------- */
@@ -342,7 +602,7 @@
   }
   @media (min-width: 990px) {
     .collections-list__grid {
-      grid-template-columns: repeat(var(--cols-desktop, 3), minmax(0, 1fr));
+      grid-template-columns: repeat(var(--cols-desktop, 4), minmax(0, 1fr));
     }
   }
 
@@ -523,7 +783,12 @@
     justify-content: center;
     align-items: center;
     gap: 0.4rem;
-    margin-block-start: 2rem;
+    /* 与网格的间距由 .collections-list__pager 的 margin-block-start 提供，
+       这里再写一份会叠成双倍空档 */
+    grid-column: 2;
+  }
+  .collections-list__pagination:only-child {
+    grid-column: 1 / -1;
   }
   .collections-list__pagination-nav,
   .collections-list__pagination-page {
@@ -557,6 +822,46 @@
     color: color-mix(in srgb, var(--color-foreground) 45%, transparent);
   }
 
+  /* ---------- 底部工具行：窄屏堆叠 ---------- */
+
+  /* 放在样式块末尾是刻意的：媒体查询里的 grid-column 要覆盖上面那条
+     .collections-list__pagination 基础规则，靠源码顺序而不是堆选择器权重。
+     一行塞不下（档位组 197px + 页码约 150px > 375px 内容列），所以两行堆叠，
+     档位在上、页码在下。 */
+  @media (max-width: 749px) {
+    .collections-list__pager {
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+      justify-items: center;
+    }
+    .collections-list__per-page,
+    .collections-list__pagination {
+      grid-column: 1;
+      justify-self: center;
+    }
+  }
+
+  /* ---------- 横幅：窄屏 ---------- */
+
+  /* 手机上文字会横跨整幅图，所以遮罩从"左浓右透"改成"上浓下透"——
+     横向渐变在窄屏只剩最左一小段有遮盖，右半边文字会压在亮图上。
+     叶子也缩小，避免占掉本就狭窄的左侧留白。 */
+  @media (max-width: 749px) {
+    .collections-list__hero {
+      min-block-size: 15rem;
+    }
+    .collections-list__hero-scrim {
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-background) 90%, transparent) 0%,
+        color-mix(in srgb, var(--color-background) 72%, transparent) 100%
+      );
+    }
+    .collections-list__hero-media img {
+      object-position: 60% 50%;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .collections-list__card,
     .collections-list__media img {
@@ -579,9 +884,16 @@
   "settings": [
     {
       "type": "text",
+      "id": "eyebrow",
+      "label": "t:sections.collections_list.labels.eyebrow",
+      "info": "t:sections.collections_list.labels.eyebrow_info",
+      "default": "All series"
+    },
+    {
+      "type": "text",
       "id": "heading",
       "label": "t:labels.heading",
-      "default": "All series"
+      "default": "Power for Every Yard"
     },
     {
       "type": "text",
@@ -590,24 +902,39 @@
       "default": "Every series we carry — battery platforms and gas-powered machines alike."
     },
     {
-      "type": "range",
-      "id": "columns",
-      "min": 2,
-      "max": 4,
-      "step": 1,
-      "label": "t:sections.collections_list.labels.columns",
-      "info": "t:sections.collections_list.labels.columns_info",
-      "default": 3
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "t:sections.collections_list.labels.hero_image",
+      "info": "t:sections.collections_list.labels.hero_image_info"
     },
     {
       "type": "range",
+      "id": "columns",
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "label": "t:sections.collections_list.labels.columns",
+      "info": "t:sections.collections_list.labels.columns_info",
+      "default": 4
+    },
+    {
+      "type": "select",
       "id": "collections_per_page",
-      "min": 8,
-      "max": 48,
-      "step": 4,
       "label": "t:sections.collections_list.labels.collections_per_page",
       "info": "t:sections.collections_list.labels.collections_per_page_info",
-      "default": 24
+      "options": [
+        { "value": "12", "label": "12" },
+        { "value": "24", "label": "24" },
+        { "value": "48", "label": "48" }
+      ],
+      "default": "24"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_per_page",
+      "label": "t:sections.collections_list.labels.show_per_page",
+      "info": "t:sections.collections_list.labels.show_per_page_info",
+      "default": true
     },
     {
       "type": "checkbox",

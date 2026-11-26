@@ -119,13 +119,7 @@ class VariantPicker extends HTMLElement {
 
     this._syncUnitPrice(variant);
 
-    if (this._button) {
-      const soldOutLabel = this._button.dataset.soldOutLabel || '';
-      const addLabel = this._button.dataset.addLabel || '';
-      this._button.disabled = !variant.available;
-      this._button.textContent = variant.available ? addLabel : soldOutLabel;
-      delete this._button.dataset.state;
-    }
+    if (this._button) this._syncButton(variant);
 
     document.dispatchEvent(
       new CustomEvent('variant:change', {
@@ -141,6 +135,30 @@ class VariantPicker extends HTMLElement {
         },
       })
     );
+  }
+
+  /** 按钮态：文字 + 可用性都按传入变体裁决（唯一一份，别在别处再拼一遍） */
+  _syncButton(variant) {
+    const soldOutLabel = this._button.dataset.soldOutLabel || '';
+    const addLabel = this._button.dataset.addLabel || '';
+    this._button.disabled = !variant.available;
+    this._button.textContent = variant.available ? addLabel : soldOutLabel;
+    delete this._button.dataset.state;
+  }
+
+  /**
+   * 给宿主回退按钮态用（<product-form> 加购成功 2.5s 后 / 失败收尾）。
+   *
+   * 为什么不自己写 `textContent = addLabel; disabled = false`：加购成功到回退
+   * 这 2.5s 里顾客可能把变体切到售罄那一档，选择器已经改过文字并禁用按钮了；
+   * 宿主照着"加购态"硬恢复，会把售罄变体改回可买。当前变体是唯一的真值来源，
+   * 由这里重放一次。返回 false = 没有可用变体（宿主自行降级）。
+   */
+  syncButton() {
+    const variant = this._variants ? this._resolve() : null;
+    if (!variant || !this._button) return false;
+    this._syncButton(variant);
+    return true;
   }
 
   /** 单位计价：多变体价格时也要跟着变；原本没有这块就补一个，放在价格区后面。
@@ -265,7 +283,16 @@ class ProductForm extends HTMLElement {
       this._button.dataset.state = 'added';
       this._button.textContent = this._button.dataset.addedLabel || this._defaultLabel;
       this._announce(this._button.dataset.addedMessage || '');
-      this._revertTimer = setTimeout(() => this._reset(), ProductForm.REVERT_DELAY_MS);
+      /* 成功播报与按钮的「已加入」同寿：2.5s 后一起退场。
+         文案是给"点下去那一下"看的即时反馈，不是页面内容 —— 不清掉的话它会
+         永久留在 [data-form-status] 里，:empty 的隐藏也就永久失效：
+         快速查看弹窗关掉再打开，上次那句"was added to your cart"还在，
+         紧挨着新面板的按钮（2026-11-26 刘工）。
+         只有这一条路径清（失败路径的 _reset 不清，错误提示要留在眼前）。 */
+      this._revertTimer = setTimeout(() => {
+        this._announce('');
+        this._reset();
+      }, ProductForm.REVERT_DELAY_MS);
 
       this._syncCartCount();
     } catch (error) {
@@ -282,14 +309,32 @@ class ProductForm extends HTMLElement {
   /** 按钮文字回到「加购」或「售罄」——售罄态由变体选择器维护，这里只恢复可用标签 */
   _reset() {
     delete this._button.dataset.state;
-    if (!this._button.dataset.addLabel) {
-      this._button.textContent = this._defaultLabel;
-    }
+
+    /* 交给 <variant-picker> 重放：它手里有"当前选中变体是否还有货"的真值。
+       原来这里是 `if (!this._button.dataset.addLabel)` 才写文字 —— 两处渲染点
+       （产品页买盒与快速查看）**都带** data-add-label，这个分支永远进不去，
+       加购成功后按钮就永久停在 "Added"（2026-11-26，与播报残留同一次发现）。
+       自己拼一份"addLabel + 解禁"也不行：2.5s 内切到售罄变体时会把按钮改回可买。
+
+       按作用域找选择器，不能用 this.querySelector：产品页的 <variant-picker>
+       在 <product-form> **外面**（main-product 第 467 行 vs 469 行），
+       只有快速查看那份才在 form 里。data-variant-scope 两处都有。 */
+    const scope = this.closest('[data-variant-scope]') || this;
+    const picker = scope.querySelector('variant-picker');
+    if (picker && typeof picker.syncButton === 'function' && picker.syncButton()) return;
+
+    /* 没有变体选择器（或一个变体都没解析出来）：退回最保守的恢复 */
+    this._button.textContent = this._button.dataset.addLabel || this._defaultLabel;
     this._button.disabled = false;
   }
 
+  /**
+   * 播报：写进面板/买盒里的 [data-form-status]（aria-live 容器）。
+   * **空串也是有效入参**（表示"撤掉播报"）——不能写成 `if (message)`，
+   * 那样成功文案的退场就清不掉，`:empty` 的隐藏也回不来。
+   */
   _announce(message) {
-    if (this._status && message) this._status.textContent = message;
+    if (this._status) this._status.textContent = message;
   }
 
   async _syncCartCount() {

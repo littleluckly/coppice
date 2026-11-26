@@ -2,8 +2,11 @@
  * cart-drawer — 购物车抽屉（2026-11-02）。
  *
  * 为什么用原生 <dialog> + showModal()：焦点锁定、背景 inert、Esc 关闭、::backdrop
- * 全由平台提供（AGENTS.md §8），手写焦点陷阱只会和它打架。这里只补四件事：
- * 滑入（桌面右侧 / 移动端底部）、点遮罩关闭、移动端下拉收起、关闭后把焦点还给触发按钮。
+ * 全由平台提供（AGENTS.md §8），手写焦点陷阱只会和它打架。这里只补三件事：
+ * 滑入（桌面右侧 / 移动端底部）、点遮罩关闭、关闭后把焦点还给触发按钮。
+ * **没有下拉收起**（2026-11-26 刘工：先去抓手横线，再去拖拽逻辑）——关闭只有
+ * 三条路：关闭按钮、点遮罩、Esc。筛选面板 / 导航抽屉 / 排序面板的拖拽不受影响，
+ * 它们各自还在用 <bottom-sheet> 的 `close({ fromDrag })`。
  *
  * 为什么监听 document 的 cart:added：那是 quick-add 派发的跨组件事件（项目既有约定，
  * 见 assets/quick-add.js）。抽屉和商品卡永远不在同一棵子树里，只能走 document。
@@ -41,7 +44,6 @@ class CartDrawer extends HTMLElement {
     this._sheetEl = this.dialog.closest('bottom-sheet');
 
     this.dialog.addEventListener('click', this._onBackdropClick, { signal });
-    this.dialog.addEventListener('pointerdown', this._onDragStart, { signal });
     this.dialog.addEventListener('close', this._onClose, { signal });
 
     document.addEventListener('cart:added', this._onAdded, { signal });
@@ -71,14 +73,38 @@ class CartDrawer extends HTMLElement {
    *
    * 正确的等待信号是 cart:updated：它在 /cart/add.js 成功、/cart.js 查回
    * item_count 之后才派发，那一刻服务端已经是加完的购物车。
+   *
+   * **快速查看弹窗里点加购：抽屉直接盖上去，弹窗不收**（2026-11-26 刘工第二版）。
+   * 试过"等弹窗播完滑出再开抽屉"：顺序是干净了，但顾客要连看两段动画
+   * （0.22s 关 + 0.28s 开）、中间还有一瞬两面都没有，而且抽屉关掉后落回的是
+   * 商品列表，不是刚才那个商品。现在的做法是弹窗留在原地当背景，抽屉从底部
+   * 推上来把它整块盖住 —— 前提是**抽屉必须比弹窗高**，否则第一帧就会露出
+   * 上半截弹窗，变成两截拼接（那正是 BUG-100 的现场）。移动端两者都锁
+   * 88dvh（见 sections/cart-drawer.liquid 与 assets/product-card.css），
+   * 所以这条时序才成立；改高度时两边必须一起改。
    */
   _onAdded = () => {
     this._showPending();
   };
 
-  /** 加购失败（三条加购路径的 catch 都会派发）：骨架不能一直转，刷一次真实购物车 */
+  /**
+   * 加购失败（三条加购路径的 catch 都会派发）。
+   *
+   * 分两种：顾客自己点开的抽屉只把骨架换成真实内容（加法跟原来一样）；
+   * **这次加购自动弹出来的**要收回去 —— 失败原因写在快速查看面板的
+   * [data-form-status] 里，而抽屉此刻正整块盖着那张面板、里面又没有任何新商品，
+   * 顾客只会看到"购物车没变"却不知道发生了什么。收掉抽屉（_onClose 会 _endPending），
+   * 错误文案就露出来了。
+   */
   _onAddFailed = () => {
     if (!this._isPending()) return;
+
+    if (this._autoOpened) {
+      this._autoOpened = false;
+      this._closeSheet();
+      return;
+    }
+
     this._refresh();
   };
 
@@ -92,7 +118,12 @@ class CartDrawer extends HTMLElement {
 
   _showPending() {
     this._beginPending();
-    if (!this.dialog.open) this._openSheet();
+    if (!this.dialog.open) {
+      /* 记下"这次是加购叫出来的"：失败时要能原路收回去（见 _onAddFailed）。
+         顾客自己点购物车入口打开的不置这个标记。 */
+      this._autoOpened = true;
+      this._openSheet();
+    }
   }
 
   _isPending() {
@@ -163,77 +194,8 @@ class CartDrawer extends HTMLElement {
   };
 
   _onBackdropClick = (event) => {
-    /* 拖拽刚松手时浏览器还会补一个 click，落点可能正好在遮罩上——
-       不挡掉的话，"往下拽到一半又弹回"会顺手把抽屉关掉。 */
-    if (this._dragEndedAt && performance.now() < this._dragEndedAt) return;
     /* dialog 自身是点击目标 = 点在遮罩上（面板盖满了 dialog 内部） */
     if (event.target === this.dialog) this._closeSheet();
-  };
-
-  /**
-   * 下拉收起（移动端，与集合页筛选面板同一套手感）。
-   *
-   * 只在底部抽屉形态下启用（≤989.98px）：桌面是从右侧滑出的窄栏，往下拽没有语义。
-   * 热区 = 抓手横线 + 头部行（样式里给了 touch-action:none）；
-   * 列表区不参与——那里的手势属于滚动，抢过来顾客就没法翻长购物车了。
-   * 越过阈值（抽屉高的 30%，至少 120px）→ 关闭；未过 → 弹回原位。
-   */
-  _onDragStart = (event) => {
-    if (event.button > 0) return;
-    if (!window.matchMedia('(max-width: 989.98px)').matches) return;
-    /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
-    if (this._sheet?.isClosing) return;
-
-    const handle = event.target.closest('.cart-drawer__grabber, .cart-drawer__header');
-    /* 关闭按钮在头部行里，不能当成拖拽起点 */
-    if (!handle || event.target.closest('[data-cart-drawer-close]')) return;
-
-    const dialog = this.dialog;
-    const startY = event.clientY;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let moved = false;
-
-    const onMove = (moveEvent) => {
-      const dy = moveEvent.clientY - startY;
-      if (dy <= 0) return; /* 只响应下拉，上推不做事 */
-      moved = moved || dy > 8;
-      /* 必须先压掉滑入动画：@keyframes 的 transform 优先级高于内联 style，
-         不压的话抽屉打开后的 0.28s 内怎么拖都不会动（2026-11-03 修） */
-      dialog.style.animation = 'none';
-      dialog.style.transition = 'none';
-      dialog.style.transform = `translateY(${dy}px)`;
-    };
-
-    const onEnd = (endEvent) => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onEnd);
-      window.removeEventListener('pointercancel', onEnd);
-
-      const dy = endEvent.clientY - startY;
-      const dismissAt = Math.max(120, dialog.offsetHeight * 0.3);
-
-      if (moved && dy > dismissAt) {
-        this._dragEndedAt = performance.now() + 350;
-        /* 从当前拖拽位置顺势滑出（组件按 fromDrag 走 transition），不再原地闪没 */
-        this._closeSheet({ fromDrag: true });
-        return;
-      }
-
-      /* 弹回：先给一段回弹过渡，再从内联样式收回（CSS 自己的滑入动画不受影响） */
-      if (moved && !reduce) dialog.style.transition = 'transform 0.22s ease-out';
-      dialog.style.transform = '';
-      window.setTimeout(
-        () => {
-          dialog.style.transition = '';
-        },
-        moved && !reduce ? 240 : 0
-      );
-      if (moved) this._dragEndedAt = performance.now() + 350;
-    };
-
-    window.addEventListener('pointermove', onMove, { signal: this._ac.signal });
-    window.addEventListener('pointerup', onEnd, { signal: this._ac.signal });
-    window.addEventListener('pointercancel', onEnd, { signal: this._ac.signal });
   };
 
   _onClose = () => {
@@ -241,6 +203,8 @@ class CartDrawer extends HTMLElement {
     delete document.documentElement.dataset.cartDrawerOpen;
     /* 关掉就结束等待：不然顾客关掉再打开会看到一屏骨架（而请求可能早就没在飞了） */
     this._endPending();
+    /* "加购自动弹出"的身份随这次开合结束：下一次打开由 _showPending 重新判定 */
+    this._autoOpened = false;
     if (this._lastTrigger && this._lastTrigger.isConnected) {
       this._lastTrigger.focus({ preventScroll: true });
     }

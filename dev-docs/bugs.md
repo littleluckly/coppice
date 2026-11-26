@@ -999,6 +999,47 @@
 - **修复**：`git rm snippets/image.liquid` ⇒ 预期 0 warning（历史上它从不是功能的一部分，全仓 0 引用；G-05 那条「`image_url` 别传 `crop`」的教训在 `tools/check-focal-points.py` 的 C 检查、`bugs.md` 的 G-05 条目、AGENTS.md §4 都有留档，不随文件消失）。同步改：AGENTS.md §2 的结论、`bugs.md` 里 10-10 那段的补注、`task-compliance.md` v1.8 变更行。
 - **预防**：① **凡写「已知误报 / 已知问题」，必须带复核日期与复核方法**；下一次验证不重新核实就自动降级为「待复核」，不许继续照抄。② **warning 数的变化必须逐条解释**（这次 1→2 就是新发现入口：多出来的那条是新问题，不是既有的那条变严重了）——只看 `error = 0` 会漏掉它。③ 判定「工具误报」的前提是**能举出反例**（如「这条它报错了，但该文件确实被 render」），举不出反例就按真问题处理。
 
+### BUG-098 · 横幅底图配了也不显示：`image_tag` 缺 width/height 时静默输出空串
+- **日期**：2026-11-26 ｜ **状态**：Fixed
+- **现象**：集合列表页新增横幅底图。`section.settings.hero_image` 有值、`hero--image` 修饰类渲染了、`hero-media` 容器也在，**但容器里没有 `<img>`**，横幅静默退回淡色带。无报错、无 404、`shopify theme check` 也不报，只能靠读渲染出的 HTML 发现。
+- **根因**：`image_tag` 的 `widths` / `sizes` 只负责生成 `srcset` / `sizes`，**元素自身的尺寸仍必须由 `width` 或 `height` 参数提供**；两者都缺时 filter 直接返回空字符串（不抛错）。我按「给了 widths 就不用 width」写，而既有卡图的调用里本来就带着 `width: … , height: …`，所以这个前提从来没被暴露过。
+- **修复**：补 `width: hero_image.width, height: hero_image.height`。
+- **预防**：① `image_tag` 输出为空时，**先数参数里有没有 width/height**，再怀疑图片对象是否为空（顺序反过来会白查半小时）。② 已把这条写进 AGENTS §6 的图片规范行——`widths` 不能替代 `width/height`。
+
+---
+
+### BUG-099 · 移动端页头行里根本没有对比图标：`compare-entry` 在移动行漏渲染
+- **日期**：2026-11-26 ｜ **状态**：Fixed
+- **现象**：手机上（≤989px）页头行只有 ☰ / 搜索 / 购物车三个图标，清单里加了商品、角标该出现的位置**什么都没有**；桌面页头同一个位置有图标。☰ 抽屉底部那行「Compare products」倒是在。
+- **根因**：`sections/main-nav.liquid` 只渲染了两处 `compare-entry`——桌面工具区（第 632 行）与 ☰ 抽屉底部（第 895 行）。**移动行（`.main-nav__mobile`）从头到尾没有这一行 render**。而 SDD §6.2.8 写明「桌面常驻；移动端仅在角标 > 0 时渲染」，`snippets/compare-entry.liquid` 的 docblock 也按这个口径写了「移动端仅角标 > 0 时显示，由 `data-empty` + CSS 控制」，**CSS 却只写了空态的弱化色、没写隐藏规则，标记也从来没插进去**——文档描述的是一个不存在的东西。`pages-ui.md` 第 54 行当时反向记成了「移动端页头不渲染」，与 SDD 冲突但没人对照，于是这个缺口被两份文档各自描述成「有意为之」。
+- **修复**：① 移动行在搜索与购物车之间加 `{% render 'compare-entry', class: 'compare-entry--mobile' %}`（不包 `<ui-tooltip>`：触摸没有 hover，包一层还往 flex 行里塞一个 0 宽宿主）。② 新增 `.compare-entry--mobile[data-empty] { display: none }`——**限定 `--mobile`**，桌面那份 2026-11-15 定的是「常驻弱化」而不是隐藏，写成 `compare-entry[data-empty]` 会把它一起抹掉。③ 移动行 0.35rem 的触摸缝规则把 `.compare-entry` 一并纳入。④ 顺手修 `compare.js` 的 `findTarget()`：原来只取 `document.querySelector('compare-entry')` 的第一个（桌面那份，移动端被 `display:none` 包着 ⇒ 0×0 ⇒ 返回 null），**移动端的加入飞入动画一直是空转**；改成遍历所有 `compare-entry` 取第一个真有尺寸的。
+- **验证**：新增 `tools/preview-mobile-header.py`（抽 `main-nav.liquid` 的真实 `{% stylesheet %}` + 同构 DOM，无头 Chrome 读 `getBoundingClientRect`，断言 6 条）跑 375 / 320 两档。空清单：`compare-entry` 计算值 `display: none`、不占位；计数 2：`display: flex`、44×44、角标显示「2」，375 档 搜索 278–322 / 对比 328–372 / 购物车 378–422，两档 `scrollWidth === clientWidth` 均不溢出。`check-locale-keys` 两个命名空间全命中；`check-tag-balance` 仍是那 11 条既有误报（`main-nav.liquid` 不在其中）。
+- **预防**：① **「文档说有、代码没有」的检查点放在渲染层**：新增/改动涉及条件渲染的组件时，先 `grep -rn "render '<组件名>'"` 数清渲染点，再逐个对照文档列出的位置——这次一处文档（SDD）、一处注释（snippet docblock）、一处 CSS 注释（"移动端要走 ☰ 抽屉那行"）三份描述互相矛盾，谁都没错得离谱，合起来就是这个洞。② **同一个组件多处渲染时，判「可见的那份」不许用 `querySelector` 取第一个**（`findTarget` 这次就是被跨断点的隐藏副本骗了）；要按 `getBoundingClientRect()` 是否有尺寸筛。③ 移动行再增减图标时，按 375px 实测一遍 `scrollWidth === clientWidth`（本 bug 的核对稿可复用）。
+
+---
+
+### BUG-100 · 快速查看里加购：弹窗与购物车抽屉同框数百毫秒，抽屉还是半截矮条弹出
+
+- **日期**：2026-11-26 ｜ **状态**：Fixed
+- **现象**：移动端商品卡「Choose options」弹窗里点 Add to cart，上半截仍停在快速查看（商品标题、价格、"was added to your cart"），下半截已经冒出 "Cart (29)" 抽屉，两截拼在一起、整屏发暗；过一会儿弹窗才滑走。同时抽屉只以一根约 340px 的矮条贴底弹出，等商品行刷回来才猛地长到 85vh —— 看起来"位置不对"。
+- **根因**：两条时序不同步，各自都"按设计"在跑。① `cart:added` 是在 `fetch(/cart/add.js)` **之前**派发的（quick-add / product-form / supplies 三处同口径，为的是飞入动画不迟滞），`cart-drawer._onAdded` 收到就 `_showPending()` 把抽屉 `showModal()` 出来；而快速查看面板要等 `cart:updated`（`/cart/add.js` + `/cart.js` 两个来回之后）才 `close()`，还要再播 0.22s 滑出。这 400–600ms 里两张 modal dialog 同时在 top layer 上，后开的抽屉把已打开弹窗的遮罩再压一层。② 抽屉移动端是 `block-size: auto`，骨架只有两行 80px 高，所以第一帧的高度由骨架决定（实测 314px），与最终 85vh 差一倍多。
+- **修复**：① `assets/cart-drawer.js` — `_onAdded(event)` 先认来源：`detail.button.closest('quick-view')` 命中时不立刻开抽屉，只 `_beginPending()`（骨架与 12s 兜底照旧起算）+ `_openAfterClose(dialog)` 排队等该 panel 的 `close`；close 是 `<bottom-sheet>` 播完滑出、真正 `dialog.close()` 的那一刻，在它的处理里同步 `_show()`，浏览器不绘制"两个都不开"的中间帧（`html:has(dialog[open])` 的滚动锁不抖）。`_onAddFailed` 里 `_cancelQueuedOpen()` —— 失败的加购要留弹窗显示错误（quick-view 的 `_onCartFailed` 刻意不收），抽屉不能跟着冒出来。② `sections/cart-drawer.liquid` — 移动端 `.cart-drawer__dialog:has(.cart-drawer__footer)` 与 `cart-drawer[data-cart-loading] .cart-drawer__dialog` 锁成 `block-size: 85dvh`（footer 只在 `item_count > 0` 时渲染，两条合起来覆盖"已有商品"和"骨架等待"两种态）。空车仍是 auto —— 那是一句话加一个按钮，撑满整屏更难看。用 `dvh` 不用 `vh`：地址栏展开时 85vh 会低于可视线，抓手和标题会被切掉。
+- **验证**：`/tmp/cvdemo/` 用真实 `critical.css` + `cart-drawer.liquid` 的 `{% stylesheet %}` + `product-card.css` + 三个真实组件（`bottom-sheet.js` / `cart-drawer.js` / `quick-view.js`），桩掉 `fetch` 与 product-form 的两段延时（220ms + 160ms），无头 Chrome 390×844 每帧采样 `dialog[open]` 与 `getBoundingClientRect` 对比 HEAD 与工作区：修复前两浮层**同框 600ms / 29 帧**、抽屉高度 314→717 跳变；修复后**同框 0 帧**，弹窗滑出结束（t=650）下一帧抽屉才从 bottom 844 滑到 127，高度恒定 717。另验三条边界：空车首次加购（先摘掉 footer）高度取值只有 `[717]` 不跳；加购失败后抽屉不弹、事后手动关弹窗也不弹；产品页买盒（不在 quick-view 内）300ms 内照旧开抽屉。桌面 1280×900 同框 0 帧。`shopify theme check` 92 files 0 offenses。
+- **预防**：① **"点击即发"的乐观事件（cart:added）只能承担无状态的视觉反馈**（飞入动画、角标），任何**有状态的浮层**都不该由它触发——它早于结果，必然和"结果驱动"的浮层抢同一个时间窗。要开浮层就挂结果事件（cart:updated）。② 多浮层页面里，**先后顺序用对方组件的 `close` 事件表达，不要复制动画时长常量**（`bottom-sheet` 已经把时长、兜底、动画名收在自己身上，抄一份必然漂）。③ **底部抽屉的高度不能由骨架决定**：骨架是"最少内容"，内容型高度会让第一帧与最终帧差一倍；要么给 loading 态锁高，要么按"是否已有内容"分支锁高。④ 复现脚本留在 `/tmp/cvdemo/`（`build.mjs` + `run.mjs` + `run2.mjs`），下次动这两个组件的时序先跑一遍：`重叠帧数` 必须为 0。
+- **同日改口径 · 第二版（2026-11-26，刘工）**：要求改成「加购后抽屉直接弹出来、快速查看弹窗**不收**，保持覆盖」。于是 `cart-drawer.js` 的 `_onAdded` 回到 `_showPending()`（那一刻就开），排队等 close 的整套 `_openAfterClose` / `_cancelQueuedOpen` 删除。**能这么做的前提是抽屉必须比弹窗高** —— 移动端两者都锁 `88dvh`（`sections/cart-drawer.liquid` 的 `block-size`/`max-block-size` 与 `assets/product-card.css` 的 `.quick-view` max-height 逐字对齐），第一帧就整块盖住，看不到拼接。两处配套：① **桌面端**抽屉是右侧 26rem 窄栏、盖不住居中弹窗（两个浮层并排、弹窗被第二层遮罩压暗），所以 `quick-view.js` 按 989.98px 分流，桌面仍收面板；② **失败时**抽屉会盖住面板上的错误文案，`cart-drawer.js` 用 `_autoOpened` 记住"这次是加购自动叫出来的"，原路收回（顾客自己点开的只刷新不收）。
+- **预防（第二版，取代上面的 ①/④）**：**「两个浮层同框」能不能接受，判据是"上层能否完全盖住下层"**，不是"先后顺序"。盖得住时同框优于串行（省掉 0.5s 的关+开、关掉抽屉还能落回原处）；盖不住就是两截拼接。因此这条判据必须是**写死的几何**（两者同为 88dvh）而不是"感觉够高"，且改任一边的高度都要同时改另一边 —— 两个文件的注释里已互相点名。复现脚本 `/tmp/cvdemo/run6.mjs`（覆盖判定：`cart.top <= qv.top`，并断言骨架期高度恒为 88dvh）与 `run8.mjs`（成功 / 失败 / 手动开抽屉三条路径），动时序或高度先跑这两个。
+
+---
+
+### BUG-101 · 快速查看第二次打开，上次那句 "was added to your cart" 还留在按钮下面
+
+- **日期**：2026-11-26 ｜ **状态**：Fixed
+- **现象**：移动端快速查看弹窗首次打开时没有那句提示；加购成功后按钮下方出现灰色一行「Northbark … was added to your cart」；关掉再打开同一个弹窗，它**还在**，紧挨着 Add to cart/Added 按钮与 Buy it now。同一个弹窗还出现第二个残留：按钮文字也永久停在 "Added"。
+- **根因**：两处"只写不清"，都靠"初始为空"这个假设过日子。① `ProductForm._announce()` 写成 `if (this._status && message) this._status.textContent = message`，**空串被这个 if 吃掉**，所以没有任何一条路径能把文案撤掉；`:empty { display: none }` 的隐藏从此永久失效。② `ProductForm._reset()` 写成 `if (!this._button.dataset.addLabel)` 才恢复文字 —— 两处渲染点（`sections/main-product.liquid:531`、`snippets/quick-view.liquid:319`）**都带** `data-add-label`，这个分支永远进不去，按钮就永久停在 "Added"。弹窗是"关掉还留着 DOM、下次只 showModal"的形态，两个残留都会带进下一次。
+- **修复**：① `_announce()` 改为无条件写入（空串 = 撤掉播报）。② 成功文案与按钮「已加入」同寿：`_revertTimer` 的回调改成先 `_announce('')` 再 `_reset()`；**失败路径不清**（错误提示要留在眼前，见 catch 里那条顺序）。③ `_reset()` 把按钮文字与可用性交还 `<variant-picker>`：把 `_apply()` 里那段按钮逻辑抽成 `_syncButton(variant)`，新增公开的 `syncButton()` 按当前选中变体重放一次。查找用 `closest('[data-variant-scope]')` 而不是 `this.querySelector` —— 产品页的 `<variant-picker>` 在 `<product-form>` **外面**（`main-product.liquid` 467 vs 469 行），只有快速查看那份在 form 内。
+- **验证**：`/tmp/cvdemo/`（`build.mjs` 改成真实 `product-form.js` + 真实 DOM 结构，`run3.mjs` / `run4.mjs` / `run5.mjs`）对比 HEAD 与工作区。快速查看：修复前"回退后"文案仍在、二次打开 `h=30`（两行，正是刘工截图）且按钮 "Added"；修复后回退即清空、二次打开 `display:none`、按钮回 "Add to cart"。失败路径：错误文案在面板上保留（`h=15`），关掉再打开清空。产品页买盒单独同构页（`build2.mjs` + `run5.mjs`，variant-picker 放在 product-form 外）：修复前回退后仍 "Added" + 文案残留，修复后回 "Add to cart" + 清空。**反向验证**：加购后 2.5s 窗口内切到售罄变体，修复后回退仍是 "Sold out" + `disabled=true`，修复前是 "Sold out" 但 `disabled=false`（原代码 `disabled = false` 无条件执行，会把售罄变体改回可买）—— 顺手堵上了。`shopify theme check` 92 files 0 offenses。
+- **预防**：① **"初始为空所以不用清"是隐性契约**：凡 `:empty` / `:has()` 靠"元素里没有内容"表达状态的组件（播报容器、空态占位、角标），必须有一条**显式的清空路径**，且清空函数不能把空串当"没有参数"。② **写 `if (!dataset.xxx)` 分支前先 grep 渲染点**：判断"某属性是否存在"的分支，属性在两处渲染点都常驻时就是死代码——这次死分支让按钮文字永不恢复，而注释还写着"回到加购/售罄"。③ **保留状态的开关（按钮文案、可用性）只认一个真值来源**（这里是 `<variant-picker>` 的当前变体）；宿主自己拼 `textContent = addLabel; disabled = false` 会覆盖掉用户在这段时间里的变体切换。④ 跨组件找元素用**约定的作用域锚点**（`[data-variant-scope]`），不要用 `this.querySelector` —— 两个宿主的 DOM 嵌套关系不一样。
+
 ---
 
 ## 记录模板（追加新 bug 用）
