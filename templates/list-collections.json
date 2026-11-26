@@ -11,10 +11,7 @@
   "sections": {
     "main": {
       "type": "collections",
-      "settings": {
-        "eyebrow": "All series",
-        "heading": "Power for Every Yard"
-      }
+      "settings": {}
     }
   },
   "order": [

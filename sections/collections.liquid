@@ -67,13 +67,7 @@
   assign sizes_str = sizes_str | append: tablet_vw
   assign sizes_str = sizes_str | append: 'vw, 46vw'
   # 横幅底图：留空时退回淡品牌色带（叶子装饰仍在，页面不会空）
-  assign hero_image = nil
-  for c in collections
-    if c.featured_image
-      assign hero_image = c.featured_image
-      break
-    endif
-  endfor
+  assign hero_image = section.settings.hero_image
 
   # H1 兜底：商家清空标题设置时仍要有一个有文字的 h1（每页恰好一个 h1）
   assign heading_text = section.settings.heading
@@ -86,27 +80,22 @@
   {%- if hero_image != blank -%}
     <span class="collections-list__hero-media" aria-hidden="true">
       {%- comment -%}
-        image_tag 在 alt 为空时会把整个 alt 属性吞掉（不是输出 alt=""），Lighthouse
-        会判"缺 alt"。容器已 aria-hidden，这里再补一次空 alt —— 与集合卡图同套手法。
+        ⚠️ width / height 必须给：只传 widths 时 image_tag 不报错、直接输出空字符串，
+        横幅会静默退回淡色带（本地踩过一次，查了半天 HTML）。
+        容器已 aria-hidden，alt 传空 —— 当前版本会保留 alt="" 属性，不必事后补。
       {%- endcomment -%}
-      {%- capture hero_img -%}
-        {{
-          hero_image
-          | image_url: width: 2400
-          | image_tag:
-            widths: '750, 1100, 1500, 2000, 2400',
-            sizes: '100vw',
-            width: hero_image.width,
-            height: hero_image.height,
-            loading: 'eager',
-            fetchpriority: 'high',
-            alt: ''
-        }}
-      {%- endcapture -%}
-      {%- unless hero_img contains ' alt=' -%}
-        {%- assign hero_img = hero_img | replace: '<img ', '<img alt="" ' -%}
-      {%- endunless -%}
-      {{ hero_img }}
+      {{
+        hero_image
+        | image_url: width: 2400
+        | image_tag:
+          widths: '750, 1100, 1500, 2000, 2400',
+          sizes: '100vw',
+          width: hero_image.width,
+          height: hero_image.height,
+          loading: 'eager',
+          fetchpriority: 'high',
+          alt: ''
+      }}
     </span>
     <span class="collections-list__hero-scrim" aria-hidden="true"></span>
   {%- endif -%}
