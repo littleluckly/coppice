@@ -19,8 +19,8 @@
  *   - 收到 variant:change（来自 <variant-picker>，document 级）→ 若实例令牌对得上，
  *     按 mediaId 找对应缩略图并换图；面板没打开时一律忽略（否则首屏直出的主图
  *     会被"首次对齐"那次事件换成变体图，闪一下）
- *   - 提交后按结果分流：cart:updated → 收面板；cart:add-failed → **不收**，
- *     让 product-form 写进 data-form-status 的错误文案留在眼前（抽屉自己退出骨架）
+ *   - 加购后的收场按断点分流：移动端抽屉整块盖在面板上、面板不收；桌面端抽屉
+ *     是右侧窄栏盖不住，仍收面板（详见文件下半段"加购结果"）
  *
  * 重连幂等：监听全部挂在 AbortController 上，Section Rendering 换掉卡片后
  * 旧节点销毁、新节点重新 bind，不会叠加。
@@ -45,6 +45,13 @@ class QuickView extends HTMLElement {
 
     this._dialog.addEventListener('click', this._onDialogClick, { signal });
     document.addEventListener('variant:change', this._onVariantChange, { signal });
+
+    const form = this._dialog.querySelector('form');
+    if (form) form.addEventListener('submit', this._onSubmit, { signal });
+    this._dialog.addEventListener('close', this._onDialogClose, { signal });
+
+    document.addEventListener('cart:updated', this._onCartUpdated, { signal });
+    document.addEventListener('cart:add-failed', this._onCartFailed, { signal });
   }
 
   disconnectedCallback() {
@@ -99,12 +106,36 @@ class QuickView extends HTMLElement {
     }
   };
 
-  /* ---- 加购结果不归本组件 ----
-     面板不是"加完就收"的模态：购物车抽屉会直接从底部盖在它上面（cart-drawer.js
-     监听 cart:added 后立刻 showModal，两者在移动端同为 88dvh），顾客关掉抽屉就
-     回到这个商品继续挑。所以这里既不收面板、也不跟踪提交结果——成功文案与按钮态
-     的退场全归 <product-form>（2.5s），失败文案同样留在面板里给人看。 */
+  /* ---- 加购结果 ----
+     移动端（≤989.98px）：抽屉是底部通栏、88dvh（与面板的 max-height 同值），
+     整块盖在面板上面 —— 面板**不收**，顾客关掉抽屉就落回这个商品继续挑。
+     桌面端（≥990px）：抽屉是右侧 26rem 窄栏，盖不住居中的弹窗；两个浮层并排
+     立在屏幕上、面板还被第二层遮罩压暗，看着像"这个弹窗已经失效了" ——
+     那里仍然收面板（2026-11-26 之前的形态）。
+     分界 989.98px 跟着抽屉换挡走（与 cart-drawer.js 的拖拽收起同一个断点）。 */
 
+  /* 提交事件冒到 dialog 才标记（product-form 在前台先跑，它拦下默认提交并发请求）。
+     这个标记只用来回答一件事：后面那个 cart:updated 是不是"我这次提交"引起的。 */
+  _onSubmit = () => {
+    this._submitted = true;
+  };
+
+  _onCartUpdated = () => {
+    if (!this._submitted) return;
+    this._submitted = false;
+    if (window.matchMedia('(max-width: 989.98px)').matches) return;
+    this.close();
+  };
+
+  /** 失败：面板本来就留着（product-form 把错误文案写进 [data-form-status]），
+      只把标记清掉 —— 免得之后别的 cart:updated（比如在抽屉里改数量）把面板收走。 */
+  _onCartFailed = () => {
+    this._submitted = false;
+  };
+
+  _onDialogClose = () => {
+    this._submitted = false;
+  };
 
   /** 变体切换：只负责"变体自带图 → 主图"。
       价格 / 划线价 / 折扣 / 单位价 / 按钮态全在 <variant-picker> 那边改完了，
