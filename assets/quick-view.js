@@ -107,12 +107,13 @@ class QuickView extends HTMLElement {
   };
 
   /* ---- 加购结果 ----
-     移动端（≤989.98px）：抽屉是底部通栏、88dvh（与面板的 max-height 同值），
-     整块盖在面板上面 —— 面板**不收**，顾客关掉抽屉就落回这个商品继续挑。
-     桌面端（≥990px）：抽屉是右侧 26rem 窄栏，盖不住居中的弹窗；两个浮层并排
-     立在屏幕上、面板还被第二层遮罩压暗，看着像"这个弹窗已经失效了" ——
-     那里仍然收面板（2026-11-26 之前的形态）。
-     分界 989.98px 跟着抽屉换挡走（与 cart-drawer.js 的拖拽收起同一个断点）。 */
+     面板自己是底部抽屉还是居中弹窗，由 <bottom-sheet media="(max-width: 749.98px)">
+     决定（与 assets/product-card.css 的 750px 断点同值），所以分界也取它：
+       <750px：抽屉形态 + 购物车底部通栏（88dvh，与本面板 max-height 同值）——
+               抽屉整块盖在面板上面，面板**不收**，顾客关掉抽屉就落回这个商品。
+       ≥750px：居中弹窗。购物车在 750–989px 是底部通栏、≥990px 是右侧 26rem
+               窄栏，两种都盖不住居中的弹窗（顶部会露出一条标题栏，或者并排立着
+               被第二层遮罩压暗）—— 那里仍然收面板（2026-11-26 之前的形态）。
 
   /* 提交事件冒到 dialog 才标记（product-form 在前台先跑，它拦下默认提交并发请求）。
      这个标记只用来回答一件事：后面那个 cart:updated 是不是"我这次提交"引起的。 */
@@ -123,7 +124,7 @@ class QuickView extends HTMLElement {
   _onCartUpdated = () => {
     if (!this._submitted) return;
     this._submitted = false;
-    if (window.matchMedia('(max-width: 989.98px)').matches) return;
+    if (window.matchMedia('(max-width: 749.98px)').matches) return;
     this.close();
   };
 
