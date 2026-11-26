@@ -1,12 +1,12 @@
 /**
  * quick-view — 商品卡「Choose options」快速查看弹窗（2026-11-20 刘工）。
  *
- * 边界：本文件只管「开合 + 缩略图 / 变体图切换 + 加购后收面板」。
- * **变体联动不在这里**——选项渲染由 snippets/variant-picker.liquid 出，
- * 选中后改价格 / 划线价 / 折扣 / 单位价 / 按钮态 / 隐藏 id 全归 product-form.js
- * 的 <variant-picker>（2026-11-21 抽取，与产品页共用一份）。本文件只接它的
- * `variant:change` 事件，把「变体自带图」换成主图（弹窗的图库只有一张主图，
- * 不是 product-gallery，所以这一小段仍归宿主）。
+ * 边界：本文件只管「开合 + 缩略图 / 变体图切换」。**变体联动不在这里**——
+ * 选项渲染由 snippets/variant-picker.liquid 出，选中后改价格 / 划线价 / 折扣 /
+ * 单位价 / 按钮态 / 隐藏 id 全归 product-form.js 的 <variant-picker>
+ * （2026-11-21 抽取，与产品页共用一份）。本文件只接它的 `variant:change` 事件，
+ * 把「变体自带图」换成主图（弹窗的图库只有一张主图，不是 product-gallery，
+ * 所以这一小段仍归宿主）。
  * 加购提交同理归 <product-form>（含 BUG-083 的 cart:add-failed 收口、
  * cart:added / cart:updated 事件约定）。所以消费卡片的 section 必须同时引入
  * product-form.js，否则表单会退化成原生 POST（不会坏，只是整页跳走）。
@@ -99,30 +99,12 @@ class QuickView extends HTMLElement {
     }
   };
 
-  /* ---- 加购结果 ---- */
-  /* 提交事件冒到 dialog 才标记（product-form 在前台先跑，它拦下默认提交并发请求）。
-     这个标记只用来回答一件事：后面那个 cart:updated 是不是"我这次提交"引起的。 */
-  _onSubmit = () => {
-    this._submitted = true;
-  };
+  /* ---- 加购结果不归本组件 ----
+     面板不是"加完就收"的模态：购物车抽屉会直接从底部盖在它上面（cart-drawer.js
+     监听 cart:added 后立刻 showModal，两者在移动端同为 88dvh），顾客关掉抽屉就
+     回到这个商品继续挑。所以这里既不收面板、也不跟踪提交结果——成功文案与按钮态
+     的退场全归 <product-form>（2.5s），失败文案同样留在面板里给人看。 */
 
-  /** 成功：收面板（购物车抽屉已经带着新数量开好了） */
-  _onCartUpdated = () => {
-    if (!this._submitted) return;
-    this._submitted = false;
-    this.close();
-  };
-
-  /** 失败：面板留着（product-form 把错误文案写进面板里的 [data-form-status]），
-      只把"等结果"的标记清掉 —— 免得之后别的 cart:updated（比如在抽屉里改数量）
-      把面板顺手收走。抽屉那边自己会退出骨架（BUG-083）。 */
-  _onCartFailed = () => {
-    this._submitted = false;
-  };
-
-  _onDialogClose = () => {
-    this._submitted = false;
-  };
 
   /** 变体切换：只负责"变体自带图 → 主图"。
       价格 / 划线价 / 折扣 / 单位价 / 按钮态全在 <variant-picker> 那边改完了，
