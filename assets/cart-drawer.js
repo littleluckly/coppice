@@ -2,8 +2,11 @@
  * cart-drawer — 购物车抽屉（2026-11-02）。
  *
  * 为什么用原生 <dialog> + showModal()：焦点锁定、背景 inert、Esc 关闭、::backdrop
- * 全由平台提供（AGENTS.md §8），手写焦点陷阱只会和它打架。这里只补四件事：
- * 滑入（桌面右侧 / 移动端底部）、点遮罩关闭、移动端下拉收起、关闭后把焦点还给触发按钮。
+ * 全由平台提供（AGENTS.md §8），手写焦点陷阱只会和它打架。这里只补三件事：
+ * 滑入（桌面右侧 / 移动端底部）、点遮罩关闭、关闭后把焦点还给触发按钮。
+ * **没有下拉收起**（2026-11-26 刘工：先去抓手横线，再去拖拽逻辑）——关闭只有
+ * 三条路：关闭按钮、点遮罩、Esc。筛选面板 / 导航抽屉 / 排序面板的拖拽不受影响，
+ * 它们各自还在用 <bottom-sheet> 的 `close({ fromDrag })`。
  *
  * 为什么监听 document 的 cart:added：那是 quick-add 派发的跨组件事件（项目既有约定，
  * 见 assets/quick-add.js）。抽屉和商品卡永远不在同一棵子树里，只能走 document。
@@ -41,7 +44,6 @@ class CartDrawer extends HTMLElement {
     this._sheetEl = this.dialog.closest('bottom-sheet');
 
     this.dialog.addEventListener('click', this._onBackdropClick, { signal });
-    this.dialog.addEventListener('pointerdown', this._onDragStart, { signal });
     this.dialog.addEventListener('close', this._onClose, { signal });
 
     document.addEventListener('cart:added', this._onAdded, { signal });
@@ -192,77 +194,8 @@ class CartDrawer extends HTMLElement {
   };
 
   _onBackdropClick = (event) => {
-    /* 拖拽刚松手时浏览器还会补一个 click，落点可能正好在遮罩上——
-       不挡掉的话，"往下拽到一半又弹回"会顺手把抽屉关掉。 */
-    if (this._dragEndedAt && performance.now() < this._dragEndedAt) return;
     /* dialog 自身是点击目标 = 点在遮罩上（面板盖满了 dialog 内部） */
     if (event.target === this.dialog) this._closeSheet();
-  };
-
-  /**
-   * 下拉收起（移动端，与集合页筛选面板同一套手感）。
-   *
-   * 只在底部抽屉形态下启用（≤989.98px）：桌面是从右侧滑出的窄栏，往下拽没有语义。
-   * 热区 = 头部行（2026-11-26 去掉抓手横线后只剩它，样式给了 touch-action:none）。
-   * 列表区不参与——那里的手势属于滚动，抢过来顾客就没法翻长购物车了。
-   * 越过阈值（抽屉高的 30%，至少 120px）→ 关闭；未过 → 弹回原位。
-   */
-  _onDragStart = (event) => {
-    if (event.button > 0) return;
-    if (!window.matchMedia('(max-width: 989.98px)').matches) return;
-    /* 收起动画进行中：面板已不可交互，不再接受新的拖拽 */
-    if (this._sheet?.isClosing) return;
-
-    const handle = event.target.closest('.cart-drawer__header');
-    /* 关闭按钮在头部行里，不能当成拖拽起点 */
-    if (!handle || event.target.closest('[data-cart-drawer-close]')) return;
-
-    const dialog = this.dialog;
-    const startY = event.clientY;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let moved = false;
-
-    const onMove = (moveEvent) => {
-      const dy = moveEvent.clientY - startY;
-      if (dy <= 0) return; /* 只响应下拉，上推不做事 */
-      moved = moved || dy > 8;
-      /* 必须先压掉滑入动画：@keyframes 的 transform 优先级高于内联 style，
-         不压的话抽屉打开后的 0.28s 内怎么拖都不会动（2026-11-03 修） */
-      dialog.style.animation = 'none';
-      dialog.style.transition = 'none';
-      dialog.style.transform = `translateY(${dy}px)`;
-    };
-
-    const onEnd = (endEvent) => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onEnd);
-      window.removeEventListener('pointercancel', onEnd);
-
-      const dy = endEvent.clientY - startY;
-      const dismissAt = Math.max(120, dialog.offsetHeight * 0.3);
-
-      if (moved && dy > dismissAt) {
-        this._dragEndedAt = performance.now() + 350;
-        /* 从当前拖拽位置顺势滑出（组件按 fromDrag 走 transition），不再原地闪没 */
-        this._closeSheet({ fromDrag: true });
-        return;
-      }
-
-      /* 弹回：先给一段回弹过渡，再从内联样式收回（CSS 自己的滑入动画不受影响） */
-      if (moved && !reduce) dialog.style.transition = 'transform 0.22s ease-out';
-      dialog.style.transform = '';
-      window.setTimeout(
-        () => {
-          dialog.style.transition = '';
-        },
-        moved && !reduce ? 240 : 0
-      );
-      if (moved) this._dragEndedAt = performance.now() + 350;
-    };
-
-    window.addEventListener('pointermove', onMove, { signal: this._ac.signal });
-    window.addEventListener('pointerup', onEnd, { signal: this._ac.signal });
-    window.addEventListener('pointercancel', onEnd, { signal: this._ac.signal });
   };
 
   _onClose = () => {
