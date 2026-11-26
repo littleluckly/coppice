@@ -429,6 +429,34 @@
       transparent 86%
     );
   }
+  .collections-list__hero-leaves {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: -1;
+    inline-size: 22rem;
+    color: var(--color-brand);
+    opacity: 0.14;
+    pointer-events: none;
+  }
+  .collections-list__hero-leaves svg {
+    position: absolute;
+    block-size: auto;
+  }
+  .collections-list__hero-leaves svg:first-of-type {
+    /* 4.5rem 是放大上限：这个图标按 20×20 起稿，放到 10rem 以上时
+       1.2 宽的叶脉线会粗到 6px，整片糊成一个圆点（第一版就是这么翻车的）。 */
+    inline-size: 4.5rem;
+    inset-block-start: -0.75rem;
+    inset-inline-start: -1rem;
+    transform: rotate(-16deg);
+  }
+  .collections-list__hero-leaves svg:last-of-type {
+    inline-size: 3rem;
+    inset-block-start: 4.75rem;
+    inset-inline-start: 3.25rem;
+    transform: rotate(22deg);
+  }
   .collections-list__hero-inner {
     position: relative;
     z-index: 1;
@@ -862,6 +890,19 @@
     }
     .collections-list__hero-media img {
       object-position: 60% 50%;
+    }
+    .collections-list__hero-leaves {
+      inline-size: 14rem;
+    }
+    .collections-list__hero-leaves svg:first-of-type {
+      inline-size: 3.5rem;
+      inset-block-start: -0.5rem;
+      inset-inline-start: -0.75rem;
+    }
+    .collections-list__hero-leaves svg:last-of-type {
+      inline-size: 2.25rem;
+      inset-block-start: 3.5rem;
+      inset-inline-start: 2rem;
     }
   }
 
